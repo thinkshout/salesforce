@@ -6,7 +6,7 @@ Original Creator, Maintainer & Developer:
 Current Maintainer: 
   Victor Kane (awebfactory.com.ar)
 ***************************************************************************
-WARNING: This module is currently in development and is not yet NOT usable.
+WARNING: This module is currently in development and is NOT yet usable.
 ***************************************************************************
 
 CURRENT FUNCTIONALITY:
