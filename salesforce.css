@@ -1,0 +1,21 @@
+/* $Id$ */
+
+table.salesforce_admin { 
+  width: 100%;
+}
+
+table.salesforce_lead_list, table.salesforce_contact_list { 
+  width: 50%;
+}
+
+table.salesforce_lead_list th.user, table.salesforce_contact_list th.user {
+  width: 25%;
+}
+
+table.salesforce_admin th.id { width: 5%; }
+table.salesforce_admin th.message { width: 30%; }
+table.salesforce_admin th.op { width: 15%; }
+table.salesforce_admin td.total { text-align: right; background: #fff; }
+table.salesforce_admin tr.active { background: #ffcccc; }
+table.salesforce_admin tr.completed { background: #ffffdd; }
+table.salesforce_admin td { padding: 0 5px; }

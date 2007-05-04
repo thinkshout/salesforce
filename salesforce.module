@@ -1,0 +1,617 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Original Creator, Maintainer & Developer: Steve McKenzie (Raincity Studios - www.raincitystudios.com)
+ * Drupal and Salesforce.com (mainly only working with contacts / leads but can be extended to do anything the salesforce API version 6 can do)
+ * Current Maintainer: Victor Kane (awebfactory.com.ar)
+ */
+
+define('SALESFORCE_LEADS_CREATE_FORMS', variable_get('salesforce_leads_create_forms', "user_register\nuser_edit\n"));
+define('SALESFORCE_EVENTS_CREATE_FORMS', variable_get('salesforce_events_create_forms', "user_register | user registration\nuser_edit | user edit form\n"));
+
+require_once('includes/salesforce_api.inc');
+
+/**
+ * Implementation of hook_help().
+ */
+function salesforce_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      return t('Drupal and Salesforce.com (mainly only working with contacts / leads but can do anything the salesforce API version 6 can do.)');
+  }
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function salesforce_perm() {
+  return array('access salesforce', 'administer salesforce');
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function salesforce_menu($may_cache) {
+  $items = array();
+
+  $items[] = array('path' => 'admin/salesforce',
+  'title' => t('salesforce'),
+  'access' => user_access('administer salesforce'),
+  'callback' => 'salesforce_admin_page');
+
+  $items[] = array('path' => 'admin/salesforce/logs',
+  'title' => t('logs'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_DEFAULT_LOCAL_TASK,
+  'weight' => -1,
+  'callback' => 'salesforce_admin_page');
+
+  $items[] = array('path' => 'admin/salesforce/lead',
+  'title' => t('leads'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_LOCAL_TASK,
+  'weight' => 0,
+  'callback' => 'salesforce_admin_page');
+
+  $items[] = array('path' => 'admin/salesforce/contact',
+  'title' => t('contacts'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_LOCAL_TASK,
+  'weight' => 1,
+  'callback' => 'salesforce_admin_page');
+
+  $items[] = array('path' => 'admin/salesforce/log/delete',
+  'title' => t('delete log'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_CALLBACK,
+  'callback' => 'salesforce_log_manage_page');
+
+  $items[] = array('path' => 'admin/salesforce/log/enable',
+  'title' => t('enable log'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_CALLBACK,
+  'callback' => 'salesforce_log_manage_page');
+
+  $items[] = array('path' => 'admin/salesforce/log/disable',
+  'title' => t('disable log'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_CALLBACK,
+  'callback' => 'salesforce_log_manage_page');
+
+  $items[] = array('path' => 'admin/salesforce/log/run',
+  'title' => t('run logged entry'),
+  'access' => user_access('administer salesforce'),
+  'type' => MENU_CALLBACK,
+  'callback' => 'salesforce_log_run_page');
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_settings().
+ */
+function salesforce_settings() {
+  drupal_set_title(t('SalesForce.com Settings'));
+
+  _salesforce_settings();
+
+  $form['salesforce_account'] = array(
+  '#type' => 'fieldset',
+  '#title' => t('SalesForce.com Account'),
+  '#collapsible' => true,
+  '#description' => t('this information is required for this module to work')
+  );
+  $form['salesforce_account']['salesforce_user'] = array(
+  '#type' => 'textfield',
+  '#title' => t('Username'),
+  '#default_value' => variable_get('salesforce_user', NULL),
+  '#required' => true
+  );
+
+  // TODO: need to encrypt / decrypt this
+  if (!variable_get('salesforce_password', NULL)) {
+    $form['salesforce_account']['salesforce_password'] = array(
+    '#type' => 'password',
+    '#title' => t('Password'),
+    '#default_value' => variable_get('salesforce_password', NULL),
+    '#required' => true
+    );
+  } else {
+    $form['salesforce_account']['salesforce_password_delete'] = array(
+    '#prefix' => t('<strong>***** (TODO: setup like this until a better password saving feature can be implemented)</strong>'),
+    '#type' => 'checkbox',
+    '#title' => t('Delete Password'),
+    '#default_value' => variable_get('salesforce_password_delete', false)
+    );
+  }
+
+  $form['salesforce_options'] = array(
+  '#type' => 'fieldset',
+  '#title' => t('Additional Options'),
+  '#collapsible' => true
+  );
+
+  $form['salesforce_options']['salesforce_leads_create_forms'] = array(
+  '#type' => 'textarea',
+  '#title' => t('Create Leads on form processes'),
+  '#description' => t('a new line for each form_id (drupal 5.0 will make this feature much easier as I will be able to generate a select box with the names of the forms)'),
+  '#default_value' => SALESFORCE_LEADS_CREATE_FORMS
+  );
+
+  $form['salesforce_options']['salesforce_events_create_forms'] = array(
+  '#type' => 'textarea',
+  '#title' => t('Create Events on form processes'),
+  '#description' => t('a new line for each form_id | message (drupal 5.0 will make this feature much easier as I will be able to generate a select box with the names of the forms)'),
+  '#default_value' => SALESFORCE_EVENTS_CREATE_FORMS
+  );
+
+  return $form;
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function salesforce_cron() {
+  $result = db_query("SELECT sid, type, type_id, message, timestamp, status FROM {salesforce_log} WHERE status = 1 ORDER BY timestamp DESC");
+  if (db_num_rows($result) > 0) {
+    while ($row = db_fetch_object($result)) {
+      _salesforce_cron_run($row);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_user().
+ */
+function salesforce_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'load':
+      // create the salesforce array and append all salesforce id's associated to this account
+      $account->salesforce = array();
+      $ids = _salesforce_user_ids($account);
+      if (!empty($ids)) {
+        foreach ($ids as $id => $value) {
+          $account->salesforce[$id] = $value;
+        }
+      }
+      break;
+    case 'insert':
+      // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
+      if ($edit['create_lead']) {
+        // must reload the object with user_load() to grab the updated profile fields
+        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: %date', array('%date' => format_date(time(), 'large')))));
+      }
+      break;
+
+    case 'update':
+      if (_salesforce_is_form('leads', 'user_edit')) {
+        // must reload the object with user_load() to grab the updated profile fields
+        $updated_account = user_load(array('uid' => $account->uid));
+        if ($account->salesforce['contact_id']) {
+          salesforce_contact('update', $updated_account);
+        } else if ($account->salesforce['lead_id']) {
+          salesforce_lead('update', $updated_account, array('Description' => t('last updated account information: %date', array('%date' => format_date(time(), 'large')))));
+        } else {
+          // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
+          if ($edit['create_lead']) {
+            // must reload the object with user_load() to grab the updated profile fields
+            salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('admin adding lead: %date', array('%date' => format_date(time(), 'large')))));
+          }
+        }
+      }
+      break;
+    case 'view':
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function salesforce_form_alter($form_id, &$form) {
+  if (_salesforce_is_form('leads', $form_id)) {
+    // TODO: not needed yet but do we need this?
+    //$form['#submit']['salesforce_form_lead_submit'] = array();
+  }
+
+  if (_salesforce_is_form('events', $form_id)) {
+    $form['#submit']['salesforce_form_event_submit'] = array();
+  }
+
+  if (module_exist('contact') && $form_id == 'contact_mail_page') {
+    $form['#submit']['salesforce_contact_form'] = array();
+  }
+
+  if ($form_id == 'user_register' || $form_id == 'user_edit') {
+    $leads = _salesforce_is_form('leads', $form_id);
+    if (user_access('administer salesforce')) {
+      $uid = arg(1);
+      if (is_numeric($uid)) {
+        $account = user_load(array('uid' => $uid));
+        if ($account->salesforce['lead_id']) return;
+      }
+
+      if ($leads) {
+        $form['create_lead'] = array('#type' => 'checkbox', '#title' => t('create a lead in salesforce'), '#default_value' => true);
+      }
+    } else {
+      if ($leads) {
+        $form['create_lead'] = array('#type' => 'hidden', '#value' => true);
+      }
+    }
+  }
+}
+
+/**
+ *  handle the contact form in a special way since we're building the $user object manually from the contact form values
+ */
+function salesforce_contact_form() {
+  global $user;
+
+  if ($user->uid > 0) {
+    $account->uid = $user->uid;
+  }
+
+  $name = explode(' ', $_POST['edit']['name']);
+
+  if (count($name) > 1 && count($name) < 2) {
+    $account->first_name = $name[0];
+    $account->last_name = $name[1];
+  } else {
+    $account->first_name = $_POST['edit']['name'];
+    $account->last_name = $_POST['edit']['name'];
+  }
+  $account->company = 'n/a';
+  $account->mail = $_POST['edit']['mail'];
+  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: %subject', array('%subject' => $_POST['edit']['subject']))));
+}
+
+/**
+ *  all forms set to use lead / event actions receive these submit functions
+ *  separated right now just because.. TODO: should probably be reduced 1 one function but we're waiting..
+ */
+function salesforce_form_lead_submit() {
+  $message =_salesforce_is_form('leads', $_POST['edit']['form_id'], true);
+  // TODO: ? (currently not needed but.. hmm...)
+}
+function salesforce_form_event_submit() {
+  global $user;
+
+  // only track logged in users since we need an account to associated them with
+  if ($user->uid == 0) return;
+
+  // grab our message to display as the description of this event in salesforce
+  $message =_salesforce_is_form('events', $_POST['edit']['form_id'], true);
+  // insert our event and yet again i find myself having to reload the user object to get my stuff? wtf?
+  $result = salesforce_event('insert', $_POST['edit']['form_id'], $message, user_load(array('mail' => $_POST['edit']['mail'])));
+}
+
+/**
+ *  admin page for viewing the salesforce_logs table
+ */
+function salesforce_admin_page() {
+  theme('add_style', drupal_get_path('module', 'salesforce') .'/salesforce.css');
+  $op = arg(2);
+
+  if ($op) {
+    $breadcrumb = drupal_get_breadcrumb();
+    $breadcrumb[] = l(t('salesforce'), 'admin/salesforce');
+    drupal_set_breadcrumb($breadcrumb);
+
+    drupal_set_title(t('SalesForce - %op', array('%op' => ucfirst($op) .'s')));
+    switch ($op) {
+      default:
+        $output .= _salesforce_admin_list($op);
+        break;
+        break;
+    }
+  } else {
+    drupal_set_title(t('SalesForce'));
+
+    $result = db_query("SELECT sid, type, type_id, message, timestamp, status FROM {salesforce_log} ORDER BY timestamp DESC");
+    $total = db_num_rows($result);
+
+    $output .= '<p>'. t('All tasks that were not completed successfully are logged and displayed here. If you have a cron job setup to use drupal\'s cron.php, these logged items will be attempted again on cron run.') .'</p>'. "\n";
+
+    if ($total > 0) {
+      // table columns (damn these big ass arrays kinda bug me)
+      $cols = array(array(
+      'data' => t('ID'),
+      'class' => 'id'),
+      t('type'),
+      t('user'),
+      array('data' => 'message', 'class' => 'message'),
+      t('date'),
+      array('data' => t('status'), 'class' => 'status'),
+      array('data' => t('operations'), 'class' => 'op'));
+
+      while ($row = db_fetch_object($result)) {
+        if ($row->status) {
+          $state = 'active';
+        } else {
+          $state = 'completed';
+        }
+        // this row kinda looks nasty but ya.. here it is
+        $rows[] = array('class' => $state,
+        'data' => array($row->sid, str_replace('_', ' ', $row->type),
+        theme('username', user_load(array('uid' => $row->type_id))),
+        $row->message, format_date(strtotime($row->timestamp), 'large'), $state,
+        (($row->status) ?
+        l(t('run'), 'admin/salesforce/log/run/'. $row->sid) .' | ' .
+        l(t('disable'), 'admin/salesforce/log/disable/'. $row->sid, array('onclick' => 'if (confirm("'. t('are you sure you want to disable this log?') .'")) { return true; } else { return false; }')) .' | ' :
+        l(t('enable'), 'admin/salesforce/log/enable/'. $row->sid) .' | ') .
+        l(t('delete'), 'admin/salesforce/log/delete/'. $row->sid, array('onclick' => 'if (confirm("'. t('are you sure you want to delete this log?') .'")) { return true; } else { return false; }'))
+        )
+        );
+      }
+
+      $rows[] = array(array('class' => 'total', 'colspan' => 7, 'data' => t('<strong>Total:</strong> %total', array('%total' => $total))));
+
+      $output .= theme('table', $cols, $rows, array('class' => 'salesforce_admin'));
+    } else {
+      $output .= '<p><strong>'. t('currently no logged items') .'</strong></p>' ."\n";
+    }
+  }
+
+  print theme('page', $output);
+}
+
+/**
+ *  delete or disable a logged item
+ */
+function salesforce_log_manage_page() {
+  $op = arg(3);
+  $sid = arg(4);
+
+  if (is_numeric($sid)) {
+    switch ($op) {
+      case 'disable':
+        $disable = true;
+        $message = t('disabled');
+        break;
+      case 'enable':
+        $enable = true;
+        $disable = false;
+        $message = t('enabled');
+        break;
+      default:
+        $disable = false;
+        $message = t('deleted');
+        break;
+    }
+
+    _salesforce_log_manage($sid, $disable, $enable);
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('%message log entry', array('%message' => $message)));
+    }
+    drupal_goto('admin/salesforce');
+  }
+}
+
+/**
+ *  run a logged cron task
+ */
+function salesforce_log_run_page() {
+  $sid = arg(4);
+
+  if (is_numeric($sid)) {
+    $result = _salesforce_cron_run($sid);
+    if ($result) {
+      drupal_set_message(t('the logged task completed successfully'));
+    } else {
+      drupal_set_message(t('the logged task failed to complete'), 'error');
+    }
+  }
+
+  drupal_goto('admin/salesforce');
+}
+
+/**
+ *  helper functions
+ */
+
+function _salesforce_admin_list($op) {
+  $sf = 'https://na1.salesforce.com/';
+
+  if ($op == 'lead' || $op == 'contact') {
+    $result = db_query("SELECT s.uid FROM {salesforce_users} s WHERE %s != ''", 's.'. $op .'_id');
+    if (db_num_rows($result) > 0) {
+      $cols = array(array('data' => t('User'), 'class' => 'user'), array('data' => t('%i', array('%i' => ucfirst($op) .' ID')), 'class' => 'id'));
+      if ($op == 'contact') {
+        $cols[] = array('data' => t('Account ID', array('%i' => ucfirst($op))), 'class' => 'id');
+      }
+
+      while ($row = db_fetch_object($result)) {
+        if ($op == 'contact') {
+          // we do this incase we don't have a cached account id
+          salesforce_account_select(user_load(array('uid' => $row->uid)));
+        }
+        $account = user_load(array('uid' => $row->uid));
+        // remove the extra 3 chars that are not used in this case
+        $link = $sf . substr($account->salesforce[$op.'_id'], 0, strlen($account->salesforce[$op.'_id']) - 3);
+        $rows[$row->uid] = array(theme('username', $account), l($account->salesforce[$op.'_id'], $link));
+        if ($op == 'contact') {
+          if ($account->salesforce['account_id']) {
+            $account_link = $sf . substr($account->salesforce['account_id'], 0, strlen($account->salesforce['account_id']) - 3);
+            $account_label = l($account->salesforce['account_id'], $account_link);
+          } else {
+            $account_label = t('N/A');
+          }
+          $rows[$row->uid][] = $account_label;
+        }
+      }
+
+      $output .= '<p>'. t('%type in salesforce', array('%type' => ucfirst($op) .'s')) .'</p>'. "\n";
+      $output .= theme('table', $cols, $rows, array('class' => 'salesforce_'. $op .'_list'));
+    } else {
+      drupal_set_message(t('currently no %op', array('%op' => $op .'s')));
+    }
+  }
+
+  return $output;
+}
+
+/**
+ *  run a logged cron item
+ */
+function _salesforce_cron_run($row) {
+  if (is_numeric($row)) {
+    $result = db_query("SELECT sid, type, type_id, message, timestamp, status, data FROM {salesforce_log} WHERE status = 1 AND sid = %d ORDER BY timestamp DESC", $row);
+    if (db_num_rows($result) > 0) {
+      $row = db_fetch_object($result);
+    } else {
+      return false;
+    }
+    unset($result);
+  }
+
+  switch ($row->type) {
+    case 'lead_insert': case 'lead_update':
+      $result = salesforce_lead(str_replace('lead_', '', $row->type), user_load(array('uid' => $row->type_id)));
+      break;
+    case 'contact_insert': case 'contact_update':
+      $result = salesforce_contact(str_replace('contact_', '', $row->type), user_load(array('uid' => $row->type_id)));
+      break;
+    case 'event_insert':
+      // TODO: why do i have to do this? why doesn't it like the object?
+      $event = (array) unserialize($row->data);
+      $result = salesforce_event('insert', $event['values']['Subject'], $event['values']['Description'], user_load(array('uid' => $row->type_id)));
+      break;
+    default:
+      $result = array('error' => 'NO_METHOD_PROVIDED');
+      break;
+  }
+
+  // remove it from the cron runs if it went through
+  if (!$result['error'] || $result['error'] == 'NO_METHOD_PROVIDED') {
+    _salesforce_log_manage($row->sid);
+    watchdog('salesforce', t('removed log entry %sid', array('%sid' => l($row->sid, 'admin/salesforce'))));
+
+    if ($result['error'] == 'NO_METHOD_PROVIDED') {
+      db_query("UPDATE {salesforce_logs} l SET l.message = l.message + ' - (%s)' WHERE sid = %d", $result['error'], $row->sid);
+      if (user_access('administer salesforce')) {
+        drupal_set_message(t('the logged task with the message "%message" was disabled because it has no methods provided in the module. Please post this issue as a bug.', array('%message' => $row->message)));
+      }
+    }
+    return true;
+  }
+}
+
+/**
+ *  used for inserting a single column into the salesforce_users table
+ */
+function _salesforce_insert($col, $value, $account = NULL) {
+  $account = _salesforce_select_account($account);
+
+  if (db_num_rows(db_query("SELECT * FROM {salesforce_users} WHERE uid = %d", $account->uid)) > 0) {
+    $result = db_query("UPDATE {salesforce_users} SET %s = '%s' WHERE uid = %d", $col, $value, $account->uid);
+  } else {
+    $result = db_query("INSERT INTO {salesforce_users} (uid, %s) VALUES (%d, '%s')", $col, $account->uid, $value);
+  }
+
+  if (db_affected_rows() > 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/**
+ *  check the settings to see if a form is allowed lead or event actions and return its message if needed
+ */
+function _salesforce_is_form($type, $form_id, $message = false) {
+  $ids = explode("\n", variable_get('salesforce_'. $type .'_create_forms', SALESFORCE_EVENTS_CREATE_FORMS));
+  foreach ($ids as $id) {
+    if (strchr($id, ' | ')) {
+      $result = explode(' | ', $id);
+      $id = $result[0];
+      $msg = $result[1];
+    }
+    if (trim($id) == $form_id) {
+      if ($msg && $message) {
+        return $msg;
+      } else {
+        return true;
+      }
+    }
+  }
+}
+
+/**
+ *  handle logging of user errors
+ */
+function _salesforce_log_user($type, $message = NULL, $account = NULL, $status = 1, $data = NULL) {
+  $account = _salesforce_select_account($account);
+
+  if (!$message) {
+    $message = t('the connection to salesforce was probably lost');
+  }
+
+  $sql = "SELECT type_id FROM {salesforce_log} WHERE type_id = %d AND type = '%s'";
+  /*
+  if ($data) {
+  $sql .= " AND data = '%s'";
+  }
+  */
+  $result = db_query($sql, $account->uid, $type, $data);
+  if ((int) db_num_rows($result) == 0) {
+    $cols = array('type', 'type_id', 'message', 'status');
+    $keys = array("'%s'", "'%s'", "'%s'", '%d');
+
+    /*
+    if ($data) {
+    $cols[] = 'data';
+    $keys[] = "'%s'";
+    }
+    */
+
+    db_query("INSERT INTO {salesforce_log} (". implode(', ', $cols) .") VALUES (". implode(', ', $keys) .")", $type, $account->uid, $message, $status, $data);
+    watchdog('salesforce', t('%message - for the user %user', array('%message' => $message, '%account' => $account)));
+  }
+}
+
+function _salesforce_log_manage($sid, $disable = true, $enable = false) {
+  if ($disable) {
+    db_query("UPDATE {salesforce_log} SET status = 0 WHERE sid = %d", $sid);
+  } else if ($enable) {
+    db_query("UPDATE {salesforce_log} SET status = 1 WHERE sid = %d", $sid);
+  } else {
+    db_query("DELETE FROM {salesforce_log} WHERE sid = %d", $sid);
+  }
+}
+
+/**
+ *  helper of hook_settings().. making things a little easier for the user
+ */
+function _salesforce_settings() {
+  // remove the password
+  if (variable_get('salesforce_password_delete', false)) {
+    variable_set('salesforce_password', NULL);
+    variable_set('salesforce_password_delete', false);
+  }
+}
+
+function _salesforce_user_ids($account = NULL) {
+  $account = _salesforce_select_account($account);
+  $result = db_query("SELECT lead_id, contact_id, opp_id, account_id FROM {salesforce_users} WHERE uid = %d", $account->uid);
+
+  if (db_num_rows($result) > 0) {
+    return db_fetch_array($result);
+  }
+}
+
+function _salesforce_select_account($account = NULL) {
+  if (!$account) {
+    global $user;
+    $account = user_load(array('uid' => $user->uid));
+  }
+
+  return $account;
+}
+
+/**
+ *  theme functions
+ */
+
