@@ -116,7 +116,7 @@ function salesforce_install() {
   foreach ($fields as $field) {
     $result = db_result(db_query("SELECT fid FROM {profile_fields} WHERE name = '%s'", $field['name']));
     
-    if ($result > 0) {    
+    if (!$result) {    
       profile_field_form_submit('salesforce_install', $field);
     }
   }
