@@ -255,14 +255,20 @@ function salesforce_contact_form() {
   }
 
   $name = explode(' ', $_POST['edit']['name']);
-
-  if (count($name) > 1 && count($name) < 2) {
-    $account->first_name = $name[0];
-    $account->last_name = $name[1];
+  $k = count($name);
+  $fname = '';
+  // Concatenate first names if any
+  if ($k > 1) {
+    for ($i = 0; $i < $k - 1; $i++) {
+      $fname .= ($i > 0)?' ' . $name[$i] : $name[$i]; 
+    }
+    $account->first_name = $fname;
+    $account->last_name = $name[$k - 1];
   } else {
     $account->first_name = $_POST['edit']['name'];
     $account->last_name = $_POST['edit']['name'];
   }
+
   $account->company = 'n/a';
   $account->mail = $_POST['edit']['mail'];
   $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: %subject', array('%subject' => $_POST['edit']['subject']))));
