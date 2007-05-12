@@ -3,9 +3,9 @@
 
 /**
  * @file
- * Original Creator, Maintainer & Developer: Steve McKenzie (Raincity Studios - www.raincitystudios.com)
+ * Original Creator, Maintainer & Developer: Steve McKenzie (http://drupal.org/user/45890)
  * Drupal and Salesforce.com (mainly only working with contacts / leads but can be extended to do anything the salesforce API version 6 can do)
- * Current Maintainer: Victor Kane (awebfactory.com.ar)
+ * Current Maintainer: Victor Kane (victorkane@drupal.org - http://drupal.org/user/36006 - http://awebfactory.com.ar)
  */
 
 define('SALESFORCE_LEADS_CREATE_FORMS', variable_get('salesforce_leads_create_forms', "user_register\nuser_edit\n"));

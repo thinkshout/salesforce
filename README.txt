@@ -2,9 +2,9 @@
 Salesforce module
 ***************************************************************************
 Original Creator, Maintainer & Developer: 
-  Steve McKenzie (Raincity Studios - www.raincitystudios.com)
+  Steve McKenzie (http://drupal.org/user/45890)
 Current Maintainer: 
-  Victor Kane (awebfactory.com.ar)
+  Victor Kane (victorkane@drupal.org - http://drupal.org/user/36006 - http://awebfactory.com.ar)
 ***************************************************************************
 WARNING: This module is currently in development and is NOT yet usable.
 ***************************************************************************
