@@ -1,0 +1,29 @@
+// $Id$
+
+Requirements
+------------
+
+1. A valid Salesforce account user name and password. Developers can head over to http://www.salesforce.com/form/trial/freetrial-developer.jsp and obtain a developers account. The user name and password obtained there will work with this module.
+2. Drupal 4.7.x
+3. MySql backend (TODO: provide support for PostgreSQL)
+
+Installation
+------------
+
+1. Salesforce depends on two core modules for full functionality:
+  * profile module
+  * contact module
+
+The profile module must be enabled in order for the salesforce installation process to be able to create the profile categories and fields for mirroring Salesforce lead info. And the contact module should be enabled in order to be able to create web-to-lead events for contact form submissions.
+
+2. Place the salesforce module with all its files under modules/salesforce.
+
+3. Enable the module in administer » modules 
+
+4. In administer » settings » salesforce, provide a valid salesforce username and password. Save the configuration (unless you would like to add additional formid's for event and lead generation functionality to be added to additional forms). Save the configuration.
+
+5. Test the installation by creating a new user (be sure to fill out the Personal Info in the new user's profile, the fields for which were created automatically in step 3 above, and make sure that the "create a lead in salesforce" checkbox is checked) and then confirming that she appears in your Salesforce account as a lead. Edit the info and see it reflected in the Salesforce account.
+
+6. Further test the installation by logging out and making anonymous use of the site-wide contact form. The name will be inserted into the Salesforce account as a new lead, together with the email and subject.
+
+7. Going to administer » salesforce » leads will list those Drupal users mirrored as Salesforce leads.
