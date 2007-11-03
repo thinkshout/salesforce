@@ -14,16 +14,6 @@ define('SALESFORCE_EVENTS_CREATE_FORMS', variable_get('salesforce_events_create_
 require_once('includes/salesforce_api.inc');
 
 /**
- * Implementation of hook_help().
- */
-function salesforce_help($section) {
-  switch ($section) {
-    case 'admin/modules#description':
-      return t('Drupal and Salesforce.com (mainly only working with contacts / leads but can do anything the salesforce API version 6 can do.)');
-  }
-}
-
-/**
  * Implementation of hook_perm().
  */
 function salesforce_perm() {
@@ -36,51 +26,62 @@ function salesforce_perm() {
 function salesforce_menu($may_cache) {
   $items = array();
 
-  $items[] = array('path' => 'admin/salesforce',
-  'title' => t('salesforce'),
+  // 4.7 to 5.x conversion: replace hook_settings with menu callback
+  $items[] = array(
+    'path' => 'admin/settings/salesforce',
+    'title' => t('Salesforce'),
+    'description' => t('Configure salesforce access.'),
+    'callback' => 'drupal_get_form',
+    'callback arguments' => array('salesforce_admin_settings'),
+    'access' => user_access('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM, // optional
+    );
+
+  $items[] = array('path' => 'admin/content/salesforce',
+  'title' => t('Salesforce'),
   'access' => user_access('administer salesforce'),
   'callback' => 'salesforce_admin_page');
 
-  $items[] = array('path' => 'admin/salesforce/logs',
+  $items[] = array('path' => 'admin/content/salesforce/logs',
   'title' => t('logs'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_DEFAULT_LOCAL_TASK,
   'weight' => -1,
   'callback' => 'salesforce_admin_page');
 
-  $items[] = array('path' => 'admin/salesforce/lead',
-  'title' => t('leads'),
+  $items[] = array('path' => 'admin/content/salesforce/lead',
+  'title' => t('Leads'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_LOCAL_TASK,
   'weight' => 0,
   'callback' => 'salesforce_admin_page');
 
-  $items[] = array('path' => 'admin/salesforce/contact',
-  'title' => t('contacts'),
+  $items[] = array('path' => 'admin/content/salesforce/contact',
+  'title' => t('Contacts'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_LOCAL_TASK,
   'weight' => 1,
   'callback' => 'salesforce_admin_page');
 
-  $items[] = array('path' => 'admin/salesforce/log/delete',
-  'title' => t('delete log'),
+  $items[] = array('path' => 'admin/logs/salesforce/log/delete',
+  'title' => t('Delete log'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_CALLBACK,
   'callback' => 'salesforce_log_manage_page');
 
-  $items[] = array('path' => 'admin/salesforce/log/enable',
-  'title' => t('enable log'),
+  $items[] = array('path' => 'admin/logs/salesforce/log/enable',
+  'title' => t('Enable log'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_CALLBACK,
   'callback' => 'salesforce_log_manage_page');
 
-  $items[] = array('path' => 'admin/salesforce/log/disable',
+  $items[] = array('path' => 'admin/logs/salesforce/log/disable',
   'title' => t('disable log'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_CALLBACK,
   'callback' => 'salesforce_log_manage_page');
 
-  $items[] = array('path' => 'admin/salesforce/log/run',
+  $items[] = array('path' => 'admin/logs/salesforce/log/run',
   'title' => t('run logged entry'),
   'access' => user_access('administer salesforce'),
   'type' => MENU_CALLBACK,
@@ -90,9 +91,12 @@ function salesforce_menu($may_cache) {
 }
 
 /**
- * Implementation of hook_settings().
+ * NO LONGER: Implementation of hook_settings().
+ * CHANGEME!!!
+ * 4.7 to 5.x conversion: is now admin settings form function
+ * and not hook_settings implementation
  */
-function salesforce_settings() {
+function salesforce_admin_settings() {
   drupal_set_title(t('SalesForce.com Settings'));
 
   _salesforce_settings();
@@ -147,7 +151,9 @@ function salesforce_settings() {
   '#default_value' => SALESFORCE_EVENTS_CREATE_FORMS
   );
 
-  return $form;
+//  4.7 to 5.x conversion:
+   //  return $form;
+   return system_settings_form($form);
 }
 
 /**
@@ -220,7 +226,7 @@ function salesforce_form_alter($form_id, &$form) {
     $form['#submit']['salesforce_form_event_submit'] = array();
   }
 
-  if (module_exist('contact') && $form_id == 'contact_mail_page') {
+  if (module_exists('contact') && $form_id == 'contact_mail_page') {
     $form['#submit']['salesforce_contact_form'] = array();
   }
 
@@ -247,14 +253,16 @@ function salesforce_form_alter($form_id, &$form) {
 /**
  *  handle the contact form in a special way since we're building the $user object manually from the contact form values
  */
-function salesforce_contact_form() {
+function salesforce_contact_form($form_id, $form_values) {
   global $user;
 
   if ($user->uid > 0) {
     $account->uid = $user->uid;
   }
 
-  $name = explode(' ', $_POST['edit']['name']);
+  //$name = explode(' ', $_POST['edit']['name']);
+  $name = explode(' ', $form_values['name']);
+  
   $k = count($name);
   $fname = '';
   // Concatenate first names if any
@@ -271,6 +279,13 @@ function salesforce_contact_form() {
 
   $account->company = 'n/a';
   $account->mail = $_POST['edit']['mail'];
+  
+  
+  //drupal_set_message('xxx '. print_r($name, TRUE) . '');
+  //drupal_set_message('form values: ' . serialize($form_values));
+  //drupal_set_message('account: ' . serialize($account) . ' k: ' . $k . ' name: ' . serialize($name));
+  //drupal_set_message($form_values['']);
+  
   $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: %subject', array('%subject' => $_POST['edit']['subject']))));
 }
 
@@ -299,7 +314,8 @@ function salesforce_form_event_submit() {
  */
 function salesforce_admin_page() {
   theme('add_style', drupal_get_path('module', 'salesforce') .'/salesforce.css');
-  $op = arg(2);
+  // in 4.7 was arg(2), now arg(3) works!
+  $op = arg(3);
 
   if ($op) {
     $breadcrumb = drupal_get_breadcrumb();
