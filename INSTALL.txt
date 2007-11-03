@@ -4,7 +4,7 @@ Requirements
 ------------
 
 1. A valid Salesforce account user name and password. Developers can head over to http://www.salesforce.com/form/trial/freetrial-developer.jsp and obtain a developers account. The user name and password obtained there will work with this module.
-2. Drupal 4.7.x
+2. Drupal 5.x 
 3. MySql backend (TODO: provide support for PostgreSQL)
 
 Installation
@@ -26,4 +26,4 @@ The profile module must be enabled in order for the salesforce installation proc
 
 6. Further test the installation by logging out and making anonymous use of the site-wide contact form. The name will be inserted into the Salesforce account as a new lead, together with the email and subject.
 
-7. Going to administer » salesforce » leads will list those Drupal users mirrored as Salesforce leads.
+7. Going to administer » salesforce » leads will list those Drupal users mirrored as Salesforce leads. Those converted to contacts inside Salesforce will be detected as such upon synch of modified user data with Salesforce, and will be listed under contacts tab.
