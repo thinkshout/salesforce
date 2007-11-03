@@ -2,7 +2,7 @@
 // $Id$
 
 function salesforce_install() {
-  if (!module_exists('profile')) {
+  if (!module_exist('profile')) {
     form_set_error('status_salesforce', t('salesforce.module requires profile.module'));
   }
 
