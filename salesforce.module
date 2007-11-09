@@ -187,7 +187,7 @@ function salesforce_user($op, &$edit, &$account, $category = NULL) {
       // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
       if ($edit['create_lead']) {
         // must reload the object with user_load() to grab the updated profile fields
-        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: %date', array('%date' => format_date(time(), 'large')))));
+        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
       }
       break;
 
@@ -198,12 +198,12 @@ function salesforce_user($op, &$edit, &$account, $category = NULL) {
         if ($account->salesforce['contact_id']) {
           salesforce_contact('update', $updated_account);
         } else if ($account->salesforce['lead_id']) {
-          salesforce_lead('update', $updated_account, array('Description' => t('last updated account information: %date', array('%date' => format_date(time(), 'large')))));
+          salesforce_lead('update', $updated_account, array('Description' => t('last updated account information: @date', array('@date' => format_date(time(), 'large')))));
         } else {
           // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
           if ($edit['create_lead']) {
             // must reload the object with user_load() to grab the updated profile fields
-            salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('admin adding lead: %date', array('%date' => format_date(time(), 'large')))));
+            salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('admin adding lead: @date', array('@date' => format_date(time(), 'large')))));
           }
         }
       }
@@ -286,7 +286,7 @@ function salesforce_contact_form($form_id, $form_values) {
   //drupal_set_message('account: ' . serialize($account) . ' k: ' . $k . ' name: ' . serialize($name));
   //drupal_set_message($form_values['']);
   
-  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: %subject', array('%subject' => $_POST['edit']['subject']))));
+  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: @subject', array('@subject' => $_POST['edit']['subject']))));
 }
 
 /**
