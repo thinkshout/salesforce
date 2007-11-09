@@ -440,7 +440,7 @@ function _salesforce_admin_list($op) {
   if ($op == 'lead' || $op == 'contact') {
     $result = db_query("SELECT s.uid FROM {salesforce_users} s WHERE %s != ''", 's.'. $op .'_id');
     if (db_num_rows($result) > 0) {
-      $cols = array(array('data' => t('User'), 'class' => 'user'), array('data' => t('%i', array('%i' => ucfirst($op) .' ID')), 'class' => 'id'));
+      $cols = array(array('data' => t('User'), 'class' => 'user'), array('data' => t('Name')), array('data' => t('%i', array('%i' => ucfirst($op) .' ID')), 'class' => 'id'));
       if ($op == 'contact') {
         $cols[] = array('data' => t('Account ID', array('%i' => ucfirst($op))), 'class' => 'id');
       }
@@ -453,7 +453,7 @@ function _salesforce_admin_list($op) {
         $account = user_load(array('uid' => $row->uid));
         // remove the extra 3 chars that are not used in this case
         $link = $sf . substr($account->salesforce[$op.'_id'], 0, strlen($account->salesforce[$op.'_id']) - 3);
-        $rows[$row->uid] = array(theme('username', $account), l($account->salesforce[$op.'_id'], $link));
+        $rows[$row->uid] = array(theme('username', $account), $account->first_name .' '. $account->last_name, l($account->salesforce[$op.'_id'], $link));
         if ($op == 'contact') {
           if ($account->salesforce['account_id']) {
             $account_link = $sf . substr($account->salesforce['account_id'], 0, strlen($account->salesforce['account_id']) - 3);
