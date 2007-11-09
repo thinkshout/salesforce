@@ -156,6 +156,13 @@ function salesforce_contact($op, $account, $params = array()) {
 function salesforce_lead($op, $account, $params = array()) {
   // grab a salesforce api connection
   $salesforce = salesforce();
+
+  // avoid fatal error on salesforce query with null element in query
+  // catch sf authentication problem (drupal message already set)
+  if (!$salesforce) {
+    return;
+  }
+
   $admin = user_access('administer salesforce');
 
   switch ($op) {
