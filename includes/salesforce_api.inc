@@ -105,7 +105,7 @@ function salesforce_contact($op, $account, $params = array()) {
         if ($result['success'] == 'true') {
           _salesforce_insert('contact_id', $result['id'], $account);
           if (user_access('administer salesforce')) {
-            drupal_set_message(t('a contact was created in salesforce for the user %user', array('%user' => "<strong>$account->first_name $account->last_name</strong>")));
+            drupal_set_message(t('a contact was created in salesforce for the user <strong>@user</strong>', array('@user' => "$account->first_name $account->last_name")));
             return array('id' => $result['id'], 'status' => 'inserted');
           }
         } else {
@@ -126,7 +126,7 @@ function salesforce_contact($op, $account, $params = array()) {
 
         if ($result['success'] == 'true') {
           if ($admin) {
-            drupal_set_message(t('updated contact in salesforce for the user %user', array('%user' => "<strong>$account->first_name $account->last_name</strong>")));
+            drupal_set_message(t('updated contact in salesforce for the user <strong>@user</strong>', array('@user' => "$account->first_name $account->last_name")));
             return array('status' => 'updated');
           }
         } else {
@@ -196,7 +196,7 @@ function salesforce_lead($op, $account, $params = array()) {
         if ($result['success'] == 'true') {
           _salesforce_insert('lead_id', $result['id'], $account);
           if (user_access('administer salesforce')) {
-            drupal_set_message(t('a lead was created in salesforce for the user %user', array('%user' => "<strong>$account->first_name $account->last_name</strong>")));
+            drupal_set_message(t('a lead was created in salesforce for the user <strong>@user</strong>', array('@user' => "$account->first_name $account->last_name")));
             return array('id' => $result['id'], 'status' => 'inserted');
           }
         } else {
@@ -215,7 +215,7 @@ function salesforce_lead($op, $account, $params = array()) {
 
         if ($result['success'] == 'true') {
           if ($admin) {
-            drupal_set_message(t('updated lead in salesforce for the user %user', array('%user' => "<strong>$account->first_name $account->last_name</strong>")));
+            drupal_set_message(t('updated lead in salesforce for the user <strong>@user</strong>', array('@user' => "$account->first_name $account->last_name")));
             return array('status' => 'updated');
           }
         } else {
@@ -227,7 +227,7 @@ function salesforce_lead($op, $account, $params = array()) {
             case 'INVALID_ID_FIELD':
               if ($admin) {
                 db_query("DELETE FROM {salesforce_users} WHERE lead_id = '%s'", $account->salesforce['lead_id']);
-                drupal_set_message(t('the lead for the user %user was removed from salesforce', array('%user' => "<strong>$account->first_name $account->last_name</strong>")));
+                drupal_set_message(t('the lead for the user <strong>@user</strong> was removed from salesforce', array('@user' => "$account->first_name $account->last_name")));
                 return array('status' => 'lead_removed_from_salesforce');
               }
               break;
@@ -288,7 +288,7 @@ function salesforce_event($op, $subject, $message, $account = NULL) {
 
   if ($result['success'] == 'true') {
     if ($admin) {
-      drupal_set_message(t('an event was created in salesforce for the user %user', array('%user' => "<strong>$account->first_name $account->last_name</strong>")));
+      drupal_set_message(t('an event was created in salesforce for the user <strong>@user</strong>', array('@user' => "$account->first_name $account->last_name")));
       return array('id' => $result['id'], 'status' => 'inserted');
     }
   } else {
