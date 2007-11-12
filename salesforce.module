@@ -273,8 +273,8 @@ function salesforce_contact_form($form_id, $form_values) {
     $account->first_name = $fname;
     $account->last_name = $name[$k - 1];
   } else {
-    $account->first_name = $_POST['edit']['name'];
-    $account->last_name = $_POST['edit']['name'];
+    $account->first_name = $form_values['name'];
+    $account->last_name = $form_values['name'];
   }
 
   $account->company = 'n/a';
@@ -286,7 +286,7 @@ function salesforce_contact_form($form_id, $form_values) {
   //drupal_set_message('account: ' . serialize($account) . ' k: ' . $k . ' name: ' . serialize($name));
   //drupal_set_message($form_values['']);
   
-  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: @subject', array('@subject' => $_POST['edit']['subject']))));
+  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: @subject', array('@subject' => $form_values['subject']))));
 }
 
 /**
