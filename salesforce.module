@@ -187,7 +187,15 @@ function salesforce_user($op, &$edit, &$account, $category = NULL) {
       // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
       if ($edit['create_lead']) {
         // must reload the object with user_load() to grab the updated profile fields
-        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
+        // salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
+        // Actually also need to make sure all info is present for new salesforce lead
+        $account = user_load(array('uid' => $account->uid));
+        $account -> first_name = $edit['first_name'];
+        $account -> last_name = $edit['last_name'];
+        $account -> company = $edit['company'];
+        $account -> phone = $edit['phone'];
+        $account -> fax = $edit['fax'];
+        salesforce_lead('insert', $account, array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
       }
       break;
 
@@ -260,7 +268,6 @@ function salesforce_contact_form($form_id, $form_values) {
     $account->uid = $user->uid;
   }
 
-  //$name = explode(' ', $_POST['edit']['name']);
   $name = explode(' ', $form_values['name']);
   
   $k = count($name);
@@ -278,13 +285,7 @@ function salesforce_contact_form($form_id, $form_values) {
   }
 
   $account->company = 'n/a';
-  $account->mail = $_POST['edit']['mail'];
-  
-  
-  //drupal_set_message('xxx '. print_r($name, TRUE) . '');
-  //drupal_set_message('form values: ' . serialize($form_values));
-  //drupal_set_message('account: ' . serialize($account) . ' k: ' . $k . ' name: ' . serialize($name));
-  //drupal_set_message($form_values['']);
+  $account->mail = $form_values['mail'];
   
   $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: @subject', array('@subject' => $form_values['subject']))));
 }
@@ -294,7 +295,7 @@ function salesforce_contact_form($form_id, $form_values) {
  *  separated right now just because.. TODO: should probably be reduced 1 one function but we're waiting..
  */
 function salesforce_form_lead_submit() {
-  $message =_salesforce_is_form('leads', $_POST['edit']['form_id'], true);
+  $message =_salesforce_is_form('leads', $form_values['form_id'], true);
   // TODO: ? (currently not needed but.. hmm...)
 }
 function salesforce_form_event_submit() {
@@ -304,9 +305,9 @@ function salesforce_form_event_submit() {
   if ($user->uid == 0) return;
 
   // grab our message to display as the description of this event in salesforce
-  $message =_salesforce_is_form('events', $_POST['edit']['form_id'], true);
+  $message =_salesforce_is_form('events', $form_values['form_id'], true);
   // insert our event and yet again i find myself having to reload the user object to get my stuff? wtf?
-  $result = salesforce_event('insert', $_POST['edit']['form_id'], $message, user_load(array('mail' => $_POST['edit']['mail'])));
+  $result = salesforce_event('insert', $form_values['form_id'], $message, user_load(array('mail' => $form_values['mail'])));
 }
 
 /**
