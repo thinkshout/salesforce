@@ -187,7 +187,8 @@ function salesforce_user($op, &$edit, &$account, $category = NULL) {
       // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
       if ($edit['create_lead']) {
         // must reload the object with user_load() to grab the updated profile fields
-        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: %date', array('%date' => format_date(time(), 'large')))));
+        // because profile NULL's all the data from $edit
+        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
       }
       break;
 
@@ -198,12 +199,12 @@ function salesforce_user($op, &$edit, &$account, $category = NULL) {
         if ($account->salesforce['contact_id']) {
           salesforce_contact('update', $updated_account);
         } else if ($account->salesforce['lead_id']) {
-          salesforce_lead('update', $updated_account, array('Description' => t('last updated account information: %date', array('%date' => format_date(time(), 'large')))));
+          salesforce_lead('update', $updated_account, array('Description' => t('last updated account information: @date', array('@date' => format_date(time(), 'large')))));
         } else {
           // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
           if ($edit['create_lead']) {
             // must reload the object with user_load() to grab the updated profile fields
-            salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('admin adding lead: %date', array('%date' => format_date(time(), 'large')))));
+            salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('admin adding lead: @date', array('@date' => format_date(time(), 'large')))));
           }
         }
       }
@@ -260,7 +261,6 @@ function salesforce_contact_form($form_id, $form_values) {
     $account->uid = $user->uid;
   }
 
-  //$name = explode(' ', $_POST['edit']['name']);
   $name = explode(' ', $form_values['name']);
   
   $k = count($name);
@@ -273,20 +273,14 @@ function salesforce_contact_form($form_id, $form_values) {
     $account->first_name = $fname;
     $account->last_name = $name[$k - 1];
   } else {
-    $account->first_name = $_POST['edit']['name'];
-    $account->last_name = $_POST['edit']['name'];
+    $account->first_name = $form_values['name'];
+    $account->last_name = $form_values['name'];
   }
 
   $account->company = 'n/a';
-  $account->mail = $_POST['edit']['mail'];
+  $account->mail = $form_values['mail'];
   
-  
-  //drupal_set_message('xxx '. print_r($name, TRUE) . '');
-  //drupal_set_message('form values: ' . serialize($form_values));
-  //drupal_set_message('account: ' . serialize($account) . ' k: ' . $k . ' name: ' . serialize($name));
-  //drupal_set_message($form_values['']);
-  
-  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: %subject', array('%subject' => $_POST['edit']['subject']))));
+  $result = salesforce_lead('insert', $account, array('Description' => t('contact us form with the subject: @subject', array('@subject' => $form_values['subject']))));
 }
 
 /**
@@ -294,7 +288,7 @@ function salesforce_contact_form($form_id, $form_values) {
  *  separated right now just because.. TODO: should probably be reduced 1 one function but we're waiting..
  */
 function salesforce_form_lead_submit() {
-  $message =_salesforce_is_form('leads', $_POST['edit']['form_id'], true);
+  $message =_salesforce_is_form('leads', $form_values['form_id'], true);
   // TODO: ? (currently not needed but.. hmm...)
 }
 function salesforce_form_event_submit() {
@@ -304,9 +298,9 @@ function salesforce_form_event_submit() {
   if ($user->uid == 0) return;
 
   // grab our message to display as the description of this event in salesforce
-  $message =_salesforce_is_form('events', $_POST['edit']['form_id'], true);
+  $message =_salesforce_is_form('events', $form_values['form_id'], true);
   // insert our event and yet again i find myself having to reload the user object to get my stuff? wtf?
-  $result = salesforce_event('insert', $_POST['edit']['form_id'], $message, user_load(array('mail' => $_POST['edit']['mail'])));
+  $result = salesforce_event('insert', $form_values['form_id'], $message, user_load(array('mail' => $form_values['mail'])));
 }
 
 /**
@@ -440,7 +434,7 @@ function _salesforce_admin_list($op) {
   if ($op == 'lead' || $op == 'contact') {
     $result = db_query("SELECT s.uid FROM {salesforce_users} s WHERE %s != ''", 's.'. $op .'_id');
     if (db_num_rows($result) > 0) {
-      $cols = array(array('data' => t('User'), 'class' => 'user'), array('data' => t('%i', array('%i' => ucfirst($op) .' ID')), 'class' => 'id'));
+      $cols = array(array('data' => t('User'), 'class' => 'user'), array('data' => t('Name')), array('data' => t('%i', array('%i' => ucfirst($op) .' ID')), 'class' => 'id'));
       if ($op == 'contact') {
         $cols[] = array('data' => t('Account ID', array('%i' => ucfirst($op))), 'class' => 'id');
       }
@@ -453,7 +447,7 @@ function _salesforce_admin_list($op) {
         $account = user_load(array('uid' => $row->uid));
         // remove the extra 3 chars that are not used in this case
         $link = $sf . substr($account->salesforce[$op.'_id'], 0, strlen($account->salesforce[$op.'_id']) - 3);
-        $rows[$row->uid] = array(theme('username', $account), l($account->salesforce[$op.'_id'], $link));
+        $rows[$row->uid] = array(theme('username', $account), $account->first_name .' '. $account->last_name, l($account->salesforce[$op.'_id'], $link));
         if ($op == 'contact') {
           if ($account->salesforce['account_id']) {
             $account_link = $sf . substr($account->salesforce['account_id'], 0, strlen($account->salesforce['account_id']) - 3);
