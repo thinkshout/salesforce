@@ -187,15 +187,8 @@ function salesforce_user($op, &$edit, &$account, $category = NULL) {
       // we check on a form value so we can display a checkbox instead of a hidden field if it's an admin viewing the page
       if ($edit['create_lead']) {
         // must reload the object with user_load() to grab the updated profile fields
-        // salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
-        // Actually also need to make sure all info is present for new salesforce lead
-        $account = user_load(array('uid' => $account->uid));
-        $account -> first_name = $edit['first_name'];
-        $account -> last_name = $edit['last_name'];
-        $account -> company = $edit['company'];
-        $account -> phone = $edit['phone'];
-        $account -> fax = $edit['fax'];
-        salesforce_lead('insert', $account, array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
+        // because profile NULL's all the data from $edit
+        salesforce_lead('insert', user_load(array('uid' => $account->uid)), array('Description' => t('new site user: @date', array('@date' => format_date(time(), 'large')))));
       }
       break;
 
