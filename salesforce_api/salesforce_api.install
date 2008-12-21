@@ -1,0 +1,29 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installs any global tables needed for Salesforce integration.
+ */
+
+
+/**
+ * Implementation of hook_install().
+ */
+function salesforce_api_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {salesforce_ids} (
+        drupal_type varchar(127) NOT NULL default '',
+        drupal_id varchar(32) NOT NULL default '',
+        sfid varchar(18) NOT NULL default '',
+        fieldmap int unsigned NOT NULL default '0',
+        PRIMARY KEY (drupal_type, drupal_id)
+      ) /*!40100 DEFAULT CHARACTER SET utf8 */");
+      break;
+    case 'pgsql':
+      break;
+  }
+}
+

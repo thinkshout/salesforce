@@ -1,0 +1,5 @@
+; $Id$
+name = Salesforce API
+description = Defines an API that enables modules to interact with the SalesForce server.
+package = Salesforce
+
