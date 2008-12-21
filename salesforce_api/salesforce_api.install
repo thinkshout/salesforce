@@ -1,0 +1,54 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installs any global tables needed for Salesforce integration.
+ */
+
+
+/**
+ * Implementation of hook_install().
+ */
+function salesforce_api_install() {
+  drupal_install_schema('salesforce_api');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function salesforce_api_schema() {
+  $schema['salesforce_ids'] = array(
+    'description' => t('Drupal to SalesForce field/id mapping table'),
+    'fields' => array(
+      'drupal_type' => array(
+        'description' => 'Drupal object identifier',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'drupal_id' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'sfid' => array(
+        'type' => 'varchar',
+        'length' => 18,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'fieldmap' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0',
+      ),
+    ),
+    'primary key' => array('drupal_type', 'drupal_id'),
+  );
+  
+  return $schema;
+}

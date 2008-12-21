@@ -1,0 +1,497 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Integrates the core node object and various node related modules with the
+ *   SalesForce API.
+ */
+
+
+/**
+ * Implementation of hook_menu().
+ */
+function sf_node_menu() {  
+  $items['node/%/salesforce'] = array(
+    'title' => 'Salesforce',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sf_node_salesforce_form', 1),
+    'access arguments' => array('sync nodes with salesforce'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function sf_node_perm() {
+  return array('sync nodes with salesforce');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function sf_node_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'salesforce_api_settings_form') {
+    $form['sf_node'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Node integration'),
+      '#description' => t('Placeholder for any node integration settings.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'load':
+      $node->salesforce = salesforce_api_id_load('node', $node->nid);
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_fieldmap_objects_alter().
+ */
+function sf_node_fieldmap_objects($type) {
+  $objects = array();
+
+  // Define the data fields available for Drupal objects.
+  if ($type == 'drupal') {
+    // Add a definition for each node type.
+    foreach (node_get_types() as $type) {
+      // Define the node type object with the node ID field.
+      $objects['node_'. $type->type] = array(
+        'label' => t('@name node', array('@name' => $type->name)),
+        'fields' => array(
+          'nid' => array('label' => t('Node ID'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
+        ),
+      );
+
+      // Add a title field if the node type has one.
+      if ($type->has_title) {
+        $objects['node_'. $type->type]['fields']['title'] = array('label' => check_plain($type->title_label), 'type' => SALESFORCE_FIELD_REQUIRED);
+      }
+
+      // Add a body field if the node type has one.
+      if ($type->has_body) {
+        $objects['node_'. $type->type]['fields']['body'] = array('label' => check_plain($type->body_label));
+      }
+
+      // Add the rest of the core fields.
+      $objects['node_'. $type->type]['fields'] += array(
+        'type' => array('label' => t('Node type')),
+        'status' => array('label' => t('Is the node published?')),
+        'promote' => array('label' => t('Is the node promoted?')),
+        'created' => array('label' => t('Created timestamp')),
+        'uid' => array('label' => t("Author's user ID")),
+        'name' => array('label' => t("Author's name")),
+      );
+    }
+
+    // Add CCK fields to the node object definitions.
+    if (module_exists('content')) {
+      // Loop through each of the content types.
+      foreach (content_types() as $type) {
+        // Add each of the fields to the node object definition.
+        foreach ((array) $type['fields'] as $field) {
+          // Choose a handler based on the type of the CCK field.
+          switch ($field['type']) {
+            // TODO: Decide if we want to make more specific handlers...
+            // case 'text':
+              // For example, I might set a handler for text fields that takes
+              // the selected input format into account.
+            default:
+              $export_handler = '_sf_node_export_cck_default';
+              $import_handler = '_sf_node_import_cck_default';
+          }
+
+          $objects['node_'. $type['type']]['fields'][$field['field_name']] = array(
+            'label' => check_plain($field['widget']['label']),
+            'group' => t('CCK fields'),
+            'export' => $export_handler,
+            'import' => $import_handler,
+          );
+
+          // If the field was a date field, add the "To" date if enabled.
+          if ($field['type'] == 'date' && !empty($field['todate'])) {
+            $objects['node_'. $type['type']]['fields'][$field['field_name'] .'_todate'] = array(
+              'label' => t('@label (to date)', array('@label' => $field['widget']['label'])),
+              'group' => t('CCK fields'),
+              'export' => '_sf_node_export_cck_todate',
+              'import' => '_sf_node_import_cck_todate',
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return $objects;
+}
+
+// Returns the basic value of a CCK field from $array[0]['value'].
+function _sf_node_export_cck_default($source, $field) {
+  // Get the data array for the field.
+  $data = $source->$field;
+
+  // Return the first value; currently doesn't support multiple value fields.
+  return $data[0]['value'];
+}
+
+// Returns the basic value of a CCK field from $array[0]['value'].
+function _sf_node_import_cck_default(&$node, $key, $source, $field) {
+  $data = $node->$key;
+
+  $data[0]['value'] = $source->$field;
+
+  $node->$key = $data;
+}
+
+// Returns the todate for a CCK date field.
+function _sf_node_export_cck_todate($source, $field) {
+  // Get the name of the actual CCK field.
+  $key = substr($field, 0, strlen($field) - 7);
+
+  // Get the data array for the field.
+  $data = $source->$key;
+
+  // Return the to date from the field data.
+  return $data[0]['value2'];
+}
+
+// Returns the todate for a CCK date field.
+function _sf_node_import_cck_todate(&$node, $key, $source, $field) {
+  $key = substr($key, 0, strlen($key) - 7);
+
+  $data = $node->$key;
+
+  $data[0]['value2'] = $source->$field;
+
+  $node->$key = $data;
+}
+
+// Displays the Salesforce synchronization form.
+function sf_node_salesforce_form(&$form_state, $nid) {
+  $node = node_load($nid);
+
+  // Fail out if the node didn't exist!
+  if (!$node->nid) {
+    drupal_not_found();
+  }
+
+  // Set the node page title.
+  drupal_set_title(check_plain($node->title));
+
+  $form = array();
+
+  $form['nid'] = array(
+    '#type' => 'value',
+    '#value' => $nid,
+  );
+
+  // Display an export button if the node hasn't been exported before.
+  if (!$node->salesforce['sfid']) {
+    $form['export'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Export node to Salesforce'),
+      '#description' => t('This node may be exported to Salesforce using any fieldmap listed below.'),
+    );
+
+    // Get an array of fieldmaps that export nodes of this type to Salesforce.
+    $options = salesforce_api_fieldmap_options('export', 'node_'. $node->type);
+
+    // If no corresponding fieldmaps were found...
+    if (count($options) == 0) {
+      // Display a message appropriate to the user's permissions.
+      if (user_access('administer salesforce')) {
+        $form['export']['#description'] = t('To export this node you must first <a href="!url">add a fieldmap</a> that exports @type nodes.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/add'), '@type' => $node->type));
+      }
+      else {
+        $form['export']['#description'] = t('Please contact a site administrator to add a fieldmap that exports @type nodes.', array('@type' => $node->type));
+      }
+    }
+    else {
+      // Otherwise add the export form!
+      $form['export']['fieldmap'] = array(
+        '#type' => 'select',
+        '#title' => t('Export fieldmap'),
+        '#options' => $options,
+      );
+
+      $form['export']['export_node'] = array(
+        '#type' => 'submit',
+        '#value' => t('Export node'),
+      );
+    }
+  }
+  else {
+    // Otherwise add synchronization information.
+    $form['sfid'] = array(
+      '#type' => 'value',
+      '#value' => $node->salesforce['sfid'],
+    );
+    $form['fieldmap'] = array(
+      '#type' => 'value',
+      '#value' => $node->salesforce['fieldmap'],
+    );
+
+    // Retrieve the object from Salesforce.
+    $sf = salesforce_api_connect();
+    $data = $sf->retrieve(array($node->salesforce['sfid']), $node->salesforce['fieldmap']);
+
+    // Load the fieldmap data.
+    $map = salesforce_api_fieldmap_load($node->salesforce['fieldmap']);
+
+    // Load the object definitions.
+    $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+    $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+
+    $header = array(t('Field name'), t('Drupal @type value', array('@type' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']))), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
+    $rows = array();
+
+    foreach ($map['fields'] as $key => $value) {
+      if (isset($drupal_object['fields'][$value]['export'])) {
+        $drupal_value = $drupal_object['fields'][$value]['export']($node, $value);
+      }
+      elseif (isset($node->$value)) {
+        $drupal_value = $node->$value;
+      }
+      else {
+        $drupal_value = '';
+      }
+
+      $rows[] = array(
+        $object['fields'][$key]['label'],
+        $drupal_value,
+        $data->$key,
+      );
+    }
+
+    $form['mapped'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Mapped field values'),
+      '#description' => t('These fields have been mapped through <a href="!url">fieldmap @index</a>.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/'. $node->salesforce['fieldmap'] .'/edit'), '@index' => $node->salesforce['fieldmap'])),
+    );
+    $form['mapped']['fieldmap_values'] = array(
+      '#value' => theme('table', $header, $rows),
+    );
+
+    $form['mapped']['export_values'] = array(
+      '#type' => 'submit',
+      '#value' => t('Export changes to Salesforce'),
+      '#attributes' => array('class' => 'sf-confirm'),
+    );
+    $form['mapped']['import_values'] = array(
+      '#type' => 'submit',
+      '#value' => t('Import changes from Salesforce'),
+      '#attributes' => array('class' => 'sf-confirm'),
+    );
+
+    // Create a table for the unmapped fields.
+    $header = array(t('Field name'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
+    $rows = array();
+
+    foreach ((array) $data as $key => $value) {
+      if (!isset($map['fields'][$key]) && isset($object['fields'][$key])) {
+        $rows[] = array(
+          $object['fields'][$key]['label'],
+          $value,
+        );
+      }
+    }
+
+    if (count($rows) > 0) {
+      $form['unmapped'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Unmapped fields'),
+        '#description' => t('These fields are available on SalesForce but are not currently mapped through the fieldmap used for this user.'),
+      );
+      $form['unmapped']['unmmaped_fields'] = array(
+        '#value' => theme('table', $header, $rows),
+      );
+    }
+
+    $rows = array();
+
+    foreach (salesforce_api_fieldmap_system_fields() as $key => $value) {
+      $rows[] = array(
+        $value['label'],
+        $data->$key,
+      );
+    }
+
+    $form['system'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('System fields'),
+      '#description' => t('These fields provide additional system information about the Salesforce object but cannot be exported to Salesforce.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['system']['system_fields'] = array(
+      '#value' => theme('table', $header, $rows),
+    );
+
+    $form['raw'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Raw data'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['raw']['data'] = array(
+      '#value' => '<pre>'. print_r($data, TRUE) .'</pre>',
+    );
+  }
+
+  return $form;
+}
+
+function sf_node_salesforce_form_submit($form, &$form_state) {
+  switch ($form_state['values']['op']) {
+    // Export the node to Salesforce.
+    case t('Export node'):
+      if (sf_node_export($form_state['values']['nid'], $form_state['values']['fieldmap'])) {
+        drupal_set_message(t('Node successfully exported to Salesforce.'));
+      }
+      else {
+        drupal_set_message(t('An error occurred while exporting the node to Salesforce.  Check the watchdog for more information.'), 'error');
+      }
+      break;
+
+    // Export changes to Salesforce.
+    case t('Export changes to Salesforce'):
+      if (sf_node_export($form_state['values']['nid'], $form_state['values']['fieldmap'], $form_state['values']['sfid'])) {
+        drupal_set_message(t('Changes successfully exported to Salesforce.'));
+      }
+      else {
+        drupal_set_message(t('An error occurred while exporting the changes to Salesforce.  Check the watchdog for more information.'), 'error');
+      }
+      break;
+
+    // Import changes from Salesforce.
+    case t('Import changes from Salesforce'):
+      if (sf_node_import($form_state['values']['sfid'], $form_state['values']['fieldmap'], $form_state['values']['nid'])) {
+        drupal_set_message(t('The node has been updated with values from Salesforce.'));
+      }
+      else {
+        drupal_set_message(t('An error occurred while importing the changes from Salesforce.  Check the watchdog for more information.'), 'error');
+      }
+
+      break;
+  }
+}
+
+/**
+ * Exports a node to Salesforce using the specified fieldmap and stores the
+ *   ID of the Salesforce object for the node.
+ *
+ * @param $nid
+ *   The nid of the node to export.
+ * @param $fieldmap
+ *   The index of the fieldmap to use to create the export object.
+ * @param $sfid
+ *   The Salesforce ID of the object you want to update.  If left NULL, a new
+ *     object will be created at Salesforce.
+ * @return
+ *   TRUE or FALSE indicating the success of the operation.
+ */
+function sf_node_export($nid, $fieldmap, $sfid = NULL) {
+  // Attempt to connect to Salesforce.
+  $sf = salesforce_api_connect();
+
+  // Load the node.
+  $node = node_load($nid);
+
+  // Create an object for export based on the specified fieldmap.
+  $object = salesforce_api_fieldmap_export_create($fieldmap, $node);
+
+  // Load the fieldmap so we can get the object name.
+  $map = salesforce_api_fieldmap_load($fieldmap);
+
+  if (empty($sfid)) {
+    // Export the object to Salesforce.
+    $response = $sf->client->create(array($object), $map['salesforce']);
+  }
+  else {
+    $object->Id = $sfid;
+
+    $response = $sf->client->update(array($object), $map['salesforce']);
+  }
+
+  // If the export was successful...
+  if ($response->success) {
+    if (empty($sfid)) {
+      // Store the Salesforce ID for the node and return TRUE.
+      salesforce_api_id_save('node', $nid, $response->id, $fieldmap);
+    }
+
+    return TRUE;
+  }
+  else {
+    // Otherwise log the error and return FALSE.
+    drupal_set_message('<pre>'. print_r($response, TRUE) .'</pre>', 'error');
+
+    return FALSE;
+  }
+}
+
+/**
+ * Imports data from Salesforce into a node.
+ *
+ * @param $sfid
+ *   The Salesforce ID of the object from which you want to import.
+ * @param $fieldmap
+ *   The index of the fieldmap to use to create the export object.
+ * @param $nid
+ *   The nid of the node to update.  If left NULL, a new node will be created.
+ * @return
+ *   The nid of the imported node or FALSE on failure.
+ */
+function sf_node_import($sfid, $fieldmap, $nid = NULL) {
+  // Retrieve the object from Salesforce.
+  $sf = salesforce_api_connect();
+  $data = $sf->retrieve(array($sfid), $fieldmap);
+
+  // Return FALSE if the object data was not found at Salesforce.
+  if (empty($data)) {
+    return FALSE;
+  }
+
+  // Load the fieldmap data.
+  $map = salesforce_api_fieldmap_load($fieldmap);
+
+  // Load the object definitions.
+  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $salesforce_object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+
+  // If a node was specified, attempt to load it.
+  $node = node_load($nid);
+
+  // If the node exists, simply update the existing node.
+  if ($node->nid) {
+    // Loop through the fields on the fieldmap.
+    foreach ($map['fields'] as $value => $key) {
+      // If a handler is specified for importing a value from Salesforce.
+      if (isset($drupal_object['fields'][$key]['import'])) {
+        // Get the value for the field from the handler function.
+        $drupal_object['fields'][$key]['import']($node, $key, $data, $value);
+      }
+      elseif (isset($data->$value)) {
+        // Otherwise set the field on the export object to the value of the source
+        // field if it's present on the source object.
+        $node->$key = $data->$value;
+      }
+    }
+
+    node_save($node);
+  }
+
+  return $node->nid;
+}
+
