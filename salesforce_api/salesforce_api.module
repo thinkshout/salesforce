@@ -34,6 +34,7 @@ define('SALESFORCE_LOG_NONE', 0);
 define('SALESFORCE_LOG_SOME', 5);
 define('SALESFORCE_LOG_ALL', 10);
 
+
 /**
  * Implementation of hook_menu().
  */
@@ -373,32 +374,8 @@ function salesforce_api_fieldmap_system_fields() {
   return $fields;
 }
 
-/**
- * Creates a new fieldmap in the database and returns its index.
- *
- * @param $drupal
- *   The name of a Drupal object.
- * @param $salesforce
- *   The name of a Salesforce object.
- * @return
- *   The numeric index of the new fieldmap.
- */
-function salesforce_api_fieldmap_create($drupal, $salesforce, $action = 'export') {
-  // Create the fieldmap array.
-  $map = array(
-    'index' => salesforce_api_fieldmap_next_index(),
-    'drupal' => $drupal,
-    'salesforce' => $salesforce,
-    'fields' => array(),
-  );
-
-  // Save the new fieldmap.
-  salesforce_api_fieldmap_save($map);
-
-  return $map['index'];
-}
-
 // Returns the next index for use by fieldmaps.
+// TODO: replace w.auto-increment
 function salesforce_api_fieldmap_next_index() {
   // Get the next index value.
   $index = variable_get('salesforce_fieldmap_index', 0) + 1;
@@ -512,10 +489,12 @@ function salesforce_api_fieldmap_delete($index) {
  *   Filters the fieldmaps by Drupal object.
  * @param $salesforce
  *   Filters the fieldmaps by Salesforce object.
+ * @param $automatic
+ *   Optional: Filter the fieldmaps to only pull those marked automatic.
  * @return
  *   A FAPI options array of all the matching fieldmaps.
  */
-function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL) {
+function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL, $automatic = FALSE) {
   $options = array();
 
   // Loop through all the indexed field maps.
@@ -530,6 +509,11 @@ function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL) {
 
     // Skip the fieldmap if it is not for the appropriate Salesforce object.
     if (!empty($salesforce) && $map['salesforce'] != $salesforce) {
+      continue;
+    }
+    
+    // Skip if we're checking for automatics, and this one isn't.
+    if ($automatic && $map['automatic'] !== 1) {
       continue;
     }
 
@@ -747,4 +731,17 @@ function salesforce_api_id_load($type, $id) {
 function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
   db_query("INSERT INTO {salesforce_ids} (drupal_type, drupal_id, sfid, fieldmap) VALUES ('%s', '%s', '%s', %d)",
     $drupal_type, $drupal_id, $sfid, $fieldmap);
+}
+
+/**
+ * Implementation of hook_theme()
+ *
+ * Registers theme callback for admin screen
+ */
+function salesforce_api_theme($existing, $type, $theme, $path) {
+  return array(
+    'salesforce_api_fieldmap_edit_form_table' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
 }

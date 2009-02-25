@@ -11,7 +11,7 @@
 // Displays an admin table for fieldmaps.
 function salesforce_api_fieldmap_admin() {
   // Define the header for the admin table.
-  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), t('Action'), array('data' => t('Operations'), 'colspan' => 3));
+  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), array('data' => t('Operations'), 'colspan' => 3));
   $rows = array();
 
   // Loop through all the indexed field maps.
@@ -26,9 +26,7 @@ function salesforce_api_fieldmap_admin() {
         $map['index'],
         salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
         salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
-        $map['action'] == 'import' ? t('import') : t('export'),
         l(t('edit'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['index'] .'/edit'),
-        l(t('clone'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['index'] .'/clone'),
         l(t('delete'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['index'] .'/delete'),
       );
     }
@@ -77,15 +75,12 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
     '#disabled' => count($options) == 0,
     '#required' => TRUE,
   );
-
-  $form['fieldmap_action'] = array(
-    '#type' => 'radios',
-    '#title' => t('Action'),
-    '#options' => array(
-      'import' => t('Import. This fieldmap will be used for importing data from Salesforce.'),
-      'export' => t('Export. This fieldmap will be used for exporting data to Salesforce.'),
-    ),
-    '#required' => TRUE,
+  $form['automatic'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Automatically Populate Salesforce?'),
+    '#return_value' => 1,
+    '#default_value' => 1,
+    '#description' => t('Automatically create and link new salesforce objects when Drupal objects are created?'),
   );
 
   $form['submit'] = array(
@@ -97,12 +92,40 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
   return $form;
 }
 
+// Submit handler for a new fieldmap
 function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
   // Create the new fieldmap.
-  $index = salesforce_api_fieldmap_create($form_state['values']['drupal_object'], $form_state['values']['salesforce_object'], $form_state['values']['fieldmap_action']);
+  $index = salesforce_api_fieldmap_create($form_state['values']['drupal_object'], $form_state['values']['salesforce_object'], $form_state['values']['automatic']);
 
   // Redirect to its edit form.
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $index .'/edit';
+}
+
+
+/**
+ * Creates a new fieldmap in the database and returns its index.
+ *
+ * @param $drupal
+ *   The name of a Drupal object.
+ * @param $salesforce
+ *   The name of a Salesforce object.
+ * @return
+ *   The numeric index of the new fieldmap.
+ */
+function salesforce_api_fieldmap_create($drupal, $salesforce, $automatic) {
+  // Create the fieldmap array.
+  $map = array(
+    'index' => salesforce_api_fieldmap_next_index(),
+    'drupal' => $drupal,
+    'salesforce' => $salesforce,
+    'automatic' => $automatic,
+    'fields' => array(),
+  );
+
+  // Save the new fieldmap.
+  salesforce_api_fieldmap_save($map);
+
+  return $map['index'];
 }
 
 // Displays the confirm form for deleting a fieldmap.
@@ -145,61 +168,6 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
 
-// Displays the form for cloning a fieldmap and altering its action.
-function salesforce_api_fieldmap_clone_form(&$form_state, $index) {
-  // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
-
-  // Return to the admin page if the fieldmap did not exist.
-  if (empty($map)) {
-    drupal_set_message(t('That fieldmap does not exist.'), 'error');
-    drupal_goto(SALESFORCE_PATH_FIELDMAPS);
-  }
-
-  $form = array();
-
-  // Add the index to the form array.
-  $form['fieldmap_index'] = array(
-    '#type' => 'value',
-    '#value' => $index,
-  );
-
-  // Add a description of the source fieldmap to the form array.
-  $form['fieldmap_desc'] = array(
-    '#value' => '<p>'. salesforce_api_fieldmap_description($map) .'</p>',
-  );
-
-  // Allow the user to change the action if needed.
-  $form['fieldmap_action'] = array(
-    '#type' => 'radios',
-    '#title' => t('Action'),
-    '#description' => t('Changing the action may result in some field associations being lost.'),
-    '#options' => array(
-      'import' => t('Import. This fieldmap will be used for importing data from Salesforce.'),
-      'export' => t('Export. This fieldmap will be used for exporting data to Salesforce.'),
-    ),
-    '#default_value' => $map['action'],
-    '#required' => TRUE,
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Clone fieldmap'),
-    '#suffix' => l(t('Cancel'), SALESFORCE_PATH_FIELDMAPS),
-  );
-
-  return $form;
-}
-
-function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
-  // Clone the specified fieldmap.
-  $map = salesforce_api_fieldmap_clone($form_state['values']['fieldmap_index'], $form_state['values']['fieldmap_action']);
-
-  // Display a message and return to the admin screen.
-  drupal_set_message(t('Fieldmap @source has been cloned to fieldmap @target.', array('@source' => $form_state['values']['fieldmap_index'], '@target' => $map['index'])));
-
-  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $map['index'] .'/edit';
-}
 
 // Displays the edit form for adding field associations to a fieldmap.
 function salesforce_api_fieldmap_edit_form(&$form_state, $index) {
@@ -228,19 +196,8 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $index) {
     '#value' => '<p>'. salesforce_api_fieldmap_description($map) .'</p>',
   );
 
-  // Based on the action, set the source and target object definitions.
-  if ($map['action'] == 'import') {
-    // For import fieldmaps, the source is the Salesforce object and the target
-    // is the Drupal object.
-    $source = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-    $target = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  }
-  else {
-    // For export fieldmaps, the source is the Drupal object and the target is
-    // the Salesforce object.
-    $source = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-    $target = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-  }
+  $source = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $target = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   // Fail with an error message if either the source or target object
   // definitions were not found.
@@ -264,7 +221,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $index) {
   $rows = array('required' => array(), 'optional' => array());
   foreach ($target['fields'] as $key => $value) {
     // Skip fields that are automatically assigned upon create for now.
-    if ($value['type'] == SALESFORCE_FIELD_SOURCE_ONLY) {
+    if ($value['type'] == SALESFORCE_FIELD_SOURCE_ONLY || $value['label'] == 'Owner ID') {
       continue;
     }
 

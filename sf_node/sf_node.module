@@ -54,7 +54,26 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'load':
       $node->salesforce = salesforce_api_id_load('node', $node->nid);
       break;
+    case 'insert':
+      // Detect whether or not this should be an auto-update for this node
+        $options = salesforce_api_fieldmap_options('node_'. $node->type, NULL, TRUE);
+        if (count($options) > 0) {
+          $map = key($options);
+        }
+        elseif (count($options) > 1 && user_access('administer salesforce')) {
+          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used @map.', array('@map' => $map[$key])), 'error');
+        }
+        sf_node_export($node->nid, $map);
+      break;
+    case 'update':    
+        $salesforce = salesforce_api_id_load('node', $node->nid);
+        if ($salesforce['fieldmap'] && $salesforce['sfid']) {
+          sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
+        }
+        break;
+
   }
+  
 }
 
 /**
@@ -394,8 +413,8 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
  * Exports a node to Salesforce using the specified fieldmap and stores the
  *   ID of the Salesforce object for the node.
  *
- * @param $nid
- *   The nid of the node to export.
+ * @param $node
+ *   The node object to export (also accepts a numeric node id).
  * @param $fieldmap
  *   The index of the fieldmap to use to create the export object.
  * @param $sfid
@@ -404,12 +423,14 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
  * @return
  *   TRUE or FALSE indicating the success of the operation.
  */
-function sf_node_export($nid, $fieldmap, $sfid = NULL) {
+function sf_node_export($node, $fieldmap, $sfid = NULL) {
   // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
 
-  // Load the node.
-  $node = node_load($nid);
+  // Load the node if we didn't get a full object.
+  if (is_numeric($node)) {
+    $node = node_load($nid);
+  }
   // Add the email address, making this suitable for bio/profile-node to Contact/Lead maps.
   $node->mail = db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $node->uid));
   // Correct timestamp formatting for SF
