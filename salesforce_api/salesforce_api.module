@@ -47,19 +47,24 @@ function salesforce_api_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'salesforce_api.admin.inc',
   );
+   $items[SALESFORCE_PATH_ADMIN .'/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
   $items[SALESFORCE_PATH_ADMIN .'/demo'] = array(
-    'title' => 'Salesforce demo',
+    'title' => 'Test/Demo',
     'page callback' => 'salesforce_api_demo',
     'access arguments' => array('administer salesforce'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
   $items[SALESFORCE_PATH_FIELDMAPS] = array(
-    'title' => 'Fieldmap admin',
+    'title' => 'Fieldmaps',
     'description' => 'Administer fieldmap relationships between Drupal objects and Salesforce objects.',
     'page callback' => 'salesforce_api_fieldmap_admin',
     'access arguments' => array('administer salesforce'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
   $items[SALESFORCE_PATH_FIELDMAPS .'/list'] = array(
@@ -129,6 +134,7 @@ function salesforce_api_settings_form() {
     '#description' => t('Use your Salesforce.com login information for these username and password fields.'),
     '#collapsible' => !empty($username),
     '#collapsed' => !empty($username),
+    '#weight' => -10,
   );
   $form['api']['salesforce_api_username'] = array(
     '#type' => 'textfield',
@@ -154,6 +160,7 @@ function salesforce_api_settings_form() {
     '#title' => t('Log settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
+    '#weight' => -9,
   );
   $form['log']['salesforce_api_activity_log'] = array(
     '#type' => 'radios',
@@ -238,7 +245,7 @@ function salesforce_api_connect($reconnect = FALSE) {
  * @return
  *   A string containing the page output.
  */
-function salesforce_api_demo($demo = NULL) {
+function salesforce_api_demo($demo = NULL, $arg = NULL) {
   // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
 
@@ -253,43 +260,62 @@ function salesforce_api_demo($demo = NULL) {
   $output = '<p>'. t('<b>Salesforce server timestamp:</b> @timestamp', array('@timestamp' => $response->timestamp)) .'</p>';
 
   // Add a specific demo's output.
-  if ($demo == 'user-export') {
-    global $user;
+  switch ($demo) {
+    case 'data-structure':
+      if ($arg) {
+        $response = $sf->client->describeSObjects(array('Lead'));
+        $output .= '<pre>'. print_r($response, 1) .'</pre>';
+      }
+      else {
+        $response = $sf->client->describeGlobal();
+        if (is_array($response->types)) {
+          foreach($response->types as $type) {
+            $items[] = l($type, SALESFORCE_PATH_DEMO .'/data-structure/'. $type);
+          }
+          $output .= theme('item_list', $items, t('Global Data Structure'));
+        }
+      }
 
-    // Fully load the user account so we get profile data.
-    $account = user_load(array('uid' => $user->uid));
-
-    // Create an object for export based on fieldmap 1.
-    $object = salesforce_api_fieldmap_export_create(1, $account);
-
-    $output .= t('Your user account prepared for export as a Contact based on <a href="!url">fieldmap 1</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/1/edit')))
-              .'<pre>'. print_r($object, TRUE) .'</pre>';
-
-    // Export the object to Salesforce as a Contact.
-    $response = $sf->client->create(array($object), 'Contact');
-
-    $output .= t('The response from Salesforce upon creation:')
-              .'<pre>'. print_r($response, TRUE) .'</pre>';
-
-  }
-  elseif ($demo == 'campaign-export') {
-    // Load the campaign node.
-    $node = node_load(1);
-
-    // Create an object for export based on fieldmap 10.
-    $object = salesforce_api_fieldmap_export_create(10, $node);
-
-    $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/10/edit')))
-              .'<pre>'. print_r($object, TRUE) .'</pre>';
-
-    // Export the object to Salesforce as a Contact.
-    $response = $sf->client->create(array($object), 'Campaign');
-
-    $output .= t('The response from Salesforce upon creation:')
-              .'<pre>'. print_r($response, TRUE) .'</pre>';
+      break;
+    case 'user-export':
+      global $user;
+  
+      // Fully load the user account so we get profile data.
+      $account = user_load(array('uid' => $user->uid));
+  
+      // Create an object for export based on fieldmap 1.
+      $object = salesforce_api_fieldmap_export_create(1, $account);
+  
+      $output .= t('Your user account prepared for export as a Contact based on <a href="!url">fieldmap 1</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/1/edit')))
+                .'<pre>'. print_r($object, TRUE) .'</pre>';
+  
+      // Export the object to Salesforce as a Contact.
+      $response = $sf->client->create(array($object), 'Contact');
+  
+      $output .= t('The response from Salesforce upon creation:')
+                .'<pre>'. print_r($response, TRUE) .'</pre>';
+      break;
+  
+    case 'campaign-export':
+      // Load the campaign node.
+      $node = node_load(1);
+  
+      // Create an object for export based on fieldmap 10.
+      $object = salesforce_api_fieldmap_export_create(10, $node);
+  
+      $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/10/edit')))
+                .'<pre>'. print_r($object, TRUE) .'</pre>';
+  
+      // Export the object to Salesforce as a Contact.
+      $response = $sf->client->create(array($object), 'Campaign');
+  
+      $output .= t('The response from Salesforce upon creation:')
+                .'<pre>'. print_r($response, TRUE) .'</pre>';
+      break;
   }
 
   $items = array(
+    l(t('Examine Data Structure'), SALESFORCE_PATH_DEMO .'/data-structure'),
     l(t('Export your user account as a contact'), SALESFORCE_PATH_DEMO .'/user-export'),
     l(t('Export node 1 as a campaign'), SALESFORCE_PATH_DEMO .'/campaign-export'),
   );
@@ -307,69 +333,26 @@ function salesforce_api_fieldmap_objects($type) {
 
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
-    $objects['campaign'] = array(
-      'label' => t('Campaign'),
-      'fields' => array(
-        'Name' => array('label' => t('Name'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'Description' => array('label' => t('Description')),
-        'StartDate' => array('label' => t('Start date')),
-        'EndDate' => array('label' => t('End date')),
-        'IsActive' => array('label' => t('Is the campaign active?')),
-        'Status' => array('label' => t('Status')),
-        'Type' => array('label' => t('Type')),
-        'NumberSent' => array('label' => t('Number of e-mails sent')),
-        'ExpectedResponse' => array('label' => t('Expected response')),
-        'BudgetedCost' => array('label' => t('Budgeted cost')),
-        'ActualCost' => array('label' => t('Actual cost')),
-        'ExpectedRevenue' => array('label' => t('Expected revenue')),
-        'OwnerID' => array('label' => t('Owner ID')),
-        //'ParentCampaign' => array('label' => t('Parent campaign')),
-      ),
-    );
-
-    $objects['contact'] = array(
-      'label' => t('Contact'),
-      'fields' => array(
-        'Email' => array('label' => t('E-mail address')),
-        'FirstName' => array('label' => t('First name')),
-        'LastName' => array('label' => t('Last name'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'Name' => array('label' => t('First and last name'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
-        'Phone' => array('label' => t('Primary phone number')),
-        'BirthDate' => array('label' => t('Birthdate')),
-      ),
-    );
-
-    $objects['lead'] = array(
-      'label' => t('Lead'),
-      'fields' => array(
-        'Company' => array('label' => t('Company'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'FirstName' => array('label' => t('First name')),
-        'LastName' => array('label' => t('Last name'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'Salutation' => array('label' => t('Salutation')),
-        'Name' => array('label' => t('First and last name'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
-        'Title' => array('label' => t('Title')),
-        'Street' => array('label' => t('Street address')),
-        'City' => array('label' => t('City')),
-        'State' => array('label' => t('State')),
-        'PostalCode' => array('label' => t('Zip/Postal code')),
-        'Country' => array('label' => t('Country')),
-        'Phone' => array('label' => t('Phone number')),
-        'MobilePhone' => array('label' => t('Mobile phone')),
-        'Fax' => array('label' => t('Fax number')),
-        'Email' => array('label' => t('E-mail address')),
-        //'HasOptedOutOfEmail' => array('label' => t('Has the lead opted out of e-mail?')),
-        'Website' => array('label' => t('Website')),
-        'Industry' => array('label' => t('Industry')),
-        'Description' => array('label' => t('Description')),
-        'AnnualRevenue' => array('label' => t('Annual revenue')),
-        'NumberOfEmployees' => array('label' => t('Number of employees')),
-        'LeadSource' => array('label' => t('Lead source')),
-        'Rating' => array('label' => t('Lead rating')),
-        'Status' => array('label' => t('Lead status')),
-        'IsConverted' => array('label' => t('Is the lead converted?')),
-        'IsUnreadByOwner' => array('label' => t('Is the lead unread by its owner?')),
-      ),
-    );
+    $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
+    $sf = salesforce_api_connect();
+    $result = $sf->client->describeSObjects($sf_objects);
+    foreach($result as $key => $object) {
+      $objects[$sf_objects[$key]] = array(
+        'label' => t($sf_objects[$key]),
+        'fields' => array(),
+      );
+      foreach($object->fields as $field) {
+        $objects[$sf_objects[$key]]['fields'][$field->name] = array(
+          'label' => t($field->label),
+        );
+        if ($field->createable != 1) {
+          $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
+        }
+        elseif ($field->nillable != 1 && $field->defaultedOnCreate != 1) {
+          $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_REQUIRED;
+        }
+      }
+    }
   }
 
   return $objects;
@@ -397,9 +380,6 @@ function salesforce_api_fieldmap_system_fields() {
  *   The name of a Drupal object.
  * @param $salesforce
  *   The name of a Salesforce object.
- * @param $action
- *   A string letting us know which direction the data will be travelling when
- *     this fieldmap is used; valid actions are 'import' and 'export'.
  * @return
  *   The numeric index of the new fieldmap.
  */
@@ -409,7 +389,6 @@ function salesforce_api_fieldmap_create($drupal, $salesforce, $action = 'export'
     'index' => salesforce_api_fieldmap_next_index(),
     'drupal' => $drupal,
     'salesforce' => $salesforce,
-    'action' => $action,
     'fields' => array(),
   );
 
@@ -536,18 +515,13 @@ function salesforce_api_fieldmap_delete($index) {
  * @return
  *   A FAPI options array of all the matching fieldmaps.
  */
-function salesforce_api_fieldmap_options($action = NULL, $drupal = NULL, $salesforce = NULL) {
+function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL) {
   $options = array();
 
   // Loop through all the indexed field maps.
   for ($i = 1; $i <= variable_get('salesforce_fieldmap_index', 0); $i++) {
     // Load the map for this index.
     $map = variable_get('salesforce_fieldmap_'. $i, array());
-
-    // Skip the fieldmap if it is not for the appropriate action.
-    if (!empty($action) && $map['action'] != $action) {
-      continue;
-    }
 
     // Skip the fieldmap if it is not for the appropriate Drupal object.
     if (!empty($drupal) && $map['drupal'] != $drupal) {
@@ -565,13 +539,7 @@ function salesforce_api_fieldmap_options($action = NULL, $drupal = NULL, $salesf
       '@salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
     );
 
-    // Add the fieldmap to the options array with an appropriate title.
-    if ($map['action'] == 'import') {
-      $options[$map['index']] = t('Salesforce @salesforce to Drupal @drupal', $args);
-    }
-    else {
-      $options[$map['index']] = t('Drupal @drupal to Salesforce @salesforce', $args);
-    }
+    $options[$map['index']] = t('Drupal @drupal to Salesforce @salesforce', $args);
   }
 
   return $options;
@@ -649,14 +617,8 @@ function salesforce_api_fieldmap_object_label($type, $name) {
 }
 
 // Returns a string of description text for the specified fieldmap.
-function salesforce_api_fieldmap_description($map) {
-  // Build a description for this fieldmap based on the action.
-  if ($map['action'] == 'import') {
-    return t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('@index' => $map['index'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
-  }
-  else {
-    return t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('@index' => $map['index'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
-  }
+function salesforce_api_fieldmap_description() {
+  return t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects.', array('@index' => $map['index'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
 }
 
 /**

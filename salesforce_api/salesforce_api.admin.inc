@@ -261,6 +261,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $index) {
   );
 
   // Loop through each of the target fields.
+  $rows = array('required' => array(), 'optional' => array());
   foreach ($target['fields'] as $key => $value) {
     // Skip fields that are automatically assigned upon create for now.
     if ($value['type'] == SALESFORCE_FIELD_SOURCE_ONLY) {

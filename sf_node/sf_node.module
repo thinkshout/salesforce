@@ -41,6 +41,7 @@ function sf_node_form_alter(&$form, $form_state, $form_id) {
       '#description' => t('Placeholder for any node integration settings.'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
+      '#weight' => -1,
     );
   }
 }
@@ -91,7 +92,9 @@ function sf_node_fieldmap_objects($type) {
         'promote' => array('label' => t('Is the node promoted?')),
         'created' => array('label' => t('Created timestamp')),
         'uid' => array('label' => t("Author's user ID")),
-        'name' => array('label' => t("Author's name")),
+        'mail' => array('label' => t("Author's email")),
+        'name' => array('label' => t("Author's username")),
+        'blank' => array('label' => t("(blank)")),
       );
     }
 
@@ -205,7 +208,7 @@ function sf_node_salesforce_form(&$form_state, $nid) {
     );
 
     // Get an array of fieldmaps that export nodes of this type to Salesforce.
-    $options = salesforce_api_fieldmap_options('export', 'node_'. $node->type);
+    $options = salesforce_api_fieldmap_options('node_'. $node->type);
 
     // If no corresponding fieldmaps were found...
     if (count($options) == 0) {
@@ -407,6 +410,13 @@ function sf_node_export($nid, $fieldmap, $sfid = NULL) {
 
   // Load the node.
   $node = node_load($nid);
+  // Add the email address, making this suitable for bio/profile-node to Contact/Lead maps.
+  $node->mail = db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $node->uid));
+  // Correct timestamp formatting for SF
+  $node->created = gmdate(DATE_ATOM, $node->created);
+  // Inlcude the "blank" value
+  $node->blank = '(blank)';
+  
 
   // Create an object for export based on the specified fieldmap.
   $object = salesforce_api_fieldmap_export_create($fieldmap, $node);
