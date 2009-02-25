@@ -132,7 +132,7 @@ class DrupalSalesforce {
 
      $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
-     $fields = array_merge(array_keys(salesforce_api_fieldmap_system_fields()), array_keys($object['fields']));
+     $fields = array_keys($object['fields']);
 
      return $this->client->retrieve(implode(', ', $fields), $map['salesforce'], $ids);
    }
