@@ -184,6 +184,8 @@ function salesforce_api_settings_form() {
     '#default_value' => variable_get('salesforce_api_error_log', SALESFORCE_LOG_ALL),
   );
 
+  // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
+  $form['#submit'][] = 'salesforce_api_settings_form_submit';
   return system_settings_form($form);
 }
 

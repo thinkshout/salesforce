@@ -7,6 +7,17 @@
  *   for general settings and fieldmap administration.
  */
 
+// Settings form submit handler so that password doesn't get deleted.
+function salesforce_api_settings_form_submit($form, &$form_state) {
+  // If the user hit "Save Configuration" and the required field
+  // salesforce_api_password is blank, try to get it from variables
+  if ($form_state['values']['submit'] == $form_state['values']['op'] and empty($form_state['values']['salesforce_api_password'])) {
+    $pass = variable_get('salesforce_api_password', FALSE);
+    if (isset($pass)) {
+      $form_state['values']['salesforce_api_password'] = $pass;
+    }
+  }
+}
 
 // Displays an admin table for fieldmaps.
 function salesforce_api_fieldmap_admin() {
