@@ -122,73 +122,6 @@ function salesforce_api_perm() {
   return array('administer salesforce');
 }
 
-// Displays the basic API settings form at admin/settings/salesforce.
-function salesforce_api_settings_form() {
-  $form = array();
-
-  // Use the username field to collapse the API settings fieldset.
-  $username = variable_get('salesforce_api_username', '');
-
-  $form['api'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Salesforce API settings'),
-    '#description' => t('Use your Salesforce.com login information for these username and password fields.'),
-    '#collapsible' => !empty($username),
-    '#collapsed' => !empty($username),
-    '#weight' => -10,
-  );
-  $form['api']['salesforce_api_username'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Username'),
-    '#description' => t('Should be in the form of an e-mail address.'),
-    '#default_value' => variable_get('salesforce_api_username', ''),
-    '#required' => TRUE,
-  );
-  $form['api']['salesforce_api_password'] = array(
-    '#type' => 'password',
-    '#title' => t('Password'),
-    '#default_value' => variable_get('salesforce_api_password', ''),
-  );
-  $form['api']['salesforce_api_token'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Security token'),
-    '#description' => t('Set your security token by logging into Salesforce and navigating to Setup > My Personal Information > Reset My Security Token.'),
-    '#default_value' => variable_get('salesforce_api_token', ''),
-  );
-
-  $form['log'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Log settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => -9,
-  );
-  $form['log']['salesforce_api_activity_log'] = array(
-    '#type' => 'radios',
-    '#title' => t('Activity log level'),
-    '#options' => array(
-      SALESFORCE_LOG_NONE => t('Do not log any Salesforce activities.'),
-      SALESFORCE_LOG_SOME => t('Log important Salesforce activities.'),
-      SALESFORCE_LOG_ALL => t('Log all Salesforce activitiies.'),
-    ),
-    '#default_value' => variable_get('salesforce_api_activitiy_log', SALESFORCE_LOG_SOME),
-  );
-  $form['log']['salesforce_api_error_log'] = array(
-    '#type' => 'radios',
-    '#title' => t('Error log level'),
-    '#options' => array(
-      SALESFORCE_LOG_NONE => t('Do not log any Salesforce errors.'),
-      SALESFORCE_LOG_SOME => t('Log important Salesforce errors.'),
-      SALESFORCE_LOG_ALL => t('Log all Salesforce errors.'),
-    ),
-    '#default_value' => variable_get('salesforce_api_error_log', SALESFORCE_LOG_ALL),
-  );
-
-  // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
-  $form['#submit'][] = 'salesforce_api_settings_form_submit';
-  return system_settings_form($form);
-}
-
 /**
  * Creates an object used for communicating with the Salesforce server and
  *   performs a login to verify the API credentials.
@@ -237,103 +170,6 @@ function salesforce_api_connect($reconnect = FALSE) {
 
     return FALSE;
   }
-}
-
-/**
- * Demonstrates some of the API functionality through the Salesforce class and
- * fieldmap functionality.
- *
- * @param $demo
- *   The name of the demonstration to perform.
- * @return
- *   A string containing the page output.
- */
-function salesforce_api_demo($demo = NULL, $arg = NULL) {
-  // Attempt to connect to Salesforce.
-  $sf = salesforce_api_connect();
-
-  // Display an error message if the connection failed.
-  if (!$sf) {
-    return t('Could not connect to Salesforce. Please doublecheck your API credentials.');
-  }
-
-  // Display the server timestamp first.
-  $response = $sf->client->getServerTimestamp();
-
-  $output = '<p>'. t('<b>Salesforce server timestamp:</b> @timestamp', array('@timestamp' => $response->timestamp)) .'</p>';
-
-  // Add a specific demo's output.
-  switch ($demo) {
-    case 'data-structure':
-      if ($arg) {
-        $response = $sf->client->describeSObjects(array(check_plain($arg)));
-        if (function_exists('dpm')) {
-          dpm($response);
-        }
-        elseif (function_exists('krumo')) {
-          $output .= krumo($response);
-        }
-        else {
-          $output .= '<pre>'. print_r($response, 1) .'</pre>';
-        }
-      }
-      else {
-        $response = $sf->client->describeGlobal();
-        if (is_array($response->types)) {
-          foreach ($response->types as $type) {
-            $items[] = l($type, SALESFORCE_PATH_DEMO .'/data-structure/'. $type);
-          }
-          $output .= theme('item_list', $items, t('Global Data Structure'));
-        }
-      }
-
-      break;
-    case 'user-export':
-      global $user;
-
-      // Fully load the user account so we get profile data.
-      $account = user_load(array('uid' => $user->uid));
-
-      // Create an object for export based on fieldmap 1.
-      $object = salesforce_api_fieldmap_export_create(1, $account);
-
-      $output .= t('Your user account prepared for export as a Contact based on <a href="!url">fieldmap 1</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/1/edit')))
-                .'<pre>'. print_r($object, TRUE) .'</pre>';
-
-      // Export the object to Salesforce as a Contact.
-      $response = $sf->client->create(array($object), 'Contact');
-
-      $output .= t('The response from Salesforce upon creation:')
-                .'<pre>'. print_r($response, TRUE) .'</pre>';
-      break;
-
-    case 'campaign-export':
-      // Load the campaign node.
-      $node = node_load(1);
-
-      // Create an object for export based on fieldmap 10.
-      $object = salesforce_api_fieldmap_export_create(10, $node);
-
-      $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/10/edit')))
-                .'<pre>'. print_r($object, TRUE) .'</pre>';
-
-      // Export the object to Salesforce as a Contact.
-      $response = $sf->client->create(array($object), 'Campaign');
-
-      $output .= t('The response from Salesforce upon creation:')
-                .'<pre>'. print_r($response, TRUE) .'</pre>';
-      break;
-  }
-
-  $items = array(
-    l(t('Examine Data Structure'), SALESFORCE_PATH_DEMO .'/data-structure'),
-    l(t('Export your user account as a contact'), SALESFORCE_PATH_DEMO .'/user-export'),
-    l(t('Export node 1 as a campaign'), SALESFORCE_PATH_DEMO .'/campaign-export'),
-  );
-
-  $output .= '<p>'. t('<b>Choose from the following demonstrations:</b>') . theme('item_list', $items) .'</p>';
-
-  return $output;
 }
 
 /**
@@ -751,6 +587,8 @@ function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
 function salesforce_api_theme($existing, $type, $theme, $path) {
   return array(
     'salesforce_api_fieldmap_edit_form_table' => array(
+      // 'file' => drupal_get_path('module', 'salesforce_api')
+      'file' => 'salesforce_api.admin.inc',
       'arguments' => array('form' => NULL),
     ),
   );

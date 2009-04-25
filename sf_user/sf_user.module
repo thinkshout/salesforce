@@ -417,4 +417,3 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
 
   return $account->uid;
 }
-

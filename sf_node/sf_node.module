@@ -60,6 +60,9 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       if (empty($options)) {
         return;
       }
+      if (count($options) > 0) {
+        $map = key($options);
+      }
       elseif (count($options) > 1 && user_access('administer salesforce')) {
         drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used @map.', array('@map' => $map[$key])), 'error');
       }
@@ -525,4 +528,3 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
 
   return $node->nid;
 }
-
