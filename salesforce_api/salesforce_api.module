@@ -48,7 +48,7 @@ function salesforce_api_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'salesforce_api.admin.inc',
   );
-   $items[SALESFORCE_PATH_ADMIN .'/settings'] = array(
+  $items[SALESFORCE_PATH_ADMIN .'/settings'] = array(
     'title' => 'Settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
@@ -290,36 +290,36 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
       break;
     case 'user-export':
       global $user;
-  
+
       // Fully load the user account so we get profile data.
       $account = user_load(array('uid' => $user->uid));
-  
+
       // Create an object for export based on fieldmap 1.
       $object = salesforce_api_fieldmap_export_create(1, $account);
-  
+
       $output .= t('Your user account prepared for export as a Contact based on <a href="!url">fieldmap 1</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/1/edit')))
                 .'<pre>'. print_r($object, TRUE) .'</pre>';
-  
+
       // Export the object to Salesforce as a Contact.
       $response = $sf->client->create(array($object), 'Contact');
-  
+
       $output .= t('The response from Salesforce upon creation:')
                 .'<pre>'. print_r($response, TRUE) .'</pre>';
       break;
-  
+
     case 'campaign-export':
       // Load the campaign node.
       $node = node_load(1);
-  
+
       // Create an object for export based on fieldmap 10.
       $object = salesforce_api_fieldmap_export_create(10, $node);
-  
+
       $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/10/edit')))
                 .'<pre>'. print_r($object, TRUE) .'</pre>';
-  
+
       // Export the object to Salesforce as a Contact.
       $response = $sf->client->create(array($object), 'Campaign');
-  
+
       $output .= t('The response from Salesforce upon creation:')
                 .'<pre>'. print_r($response, TRUE) .'</pre>';
       break;
@@ -521,7 +521,7 @@ function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL, $au
     if (!empty($salesforce) && $map['salesforce'] != $salesforce) {
       continue;
     }
-    
+
     // Skip if we're checking for automatics, and this one isn't.
     if ($automatic && $map['automatic'] !== 1) {
       continue;
@@ -744,7 +744,7 @@ function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
 }
 
 /**
- * Implementation of hook_theme()
+ * Implementation of hook_theme().
  *
  * Registers theme callback for admin screen
  */

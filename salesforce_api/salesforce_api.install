@@ -49,6 +49,6 @@ function salesforce_api_schema() {
     ),
     'primary key' => array('drupal_type', 'drupal_id'),
   );
-  
+
   return $schema;
 }
