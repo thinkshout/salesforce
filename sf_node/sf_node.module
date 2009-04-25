@@ -63,7 +63,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         elseif (count($options) > 1 && user_access('administer salesforce')) {
           drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used @map.', array('@map' => $map[$key])), 'error');
         }
-        sf_node_export($node->nid, $map);
+        sf_node_export($node, $map);
       break;
     case 'update':
         $salesforce = salesforce_api_id_load('node', $node->nid);
@@ -431,7 +431,7 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
 
   // Load the node if we didn't get a full object.
   if (is_numeric($node)) {
-    $node = node_load($nid);
+    $node = node_load($node);
   }
   // Add the email address, making this suitable for bio/profile-node to Contact/Lead maps.
   $node->mail = db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $node->uid));
@@ -461,7 +461,7 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   if ($response->success) {
     if (empty($sfid)) {
       // Store the Salesforce ID for the node and return TRUE.
-      salesforce_api_id_save('node', $nid, $response->id, $fieldmap);
+      salesforce_api_id_save('node', $node->nid, $response->id, $fieldmap);
     }
 
     return TRUE;
