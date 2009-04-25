@@ -56,24 +56,22 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
     case 'insert':
       // Detect whether or not this should be an auto-update for this node
-        $options = salesforce_api_fieldmap_options('node_'. $node->type, NULL, TRUE);
-        if (count($options) > 0) {
-          $map = key($options);
-        }
-        elseif (count($options) > 1 && user_access('administer salesforce')) {
-          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used @map.', array('@map' => $map[$key])), 'error');
-        }
-        sf_node_export($node, $map);
+      $options = salesforce_api_fieldmap_options('node_'. $node->type, NULL, TRUE);
+      if (empty($options)) {
+        return;
+      }
+      elseif (count($options) > 1 && user_access('administer salesforce')) {
+        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used @map.', array('@map' => $map[$key])), 'error');
+      }
+      sf_node_export($node, $map);
       break;
     case 'update':
-        $salesforce = salesforce_api_id_load('node', $node->nid);
-        if ($salesforce['fieldmap'] && $salesforce['sfid']) {
-          sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
-        }
-        break;
-
+      $salesforce = salesforce_api_id_load('node', $node->nid);
+      if ($salesforce['fieldmap'] && $salesforce['sfid']) {
+        sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
+      }
+      break;
   }
-
 }
 
 /**
