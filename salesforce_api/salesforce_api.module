@@ -280,7 +280,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
       else {
         $response = $sf->client->describeGlobal();
         if (is_array($response->types)) {
-          foreach($response->types as $type) {
+          foreach ($response->types as $type) {
             $items[] = l($type, SALESFORCE_PATH_DEMO .'/data-structure/'. $type);
           }
           $output .= theme('item_list', $items, t('Global Data Structure'));
@@ -347,12 +347,12 @@ function salesforce_api_fieldmap_objects($type) {
     $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
     $sf = salesforce_api_connect();
     $result = $sf->client->describeSObjects($sf_objects);
-    foreach($result as $key => $object) {
+    foreach ($result as $key => $object) {
       $objects[$sf_objects[$key]] = array(
         'label' => t($sf_objects[$key]),
         'fields' => array(),
       );
-      foreach($object->fields as $field) {
+      foreach ($object->fields as $field) {
         $objects[$sf_objects[$key]]['fields'][$field->name] = array(
           'label' => t($field->label),
         );
