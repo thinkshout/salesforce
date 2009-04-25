@@ -267,7 +267,15 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
     case 'data-structure':
       if ($arg) {
         $response = $sf->client->describeSObjects(array(check_plain($arg)));
-        $output .= '<pre>'. print_r($response, 1) .'</pre>';
+        if (function_exists('dpm')) {
+          dpm($response);
+        }
+        elseif (function_exists('krumo')) {
+          $output .= krumo($response);
+        }
+        else {
+          $output .= '<pre>'. print_r($response, 1) .'</pre>';
+        }
       }
       else {
         $response = $sf->client->describeGlobal();
