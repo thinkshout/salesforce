@@ -587,7 +587,6 @@ function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
 function salesforce_api_theme($existing, $type, $theme, $path) {
   return array(
     'salesforce_api_fieldmap_edit_form_table' => array(
-      // 'file' => drupal_get_path('module', 'salesforce_api')
       'file' => 'salesforce_api.admin.inc',
       'arguments' => array('form' => NULL),
     ),
