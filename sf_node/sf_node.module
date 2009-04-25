@@ -4,7 +4,7 @@
 /**
  * @file
  * Integrates the core node object and various node related modules with the
- *   SalesForce API.
+ *   Salesforce API.
  */
 
 
@@ -336,7 +336,7 @@ function sf_node_salesforce_form(&$form_state, $nid) {
       $form['unmapped'] = array(
         '#type' => 'fieldset',
         '#title' => t('Unmapped fields'),
-        '#description' => t('These fields are available on SalesForce but are not currently mapped through the fieldmap used for this user.'),
+        '#description' => t('These fields are available on Salesforce but are not currently mapped through the fieldmap used for this user.'),
       );
       $form['unmapped']['unmmaped_fields'] = array(
         '#value' => theme('table', $header, $rows),

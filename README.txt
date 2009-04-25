@@ -4,7 +4,7 @@ SALESFORCE MODULE
 
 New architecture for modularity and Druapl 6 compatibility.
 
-This module utilizes SalesForce's Enterprise SOAP client and generic WSDL 
+This module utilizes Salesforce's Enterprise SOAP client and generic WSDL 
 functionality to allow you to work with custom fields without having to 
 download your own WSDL file.
 
@@ -33,9 +33,9 @@ QUICKSTART:
    "Salesforce API Settings" fieldset. Save that configuration.
 
 2) Click on the "Fieldmaps" local task, and create a fieldmap between Drupal and 
-   SalesForce objects.
+   Salesforce objects.
 
 3) If you left the "automatic" box checked, the next time a Drupal object is 
-   created, it will create a corresponding object in SalesForce. Alternatively, 
+   created, it will create a corresponding object in Salesforce. Alternatively, 
    you can click the "salesforce" tab on any node which you've established a 
-   mapping for and manually create a SalesForce object for it.
+   mapping for and manually create a Salesforce object for it.

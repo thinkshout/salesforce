@@ -229,7 +229,7 @@ function sf_user_salesforce_form(&$form_state, $uid) {
       $form['unmapped'] = array(
         '#type' => 'fieldset',
         '#title' => t('Unmapped fields'),
-        '#description' => t('These fields are available on SalesForce but are not currently mapped through the fieldmap used for this user. Some of these values may only be available when importing from Salesforce.'),
+        '#description' => t('These fields are available on Salesforce but are not currently mapped through the fieldmap used for this user. Some of these values may only be available when importing from Salesforce.'),
       );
       $form['unmapped']['unmmaped_fields'] = array(
         '#value' => theme('table', $header, $rows),
