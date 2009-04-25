@@ -266,7 +266,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
   switch ($demo) {
     case 'data-structure':
       if ($arg) {
-        $response = $sf->client->describeSObjects(array('Lead'));
+        $response = $sf->client->describeSObjects(array(check_plain($arg)));
         $output .= '<pre>'. print_r($response, 1) .'</pre>';
       }
       else {
