@@ -575,8 +575,8 @@ function salesforce_api_id_load($type, $id) {
  *   The index of the fieldmap used to generate the export.
  */
 function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
-  db_query("INSERT INTO {salesforce_ids} (drupal_type, drupal_id, sfid, fieldmap) VALUES ('%s', '%s', '%s', %d)",
-    $drupal_type, $drupal_id, $sfid, $fieldmap);
+  db_query("DELETE FROM {salesforce_ids} WHERE drupal_type LIKE '%s' AND drupal_id LIKE '%s'", $drupal_type, $drupal_id);
+  db_query("INSERT INTO {salesforce_ids} (drupal_type, drupal_id, sfid, fieldmap) VALUES ('%s', '%s', '%s', %d)", $drupal_type, $drupal_id, $sfid, $fieldmap);
 }
 
 /**
