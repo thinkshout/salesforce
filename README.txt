@@ -11,6 +11,19 @@ download your own WSDL file.
 It also includes an API architecture which allows for additional modules to 
 be easily plugged in (e.g. for webforms, contact form submits, etc).
 
+REQUIREMENTS:
+
+1) You need a salesforce account. Developers can register here:
+
+http://www.developerforce.com/events/regular/registration.php
+
+You will need to know your login data and your security token.
+
+2) PHP needs the SOAP web services kit installed, as per:
+
+http://php.net/soap
+
+
 INSTALLATION:
 
 1) Download, uncompress and situate the module as per usual.
@@ -26,6 +39,7 @@ INSTALLATION:
 3) Enable the module on admin/build/modules along with at least one of the 
    object modules (salesfoce_node, salesfoce_user). Node is the usual place to 
    start.
+   
 
 QUICKSTART:
 

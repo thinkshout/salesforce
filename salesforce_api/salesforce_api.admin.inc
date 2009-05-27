@@ -93,21 +93,16 @@ function salesforce_api_fieldmap_admin() {
   $rows = array();
 
   // Loop through all the indexed field maps.
-  for ($i = 1; $i <= variable_get('salesforce_fieldmap_index', 0); $i++) {
-    // Load the map for this index.
-    $map = variable_get('salesforce_fieldmap_'. $i, array());
-
-    // If it actually existed...
-    if (!empty($map)) {
-      // Add the row to the table with the basic operations.
-      $rows[] = array(
-        $map['index'],
-        salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
-        salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
-        l(t('edit'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['index'] .'/edit'),
-        l(t('delete'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['index'] .'/delete'),
-      );
-    }
+  $result = db_query("SELECT fieldmap, drupal, salesforce FROM {salesforce_field_map}");
+  while ($map = db_fetch_array($result)) {
+    // Add the row to the table with the basic operations.
+    $rows[] = array(
+      $map['fieldmap'],
+      salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
+      salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
+      l(t('edit'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/edit'),
+      l(t('delete'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/delete'),
+    );
   }
 
   // Add a message if no objects have been mapped.
@@ -192,7 +187,6 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
 function salesforce_api_fieldmap_create($drupal, $salesforce, $automatic) {
   // Create the fieldmap array.
   $map = array(
-    'index' => salesforce_api_fieldmap_next_index(),
     'drupal' => $drupal,
     'salesforce' => $salesforce,
     'automatic' => $automatic,
@@ -202,13 +196,13 @@ function salesforce_api_fieldmap_create($drupal, $salesforce, $automatic) {
   // Save the new fieldmap.
   salesforce_api_fieldmap_save($map);
 
-  return $map['index'];
+  return $map['fieldmap'];
 }
 
 // Displays the confirm form for deleting a fieldmap.
-function salesforce_api_fieldmap_delete_form(&$form_state, $index) {
+function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
+  $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -218,18 +212,18 @@ function salesforce_api_fieldmap_delete_form(&$form_state, $index) {
 
   $form = array();
 
-  // Add the index to the form array.
+  // Add the fieldmap to the form array.
   $form['fieldmap_index'] = array(
     '#type' => 'value',
-    '#value' => $index,
+    '#value' => $fieldmap,
   );
 
   // Build the description text for this fieldmap.
   if ($map['action'] == 'import') {
-    $desc = t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('@index' => $map['index'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
+    $desc = t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('@index' => $map['fieldmap'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
   }
   else {
-    $desc = t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('@index' => $map['index'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
+    $desc = t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('@index' => $map['fieldmap'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
   }
 
   return confirm_form($form, t('Are you sure you want to delete this fieldmap?'), SALESFORCE_PATH_FIELDMAPS, $desc, t('Delete'));
@@ -246,9 +240,9 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
 }
 
 // Displays the edit form for adding field associations to a fieldmap.
-function salesforce_api_fieldmap_edit_form(&$form_state, $index) {
+function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
+  $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -264,7 +258,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $index) {
   // Add the index to the form array.
   $form['fieldmap_index'] = array(
     '#type' => 'value',
-    '#value' => $index,
+    '#value' => $fieldmap,
   );
 
   // Add a description of the source fieldmap to the form array.

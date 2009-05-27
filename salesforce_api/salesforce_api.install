@@ -15,39 +15,99 @@ function salesforce_api_install() {
 }
 
 /**
+ * Implementation of hook_uninstall().
+ */
+function salesforce_api_uninstall() {
+  drupal_uninstall_schema('salesforce_api');
+}
+
+/**
  * Implementation of hook_schema().
  */
 function salesforce_api_schema() {
-  $schema['salesforce_ids'] = array(
-    'description' => t('Drupal to Salesforce field/id mapping table'),
+  $schema['salesforce_object_map'] = array(
+    'description' => t('Drupal to Salesforce object mapping table'),
     'fields' => array(
       'drupal_type' => array(
-        'description' => 'Drupal object identifier',
+        'description' => 'Drupal object type (e.g. "node", "comment")',
         'type' => 'varchar',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ),
-      'drupal_id' => array(
+      'oid' => array(
+        'description' => 'Specific Drupal object identifier (e.g. node id or comment id)',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'sfid' => array(
+        'description' => 'Salesforce object identifier (e.g. "node", "comment")',
         'type' => 'varchar',
         'length' => 32,
         'not null' => TRUE,
         'default' => '',
       ),
-      'sfid' => array(
-        'type' => 'varchar',
-        'length' => 18,
-        'not null' => TRUE,
-        'default' => '',
-      ),
       'fieldmap' => array(
+        'description' => 'Fieldmap id',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => '0',
       ),
     ),
-    'primary key' => array('drupal_type', 'drupal_id'),
+    'indexes' => array(
+      'drupal_object' => array('drupal_type', 'oid'),
+      'sfid' => array('sfid'),
+    ),
+    'primary key' => array('drupal_type', 'oid'),
+  );
+  $schema['salesforce_field_map'] = array(
+    'description' => t('Drupal to Salesforce field mappings'),
+    'fields' => array(
+      'fieldmap' => array(
+        'description' => 'The primary identifier for a fieldmap.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE
+      ),
+      'drupal' => array(
+        'description' => 'The kind of Drupal object this map is for.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'salesforce' => array(
+        'description' => 'The kind of Salesforce object this map is for.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'action' => array(
+        'description' => 'The action this map is for (import vs export)',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'automatic' => array(
+        'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny'
+      ),
+      'fields' => array(
+        'description' => 'Serialized fieldmap',
+        'type' => 'text',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('fieldmap'),
   );
 
   return $schema;

@@ -174,31 +174,40 @@ function salesforce_api_connect($reconnect = FALSE) {
 
 /**
  * Implementation of hook_fieldmap_objects().
+ *
+ * This will pull a cached version (if possible) of the available SF fields for
+ * the object(s) in question. Prevent excess querying!
  */
 function salesforce_api_fieldmap_objects($type) {
   $objects = array();
-
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
-    $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
-    $sf = salesforce_api_connect();
-    $result = $sf->client->describeSObjects($sf_objects);
-    foreach ($result as $key => $object) {
-      $objects[$sf_objects[$key]] = array(
-        'label' => t($sf_objects[$key]),
-        'fields' => array(),
-      );
-      foreach ($object->fields as $field) {
-        $objects[$sf_objects[$key]]['fields'][$field->name] = array(
-          'label' => t($field->label),
+    $cache = cache_get('salesforce_api_sf_objects');
+    if ($cache->data == '') {
+      $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
+      $sf = salesforce_api_connect();
+      $result = $sf->client->describeSObjects($sf_objects);
+      foreach ($result as $key => $object) {
+        $objects[$sf_objects[$key]] = array(
+          'label' => t($sf_objects[$key]),
+          'fields' => array(),
         );
-        if ($field->createable != 1) {
-          $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
-        }
-        elseif ($field->nillable != 1 && $field->defaultedOnCreate != 1) {
-          $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_REQUIRED;
+        foreach ($object->fields as $field) {
+          $objects[$sf_objects[$key]]['fields'][$field->name] = array(
+            'label' => t($field->label),
+          );
+          if ($field->createable != 1) {
+            $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
+          }
+          elseif ($field->nillable != 1 && $field->defaultedOnCreate != 1) {
+            $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_REQUIRED;
+          }
         }
       }
+      cache_set('salesforce_api_sf_objects', $objects);
+    }
+    else {
+      $objects = $cache->data;
     }
   }
 
@@ -220,74 +229,68 @@ function salesforce_api_fieldmap_system_fields() {
   return $fields;
 }
 
-// Returns the next index for use by fieldmaps.
-// TODO: replace w.auto-increment
-function salesforce_api_fieldmap_next_index() {
-  // Get the next index value.
-  $index = variable_get('salesforce_fieldmap_index', 0) + 1;
-
-  // Increment the index counter.
-  variable_set('salesforce_fieldmap_index', $index);
-
-  // Return the new index.
-  return $index;
-}
 
 /**
  * Saves a fieldmap to the database.
  *
  * @param $map;
  *   An array containing the fieldmap data using the following keys and values:
- *   - index: the numeric index of the fieldmap.
+ *   - fieldmap: the numeric index of the fieldmap.
  *   - drupal: the name of a Drupal object.
  *   - salesforce: the name of a Salesforce object.
  *   - action: the action this fieldmap is used for; 'import' or 'export'.
+ *   - automatic: whether or not the sync should be automatic
  *   - fields: an array that maps source fields (as keys) to their corresponding
  *       target fields (as values).
  */
-function salesforce_api_fieldmap_save($map) {
-  variable_set('salesforce_fieldmap_'. $map['index'], $map);
+function salesforce_api_fieldmap_save(&$map) {
+  if ($map['fieldmap']) {
+    $primary_keys = array('fieldmap');
+  }
+  if (is_array($map['fields'])) {
+    $map['fields'] = serialize($map['fields']);
+  }
+  drupal_write_record('salesforce_field_map', $map, $primary_keys);
 }
 
 /**
  * Loads a fieldmap from the database.
  *
- * @param $index
+ * @param $fieldmap
  *   The index of the fieldmap to load.
  * @return
  *   An array containing the fieldmap data.
  */
-function salesforce_api_fieldmap_load($index) {
+function salesforce_api_fieldmap_load($fieldmap) {
   static $maps;
-
-  if (!isset($maps[$index]) && $index != '') {
-    $maps[$index] = variable_get('salesforce_fieldmap_'. $index, array());
+  if (!isset($maps[$fieldmap]) && $fieldmap != '') {
+    $result = db_query("SELECT * FROM {salesforce_field_map} WHERE fieldmap = %d", $fieldmap);
+    $map = db_fetch_array($result);
+    $map['fields'] = unserialize($map['fields']);
+    $maps[$fieldmap] = $map;
   }
 
-  return $maps[$index];
+  return $maps[$fieldmap];
 }
 
 /**
  * Clones a fieldmap, updating fields as necessary for a change in action.
  *
- * @param $index
+ * @param $fieldmap
  *   The index of the fieldmap to clone.
  * @param $action
  *   The action to switch to for the cloned fieldmap.
  * @return
  *   The newly created fieldmap or FALSE if the clone failed.
  */
-function salesforce_api_fieldmap_clone($index, $action) {
+function salesforce_api_fieldmap_clone($fieldmap, $action) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
+  $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Return FALSE if the source fieldmap does not exist.
   if (empty($map)) {
     return FALSE;
   }
-
-  // Assign a new index to the fieldmap.
-  $map['index'] = salesforce_api_fieldmap_next_index();
 
   // Switch the action and update the fields if necessary.
   if ($map['action'] != $action) {
@@ -315,15 +318,12 @@ function salesforce_api_fieldmap_clone($index, $action) {
 /**
  * Deletes a fieldmap from the database.
  *
- * @param $index
+ * @param $fieldmap
  *   The index of the fieldmap to delete.
  */
-function salesforce_api_fieldmap_delete($index) {
-  // Force a numeric index here so other fieldmap variables are accidentally
-  // deleted. May remove if we relocate the fieldmap data.
-  if (is_numeric($index)) {
-    variable_del('salesforce_fieldmap_'. $index);
-  }
+function salesforce_api_fieldmap_delete($fieldmap) {
+  db_querey("DELETE FROM {salesfoce_field_map} WHERE fieldmap = %d", $fieldmap);
+  db_querey("DELETE FROM {salesfoce_object_map} WHERE fieldmap = %d", $fieldmap);
 }
 
 /**
@@ -342,11 +342,9 @@ function salesforce_api_fieldmap_delete($index) {
  */
 function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL, $automatic = FALSE) {
   $options = array();
-
-  // Loop through all the indexed field maps.
-  for ($i = 1; $i <= variable_get('salesforce_fieldmap_index', 0); $i++) {
-    // Load the map for this index.
-    $map = variable_get('salesforce_fieldmap_'. $i, array());
+  
+  $result = db_query("SELECT fieldmap, drupal, salesforce FROM {salesforce_field_map}");
+  while ($map = db_fetch_array($result)) {
 
     // Skip the fieldmap if it is not for the appropriate Drupal object.
     if (!empty($drupal) && $map['drupal'] != $drupal) {
@@ -358,18 +356,13 @@ function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL, $au
       continue;
     }
 
-    // Skip if we're checking for automatics, and this one isn't.
-    if ($automatic && $map['automatic'] !== 1) {
-      continue;
-    }
-
     // Setup some replacement args for the label.
     $args = array(
       '@drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
       '@salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
     );
 
-    $options[$map['index']] = t('Drupal @drupal to Salesforce @salesforce', $args);
+    $options[$map['fieldmap']] = t('Drupal @drupal to Salesforce @salesforce', $args);
   }
 
   return $options;
@@ -448,7 +441,7 @@ function salesforce_api_fieldmap_object_label($type, $name) {
 
 // Returns a string of description text for the specified fieldmap.
 function salesforce_api_fieldmap_description() {
-  return t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects.', array('@index' => $map['index'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
+  return t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects.', array('@index' => $map['fieldmap'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
 }
 
 /**
@@ -492,7 +485,7 @@ function salesforce_api_fieldmap_field_options($object, $type = NULL, $name = NU
  * Creates an object for export to Salesforce based on the supplied source
  *   object and fieldmap.
  *
- * @param $index
+ * @param $fieldmap
  *   The index of the fieldmap used to filter the source object into the export.
  * @param $source
  *   The source object used to generate the export.
@@ -500,9 +493,9 @@ function salesforce_api_fieldmap_field_options($object, $type = NULL, $name = NU
  *   An object of the source type ready for export to Salesforce or FALSE if
  *     the operation failed.
  */
-function salesforce_api_fieldmap_export_create($index, $source = NULL) {
+function salesforce_api_fieldmap_export_create($fieldmap, $source = NULL) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
+  $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Fail if the fieldmap does not exist.
   if (!$map) {
@@ -550,7 +543,7 @@ function salesforce_api_fieldmap_export_create($index, $source = NULL) {
  */
 function salesforce_api_id_load($type, $id) {
   // Query the main ID table for the associated data.
-  $result = db_query("SELECT sfid, fieldmap FROM {salesforce_ids} WHERE drupal_type = '%s' AND drupal_id = %d", $type, $id);
+  $result = db_query("SELECT sfid, fieldmap FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $type, $id);
 
   // Return an empty array if no data was found.
   if (!$data = db_fetch_array($result)) {
@@ -567,16 +560,16 @@ function salesforce_api_id_load($type, $id) {
  *
  * @param $drupal_type
  *   The type of the Drupal object you are requesting data for; node or user.
- * @param $drupal_id
+ * @param $oid
  *   The associated unique ID used to identify the object in Drupal.
  * @param $sfid
  *   The Salesforce ID of the associated object in the Salesforce database.
  * @param $fieldmap
  *   The index of the fieldmap used to generate the export.
  */
-function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
-  db_query("DELETE FROM {salesforce_ids} WHERE drupal_type LIKE '%s' AND drupal_id LIKE '%s'", $drupal_type, $drupal_id);
-  db_query("INSERT INTO {salesforce_ids} (drupal_type, drupal_id, sfid, fieldmap) VALUES ('%s', '%s', '%s', %d)", $drupal_type, $drupal_id, $sfid, $fieldmap);
+function salesforce_api_id_save($drupal_type, $oid, $sfid, $fieldmap) {
+  db_query("DELETE FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid);
+  db_query("INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, fieldmap) VALUES ('%s', %d, '%s', %d)", $drupal_type, $oid, $sfid, $fieldmap);
 }
 
 /**
