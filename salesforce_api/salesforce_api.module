@@ -126,6 +126,13 @@ function salesforce_api_perm() {
  * Creates an object used for communicating with the Salesforce server and
  *   performs a login to verify the API credentials.
  *
+ * @param $username
+ *   Uername for Salesforce. An email address, most likely. If none passed, 
+ *     sitewide creds will be used
+ * @param $password
+ *   Password to Salesforce account.
+ * @param $token
+ *   Security token from Salesforce.
  * @param $reconnect
  *   By default, subsequent calls to this function will return the same, already
  *     connected Salesforce object as preceding calls. Setting this variable to
@@ -134,7 +141,7 @@ function salesforce_api_perm() {
  *   The DrupalSalesforce object used to communicate with the Salesforce server
  *     if successful or FALSE if a connection could not be established.
  */
-function salesforce_api_connect($reconnect = FALSE) {
+function salesforce_api_connect($username = FALSE, $password = FALSE, $token = FALSE, $reconnect = FALSE) {
   static $sf = FALSE;
 
   // Return the previously connected object.
@@ -142,10 +149,10 @@ function salesforce_api_connect($reconnect = FALSE) {
     return $sf;
   }
 
-  // Load up the API credentials.
-  $username = variable_get('salesforce_api_username', '');
-  $password = variable_get('salesforce_api_password', '');
-  $token = variable_get('salesforce_api_token', '');
+  // Load up the sitewide API credentials if no others were provided:
+  $username = $username ? $username : variable_get('salesforce_api_username', '');
+  $password = $password ? $password : variable_get('salesforce_api_password', '');
+  $token = $token ? $token : variable_get('salesforce_api_token', '');
 
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
