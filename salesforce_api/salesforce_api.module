@@ -329,8 +329,8 @@ function salesforce_api_fieldmap_clone($fieldmap, $action) {
  *   The index of the fieldmap to delete.
  */
 function salesforce_api_fieldmap_delete($fieldmap) {
-  db_query("DELETE FROM {salesfoce_field_map} WHERE fieldmap = %d", $fieldmap);
-  db_query("DELETE FROM {salesfoce_object_map} WHERE fieldmap = %d", $fieldmap);
+  db_query("DELETE FROM {salesforce_field_map} WHERE fieldmap = %d", $fieldmap);
+  db_query("DELETE FROM {salesforce_object_map} WHERE fieldmap = %d", $fieldmap);
 }
 
 /**
