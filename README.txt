@@ -53,3 +53,24 @@ QUICKSTART:
    created, it will create a corresponding object in Salesforce. Alternatively, 
    you can click the "salesforce" tab on any node which you've established a 
    mapping for and manually create a Salesforce object for it.
+
+WORKING WITH WSDL FILES
+
+Salesforce module will use a default .wsdl file
+(salesforce_api/toolkit/soapclient/enterprise.wsdl.xml). Alternatively, you can
+supply your own enterprise wsdl file by placing it in the salesforce_api/wsdl/ 
+directory (salesforce_api/wsdl/enterprise.wsdl - no .xml at the end of the file
+name).
+
+When switching between wsdl files, keep in mind that PHP's SoapClient is caching
+wsdl information. You can turn off caching of wsdl information by adding this 
+line to your settings.php:
+
+ini_set('soap.wsdl_cache_enabled',  '0');
+
+You can control the life time of your cache by adding this line to your 
+settings.php:
+
+ini_set('soap.wsdl_cache_ttl',      '0');
+
+For more information on SoapClient refer to http://php.net/manual/en/book.soap.php
