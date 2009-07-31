@@ -53,7 +53,7 @@ function salesforce_api_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  $items[SALESFORCE_PATH_ADMIN .'/demo'] = array(
+  $items[SALESFORCE_PATH_DEMO] = array(
     'title' => 'Test/Demo',
     'page callback' => 'salesforce_api_demo',
     'access arguments' => array('administer salesforce'),
