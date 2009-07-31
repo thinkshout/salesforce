@@ -58,7 +58,7 @@ function salesforce_api_settings_form() {
       SALESFORCE_LOG_SOME => t('Log important Salesforce activities.'),
       SALESFORCE_LOG_ALL => t('Log all Salesforce activitiies.'),
     ),
-    '#default_value' => variable_get('salesforce_api_activitiy_log', SALESFORCE_LOG_SOME),
+    '#default_value' => variable_get('salesforce_api_activity_log', SALESFORCE_LOG_SOME),
   );
   $form['log']['salesforce_api_error_log'] = array(
     '#type' => 'radios',
