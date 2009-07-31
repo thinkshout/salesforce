@@ -32,12 +32,14 @@ function salesforce_api_settings_form() {
   $form['api']['salesforce_api_password'] = array(
     '#type' => 'password',
     '#title' => t('Password'),
+    '#description' => t('Enter the password used when logging into Salesforce.'),
     '#default_value' => variable_get('salesforce_api_password', ''),
   );
   $form['api']['salesforce_api_token'] = array(
     '#type' => 'textfield',
     '#title' => t('Security token'),
     '#description' => t('Set your security token by logging into Salesforce and navigating to Setup > My Personal Information > Reset My Security Token.'),
+    '#required' => TRUE,
     '#default_value' => variable_get('salesforce_api_token', ''),
   );
 
@@ -70,8 +72,21 @@ function salesforce_api_settings_form() {
   );
 
   // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
+  $form['#validate'][] = 'salesforce_api_settings_form_validate';
   $form['#submit'][] = 'salesforce_api_settings_form_submit';
   return system_settings_form($form);
+}
+
+// Settings form validate handler to verify new salesforce credentials before saving them.
+function salesforce_api_settings_form_validate(&$form, &$form_state) {
+  $values = $form_state['values'];
+  if (!salesforce_api_connect($values['salesforce_api_username'], $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE)) {
+    // If not, prevent the user from overwriting the current configuration.
+    form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
+  }
+  else {
+    drupal_set_message('Salesforce connection established.');
+  }
 }
 
 // Settings form submit handler so that password doesn't get deleted.

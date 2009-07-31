@@ -22,6 +22,13 @@ function salesforce_api_uninstall() {
 }
 
 /**
+ * Implementation of hook_enable().
+ */
+function salesforce_api_enable() {
+  drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
+}
+
+/**
  * Implementation of hook_schema().
  */
 function salesforce_api_schema() {
@@ -110,4 +117,43 @@ function salesforce_api_schema() {
   );
 
   return $schema;
+}
+
+/**
+ * Implementation of hook_requirements().
+ *
+ * Check the Salesforce API configuration to see if we have valid credentials.
+ */
+function salesforce_api_requirements($phase) {
+  $req = array();
+  switch($phase) {
+    case 'install':
+      break;
+
+    case 'runtime':
+      $username = variable_get('salesforce_api_username', FALSE);
+      if (!$username) {
+        $description = l(t('Enter your Salesforce credentials.'), SALESFORCE_PATH_ADMIN);
+        $severity = REQUIREMENT_ERROR;
+      }
+      elseif (!salesforce_api_connect()) {
+        $description = t('Unable to connect to Salesforce using <a href="!url">current configuration</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
+        $severity = REQUIREMENT_ERROR;
+      }
+      else {
+        $description = '';
+        $severity = REQUIREMENT_OK;
+      }
+      $req[] = array(
+        'title' => t('Salesforce Configuration'),
+        'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN), 
+        'description' => $description,
+        'severity' => $severity
+      );
+      break;
+  }
+
+  if(!empty($req)) {
+    return $req;
+  }
 }
