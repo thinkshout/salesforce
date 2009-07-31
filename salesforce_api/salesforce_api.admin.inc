@@ -90,7 +90,7 @@ function salesforce_api_settings_form_validate(&$form, &$form_state) {
 }
 
 // Settings form submit handler so that password doesn't get deleted.
-function salesforce_api_settings_form_submit($form, &$form_state) {
+function salesforce_api_settings_form_submit(&$form, &$form_state) {
   // If the user hit "Save Configuration" and the required field
   // salesforce_api_password is blank, try to get it from variables
   if ($form_state['values']['submit'] == $form_state['values']['op'] and empty($form_state['values']['salesforce_api_password'])) {
