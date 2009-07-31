@@ -63,7 +63,7 @@ function salesforce_api_drush_show_tables() {
     foreach ($response->types as $type) {
       $rows[] = array($type);
     }
-    drush_print_table($rows, 4, TRUE);
+    drush_print_table($rows, TRUE);
     drush_print("\n" . dt('!count rows in set.', array('!count' => (count($rows)-1))));
   }
   else {
@@ -104,12 +104,12 @@ function salesforce_api_drush_describe() {
         if ($_i == 'fields') {
           $rows = array(array('Key', 'Type', 'Name', 'Label'));
           _salesforce_api_drush_get_fields($response, $rows);
-          drush_print_table($rows, 4, TRUE);
+          drush_print_table($rows, TRUE);
         }
         else {
           $rows = array(array(dt('Key'), dt('Value')));
           _salesforce_api_drush_get_info($response, &$rows);
-          drush_print_table($rows, 4, TRUE);
+          drush_print_table($rows, TRUE);
         }
       } 
       catch (Exception $e) {
@@ -202,7 +202,7 @@ function salesforce_api_drush_soql() {
         }
         $rows[] = $row;
       }
-      drush_print_table($rows, 4, TRUE);
+      drush_print_table($rows, TRUE);
       drush_print("\n" . dt('!count rows in set (!time sec)', 
         array('!count' => $result->size, '!time' => number_format($timer['time']/1000, 2))));
     } 
