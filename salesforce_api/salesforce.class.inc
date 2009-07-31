@@ -67,11 +67,11 @@ class DrupalSalesforce {
       $login = $this->client->login($this->username, $this->password . $this->token);
 
       // Log the login occurence.
-      $this->watchdog(SALESFORCE_LOG_ALL, t('@user (@email) logged into Salesforce.', array('@user' => $login->userInfo->userFullName, '@email' => $login->userInfo->userEmail)));
+      $this->watchdog(SALESFORCE_LOG_ALL, '@user (@email) logged into Salesforce.', array('@user' => $login->userInfo->userFullName, '@email' => $login->userInfo->userEmail));
     }
     catch (Exception $e) {
       // Log the error message.
-      $this->watchdog(SALESFORCE_LOG_SOME, t('Could not login to Salesforce.') .'<pre>'. check_plain($this->client->getLastRequest() . $e->faultstring) .'</pre>', WATCHDOG_ERROR);
+      $this->watchdog(SALESFORCE_LOG_SOME, 'Could not login to Salesforce: %message. <pre>!debug</pre>', array('%message' => $e->faultstring, '!debug' => check_plain($this->client->getLastRequest())), WATCHDOG_ERROR);
 
       // Indicate the failed login.
       return FALSE;
@@ -86,10 +86,11 @@ class DrupalSalesforce {
    *
    * @param $level
    * @param $message
+   * @param $vars
    * @param $severity
    * @param $link
    */
-  function watchdog($level, $message, $severity = WATCHDOG_NOTICE, $link = NULL) {
+  function watchdog($level, $message, $vars = array(), $severity = WATCHDOG_NOTICE, $link = NULL) {
     // Log nothing for notices if the related log level is not greater than or
     // equal to the level of this message.
     switch ($severity) {
@@ -111,7 +112,7 @@ class DrupalSalesforce {
     }
 
     // Log the message to the watchdog.
-    watchdog('salesforce', $message, $severity, $link);
+    watchdog('salesforce', $message, $vars, $severity, $link);
   }
 
   /**
