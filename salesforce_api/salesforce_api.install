@@ -19,6 +19,7 @@ function salesforce_api_install() {
  */
 function salesforce_api_uninstall() {
   drupal_uninstall_schema('salesforce_api');
+  db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'");
 }
 
 /**
