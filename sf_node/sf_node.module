@@ -56,7 +56,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
     case 'insert':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
-      if(isset($node->sf_node_skip_export)) {
+      if (isset($node->sf_node_skip_export)) {
         return;
       }
       // Detect whether or not this should be an auto-update for this node
@@ -74,7 +74,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
     case 'update':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
-      if(isset($node->sf_node_skip_export)) {
+      if (isset($node->sf_node_skip_export)) {
         return;
       }
       $salesforce = salesforce_api_id_load('node', $node->nid);
@@ -477,7 +477,7 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   }
   else {
     // Otherwise log the error and return FALSE.
-    drupal_set_message('<pre>'. print_r($response, TRUE) .'</pre>', 'error');
+    drupal_set_message('<pre>' . print_r($response, TRUE) . '</pre>', 'error');
 
     return FALSE;
   }

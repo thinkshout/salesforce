@@ -51,10 +51,10 @@ function salesforce_api_drush_command() {
  */
 function salesforce_api_drush_show_tables() {
   _salesforce_api_drush_check_soap();
-  if($sf = salesforce_api_connect()) {
+  if ($sf = salesforce_api_connect()) {
     try {
       $response = $sf->client->describeGlobal();
-    } 
+    }
     catch (Exception $e) {
       drush_print($e->faultstring);
       return;
@@ -81,7 +81,7 @@ function salesforce_api_drush_show_tables() {
 function salesforce_api_drush_describe() {
     _salesforce_api_drush_check_soap();
   $tables = func_get_args();
-  if($sf = salesforce_api_connect()) {
+  if ($sf = salesforce_api_connect()) {
     foreach ($tables as $t) {
       $info = explode('.', $t);
       try {
@@ -111,7 +111,7 @@ function salesforce_api_drush_describe() {
           _salesforce_api_drush_get_info($response, &$rows);
           drush_print_table($rows, TRUE);
         }
-      } 
+      }
       catch (Exception $e) {
         drush_print($e->faultstring);
       }
@@ -137,7 +137,7 @@ function _salesforce_api_drush_get_info($response, &$rows) {
       }
       elseif (is_object($v) && isset($v->childSObject)) {
         // For relationships
-        $label = $v->childSObject. '.' .$v->field;
+        $label = $v->childSObject . '.' . $v->field;
       }
       elseif (is_object($v) && isset($v->label)) {
         // For picklist values
@@ -183,7 +183,7 @@ function salesforce_api_drush_soql() {
   _salesforce_api_drush_check_soap();
   $args = func_get_args();
   $command = implode(' ', $args);
-  if($sf = salesforce_api_connect()) {
+  if ($sf = salesforce_api_connect()) {
     try {
       timer_start('soql_query');
       $result = $sf->client->query($command);
@@ -203,9 +203,9 @@ function salesforce_api_drush_soql() {
         $rows[] = $row;
       }
       drush_print_table($rows, TRUE);
-      drush_print("\n" . dt('!count rows in set (!time sec)', 
+      drush_print("\n" . dt('!count rows in set (!time sec)',
         array('!count' => $result->size, '!time' => number_format($timer['time']/1000, 2))));
-    } 
+    }
     catch (Exception $e) {
       drush_print($e->faultstring);
     }

@@ -126,7 +126,7 @@ function salesforce_api_schema() {
  */
 function salesforce_api_requirements($phase) {
   $req = array();
-  switch($phase) {
+  switch ($phase) {
     case 'install':
       break;
 
@@ -146,14 +146,14 @@ function salesforce_api_requirements($phase) {
       }
       $req[] = array(
         'title' => t('Salesforce Configuration'),
-        'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN), 
+        'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN),
         'description' => $description,
         'severity' => $severity
       );
       break;
   }
 
-  if(!empty($req)) {
+  if (!empty($req)) {
     return $req;
   }
 }

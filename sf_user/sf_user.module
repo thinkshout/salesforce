@@ -353,7 +353,7 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   }
   else {
     // Otherwise log the error and return FALSE.
-    drupal_set_message('<pre>'. print_r($response, TRUE) .'</pre>', 'error');
+    drupal_set_message('<pre>' . print_r($response, TRUE) . '</pre>', 'error');
 
     return FALSE;
   }

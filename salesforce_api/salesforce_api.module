@@ -127,7 +127,7 @@ function salesforce_api_perm() {
  *   performs a login to verify the API credentials.
  *
  * @param $username
- *   Uername for Salesforce. An email address, most likely. If none passed, 
+ *   Username for Salesforce. An email address, most likely. If none passed,
  *     sitewide creds will be used
  * @param $password
  *   Password to Salesforce account.
@@ -347,7 +347,7 @@ function salesforce_api_fieldmap_delete($fieldmap) {
  */
 function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL, $automatic = FALSE) {
   $options = array();
-  
+
   $result = db_query("SELECT fieldmap, drupal, salesforce FROM {salesforce_field_map}");
   while ($map = db_fetch_array($result)) {
 

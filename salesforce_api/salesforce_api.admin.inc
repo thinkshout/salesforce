@@ -85,7 +85,7 @@ function salesforce_api_settings_form_validate(&$form, &$form_state) {
     form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
   }
   else {
-    drupal_set_message('Salesforce connection established.');
+    drupal_set_message(t('Salesforce connection established.'));
   }
 }
 
