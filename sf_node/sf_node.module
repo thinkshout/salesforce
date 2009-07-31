@@ -55,6 +55,10 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $node->salesforce = salesforce_api_id_load('node', $node->nid);
       break;
     case 'insert':
+      // When importing *from* Salesforce, don't export *back* to Salesforce.
+      if(isset($node->sf_node_skip_export)) {
+        break;
+      }
       // Detect whether or not this should be an auto-update for this node
       $options = salesforce_api_fieldmap_options('node_'. $node->type, NULL, TRUE);
       if (empty($options)) {
@@ -69,6 +73,10 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       sf_node_export($node, $map);
       break;
     case 'update':
+      // When importing *from* Salesforce, don't export *back* to Salesforce.
+      if(isset($node->sf_node_skip_export)) {
+        break;
+      }
       $salesforce = salesforce_api_id_load('node', $node->nid);
       if ($salesforce['fieldmap'] && $salesforce['sfid']) {
         sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
@@ -522,8 +530,9 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
         $node->$key = $data->$value;
       }
     }
-
+    $node->sf_node_skip_export = TRUE;
     node_save($node);
+    unset($node->sf_node_skip_export);
   }
 
   return $node->nid;
