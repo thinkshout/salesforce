@@ -58,7 +58,6 @@ function salesforce_api_schema() {
       ),
     ),
     'indexes' => array(
-      'drupal_object' => array('drupal_type', 'oid'),
       'sfid' => array('sfid'),
     ),
     'primary key' => array('drupal_type', 'oid'),
