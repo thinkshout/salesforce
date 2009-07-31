@@ -336,8 +336,6 @@ function salesforce_api_fieldmap_delete($fieldmap) {
 /**
  * Returns an array of fieldmaps for use as options in the Forms API.
  *
- * @param $action
- *   Filters the fieldmaps by action.
  * @param $drupal
  *   Filters the fieldmaps by Drupal object.
  * @param $salesforce
