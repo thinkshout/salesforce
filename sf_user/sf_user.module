@@ -162,6 +162,11 @@ function sf_user_salesforce_form(&$form_state, $uid) {
 
     // Retrieve the object from Salesforce.
     $sf = salesforce_api_connect();
+    if (!$sf) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+      return array();
+    }
+
     $data = $sf->retrieve(array($account->salesforce['sfid']), $account->salesforce['fieldmap']);
 
     // Load the fieldmap data.
@@ -322,6 +327,10 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
 function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
+  if (!$sf) {
+    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    return FALSE;
+  }
 
   // Load the user.
   $account = user_load(array('uid' => $uid));
@@ -374,6 +383,11 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
 function sf_user_import($sfid, $fieldmap, $uid = NULL) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
+  if (!$sf) {
+    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    return FALSE;
+  }
+
   $data = $sf->retrieve(array($sfid), $fieldmap);
 
   // Return FALSE if the object data was not found at Salesforce.

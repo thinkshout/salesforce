@@ -138,7 +138,7 @@ function salesforce_api_requirements($phase) {
         $severity = REQUIREMENT_ERROR;
       }
       elseif (!salesforce_api_connect()) {
-        $description = t('Unable to connect to Salesforce using <a href="!url">current configuration</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
+        $description = t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
         $severity = REQUIREMENT_ERROR;
       }
       else {

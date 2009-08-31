@@ -277,6 +277,11 @@ function sf_node_salesforce_form(&$form_state, $nid) {
 
     // Retrieve the object from Salesforce.
     $sf = salesforce_api_connect();
+    if (!$sf) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+      return array();
+    }
+
     $data = $sf->retrieve(array($node->salesforce['sfid']), $node->salesforce['fieldmap']);
 
     // Load the fieldmap data.
@@ -437,6 +442,10 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
 function sf_node_export($node, $fieldmap, $sfid = NULL) {
   // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
+  if (!$sf) {
+    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    return FALSE;
+  }
 
   // Load the node if we didn't get a full object.
   if (is_numeric($node)) {
@@ -498,6 +507,11 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
 function sf_node_import($sfid, $fieldmap, $nid = NULL) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
+  if (!$sf) {
+    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    return FALSE;
+  }
+
   $data = $sf->retrieve(array($sfid), $fieldmap);
 
   // Return FALSE if the object data was not found at Salesforce.

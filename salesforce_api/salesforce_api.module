@@ -241,6 +241,11 @@ function salesforce_api_fieldmap_objects($type) {
     if ($cache->data == '') {
       $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
       $sf = salesforce_api_connect();
+      if (!$sf) {
+        drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+        return array();
+      }
+
       $result = $sf->client->describeSObjects($sf_objects);
       foreach ($result as $key => $object) {
         $objects[$sf_objects[$key]] = array(
