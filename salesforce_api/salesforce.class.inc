@@ -64,10 +64,10 @@ class DrupalSalesforce {
       $this->client->createConnection($wsdl);
 
       // Attempt a login with the credentials entered by the user.
-      $login = $this->client->login($this->username, $this->password . $this->token);
+      $this->login = $this->client->login($this->username, $this->password . $this->token);
 
       // Log the login occurence.
-      $this->watchdog(SALESFORCE_LOG_ALL, '@user (@email) logged into Salesforce.', array('@user' => $login->userInfo->userFullName, '@email' => $login->userInfo->userEmail));
+      $this->watchdog(SALESFORCE_LOG_ALL, '@user (@email) logged into Salesforce.', array('@user' => $this->login->userInfo->userFullName, '@email' => $this->login->userInfo->userEmail));
     }
     catch (Exception $e) {
       // Log the error message.

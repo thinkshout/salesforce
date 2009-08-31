@@ -149,6 +149,9 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
     return $sf;
   }
 
+  // Boolean, whether we are connecting with the default website user or not.
+  $default_site_user = !$username;
+
   // Load up the sitewide API credentials if no others were provided:
   $username = $username ? $username : variable_get('salesforce_api_username', '');
   $password = $password ? $password : variable_get('salesforce_api_password', '');
@@ -161,21 +164,66 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
   }
 
   // Include the file that defines the class.
-  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
+  require_once(drupal_get_path('module', 'salesforce_api') . '/salesforce.class.inc');
 
   // Create a new Salesforce object with the API credentials.
   $sf = new DrupalSalesforce($username, $password, $token);
 
-  // Attempt a login, and...
+  // Attempt a login.
   if ($sf->login()) {
-    // Return the object if a connection and login were successful.
-    return $sf;
+    // Mimick expired password state to debug.
+    // $sf->login->passwordExpired = TRUE;
+    if ($sf->login->passwordExpired) {
+      if ($default_site_user) {
+        salesforce_api_reset_expired_password($sf);
+      }
+      else {
+        drupal_set_message(t('Your Salesforce account password expired.  Please <a href="https://login.salesforce.com/">click here to login to Salesforce.com</a> and change your password.'));
+      }
+    }
   }
   else {
     // Or return FALSE to indicate the failure.
     $sf = FALSE;
+  }
+  return $sf;
+}
 
-    return FALSE;
+/**
+ * Helper function for salesforce_api_connect() to reset an expired password,
+ *   for the website's default salesforce user only.
+ *
+ * @param $sf
+ *   The logged in DrupalSalesforce object with an expired password.
+ * @return
+ *   void
+ */
+function salesforce_api_reset_expired_password($sf) {
+  // Append one letter and one digit to the password to make sure we meet
+  // salesforce's password validation requirements.
+  $new_password = user_password() . 'z9';
+  // setPassword() may throw InvalidIdFault or UnexpectedErrorFault exceptions.
+  $sf->client->setPassword($sf->login->userId, $new_password);
+  variable_set('salesforce_api_password', $new_password);
+  // Salesforce changes the security token when the password gets changed and
+  // sends an email with the new security token.  The new security token can
+  // not be retrieved via the API.
+  variable_del('salesforce_api_token');
+
+  // Log the event and alert admins about required steps to complete.
+  $vars = array(
+    '%user' => $sf->login->userInfo->userFullName,
+    '%email' => $sf->login->userInfo->userEmail,
+    '!uri' => url('admin/settings/salesforce', array('absolute' => TRUE)),
+  );
+
+  watchdog('salesforce', 'The password for the salesforce account %user expired.  Drupal changed it and saved the new password.  Salesforce updated the security token and emailed it to %email.', $vars);
+  watchdog('salesforce', 'Provide the new security token at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce emailed it to %email.', $vars, WATCHDOG_ALERT);
+
+  // If salesforce connects on pages for anonymous users then these messages should not be displayed.
+  if (user_access('administer salesforce')) {
+    drupal_set_message(t('The password for the salesforce account %user expired.  Drupal changed it and saved the new password.  Salesforce updated the security token and emailed it to %email.', $vars));
+    drupal_set_message(t('Provide the new security token at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce emailed it to %email.', $vars), 'error');
   }
 }
 
