@@ -163,13 +163,6 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
     '#disabled' => count($options) == 0,
     '#required' => TRUE,
   );
-  $form['automatic'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Automatically Populate Salesforce?'),
-    '#return_value' => 1,
-    '#default_value' => 1,
-    '#description' => t('Automatically create and link new salesforce objects when Drupal objects are created?'),
-  );
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -291,6 +284,14 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
 
+  $form['drupal_sfapi_automatic'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Automatically Populate Salesforce?'),
+    '#return_value' => 1,
+    '#default_value' => $map['automatic'],
+    '#description' => t('Automatically create and link new salesforce objects when Drupal objects are created?'),
+  );
+
   // Add the data to the form for the required fields table.
   $form['fields'] = array(
     '#theme' => 'salesforce_api_fieldmap_edit_form_table',
@@ -374,6 +375,9 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
     }
   }
 
+  // set the automatic flag on the map
+  $map['automatic'] = $form_state['values']['drupal_sfapi_automatic'];
+  
   // Save the updated fieldmap.
   salesforce_api_fieldmap_save($map);
 
