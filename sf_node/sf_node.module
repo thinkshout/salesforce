@@ -55,39 +55,40 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'load':
       $node->salesforce = salesforce_api_id_load('node', $node->nid);
       break;
+    case 'update':
     case 'insert':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
       if (isset($node->sf_node_skip_export)) {
-        return;
+        break;
       }
 
-      // Are there any automatic fieldmaps for this node type?
-      $result = db_query("SELECT fieldmap FROM {salesforce_field_map} WHERE drupal = '%s' AND automatic = 1", 'node_'. $node->type);
-      $map = db_fetch_object($result);
-      if (!$map) {
-        return;
+      // If this is an update, and the node already has a salesforce mapping, 
+      // try to load it. If the load fails, we need to fetch the appropriate 
+      // fieldmap. Either way, we're upserting the salesforce record.
+      $salesforce = array('fieldmap' => null, 'sfid' => null);
+      if ($node->nid) {
+        $salesforce = salesforce_api_id_load('node', $node->nid);
       }
 
-      // Use the first fieldmap.
-      $map = $map->fieldmap;
+      if (empty($salesforce['fieldmap'])) {
+        // Are there any automatic fieldmaps for this node type?
+        $result = db_query("SELECT fieldmap FROM {salesforce_field_map} WHERE drupal = '%s' AND automatic = 1", 'node_'. $node->type);
+        $map = db_fetch_object($result);
+        if (!$map) {
+          // If we still didn't find a map, we're out of options. Bail out.
+          break;
+        }
 
-      // Check if there is more than one fieldmap in the result.
-      if (user_access('administer salesforce') and db_fetch_object($result)) {
-        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
+        // Use the first fieldmap.
+        $salesforce['fieldmap'] = $map->fieldmap;
+
+        // Check if there is more than one fieldmap in the result.
+        if (user_access('administer salesforce') and db_fetch_object($result)) {
+          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
+        }
       }
-
       // Finally, export the node to Salesforce.
-      sf_node_export($node, $map);
-      break;
-    case 'update':
-      // When importing *from* Salesforce, don't export *back* to Salesforce.
-      if (isset($node->sf_node_skip_export)) {
-        return;
-      }
-      $salesforce = salesforce_api_id_load('node', $node->nid);
-      if ($salesforce['fieldmap'] && $salesforce['sfid']) {
-        sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
-      }
+      sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
       break;
   }
 }

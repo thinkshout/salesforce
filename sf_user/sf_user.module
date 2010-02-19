@@ -58,6 +58,40 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
     case 'load':
       $account->salesforce = salesforce_api_id_load('user', $account->uid);
       break;
+
+    case 'delete':
+      db_query('DELETE FROM {salesforce_ids} WHERE drupal_type = "user" AND drupal_id = %d', $account->uid);
+      break;
+
+    case 'insert':
+    case 'update':
+      // When importing *from* Salesforce, don't export *back* to Salesforce.
+      if (isset($account->sf_user_skip_export) || isset($edit['sf_user_skip_export'])) {
+        break;
+      }
+      $salesforce = array('fieldmap' => null, 'sfid' => null);
+      if ($account->uid) {
+        $salesforce = salesforce_api_id_load('user', $account->uid);
+      }
+      
+      if (empty($salesforce['fieldmap'])) {
+        // Detect whether or not this should be an auto-update for this user
+        $result = db_query("SELECT fieldmap FROM {salesforce_field_map} WHERE drupal = 'user' AND automatic = 1");
+        $map = db_fetch_object($result);
+        if (!$map) {
+          break;
+        }
+        // Use the first fieldmap.
+        $salesforce['fieldmap'] = $map->fieldmap;
+
+        // Check if there is more than one fieldmap in the result.
+        if (user_access('administer salesforce') and db_fetch_object($result)) {
+          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
+        }
+      }
+
+      sf_user_export($account->uid, $salesforce['fieldmap'], $salesforce['sfid']);
+      break;
   }
 }
 
@@ -107,7 +141,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
     drupal_not_found();
   }
 
-  // Set the node page title.
+  // Set the user page title.
   drupal_set_title(check_plain($account->name));
 
   $form = array();
@@ -117,7 +151,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
     '#value' => $account->uid,
   );
 
-  // Display an export button if the node hasn't been exported before.
+  // Display an export button if the user hasn't been exported before.
   if (!$account->salesforce['sfid']) {
     $form['export'] = array(
       '#type' => 'fieldset',
@@ -125,7 +159,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
       '#description' => t('This user may be exported to Salesforce using any fieldmap listed below.'),
     );
 
-    // Get an array of fieldmaps that export nodes of this type to Salesforce.
+    // Get an array of fieldmaps that export users of this type to Salesforce.
     $options = salesforce_api_fieldmap_options('user');
 
     // Add the export form
@@ -347,7 +381,7 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   // If the export was successful...
   if ($response->success) {
     if (empty($sfid)) {
-      // Store the Salesforce ID for the node and return TRUE.
+      // Store the Salesforce ID for the user and return TRUE.
       salesforce_api_id_save('user', $uid, $response->id, $fieldmap);
     }
 
@@ -395,7 +429,7 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
-  // If a node was specified, attempt to load it.
+  // If a user was specified, attempt to load it.
   $account = user_load(array('uid' => $uid));
   if (empty($uid) || empty($account)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
@@ -405,7 +439,7 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
     }
   }
 
-  // If the node exists, simply update the existing node.
+  // If the user exists, simply update the existing user.
   if ($account->uid) {
     // Loop through the fields on the fieldmap.
     foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
@@ -429,7 +463,12 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
     }
 
     //drupal_set_message('<pre>'. print_r($changes, TRUE) .'</pre>');
-    user_save($account, $changes);
+    // We don't want to trigger an export while we're running import.
+    // sf_user_skip_export is a flag to tell hook_user not to export this object.
+    $account->sf_user_skip_export = TRUE;
+    $changes['sf_user_skip_export'] = TRUE;
+    $account = user_save($account, $changes);
+    unset($account->sf_user_skip_export);
   }
 
   return $account->uid;
