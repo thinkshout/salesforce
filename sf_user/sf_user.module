@@ -115,7 +115,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
 
   $form['uid'] = array(
     '#type' => 'value',
-    '#value' => $uid,
+    '#value' => $account->uid,
   );
 
   // Display an export button if the node hasn't been exported before.
@@ -159,33 +159,36 @@ function sf_user_salesforce_form(&$form_state, $account) {
       return array();
     }
 
-    $data = $sf->retrieve(array($account->salesforce['sfid']), $account->salesforce['fieldmap']);
+    $sf_data = $sf->retrieve(array($account->salesforce['sfid']), $account->salesforce['fieldmap']);
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($account->salesforce['fieldmap']);
 
     // Load the object definitions.
-    $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-    $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+    $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+    $sf_field_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
     $header = array(t('Field name'), t('Drupal user value'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
     $rows = array();
 
-    foreach ($map['fields'] as $key => $value) {
-      if (isset($drupal_object['fields'][$value]['export'])) {
-        $drupal_value = $drupal_object['fields'][$value]['export']($account, $value);
+    foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+      if (isset($drupal_object_definition['fields'][$drupal_fieldname]['export'])) {
+        $drupal_field_export_handler = $drupal_object_definition['fields'][$drupal_fieldname]['export'];
+        $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+        $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
+        $drupal_value = $drupal_field_export_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_field_definition);
       }
-      elseif (isset($account->$value)) {
-        $drupal_value = $account->$value;
+      elseif (isset($account->$drupal_fieldname)) {
+        $drupal_value = $account->$drupal_fieldname;
       }
       else {
         $drupal_value = '';
       }
 
       $rows[] = array(
-        $object['fields'][$key]['label'],
+        $sf_field_definition['fields'][$sf_fieldname]['label'],
         $drupal_value,
-        $data->$key,
+        $sf_data->$sf_fieldname,
       );
     }
 
@@ -213,10 +216,10 @@ function sf_user_salesforce_form(&$form_state, $account) {
     $header = array(t('Field name'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
     $rows = array();
 
-    foreach ((array) $data as $key => $value) {
-      if (!isset($map['fields'][$key]) && isset($object['fields'][$key])) {
+    foreach ((array) $sf_data as $key => $value) {
+      if (!isset($map['fields'][$key]) && isset($sf_field_definition['fields'][$key])) {
         $rows[] = array(
-          $object['fields'][$key]['label'],
+          $sf_field_definition['fields'][$key]['label'],
           $value,
         );
       }
@@ -238,7 +241,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
     foreach (salesforce_api_fieldmap_system_fields() as $key => $value) {
       $rows[] = array(
         $value['label'],
-        $data->$key,
+        $sf_data->$key,
       );
     }
 
@@ -260,7 +263,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
       '#collapsed' => TRUE,
     );
     $form['raw']['data'] = array(
-      '#value' => '<pre>'. print_r($data, TRUE) .'</pre>',
+      '#value' => '<pre>'. print_r($sf_data, TRUE) .'</pre>',
     );
   }
 
@@ -380,10 +383,10 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
     return FALSE;
   }
 
-  $data = $sf->retrieve(array($sfid), $fieldmap);
+  $sf_data = $sf->retrieve(array($sfid), $fieldmap);
 
   // Return FALSE if the object data was not found at Salesforce.
-  if (empty($data)) {
+  if (empty($sf_data)) {
     return FALSE;
   }
 
@@ -391,8 +394,8 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
   $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Load the object definitions.
-  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  $salesforce_object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+  $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   // If a node was specified, attempt to load it.
   $account = user_load(array('uid' => $uid));
@@ -400,19 +403,22 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
   // If the node exists, simply update the existing node.
   if ($account->uid) {
     // Loop through the fields on the fieldmap.
-    foreach ($map['fields'] as $value => $key) {
+    foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
       // If a handler is specified for importing a value from Salesforce.
-      if (isset($drupal_object['fields'][$key]['import'])) {
+      if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
+        $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
+        $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+        $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
         // Get the value for the field from the handler function.
-        $change = $drupal_object['fields'][$key]['import']($account, $key, $data, $value);
+        $change = $drupal_field_import_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
 
         $changes = array_merge($changes, $change);
       }
-      elseif (isset($data->$value)) {
-        // Otherwise set the field on the export object to the value of the source
-        // field if it's present on the source object.
-        if ($account->$key != $data->$value) {
-          $changes[$key] = $data->$value;
+      // Otherwise set the field on the export object to the value of the source
+      // field if it's present on the source object.
+      elseif (isset($sf_data->$sf_fieldname)) {
+        if ($account->$drupal_fieldname != $sf_data->$sf_fieldname) {
+          $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
         }
       }
     }

@@ -485,8 +485,7 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
  */
 function salesforce_api_admin_object(&$form_state) {
   $objects = salesforce_api_describeGlobal();
-  $cache = cache_get('salesforce_api_sf_objects');
-  $defaults = is_array($cache->data) ? array_keys($cache->data) : array();
+  $defaults = array_keys(salesforce_api_fieldmap_objects());
 
   if (empty($objects->sobjects)) {
     drupal_set_message(t('There was an error retrieving the list of SalesForce objects. Please verify that your SalesForce instance is properly configured.'), 'error');

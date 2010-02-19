@@ -251,7 +251,7 @@ function salesforce_api_reset_expired_password($sf) {
  * This will pull a cached version (if possible) of the available SF fields for
  * the object(s) in question. Prevent excess querying!
  */
-function salesforce_api_fieldmap_objects($type) {
+function salesforce_api_fieldmap_objects($type = 'salesforce') {
   $objects = array();
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
@@ -555,18 +555,18 @@ function salesforce_api_fieldmap_field_options($object, $type = NULL, $name = NU
 }
 
 /**
- * Creates an object for export to Salesforce based on the supplied source
+ * Creates an object for export to Salesforce based on the supplied Drupal
  *   object and fieldmap.
  *
  * @param $fieldmap
- *   The index of the fieldmap used to filter the source object into the export.
- * @param $source
- *   The source object used to generate the export.
+ *   The index of the fieldmap used to filter the Drupal object into the export.
+ * @param $drupal_data
+ *   The Drupal object used to generate the export.
  * @return
- *   An object of the source type ready for export to Salesforce or FALSE if
+ *   An object containing data ready for export to Salesforce or FALSE if
  *     the operation failed.
  */
-function salesforce_api_fieldmap_export_create($fieldmap, $source = NULL) {
+function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
@@ -575,28 +575,25 @@ function salesforce_api_fieldmap_export_create($fieldmap, $source = NULL) {
     return FALSE;
   }
 
-  // Load the source object definition so we know how to get values for its
-  // various fields.
-  if ($map['action'] == 'import') {
-    $source_object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-  }
-  else {
-    $source_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  }
+  $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $sf_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   $object = new stdClass();
 
   // Loop through the fields on the fieldmap.
-  foreach ($map['fields'] as $key => $value) {
-    // If a handler is specified for retrieving a value for the source field...
-    if (isset($source_object['fields'][$value]['export'])) {
+  foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+    // If a handler is specified for retrieving a value for the Drupal field...
+    if (isset($drupal_object_definition['fields'][$drupal_fieldname]['export'])) {
+      $drupal_field_export_handler = $drupal_object_definition['fields'][$drupal_fieldname]['export'];
+      $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+      $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
       // Get the value for the field from the handler function.
-      $object->$key = $source_object['fields'][$value]['export']($source, $value);
+      $object->$sf_fieldname = $drupal_field_export_handler($drupal_data, $drupal_fieldname, $drupal_field_definition, $sf_field_definition);
     }
-    elseif (isset($source->$value)) {
-      // Otherwise set the field on the export object to the value of the source
-      // field if it's present on the source object.
-      $object->$key = $source->$value;
+    // Otherwise set the field on the export object to the value of the Drupal
+    // field if it's present on the source object.
+    elseif (isset($drupal_data->$drupal_fieldname)) {
+      $object->$sf_fieldname = $drupal_data->$drupal_fieldname;
     }
   }
 

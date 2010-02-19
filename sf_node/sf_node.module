@@ -149,6 +149,8 @@ function sf_node_fieldmap_objects($type) {
             'group' => t('CCK fields'),
             'export' => $export_handler,
             'import' => $import_handler,
+            'type' => $field['type'],
+            'multiple' => $field['multiple'],
           );
 
           // If the field was a date field, add the "To" date if enabled.
@@ -169,21 +171,53 @@ function sf_node_fieldmap_objects($type) {
 }
 
 // Returns the basic value of a CCK field from $array[0]['value'].
-function _sf_node_export_cck_default($source, $field) {
+function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   // Get the data array for the field.
-  $data = $source->$field;
-
-  // Return the first value; currently doesn't support multiple value fields.
-  return $data[0]['value'];
+  $data = $node->$fieldname;
+  
+  // Convert data based on what SF type we're sending it to.
+  switch ($sf_field_definition['type']) {
+    case 'multipicklist':
+      // SF wants a semicolon-delimited string.
+      $values = array();
+      foreach ($data as $row) {
+        $values[] = $row['value'];
+      }
+      $result = implode(';', $values);
+    break;
+    default:
+      // Unless handled above in this switch, we don't yet handle fields with multiple values.
+      $result = $data[0]['value'];
+    break;
+  }
+  
+  return $result;
 }
 
-// Returns the basic value of a CCK field from $array[0]['value'].
-function _sf_node_import_cck_default(&$node, $key, $source, $field) {
-  $data = $node->$key;
-
-  $data[0]['value'] = $source->$field;
-
-  $node->$key = $data;
+// Populates the value of a CCK field from its corresponding SF field's value.
+function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $data = array();
+  
+  // Convert data based on what SF type we're importing.
+  switch ($sf_field_definition['type']) {
+    case 'multipicklist':
+      // SF sends multiple values as a semicolon-delimited string.
+      if ($drupal_field_definition['multiple']) {
+        $sf_data = explode(';', $sf_data->$sf_fieldname);
+        foreach ($sf_data as $row) {
+          $data[] = array('value' => $row);
+        }
+      }
+      else {
+         $data[0]['value'] = $sf_data->$sf_fieldname;
+      }
+    break;
+    default:
+      // Unless handled above in this switch, we don't yet handle fields with multiple values.
+       $data[0]['value'] = $sf_data->$sf_fieldname;
+    break;
+  }
+  $node->$drupal_fieldname = $data;
 }
 
 // Returns the todate for a CCK date field.
@@ -230,7 +264,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
 
   $form['nid'] = array(
     '#type' => 'value',
-    '#value' => $nid,
+    '#value' => $node->nid,
   );
 
   // Display an export button if the node hasn't been exported before.
@@ -271,7 +305,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
       return array();
     }
 
-    $data = $sf->retrieve(array($node->salesforce['sfid']), $node->salesforce['fieldmap']);
+    $sf_data = $sf->retrieve(array($node->salesforce['sfid']), $node->salesforce['fieldmap']);
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($node->salesforce['fieldmap']);
@@ -285,7 +319,9 @@ function sf_node_salesforce_form(&$form_state, $node) {
 
     foreach ($map['fields'] as $key => $value) {
       if (isset($drupal_object['fields'][$value]['export'])) {
-        $drupal_value = $drupal_object['fields'][$value]['export']($node, $value);
+        $drupal_field_definition = $drupal_object['fields'][$value];
+        $sf_field_definition = $object['fields'][$key];
+        $drupal_value = $drupal_object['fields'][$value]['export']($node, $value, $drupal_field_definition, $sf_field_definition);
       }
       elseif (isset($node->$value)) {
         $drupal_value = $node->$value;
@@ -297,7 +333,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
       $rows[] = array(
         $object['fields'][$key]['label'],
         $drupal_value,
-        $data->$key,
+        $sf_data->$key,
       );
     }
 
@@ -325,7 +361,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
     $header = array(t('Field name'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
     $rows = array();
 
-    foreach ((array) $data as $key => $value) {
+    foreach ((array) $sf_data as $key => $value) {
       if (!isset($map['fields'][$key]) && isset($object['fields'][$key])) {
         $rows[] = array(
           $object['fields'][$key]['label'],
@@ -350,7 +386,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
     foreach (salesforce_api_fieldmap_system_fields() as $key => $value) {
       $rows[] = array(
         $value['label'],
-        $data->$key,
+        $sf_data->$key,
       );
     }
 
@@ -372,7 +408,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#collapsed' => TRUE,
     );
     $form['raw']['data'] = array(
-      '#value' => '<pre>'. print_r($data, TRUE) .'</pre>',
+      '#value' => '<pre>'. print_r($sf_data, TRUE) .'</pre>',
     );
   }
 
@@ -501,14 +537,14 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
     return FALSE;
   }
 
-  $data = $sf->retrieve(array($sfid), $fieldmap);
+  $sf_data = $sf->retrieve(array($sfid), $fieldmap);
 
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Load the object definitions.
-  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  $salesforce_object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+  $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   // If the node exists, simply update the existing node.
   if ($nid) {
@@ -522,16 +558,19 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
     );
   }
   // Loop through the fields on the fieldmap.
-  foreach ($map['fields'] as $value => $key) {
-    // If a handler is specified for importing a value from Salesforce.
-    if (isset($drupal_object['fields'][$key]['import'])) {
-      // Get the value for the field from the handler function.
-      $drupal_object['fields'][$key]['import']($node, $key, $data, $value);
+  foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+    // If a handler is specified for importing a value from Salesforce....
+    if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
+      $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
+      $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+      $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
+      // Let the handler function set the value for the field on the node.
+      $drupal_field_import_handler($node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
     }
-    elseif (isset($data->$value)) {
+    elseif (isset($sf_data->$sf_fieldname)) {
       // Otherwise set the field on the export object to the value of the source
       // field if it's present on the source object.
-      $node->$key = $data->$value;
+      $node->$drupal_fieldname = $sf_data->$sf_fieldname;
     }
   }
   $node->sf_node_skip_export = TRUE;
