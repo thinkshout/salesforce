@@ -55,6 +55,11 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'load':
       $node->salesforce = salesforce_api_id_load('node', $node->nid);
       break;
+      
+    case 'delete':
+      db_query('DELETE FROM {salesforce_object_map} WHERE drupal_type = "%s" AND oid = %d', 'node_'.$node->type, $account->uid);
+      break;
+      
     case 'update':
     case 'insert':
       // When importing *from* Salesforce, don't export *back* to Salesforce.

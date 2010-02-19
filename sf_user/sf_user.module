@@ -60,7 +60,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       break;
 
     case 'delete':
-      db_query('DELETE FROM {salesforce_ids} WHERE drupal_type = "user" AND drupal_id = %d', $account->uid);
+      db_query('DELETE FROM {salesforce_object_map} WHERE drupal_type = "user" AND oid = %d', $account->uid);
       break;
 
     case 'insert':
