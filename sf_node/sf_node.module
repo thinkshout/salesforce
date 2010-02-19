@@ -546,10 +546,13 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   // If the node exists, simply update the existing node.
-  if ($nid) {
-    $node = node_load($nid);
-  }
-  else {
+  $node = node_load($nid);
+  if (empty($nid) || empty($node)) {
+    // Look for any matching records which we might want to update instead of creating duplicates.
+    $matches = salesforce_api_search_for_duplicates('import', 'node', $node, $fieldmap);
+    if (!empty($matches)) {
+      $node->nid = reset($matches);
+    }
     $node = (object)array(
       'type' => substr($map['drupal'], 5),
       'language' => 'en',

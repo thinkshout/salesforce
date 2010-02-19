@@ -397,6 +397,13 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
 
   // If a node was specified, attempt to load it.
   $account = user_load(array('uid' => $uid));
+  if (empty($uid) || empty($account)) {
+    // Look for any matching records which we might want to update instead of creating duplicates.
+    $matches = salesforce_api_search_for_duplicates('import', 'user', $account, $fieldmap);
+    if (!empty($matches)) {
+      $account->uid = reset($matches);
+    }
+  }
 
   // If the node exists, simply update the existing node.
   if ($account->uid) {
