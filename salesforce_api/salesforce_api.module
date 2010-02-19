@@ -17,10 +17,12 @@ define('SALESFORCE_DIR_TOOLKIT', SALESFORCE_DIR .'/toolkit');
 define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT .'/soapclient');
 define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR .'/wsdl');
 
+
 // Define Drupal paths for various parts of the Salesforce UI.
 define('SALESFORCE_PATH_ADMIN', 'admin/settings/salesforce');
-define('SALESFORCE_PATH_FIELDMAPS', 'admin/settings/salesforce/fieldmap');
-define('SALESFORCE_PATH_DEMO', 'admin/settings/salesforce/demo');
+define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN .'/fieldmap');
+define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN .'/demo');
+define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN .'/object');
 
 // Define field importing requirements.
 // TODO: I believe we need to use bitwise operators instead.
@@ -111,7 +113,23 @@ function salesforce_api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'salesforce_api.admin.inc',
   );
-
+  $items[SALESFORCE_PATH_OBJECT] = array(
+    'title' => 'Object setup',
+    'description' => 'Define which SalesForce objects you would like to be available in your Drupal site.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_api_admin_object'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'salesforce_api.admin.inc',
+  );
+  $items[SALESFORCE_PATH_OBJECT .'/%'] = array(
+    'title' => 'Object setup',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_api_admin_object_settings', count(explode('/', SALESFORCE_PATH_OBJECT))),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_CALLBACK,
+    'file' => 'salesforce_api.admin.inc',
+  );
   return $items;
 }
 
@@ -164,7 +182,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
   }
 
   // Include the file that defines the class.
-  require_once(drupal_get_path('module', 'salesforce_api') . '/salesforce.class.inc');
+  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
 
   // Create a new Salesforce object with the API credentials.
   $sf = new DrupalSalesforce($username, $password, $token);
@@ -201,7 +219,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
 function salesforce_api_reset_expired_password($sf) {
   // Append one letter and one digit to the password to make sure we meet
   // salesforce's password validation requirements.
-  $new_password = user_password() . 'z9';
+  $new_password = user_password() .'z9';
   // setPassword() may throw InvalidIdFault or UnexpectedErrorFault exceptions.
   $sf->client->setPassword($sf->login->userId, $new_password);
   variable_set('salesforce_api_password', $new_password);
@@ -239,42 +257,37 @@ function salesforce_api_fieldmap_objects($type) {
   if ($type == 'salesforce') {
     $cache = cache_get('salesforce_api_sf_objects');
     if ($cache->data == '') {
-      $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
-      $sf = salesforce_api_connect();
-      if (!$sf) {
-        drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
-        return array();
-      }
-
-      $result = $sf->client->describeSObjects($sf_objects);
-      foreach ($result as $key => $object) {
-        $objects[$sf_objects[$key]] = array(
-          'label' => t($sf_objects[$key]),
-          'fields' => array(),
-        );
-        foreach ($object->fields as $field) {
-          $objects[$sf_objects[$key]]['fields'][$field->name] = array(
-            'label' => t($field->label),
-          );
-          if ($field->createable != 1) {
-            $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
-          }
-          elseif ($field->nillable != 1 && $field->defaultedOnCreate != 1) {
-            $objects[$sf_objects[$key]]['fields'][$field->name]['type'] = SALESFORCE_FIELD_REQUIRED;
-          }
-        }
-      }
-      cache_set('salesforce_api_sf_objects', $objects);
+      $objects = salesforce_api_cache_build();
     }
     else {
       $objects = $cache->data;
     }
   }
-
   return $objects;
 }
 
-// Returns an array of system fields that are retrievable from Salesforce.
+/**
+ * Recreate the salesforce object cache
+ */
+function salesforce_api_cache_build() {
+  $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
+  $sf = salesforce_api_connect();
+  $result = salesforce_api_describeSObjects($sf_objects);
+  foreach ($sf_objects as $i => $obj) {
+    $objects[$obj] = salesforce_api_object_to_fieldmap_fields($result[$obj]);
+  }
+
+  // find the expiry time
+  $lifetime = variable_get('salesforce_api_object_expire', CACHE_PERMANENT);
+  $expire = ($lifetime == CACHE_PERMANENT) ? CACHE_PERMANENT : time() + $lifetime;
+  cache_set('salesforce_api_sf_objects', $objects, $table = 'cache', $expire, $headers = NULL);
+  drupal_set_message(t('Salesforce object cache has been refreshed.'));
+  return $objects;
+}
+
+/**
+ * Returns an array of system fields that are retrievable from Salesforce.
+ */
 function salesforce_api_fieldmap_system_fields() {
   $fields = array(
     'Id' => array('label' => t('Salesforce ID')),
@@ -484,7 +497,9 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL) {
   return $objects;
 }
 
-// Returns the label for the object of the specified type and name.
+/**
+ * Returns the label for the object of the specified type and name.
+ */
 function salesforce_api_fieldmap_object_label($type, $name) {
   // Get the object definition.
   $object = salesforce_api_fieldmap_objects_load($type, $name);
@@ -641,5 +656,146 @@ function salesforce_api_theme($existing, $type, $theme, $path) {
       'file' => 'salesforce_api.admin.inc',
       'arguments' => array('form' => NULL),
     ),
+    'salesforce_api_object_options' => array(
+      'arguments' => array('element' => NULL)
+    ),
   );
 }
+
+/**
+ * Wrapper for SOAP SforceBaseClient::describeGlobal
+ * @return an SFQueryResult object (look at ->types for an array of SF object types)
+ */
+function salesforce_api_describeGlobal() {
+  static $objects;
+  if (!empty($objects)) {
+    return $objects;
+  }
+  $sf = salesforce_api_connect();
+  if ($sf === FALSE) {
+    $link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
+    drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+    return;
+  }
+  $objects = $sf->client->describeGlobal();
+  return $objects;
+}
+
+/**
+ * Convert Salesforce object fields to fieldmap array for saving
+ */
+function salesforce_api_object_to_fieldmap_fields($object)  {
+  $fieldmap_object = array(
+    'label' => t($object->label),
+    'fields' => array()
+  );
+
+  foreach ($object->fields as $field) {
+    $fieldmap_object['fields'][$field->name]['label'] = t($field->label);
+    if ($field->createable != 1) {
+      $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
+    }
+    elseif (!$field->nillable && !$field->defaultedOnCreate) {
+      $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_REQUIRED;
+    }
+    else {
+      $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_OPTIONAL;
+    }
+  }
+  return $fieldmap_object;
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function salesforce_api_cron() {
+  $cache = cache_get('salesforce_api_sf_objects');
+  // if the cache has already been delete or is expired then rebuild
+  if (!$cache || time() > $cache->expire) salesforce_api_cache_build();
+  return;
+}
+
+
+/**
+ * Wrapper for SOAP SforceBaseClient::describeSObject
+ * Given an sf object type, return the SF Object definition
+ * @param string type : the machine-readable name of the SF object type
+**/
+function salesforce_api_describeSObject($type) {
+  if (!is_string($type)) {
+    drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
+    return false;
+  }
+  
+  $objects = salesforce_api_describeSObjects($type);
+  if(!empty($objects[$type])) {
+    return $objects[$type];
+  } else {
+    drupal_set_message(t('DescribeSObject failed to find ' . $type), 'error');
+    return false;
+  }
+}
+
+/**
+ * Wrapper for SOAP SforceBaseClient::describeSObjects
+ * Given an array of sf object type, return an associative, normalized array of 
+ * SF object definitions, indexed on machine-readable names of SObjects
+ * @param array types : an array of machine-readable names to SObjects
+ */
+function salesforce_api_describeSObjects($types) {
+  static $objects;
+  if (is_string($types)) {
+    $types = array($types);
+  }
+  if (!is_array($types)) {
+    drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
+    return false;
+  }
+  
+  // There is no reason to describe the same object twice in one HTTP request.
+  // Use a static cache to save API calls and bandwidth.
+  if (!empty($objects)) {
+    $outstanding = array_diff($types, array_keys($objects));
+    if (empty($outstanding)) {
+      $ret = array();
+      foreach ($types as $k) {
+        $ret[$k] = $objects[$k];
+      }
+      return $ret;
+    }
+  }
+  
+  if (is_string($types)) {
+    $types = array($types);
+  }
+
+  try {
+  	$sf = salesforce_api_connect();
+  	if ($sf === FALSE) { 
+  		$link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
+  		drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+  		return;
+  	}
+    $objects = $sf->client->describeSObjects(array_values($types));
+  } catch (Exception $e) {
+    watchdog('salesforce', 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
+  }
+  if (empty($objects)) {
+    return array();
+  }
+
+  // This is the normalization part: If only one object was described, SalesForce
+  // returned an object instead of an array. ALWAYS return an array of objects.
+  if (is_object($objects)) {
+    $objects = array($objects);
+  }
+
+  // And make it an associative array for good measure.
+  $tmp = array();
+  foreach ($objects as $o) {
+    $tmp[$o->name] = $o;
+  }
+  $objects = $tmp;
+  return $objects;
+}
+

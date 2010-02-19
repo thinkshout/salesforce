@@ -7,7 +7,9 @@
  *   for general settings and fieldmap administration.
  */
 
-// The settings form at admin/settings/salesforce.
+/**
+ * The settings form at admin/settings/salesforce.
+ */
 function salesforce_api_settings_form() {
   $form = array();
 
@@ -70,14 +72,39 @@ function salesforce_api_settings_form() {
     ),
     '#default_value' => variable_get('salesforce_api_error_log', SALESFORCE_LOG_ALL),
   );
-
+  $form['objects'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Object settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -9,
+  );
+  $form['objects']['clear_cache'] = array(
+    '#type'  => 'item',
+    '#value' => t('Caching data improves performance, however your Drupal site will be unaware of any alterations made to your Salesforce installation unless the cached data is refreshed. Select the lifetime the object data after which the cache will be automatically refreshed.  To refresh all cached object data on your site, click the button below.'),
+  );
+  $period = drupal_map_assoc(array(32400, 43200, 86400, 172800, 259200, 604800, 1209600, 2419200, 4838400, 9676800), 'format_interval');
+  $period[CACHE_PERMANENT] = t('<none>');
+  $form['objects']['salesforce_api_object_expire'] = array(
+    '#type' => 'select',
+    '#title' => t('Cache lifetime'),
+    '#options' => $period,
+    '#default_value' => variable_get('salesforce_api_object_expire', CACHE_PERMANENT),
+  );
+  $form['objects']['clear_cache_clear'] = array(
+    '#type' => 'submit',
+    '#value' => t('Clear cached object data'),
+    '#submit' => array('salesforce_api_cache_build'),
+  );
   // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
   $form['#validate'][] = 'salesforce_api_settings_form_validate';
   $form['#submit'][] = 'salesforce_api_settings_form_submit';
   return system_settings_form($form);
 }
 
-// Settings form validate handler to verify new salesforce credentials before saving them.
+/**
+ * Settings form validate handler to verify new salesforce credentials before saving them.
+ */
 function salesforce_api_settings_form_validate(&$form, &$form_state) {
   $values = $form_state['values'];
   if (!salesforce_api_connect($values['salesforce_api_username'], $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE)) {
@@ -89,7 +116,9 @@ function salesforce_api_settings_form_validate(&$form, &$form_state) {
   }
 }
 
-// Settings form submit handler so that password doesn't get deleted.
+/**
+ * Settings form submit handler so that password doesn't get deleted.
+ */
 function salesforce_api_settings_form_submit(&$form, &$form_state) {
   // If the user hit "Save Configuration" and the required field
   // salesforce_api_password is blank, try to get it from variables
@@ -101,7 +130,9 @@ function salesforce_api_settings_form_submit(&$form, &$form_state) {
   }
 }
 
-// Displays an admin table for fieldmaps.
+/**
+ * Displays an admin table for fieldmaps.
+ */
 function salesforce_api_fieldmap_admin() {
   // Define the header for the admin table.
   $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), array('data' => t('Operations'), 'colspan' => 3));
@@ -130,7 +161,9 @@ function salesforce_api_fieldmap_admin() {
   return theme('table', $header, $rows);
 }
 
-// Displays the form to add a fieldmap.
+/**
+ * Displays the form to add a fieldmap.
+ */
 function salesforce_api_fieldmap_add_form(&$form_state) {
   $form = array();
 
@@ -173,7 +206,9 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
   return $form;
 }
 
-// Submit handler for a new fieldmap
+/**
+ * FAPI submit handler for a new fieldmap
+ */
 function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
   // Create the new fieldmap.
   $index = salesforce_api_fieldmap_create($form_state['values']['drupal_object'], $form_state['values']['salesforce_object'], $form_state['values']['automatic']);
@@ -207,7 +242,9 @@ function salesforce_api_fieldmap_create($drupal, $salesforce, $automatic) {
   return $map['fieldmap'];
 }
 
-// Displays the confirm form for deleting a fieldmap.
+/**
+ * Displays the confirm form for deleting a fieldmap.
+ */
 function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
@@ -237,6 +274,9 @@ function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
   return confirm_form($form, t('Are you sure you want to delete this fieldmap?'), SALESFORCE_PATH_FIELDMAPS, $desc, t('Delete'));
 }
 
+/**
+ * FAPI submit handler for deleting a fieldmap
+ */
 function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
   // Delete the specified fieldmap.
   salesforce_api_fieldmap_delete($form_state['values']['fieldmap_index']);
@@ -247,7 +287,9 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
 
-// Displays the edit form for adding field associations to a fieldmap.
+/**
+ * Displays the edit form for adding field associations to a fieldmap.
+ */
 function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
@@ -351,6 +393,9 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   return $form;
 }
 
+/**
+ * FAPI submit handler for fieldmap editor
+ */
 function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($form_state['values']['fieldmap_index']);
@@ -387,7 +432,9 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
 
-// Themes the field associations on a fieldmap edit form into a table.
+/**
+ * Themes the field associations on a fieldmap edit form into a table.
+ */
 function theme_salesforce_api_fieldmap_edit_form_table($form) {
   // Build the header array.
   $header = array();
@@ -426,6 +473,121 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
   return theme('table', $header, $rows, $attributes, $caption);
 }
 
+ /**
+ * Ask salesforce for a list of objects and display a checklist for the user.
+ * Based on user selection, set up or tear down cached/synched Salesforce data.
+ * @TODO make this more user friendly. At the moment it's possible for an admin user to blow away
+ * their entire local SalesForce cache with a few clicks. This is not necessarily desirable.
+ *
+ * @param string $form_state
+ * @return void
+ * @author aaron
+ */
+function salesforce_api_admin_object(&$form_state) {
+  $objects = salesforce_api_describeGlobal();
+  $cache = cache_get('salesforce_api_sf_objects');
+  $defaults = is_array($cache->data) ? array_keys($cache->data) : array();
+
+  if (empty($objects->sobjects)) {
+    drupal_set_message(t('There was an error retrieving the list of SalesForce objects. Please verify that your SalesForce instance is properly configured.'), 'error');
+    return;
+  }
+  $options = array();
+  foreach($objects->sobjects as $obj) {
+    $options[$obj->name] = $obj->name . ' (' . $obj->label .')';
+  }
+  
+  // Disable any SF Object types currently in use by fieldmap(s).
+  $result = db_query('SELECT DISTINCT salesforce FROM {salesforce_field_map}');
+  while ($type = db_result($result)) {
+    $disabled[$type] = $type;
+  }
+  
+  $fields = array(
+    'objects' => array(
+      '#type' => 'checkboxes',
+      '#title' => 'Object Name (Object Label)',
+      '#description' => 'Check the SalesForce objects you would like to synchronize locally.',
+      '#options' => $options,
+      '#default_value' => $defaults,
+    ),
+    'disabled_types' => array('#type' => 'value', '#value' => $disabled),
+    '#theme' => 'salesforce_api_object_options',
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => 'Save'
+      ),
+    );
+  return $fields;
+}
+
+/**
+ * FAPI submit handler
+ * Gather enabled SF Objects and rebuild the cache.
+ */
+function salesforce_api_admin_object_submit($form, &$form_state) {
+  $values = $form_state['values']['objects'];
+  // Start off with all the SF Object types already in use.
+  $real_types = $form['disabled_types']['#value'];
+  foreach ($values as $i => $t) {
+    if (empty($t)) {
+      continue;
+    }
+    $real_types[$i] = $t;
+  }
+  if (empty($real_types)) {
+    $real_types = array();
+  }
+  $sf_objects = variable_set('salesforce_api_enabled_objects', array_values($real_types));
+  $objects = salesforce_api_cache_build();
+  return;
+}
+
+/**
+ * Placeholder for per-object configuration settings. Any ideas?
+ */
+function salesforce_api_admin_object_settings($form_state, $type) {
+  return array('settings' => array(
+    '#type' => 'markup',
+    '#value' => 'Placeholder for per-object configuration settings.'
+    )
+  );
+}
+
+/**
+ * Theming function for salesforce_api_admin_setup
+ * For locally-cached SF Objects, add a "configure" or "re-map" link next to the checkbox
+ */
+function theme_salesforce_api_object_options($element = NULL) {
+  if (empty($element['objects']['#options'])) {
+    return drupal_render($element);
+  }
+  $objects = $element['objects'];
+  $options = $objects['#options'];
+  
+  // Disable checkboxes for SF Types which are currently in use.
+  foreach ($options as $i) {
+    if (empty($objects[$i]['#value'])) { 
+      continue;
+    }
+    if (!empty($element['disabled_types']['#value'][$i])) {
+      $element['objects'][$i]['#attributes']['disabled'] = 'disabled';
+      $element['objects'][$i]['#description'] = 
+        t('This object is in use by one or more fieldmaps and cannot be disabled.');
+    }
+    $link = l('configure', SALESFORCE_PATH_OBJECT .'/'. $i);
+    if ($_SESSION['objects_error'][$i]) {
+      $element['objects'][$i]['#prefix'] = '<div class="error">';
+      $element['objects'][$i]['#suffix'] = '</div>';
+      unset($_SESSION['objects_error'][$i]);
+      $link = l('re-map fields', SALESFORCE_PATH_OBJECT .'/'. $i);
+    }
+    $element['objects'][$i]['#title'] .= ' | '. $link;
+  }
+  unset($_SESSION['objects_error']);
+  return drupal_render($element);
+}
+
 /**
  * Demonstrates some of the API functionality through the Salesforce class and
  * fieldmap functionality.
@@ -453,7 +615,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
   switch ($demo) {
     case 'data-structure':
       if ($arg) {
-        $response = $sf->client->describeSObjects(array(check_plain($arg)));
+        $response = salesforce_api_describeSObjects(array(check_plain($arg)));
         if (function_exists('dpm')) {
           dpm($response);
         }

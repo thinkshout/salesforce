@@ -20,6 +20,7 @@ function salesforce_api_install() {
 function salesforce_api_uninstall() {
   drupal_uninstall_schema('salesforce_api');
   db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'");
+  db_query("DELETE FROM {cache} WHERE {cid} = 'salesforce_api_sf_objects'");
 }
 
 /**
@@ -27,6 +28,7 @@ function salesforce_api_uninstall() {
  */
 function salesforce_api_enable() {
   drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
+drupal_set_message(t('Salesforce API: The default Salesforce object have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
 }
 
 /**
