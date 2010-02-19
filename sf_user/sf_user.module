@@ -11,15 +11,21 @@
  * Implementation of hook_menu().
  */
 function sf_user_menu() {
-  $items['user/%/salesforce'] = array(
+  $items['user/%user/salesforce'] = array(
     'title' => 'Salesforce',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('sf_user_salesforce_form', 1),
+    'access callback' => 'sf_user_salesforce_form_access',
     'access arguments' => array('sync users with salesforce'),
     'type' => MENU_LOCAL_TASK,
   );
 
   return $items;
+}
+
+// Access callback for the user/%user/salesforce menu item.
+function sf_user_salesforce_form_access() {
+  return user_access('sync users with salesforce') and salesforce_api_fieldmap_options('user');
 }
 
 /**
@@ -96,9 +102,7 @@ function sf_user_fieldmap_objects($type) {
 }
 
 // Displays the Salesforce synchronization form.
-function sf_user_salesforce_form(&$form_state, $uid) {
-  $account = user_load(array('uid' => $uid));
-
+function sf_user_salesforce_form(&$form_state, $account) {
   // Fail out if the user didn't exist!
   if (!$account->uid) {
     drupal_not_found();
@@ -125,29 +129,17 @@ function sf_user_salesforce_form(&$form_state, $uid) {
     // Get an array of fieldmaps that export nodes of this type to Salesforce.
     $options = salesforce_api_fieldmap_options('user');
 
-    // If no corresponding fieldmaps were found...
-    if (count($options) == 0) {
-      // Display a message appropriate to the user's permissions.
-      if (user_access('administer salesforce')) {
-        $form['export']['#description'] = t('To export this user you must first <a href="!url">add a fieldmap</a> that exports users.');
-      }
-      else {
-        $form['export']['#description'] = t('Please contact a site administrator to add a fieldmap that exports users.');
-      }
-    }
-    else {
-      // Otherwise add the export form!
-      $form['export']['fieldmap'] = array(
-        '#type' => 'select',
-        '#title' => t('Export fieldmap'),
-        '#options' => $options,
-      );
+    // Add the export form
+    $form['export']['fieldmap'] = array(
+      '#type' => 'select',
+      '#title' => t('Export fieldmap'),
+      '#options' => $options,
+    );
 
-      $form['export']['export_user'] = array(
-        '#type' => 'submit',
-        '#value' => t('Export user'),
-      );
-    }
+    $form['export']['export_user'] = array(
+      '#type' => 'submit',
+      '#value' => t('Export user'),
+    );
   }
   else {
     // Otherwise add synchronization information.
