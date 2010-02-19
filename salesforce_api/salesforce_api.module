@@ -411,28 +411,19 @@ function salesforce_api_fieldmap_delete($fieldmap) {
  * @return
  *   A FAPI options array of all the matching fieldmaps.
  */
-function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL, $automatic = FALSE) {
+function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL) {
   $options = array();
 
-  $result = db_query("SELECT fieldmap, drupal, salesforce FROM {salesforce_field_map}");
+  // This does not need to not be optimized for perfomance since it's only an admin interface.
+  $vars = array($drupal ? $drupal : '%', $salesforce ? $salesforce : '%');
+  $result = db_query("SELECT fieldmap, drupal, salesforce FROM {salesforce_field_map} WHERE drupal LIKE '%s' AND salesforce LIKE '%s'", $vars);
+
   while ($map = db_fetch_array($result)) {
-
-    // Skip the fieldmap if it is not for the appropriate Drupal object.
-    if (!empty($drupal) && $map['drupal'] != $drupal) {
-      continue;
-    }
-
-    // Skip the fieldmap if it is not for the appropriate Salesforce object.
-    if (!empty($salesforce) && $map['salesforce'] != $salesforce) {
-      continue;
-    }
-
-    // Setup some replacement args for the label.
-    $args = array(
-      '@drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
-      '@salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
-    );
-
+     // Setup some replacement args for the label.
+     $args = array(
+       '@drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
+       '@salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
+       );
     $options[$map['fieldmap']] = t('Drupal @drupal to Salesforce @salesforce', $args);
   }
 

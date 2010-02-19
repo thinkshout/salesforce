@@ -60,17 +60,23 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       if (isset($node->sf_node_skip_export)) {
         return;
       }
-      // Detect whether or not this should be an auto-update for this node
-      $options = salesforce_api_fieldmap_options('node_'. $node->type, NULL, TRUE);
-      if (empty($options)) {
+
+      // Are there any automatic fieldmaps for this node type?
+      $result = db_query("SELECT fieldmap FROM {salesforce_field_map} WHERE drupal = '%s' AND automatic = 1", 'node_'. $node->type);
+      $map = db_fetch_object($result);
+      if (!$map) {
         return;
       }
-      if (count($options) > 0) {
-        $map = key($options);
+
+      // Use the first fieldmap.
+      $map = $map->fieldmap;
+
+      // Check if there is more than one fieldmap in the result.
+      if (user_access('administer salesforce') and db_fetch_object($result)) {
+        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
       }
-      elseif (count($options) > 1 && user_access('administer salesforce')) {
-        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used @map.', array('@map' => $map[$key])), 'error');
-      }
+
+      // Finally, export the node to Salesforce.
       sf_node_export($node, $map);
       break;
     case 'update':
