@@ -514,11 +514,6 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
 
   $data = $sf->retrieve(array($sfid), $fieldmap);
 
-  // Return FALSE if the object data was not found at Salesforce.
-  if (empty($data)) {
-    return FALSE;
-  }
-
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
@@ -526,28 +521,34 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
   $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
   $salesforce_object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
-  // If a node was specified, attempt to load it.
-  $node = node_load($nid);
-
   // If the node exists, simply update the existing node.
-  if ($node->nid) {
-    // Loop through the fields on the fieldmap.
-    foreach ($map['fields'] as $value => $key) {
-      // If a handler is specified for importing a value from Salesforce.
-      if (isset($drupal_object['fields'][$key]['import'])) {
-        // Get the value for the field from the handler function.
-        $drupal_object['fields'][$key]['import']($node, $key, $data, $value);
-      }
-      elseif (isset($data->$value)) {
-        // Otherwise set the field on the export object to the value of the source
-        // field if it's present on the source object.
-        $node->$key = $data->$value;
-      }
-    }
-    $node->sf_node_skip_export = TRUE;
-    node_save($node);
-    unset($node->sf_node_skip_export);
+  if ($nid) {
+    $node = node_load($nid);
   }
+  else {
+    $node = (object)array(
+      'type' => substr($map['drupal'], 5),
+      'language' => 'en',
+      'uid' => 1,
+    );
+  }
+  // Loop through the fields on the fieldmap.
+  foreach ($map['fields'] as $value => $key) {
+    // If a handler is specified for importing a value from Salesforce.
+    if (isset($drupal_object['fields'][$key]['import'])) {
+      // Get the value for the field from the handler function.
+      $drupal_object['fields'][$key]['import']($node, $key, $data, $value);
+    }
+    elseif (isset($data->$value)) {
+      // Otherwise set the field on the export object to the value of the source
+      // field if it's present on the source object.
+      $node->$key = $data->$value;
+    }
+  }
+  $node->sf_node_skip_export = TRUE;
+  node_save($node);
+  unset($node->sf_node_skip_export);
 
   return $node->nid;
 }
+
