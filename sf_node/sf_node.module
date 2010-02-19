@@ -119,11 +119,23 @@ function sf_node_fieldmap_objects($type) {
         'type' => array('label' => t('Node type')),
         'status' => array('label' => t('Is the node published?')),
         'promote' => array('label' => t('Is the node promoted?')),
-        'created' => array('label' => t('Created timestamp')),
-        'uid' => array('label' => t("Author's user ID")),
-        'mail' => array('label' => t("Author's email")),
-        'name' => array('label' => t("Author's username")),
-        'blank' => array('label' => t("(blank)")),
+        'created' => array(
+          'label' => t('Created timestamp'),
+          'export' => '_sf_node_export_date',
+          'import' => '_sf_node_import_date',
+        ),
+        'uid' => array('label' => t("Author's user ID"), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
+        'name' => array('label' => t("Author's username"), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
+        'mail' => array(
+          'label' => t("Author's email"),
+          'export' => '_sf_node_export_author_email',
+          'type' => SALESFORCE_FIELD_SOURCE_ONLY
+        ),
+        'blank' => array(
+          'label' => t("(blank)"),
+          'export' => '_sf_node_export_blank',
+          'type' => SALESFORCE_FIELD_SOURCE_ONLY
+        ),
       );
     }
 
@@ -248,6 +260,30 @@ function _sf_node_import_cck_todate(&$node, $key, $source, $field) {
 // Access callback for the node/%node/salesforce menu item.
 function sf_node_salesforce_form_access($node) {
   return user_access('sync nodes with salesforce') and salesforce_api_fieldmap_options('node_'. $node->type);
+}
+
+// Returns the email address of the node's author, given by node->uid
+function _sf_node_export_author_email($source, $field) {
+  $uid = $source->uid;
+  if(!is_numeric($uid)) {
+    return null;
+  }
+  return db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $uid));
+}
+
+// Export a timestamp in a format SalesForce comprehends.
+function _sf_node_export_date($source, $field) {
+  return gmdate(DATE_ATOM, $source->$field);
+}
+
+// Given a SalesForce time, import a node timestamp.
+function _sf_node_import_date(&$node, $key, $source, $field) {
+  $node->$key = strtotime($source->$field);
+}
+
+// Export the text value "(blank)".
+function _sf_node_export_blank($source, $field) {
+  return '(blank)';
 }
 
 // Displays the Salesforce synchronization form.
@@ -476,13 +512,6 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   if (is_numeric($node)) {
     $node = node_load($node);
   }
-  // Add the email address, making this suitable for bio/profile-node to Contact/Lead maps.
-  $node->mail = db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $node->uid));
-  // Correct timestamp formatting for SF
-  $node->created = gmdate(DATE_ATOM, $node->created);
-  // Inlcude the "blank" value
-  $node->blank = '(blank)';
-
 
   // Create an object for export based on the specified fieldmap.
   $object = salesforce_api_fieldmap_export_create($fieldmap, $node);
