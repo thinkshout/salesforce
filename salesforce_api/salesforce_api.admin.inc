@@ -589,12 +589,15 @@ function theme_salesforce_api_object_options($element = NULL) {
 
 /**
  * Demonstrates some of the API functionality through the Salesforce class and
- * fieldmap functionality.
+ * fieldmap functionality. 
  *
  * @param $demo
  *   The name of the demonstration to perform.
  * @return
  *   A string containing the page output.
+ * @todo
+ *  2/3 of the demo functionality is currently broken. see #692378
+ * @see http://drupal.org/node/692378
  */
 function salesforce_api_demo($demo = NULL, $arg = NULL) {
   // Attempt to connect to Salesforce.
@@ -637,6 +640,9 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
 
       break;
     case 'user-export':
+      // TODO: This is broken. See http://drupal.org/node/692378
+      break;
+      
       global $user;
 
       // Fully load the user account so we get profile data.
@@ -656,6 +662,9 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
       break;
 
     case 'campaign-export':
+      // TODO: Also broken. See http://drupal.org/node/692378
+      break;
+      
       // Load the campaign node.
       $node = node_load(1);
 
@@ -675,8 +684,9 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
 
   $items = array(
     l(t('Examine Data Structure'), SALESFORCE_PATH_DEMO .'/data-structure'),
-    l(t('Export your user account as a contact'), SALESFORCE_PATH_DEMO .'/user-export'),
-    l(t('Export node 1 as a campaign'), SALESFORCE_PATH_DEMO .'/campaign-export'),
+// TODO: broken. See http://drupal.org/node/692378
+//    l(t('Export your user account as a contact'), SALESFORCE_PATH_DEMO .'/user-export'),
+//    l(t('Export node 1 as a campaign'), SALESFORCE_PATH_DEMO .'/campaign-export'),
   );
 
   $output .= '<p>'. t('<b>Choose from the following demonstrations:</b>') . theme('item_list', $items) .'</p>';
