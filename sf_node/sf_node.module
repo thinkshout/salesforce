@@ -532,9 +532,13 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Look for any matching records which we might want to update instead of creating duplicates.
-  $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $fieldmap);
-  if (!empty($matches)) {
-    $object->Id = reset($matches);
+  if (empty($sfid)) {
+    $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $fieldmap);
+    if (!empty($matches)) {
+      $object->Id = reset($matches);
+    }
+  } else {
+    $object->Id = $sfid;
   }
 
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.

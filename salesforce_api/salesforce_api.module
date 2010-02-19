@@ -587,7 +587,28 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
       $object->$sf_fieldname = htmlentities($drupal_data->$drupal_fieldname);
     }
   }
-
+  
+  // Before we return the object, we need to check for any fieldsToNull.
+  // Leaving a field blank will not erase an existing value from Salesforce.
+  // Any such value must be explicitly set to null.
+  // TODO: Fields should be checked for nillable before getting added to fieldsToNull
+  $props = get_object_vars($object);
+  foreach ($props as $key => $value) {
+    $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
+    // Salesforce treats the following values differently than null.
+    if($value === FALSE || $value === 0 || $value === '0' || $value === 'false') {
+      $object->$key = $value = 0;
+    } elseif(empty($value)) {
+      unset($object->$key);
+      $object->fieldsToNull = $key;
+      // Enterprise client can only null one field per transaction.
+      // This is a bug beyond our control. For now, we just have to deal with it.
+      // The following doesn't actually work:
+      // if (!empty($object->fieldsToNull)) { 
+      //   $object->fieldsToNull .= '; '; 
+      // }
+    }
+  }
   return $object;
 }
 
