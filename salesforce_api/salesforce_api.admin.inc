@@ -484,15 +484,15 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
  * @author aaron
  */
 function salesforce_api_admin_object(&$form_state) {
-  $objects = salesforce_api_describeGlobal();
-  $defaults = array_keys(salesforce_api_fieldmap_objects());
-
-  if (empty($objects->sobjects)) {
+  $response = salesforce_api_describeGlobal();
+  if (empty($response->types)) {
     drupal_set_message(t('There was an error retrieving the list of SalesForce objects. Please verify that your SalesForce instance is properly configured.'), 'error');
     return;
   }
+  $defaults = array_keys(salesforce_api_fieldmap_objects());
+  
   $options = array();
-  foreach($objects->sobjects as $obj) {
+  foreach($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label .')';
   }
 
@@ -629,7 +629,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
         }
       }
       else {
-        $response = $sf->client->describeGlobal();
+        $response = salesforce_api_describeGlobal();
         if (is_array($response->types)) {
           foreach ($response->types as $type) {
             $items[] = l($type, SALESFORCE_PATH_DEMO .'/data-structure/'. $type);

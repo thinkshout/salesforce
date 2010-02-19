@@ -53,7 +53,7 @@ function salesforce_api_drush_show_tables() {
   _salesforce_api_drush_check_soap();
   if ($sf = salesforce_api_connect()) {
     try {
-      $response = $sf->client->describeGlobal();
+      $response = salesforce_api_describeGlobal();
     }
     catch (Exception $e) {
       drush_print($e->faultstring);
@@ -86,7 +86,7 @@ function salesforce_api_drush_describe() {
       $info = explode('.', $t);
       try {
         $table = array_shift($info);
-        $response = $sf->client->describeSObject($table);
+        $response = salesforce_api_describeSObject($table);
         if (!empty($info)) {
           $i = array_shift($info);
           while (isset($i)) {

@@ -588,12 +588,12 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
       $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
       $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
       // Get the value for the field from the handler function.
-      $object->$sf_fieldname = $drupal_field_export_handler($drupal_data, $drupal_fieldname, $drupal_field_definition, $sf_field_definition);
+      $object->$sf_fieldname = htmlentities($drupal_field_export_handler($drupal_data, $drupal_fieldname, $drupal_field_definition, $sf_field_definition));
     }
     // Otherwise set the field on the export object to the value of the Drupal
     // field if it's present on the source object.
     elseif (isset($drupal_data->$drupal_fieldname)) {
-      $object->$sf_fieldname = $drupal_data->$drupal_fieldname;
+      $object->$sf_fieldname = htmlentities($drupal_data->$drupal_fieldname);
     }
   }
 
@@ -671,9 +671,9 @@ function salesforce_api_theme($existing, $type, $theme, $path) {
  * @return an SFQueryResult object (look at ->types for an array of SF object types)
  */
 function salesforce_api_describeGlobal() {
-  static $objects;
-  if (!empty($objects)) {
-    return $objects;
+  static $response;
+  if (!empty($response)) {
+    return $response;
   }
   $sf = salesforce_api_connect();
   if ($sf === FALSE) {
@@ -681,8 +681,12 @@ function salesforce_api_describeGlobal() {
     drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
     return;
   }
-  $objects = $sf->client->describeGlobal();
-  return $objects;
+  $response = $sf->client->describeGlobal();
+  if (isset($response->sobjects)) {
+    $response->types = $response->sobjects;
+    unset($response->sobjects);
+  }
+  return $response;
 }
 
 /**
