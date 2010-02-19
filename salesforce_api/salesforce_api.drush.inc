@@ -108,7 +108,7 @@ function salesforce_api_drush_describe() {
         }
         else {
           $rows = array(array(dt('Key'), dt('Value')));
-          _salesforce_api_drush_get_info($response, &$rows);
+          _salesforce_api_drush_get_info($response, $rows);
           drush_print_table($rows, TRUE);
         }
       }

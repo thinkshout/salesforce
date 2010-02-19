@@ -642,6 +642,13 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $fieldmap) {
   db_query("INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, fieldmap) VALUES ('%s', %d, '%s', %d)", $drupal_type, $oid, $sfid, $fieldmap);
 }
 
+function salesforce_api_search_for_duplicates($direction, $fieldmap_type, $object, $fieldmap_id) {
+  // Call hook_sf_find_match to give opportunity to try to match existing sf object instead
+  // of creating a new one. No hook_sf_find_match is defined out of the box. Developers must
+  // implement their own logic for this one.
+  return module_invoke_all('sf_find_match', $direction, $fieldmap_type, $object, $fieldmap_id);
+}
+
 /**
  * Implementation of hook_theme().
  *
@@ -723,7 +730,7 @@ function salesforce_api_describeSObject($type) {
     drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
     return false;
   }
-  
+
   $objects = salesforce_api_describeSObjects($type);
   if(!empty($objects[$type])) {
     return $objects[$type];
@@ -735,7 +742,7 @@ function salesforce_api_describeSObject($type) {
 
 /**
  * Wrapper for SOAP SforceBaseClient::describeSObjects
- * Given an array of sf object type, return an associative, normalized array of 
+ * Given an array of sf object type, return an associative, normalized array of
  * SF object definitions, indexed on machine-readable names of SObjects
  * @param array types : an array of machine-readable names to SObjects
  */
@@ -748,7 +755,7 @@ function salesforce_api_describeSObjects($types) {
     drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
     return false;
   }
-  
+
   // There is no reason to describe the same object twice in one HTTP request.
   // Use a static cache to save API calls and bandwidth.
   if (!empty($objects)) {
@@ -761,18 +768,18 @@ function salesforce_api_describeSObjects($types) {
       return $ret;
     }
   }
-  
+
   if (is_string($types)) {
     $types = array($types);
   }
 
   try {
-  	$sf = salesforce_api_connect();
-  	if ($sf === FALSE) { 
-  		$link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
-  		drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
-  		return;
-  	}
+    $sf = salesforce_api_connect();
+    if ($sf === FALSE) {
+      $link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
+      drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+      return;
+    }
     $objects = $sf->client->describeSObjects(array_values($types));
   } catch (Exception $e) {
     watchdog('salesforce', 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);

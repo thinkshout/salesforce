@@ -422,7 +422,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
 
   // set the automatic flag on the map
   $map['automatic'] = $form_state['values']['drupal_sfapi_automatic'];
-  
+
   // Save the updated fieldmap.
   salesforce_api_fieldmap_save($map);
 
@@ -495,13 +495,13 @@ function salesforce_api_admin_object(&$form_state) {
   foreach($objects->sobjects as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label .')';
   }
-  
+
   // Disable any SF Object types currently in use by fieldmap(s).
   $result = db_query('SELECT DISTINCT salesforce FROM {salesforce_field_map}');
   while ($type = db_result($result)) {
     $disabled[$type] = $type;
   }
-  
+
   $fields = array(
     'objects' => array(
       '#type' => 'checkboxes',
@@ -563,15 +563,15 @@ function theme_salesforce_api_object_options($element = NULL) {
   }
   $objects = $element['objects'];
   $options = $objects['#options'];
-  
+
   // Disable checkboxes for SF Types which are currently in use.
   foreach ($options as $i) {
-    if (empty($objects[$i]['#value'])) { 
+    if (empty($objects[$i]['#value'])) {
       continue;
     }
     if (!empty($element['disabled_types']['#value'][$i])) {
       $element['objects'][$i]['#attributes']['disabled'] = 'disabled';
-      $element['objects'][$i]['#description'] = 
+      $element['objects'][$i]['#description'] =
         t('This object is in use by one or more fieldmaps and cannot be disabled.');
     }
     $link = l('configure', SALESFORCE_PATH_OBJECT .'/'. $i);

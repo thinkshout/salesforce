@@ -6,7 +6,6 @@
  * Integrates the core user object and profile module with the Salesforce API.
  */
 
-
 /**
  * Implementation of hook_menu().
  */
@@ -336,15 +335,14 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   // Load the fieldmap so we can get the object name.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
-  if (empty($sfid)) {
-    // Export the object to Salesforce.
-    $response = $sf->client->create(array($object), $map['salesforce']);
+  // Look for any matching records which we might want to update instead of creating duplicates.
+  $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $fieldmap);
+  if (!empty($matches)) {
+    $object->Id = reset($matches);
   }
-  else {
-    $object->Id = $sfid;
 
-    $response = $sf->client->update(array($object), $map['salesforce']);
-  }
+  // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
+  $response = $sf->client->upsert('Id', array($object));
 
   // If the export was successful...
   if ($response->success) {

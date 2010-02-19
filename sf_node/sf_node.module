@@ -174,7 +174,7 @@ function sf_node_fieldmap_objects($type) {
 function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   // Get the data array for the field.
   $data = $node->$fieldname;
-  
+
   // Convert data based on what SF type we're sending it to.
   switch ($sf_field_definition['type']) {
     case 'multipicklist':
@@ -190,14 +190,14 @@ function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition
       $result = $data[0]['value'];
     break;
   }
-  
+
   return $result;
 }
 
 // Populates the value of a CCK field from its corresponding SF field's value.
 function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   $data = array();
-  
+
   // Convert data based on what SF type we're importing.
   switch ($sf_field_definition['type']) {
     case 'multipicklist':
@@ -490,15 +490,14 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   // Load the fieldmap so we can get the object name.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
-  if (empty($sfid)) {
-    // Export the object to Salesforce.
-    $response = $sf->client->create(array($object), $map['salesforce']);
+  // Look for any matching records which we might want to update instead of creating duplicates.
+  $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $fieldmap);
+  if (!empty($matches)) {
+    $object->Id = reset($matches);
   }
-  else {
-    $object->Id = $sfid;
 
-    $response = $sf->client->update(array($object), $map['salesforce']);
-  }
+  // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
+  $response = $sf->client->upsert('Id', array($object));
 
   // If the export was successful...
   if ($response->success) {
