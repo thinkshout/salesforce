@@ -527,10 +527,10 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
 
   // Create an object for export based on the specified fieldmap.
   $object = salesforce_api_fieldmap_export_create($fieldmap, $node);
-
+  // dpm($object);
   // Load the fieldmap so we can get the object name.
   $map = salesforce_api_fieldmap_load($fieldmap);
-
+  // dpm($map);
   // Look for any matching records which we might want to update instead of creating duplicates.
   if (empty($sfid)) {
     $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $fieldmap);
@@ -540,10 +540,22 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   } else {
     $object->Id = $sfid;
   }
+  
 
+  // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
+  // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
+  // parameter. Until it is fixed, we have to update/create.
+  //
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
-  $response = $sf->client->upsert('Id', array($object));
-
+  // $response = $sf->client->upsert('Id', array($object));
+  
+  if (empty($object->Id)) {
+    $response = $sf->client->create(array($object), $map['salesforce']);
+  } else {
+    $response = $sf->client->update(array($object), $map['salesforce']);
+  }
+  
+  // dpm($response);
   // If the export was successful...
   if ($response->success) {
     if (empty($sfid)) {

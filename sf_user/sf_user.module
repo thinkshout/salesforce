@@ -379,8 +379,18 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
     $object->Id = $sfid;
   }
 
+  // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
+  // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
+  // parameter. Until it is fixed, we have to update/create.
+  //
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
-  $response = $sf->client->upsert('Id', array($object));
+  // $response = $sf->client->upsert('Id', array($object));
+
+  if (empty($object->Id)) {
+    $response = $sf->client->create(array($object), $map['salesforce']);
+  } else {
+    $response = $sf->client->update(array($object), $map['salesforce']);
+  }
 
   // If the export was successful...
   if ($response->success) {
