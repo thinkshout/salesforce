@@ -135,17 +135,18 @@ function salesforce_api_settings_form_submit(&$form, &$form_state) {
  */
 function salesforce_api_fieldmap_admin() {
   // Define the header for the admin table.
-  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), array('data' => t('Operations'), 'colspan' => 3));
+  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), t('Automatic'), array('data' => t('Operations'), 'colspan' => 3));
   $rows = array();
 
   // Loop through all the indexed field maps.
-  $result = db_query("SELECT fieldmap, drupal, salesforce FROM {salesforce_field_map}");
+  $result = db_query("SELECT fieldmap, drupal, salesforce, automatic FROM {salesforce_field_map}");
   while ($map = db_fetch_array($result)) {
     // Add the row to the table with the basic operations.
     $rows[] = array(
       $map['fieldmap'],
       salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
       salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
+      $map['automatic'] ? t('Yes') : t('No'),
       l(t('edit'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/edit'),
       l(t('delete'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/delete'),
     );
