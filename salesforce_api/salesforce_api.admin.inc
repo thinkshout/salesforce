@@ -623,22 +623,18 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
     case 'data-structure':
       if ($arg) {
         $response = salesforce_api_describeSObjects(array(check_plain($arg)));
-        // if (function_exists('dpm')) {
-        //   dpm($response);
-        // }
-        // elseif (function_exists('krumo')) {
-        //   $output .= krumo($response);
-        // }
-        // else {
+        if (function_exists('dpm')) {
+          dpm($response);
+        }
+        elseif (function_exists('krumo')) {
+          $output .= krumo($response);
+        }
+        else {
           $output .= '<pre>'. print_r($response, 1) .'</pre>';
-        // }
+        }
       }
       else {
         $response = salesforce_api_describeGlobal();
-        echo "<pre>";
-        print_r($response);
-        echo "</pre>";
-        exit;
         if (is_array($response->types)) {
           foreach ($response->types as $type) {
             $items[] = l($type->label, SALESFORCE_PATH_DEMO .'/data-structure/'. $type->name);
