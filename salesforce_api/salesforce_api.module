@@ -395,12 +395,11 @@ function salesforce_api_fieldmap_clone($fieldmap, $action) {
  *   The index of the fieldmap to delete.
  */
 function salesforce_api_fieldmap_delete($fieldmap) {
-	// Call hook so modules with tables extending either of the above tables can cascade deletes.
-	// We invoke this first just in case any implementation needs access to fieldmap data.
-	module_invoke_all('sf_fieldmap_delete', $fieldmap);
-
   db_query("DELETE FROM {salesforce_field_map} WHERE fieldmap = %d", $fieldmap);
   db_query("DELETE FROM {salesforce_object_map} WHERE fieldmap = %d", $fieldmap);
+  if (function_exists('sf_prematch_match_by_delete')) {
+    sf_prematch_match_by_delete($fieldmap);
+  }
 }
 
 /**

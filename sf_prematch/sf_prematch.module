@@ -126,15 +126,6 @@ function sf_prematch_match_by_delete($fieldmap) {
 }
 
 /**
- * Implementation of hook_sf_fieldmap_delete
- *
- * @param int $fieldmap 
- */
-function sf_prematch_sf_fieldmap_delete($fieldmap) {
-	sf_prematch_match_by_delete($fieldmap);
-}
-
-/**
  * Implement hook_sf_find_match
  *
  * @param string $action
