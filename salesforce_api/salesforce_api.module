@@ -177,7 +177,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
 
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
-    watchdog('salesforce', 'Connection to Salesforce failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -235,8 +235,8 @@ function salesforce_api_reset_expired_password($sf) {
     '!uri' => url(SALESFORCE_PATH_ADMIN, array('absolute' => TRUE)),
   );
 
-  watchdog('salesforce', 'The password for the salesforce account %user expired.  Drupal changed it and saved the new password.  Salesforce updated the security token and emailed it to %email.', $vars);
-  watchdog('salesforce', 'Provide the new security token at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce emailed it to %email.', $vars, WATCHDOG_ALERT);
+  DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL, 'The password for the salesforce account %user expired.  Drupal changed it and saved the new password.  Salesforce updated the security token and emailed it to %email.', $vars);
+  DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Provide the new security token at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce emailed it to %email.', $vars, WATCHDOG_ALERT);
 
   // If salesforce connects on pages for anonymous users then these messages should not be displayed.
   if (user_access('administer salesforce')) {
@@ -801,7 +801,7 @@ function salesforce_api_describeSObjects($types) {
     }
     $objects = $sf->client->describeSObjects(array_values($types));
   } catch (Exception $e) {
-    watchdog('salesforce', 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
   }
   if (empty($objects)) {
     return array();

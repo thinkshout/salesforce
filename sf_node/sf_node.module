@@ -93,7 +93,11 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         }
       }
       // Finally, export the node to Salesforce.
-      sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
+      try {
+        sf_node_export($node, $salesforce['fieldmap'], $salesforce['sfid']);
+      } catch (Exception $e) {
+        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+      }
       break;
   }
 }
@@ -549,13 +553,14 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
   // $response = $sf->client->upsert('Id', array($object));
   
+  dpm($object);
   if (empty($object->Id)) {
     $response = $sf->client->create(array($object), $map['salesforce']);
   } else {
     $response = $sf->client->update(array($object), $map['salesforce']);
   }
   
-  // dpm($response);
+  dpm($response);
   // If the export was successful...
   if ($response->success) {
     if (empty($node->salesforce['sfid'])) {
@@ -567,7 +572,14 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   }
   else {
     // Otherwise log the error and return FALSE.
-    drupal_set_message('<pre>' . print_r($response, TRUE) . '</pre>', 'error');
+    if (user_access('administer salesforce')) {
+      if (function_exists('dsm')) {
+        dsm($response);
+      } else {
+        drupal_set_message(print_r($response, 1), 'error');
+      }
+    }
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
 
     return FALSE;
   }

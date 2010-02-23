@@ -90,7 +90,7 @@ class DrupalSalesforce {
    * @param $severity
    * @param $link
    */
-  function watchdog($level, $message, $vars = array(), $severity = WATCHDOG_NOTICE, $link = NULL) {
+  static function watchdog($level, $message, $vars = array(), $severity = WATCHDOG_NOTICE, $link = NULL) {
     // Log nothing for notices if the related log level is not greater than or
     // equal to the level of this message.
     switch ($severity) {

@@ -81,7 +81,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
       $result = $sf->client->query($query);
     }
     catch (Exception $e) {
-      // TODO: watchdog($e->faultstring);
+      DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception in sf_prematch stage: ' . $e->getMessage(), array(), WATCHDOG_ALERT);
       return;
     }
 

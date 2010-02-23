@@ -89,8 +89,11 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
           drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
         }
       }
-
-      sf_user_export($account->uid, $salesforce['fieldmap'], $salesforce['sfid']);
+      try {
+        sf_user_export($account->uid, $salesforce['fieldmap'], $salesforce['sfid']);
+      } catch (Exception $e) {
+        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+      }
       break;
   }
 }
@@ -403,8 +406,14 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   }
   else {
     // Otherwise log the error and return FALSE.
-    drupal_set_message('<pre>' . print_r($response, TRUE) . '</pre>', 'error');
-
+    if (user_access('administer salesforce')) {
+      if (function_exists('dsm')) {
+        dsm($response);
+      } else {
+        drupal_set_message(print_r($response, 1), 'error');
+      }
+    }
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
     return FALSE;
   }
 }
