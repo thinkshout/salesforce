@@ -1,0 +1,70 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Installs tables needed for sf_prematch module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function sf_prematch_install() {
+  drupal_install_schema('sf_prematch');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function sf_prematch_uninstall() {
+  drupal_uninstall_schema('sf_prematch');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function sf_prematch_schema() {
+  $schema['salesforce_prematch'] = array(
+    'description' => t('Drupal to Salesforce object mapping table for pre-creation '),
+    'fields' => array(
+      'fieldmap' => array(
+        'description' => 'Fieldmap id FK',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => '0',
+      ),
+      'primary_field' => array(
+        'description' => 'Primary field or object name for use in prematching.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'secondary_field' => array(
+        'description' => 'Secondary field or object name for use in prematching.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => false,
+        'default' => '',
+      ),
+      'tertiary_field' => array(
+        'description' => 'Tertiary field or object name for use in prematching.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => false,
+        'default' => '',
+      ),
+      'rule' => array(
+        'description' => 'Int identifying rule for prematching (based on constants)',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+    ),
+    'primary key' => array('fieldmap'),
+  );
+
+  return $schema;
+}

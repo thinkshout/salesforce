@@ -368,7 +368,7 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
 
   // Load the fieldmap so we can get the object name.
   $map = salesforce_api_fieldmap_load($fieldmap);
-
+  
   if (empty($sfid)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
     $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $fieldmap);
@@ -394,7 +394,7 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
 
   // If the export was successful...
   if ($response->success) {
-    if (empty($sfid)) {
+    if (empty($account->salesforce['sfid'])) {
       // Store the Salesforce ID for the user and return TRUE.
       salesforce_api_id_save('user', $uid, $response->id, $fieldmap);
     }
@@ -447,7 +447,7 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
   $account = user_load(array('uid' => $uid));
   if (empty($uid) || empty($account)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
-    $matches = salesforce_api_search_for_duplicates('import', 'user', $account, $fieldmap);
+    $matches = salesforce_api_search_for_duplicates('import', 'user', $sf_data, $fieldmap);
     if (!empty($matches)) {
       $account->uid = reset($matches);
     }

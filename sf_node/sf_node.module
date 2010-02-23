@@ -558,7 +558,7 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   // dpm($response);
   // If the export was successful...
   if ($response->success) {
-    if (empty($sfid)) {
+    if (empty($node->salesforce['sfid'])) {
       // Store the Salesforce ID for the node and return TRUE.
       salesforce_api_id_save('node', $node->nid, $response->id, $fieldmap);
     }
@@ -597,7 +597,7 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
 
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
-
+  
   // Load the object definitions.
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
@@ -606,7 +606,7 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
   $node = node_load($nid);
   if (empty($nid) || empty($node)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
-    $matches = salesforce_api_search_for_duplicates('import', 'node', $node, $fieldmap);
+    $matches = salesforce_api_search_for_duplicates('import', 'node', $sf_data, $fieldmap);
     if (!empty($matches)) {
       $node->nid = reset($matches);
     }

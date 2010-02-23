@@ -110,5 +110,16 @@ function hook_sf_find_match($direction, $fieldmap_type, $object, $fieldmap_id) {
 }
 
 /**
+ * Allow modules to cleanup when a fieldmap gets deleted. This hook is called
+ * immediately prior to the fieldmap's removal from the database.
+ *
+ * @param $fieldmap_id
+ *  numeric ID of the fieldmap that was deleted.
+ */
+function hook_sf_fieldmap_delete($fieldmap_id) {
+  db_query('DELETE FROM {my_table} WHERE sfapi_fieldmap_id = %d', $fieldmap_id);
+}
+
+/**
  * @} End of "addtogroup hooks".
  */

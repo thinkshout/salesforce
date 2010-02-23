@@ -1,0 +1,162 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Extends Salesforce API module so checks for an existing match for an object before creating a new one.
+ */
+
+// Define constants for prematching rules.
+define('SF_PREMATCH_PRIMARY_SECONDARY_AND_TERTIARY', 1);
+define('SF_PREMATCH_PRIMARY_AND_SECONDARY', 2);
+define('SF_PREMATCH_PRIMARY', 3);
+
+/**
+ * Implementation of hook_menu().
+ */
+function sf_prematch_menu() {
+  $items[SALESFORCE_PATH_FIELDMAPS . '/prematching'] = array(
+    'title' => 'Prematching',
+    'description' => 'Create or edit prematching for a fieldmap.',
+    'page callback' => 'sf_prematch_list',
+    'access arguments' => array('administer prematching'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 15,
+    'file' => 'sf_prematch.admin.inc',
+  );
+  $items[SALESFORCE_PATH_FIELDMAPS . '/prematching/%'] = array(
+    'title' => 'Edit fieldmap prematching',
+    'description' => 'Edit an existing fieldmap prematch.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sf_prematch_edit_form', 5),
+    'access arguments' => array('administer prematching'),
+    'type' => MENU_CALLBACK,
+    'file' => 'sf_prematch.admin.inc',
+  );
+  $items[SALESFORCE_PATH_FIELDMAPS . '/prematching/%/delete'] = array(
+    'title' => 'Delete prematching from a fieldmap',
+    'description' => 'Delete an existing fieldmap prematch.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sf_prematch_delete_form', 5),
+    'access arguments' => array('administer prematching'),
+    'type' => MENU_CALLBACK,
+    'file' => 'sf_prematch.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function sf_prematch_perm() {
+  return array('administer prematching');
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function sf_prematch_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'salesforce_api_settings_form') {
+    $form['sf_prematch'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Pre-creation prematching'),
+      '#description' => t('Placeholder for any pre-creation matching settings.'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#weight' => -1,
+    );
+  }
+  if ($form_id == 'salesforce_api_fieldmap_edit_form') {
+    if (!array_search('sf_prematch_fieldmap_edit_form_submit', $form['#submit'])) {
+    	$form['#submit'][] = 'sf_prematch_fieldmap_edit_form_submit';
+    }
+  }
+}
+
+/**
+ * Piggyback on fieldmap edit form submit so can redirect to prematch creation for the fieldmap.
+ *
+ * @param array $form
+ * @param array $form_state
+ */
+function sf_prematch_fieldmap_edit_form_submit($form, &$form_state) {
+  $fieldmap = $form_state['values']['fieldmap_index'];
+	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/prematching/'. $fieldmap;
+}
+
+/**
+ * Loads a prematch from the database.
+ *
+ * @param $fieldmap
+ *   The index of the fieldmap's prematch to load.
+ * @return
+ *   An array containing the prematch rule.
+ */
+function sf_prematch_match_by_load($fieldmap) {
+  static $match_bys;
+  if (!isset($match_bys[$fieldmap]) && $fieldmap != '') {
+    $result = db_query("SELECT * FROM {salesforce_prematch} WHERE fieldmap = %d", $fieldmap);
+    $match_by = db_fetch_array($result);
+    if (count($match_by)) {
+    	$match_bys[$fieldmap] = $match_by;
+    }
+    else {
+      $match_bys[0] = array(
+        'fieldmap' => $fieldmap,
+        'primary_field' => '',
+        'secondary_field' => '',
+        'tertiary_field' => '',
+        'rule' => 1
+      );
+      $fieldmap = 0;
+    }
+  }
+
+  return $match_bys[$fieldmap];
+}
+
+/**
+ * Helper function to delete a fieldmap
+ *
+ * @param $fieldmap 
+ */
+function sf_prematch_match_by_delete($fieldmap) {
+  db_query("DELETE FROM {salesforce_prematch} WHERE fieldmap = %d", $fieldmap);
+}
+
+/**
+ * Implementation of hook_sf_fieldmap_delete
+ *
+ * @param int $fieldmap 
+ */
+function sf_prematch_sf_fieldmap_delete($fieldmap) {
+	sf_prematch_match_by_delete($fieldmap);
+}
+
+/**
+ * Implement hook_sf_find_match
+ *
+ * @param string $action
+ * @param stdClass $object
+ * @param array $map
+ */
+function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
+  $fieldmap = $map['fieldmap'];
+  $match_by = sf_prematch_match_by_load($fieldmap);
+  if ($match_by['primary_field'] == '') { return; }
+  require_once drupal_get_path('module', 'sf_prematch') . '/sf_prematch.main.inc';
+	switch ($action) {
+	 	case 'export':
+	 		$result = sf_prematch_export($object_type, $object, $map, $match_by);
+	 	  break;
+	 	case 'import':
+	 		$result = sf_prematch_import($object_type, $object, $map, $match_by);
+	 	  break;
+	 	default:
+	 	  $result = null;
+	 	  break;
+	}
+	
+	return $result;
+}
