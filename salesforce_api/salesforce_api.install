@@ -38,12 +38,12 @@ function salesforce_api_schema() {
   $schema['salesforce_object_map'] = array(
     'description' => t('Drupal to Salesforce object mapping table'),
     'fields' => array(
-      'drupal_type' => array(
-        'description' => 'Drupal object type (e.g. "node", "comment")',
-        'type' => 'varchar',
-        'length' => 128,
+      'fieldmap' => array(
+        'description' => 'Fieldmap id',
+        'type' => 'int',
+        'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => '',
+        'default' => 0,
       ),
       'oid' => array(
         'description' => 'Specific Drupal object identifier (e.g. node id or comment id)',
@@ -59,12 +59,12 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'fieldmap' => array(
-        'description' => 'Fieldmap id',
-        'type' => 'int',
-        'unsigned' => TRUE,
+      'drupal_type' => array(
+        'description' => 'Drupal object type (e.g. "node", "comment")',
+        'type' => 'varchar',
+        'length' => 128,
         'not null' => TRUE,
-        'default' => '0',
+        'default' => '',
       ),
     ),
     'indexes' => array(
@@ -80,6 +80,14 @@ function salesforce_api_schema() {
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE
+      ),
+      'automatic' => array(
+        'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny'
       ),
       'drupal' => array(
         'description' => 'The kind of Drupal object this map is for.',
@@ -102,13 +110,12 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'automatic' => array(
-        'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny'
+      'description' => array(
+        'description' => 'Name or brief description of this fieldmap',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => ''
       ),
       'fields' => array(
         'description' => 'Serialized fieldmap',

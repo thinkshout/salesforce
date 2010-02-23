@@ -135,11 +135,11 @@ function salesforce_api_settings_form_submit(&$form, &$form_state) {
  */
 function salesforce_api_fieldmap_admin() {
   // Define the header for the admin table.
-  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), t('Automatic'), array('data' => t('Operations'), 'colspan' => 3));
+  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), t('Automatic'), t('Description'), array('data' => t('Operations'), 'colspan' => 3));
   $rows = array();
 
   // Loop through all the indexed field maps.
-  $result = db_query("SELECT fieldmap, drupal, salesforce, automatic FROM {salesforce_field_map}");
+  $result = db_query("SELECT fieldmap, drupal, salesforce, description, automatic FROM {salesforce_field_map}");
   while ($map = db_fetch_array($result)) {
     // Add the row to the table with the basic operations.
     $rows[] = array(
@@ -147,6 +147,7 @@ function salesforce_api_fieldmap_admin() {
       salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
       salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
       $map['automatic'] ? t('Yes') : t('No'),
+      array('data' => check_plain($map['description']), 'class' => 'description'),
       l(t('edit'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/edit'),
       l(t('delete'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/delete'),
     );
@@ -175,7 +176,7 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
     $options[$key] = $value['label'];
   }
 
-  $form['drupal_object'] = array(
+  $form['drupal'] = array(
     '#type' => 'select',
     '#title' => t('Drupal object'),
     '#options' => count($options) > 0 ? $options : array(t('None available')),
@@ -190,7 +191,7 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
     $options[$key] = $value['label'];
   }
 
-  $form['salesforce_object'] = array(
+  $form['salesforce'] = array(
     '#type' => 'select',
     '#title' => t('Salesforce object'),
     '#options' => count($options) > 0 ? $options : array(t('None available')),
@@ -203,6 +204,11 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
     '#value' => t('Map object fields'),
     '#suffix' => l(t('Cancel'), SALESFORCE_PATH_FIELDMAPS),
   );
+  $form['description'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Title or short description',
+    '#description' => t('Enter a brief description of this fielmap to distinguish it from potentially similar fieldmaps'),
+  );
 
   return $form;
 }
@@ -212,7 +218,7 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
  */
 function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
   // Create the new fieldmap.
-  $index = salesforce_api_fieldmap_create($form_state['values']['drupal_object'], $form_state['values']['salesforce_object'], $form_state['values']['automatic']);
+  $index = salesforce_api_fieldmap_create($form_state['values']);
 
   // Redirect to its edit form.
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $index .'/edit';
@@ -228,14 +234,9 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
  * @return
  *   The numeric index of the new fieldmap.
  */
-function salesforce_api_fieldmap_create($drupal, $salesforce, $automatic) {
+function salesforce_api_fieldmap_create($values) {
   // Create the fieldmap array.
-  $map = array(
-    'drupal' => $drupal,
-    'salesforce' => $salesforce,
-    'automatic' => $automatic,
-    'fields' => array(),
-  );
+  $map = $values + array('fields' => array());
 
   // Save the new fieldmap.
   salesforce_api_fieldmap_save($map);
@@ -315,6 +316,13 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Add a description of the source fieldmap to the form array.
   $form['fieldmap_desc'] = array(
     '#value' => '<p>'. salesforce_api_fieldmap_description($map) .'</p>',
+  );
+
+  $form['description'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Title or short description',
+    '#description' => t('Enter a brief description of this fielmap to distinguish it from potentially similar fieldmaps'),
+    '#default_value' => $map['description'],
   );
 
   $source = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
@@ -401,7 +409,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($form_state['values']['fieldmap_index']);
 
-  // Reset the fields array on the fieldmap.
+  $map['description'] = $form_state['values']['description'];
   $map['fields'] = array();
 
   // Get the object definition for the target object.
