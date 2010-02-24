@@ -103,6 +103,20 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 /**
+ * Implementation of hook_content_fieldapi
+ * Delete a field from a Salesforce fieldmap when the field instance is deleted.
+ */
+function sf_node_content_fieldapi($op, $field) {
+  switch($op) {
+    case 'delete instance':
+      salesforce_api_fieldmap_field_delete($field['field_name'], 'node_'.$field['type_name']);
+      break;
+  }
+}
+
+
+
+/**
  * Implementation of hook_fieldmap_objects_alter().
  */
 function sf_node_fieldmap_objects($type) {
