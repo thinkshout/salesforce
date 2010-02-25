@@ -303,7 +303,8 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   }
 
   // Include the CSS file for the form.
-  drupal_add_css(drupal_get_path('module', 'salesforce_api') .'/salesforce_api.admin.css');
+  $path = drupal_get_path('module', 'salesforce_api');
+  drupal_add_css($path . '/misc/salesforce_api.admin.css');
 
   $form = array();
 
@@ -400,6 +401,16 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   );
 
   return $form;
+}
+
+/**
+ * FAPI validate handler for fieldmap editor
+ *
+ */
+function salesforce_api_fieldmap_edit_form_validate($form, &$form_state) {
+  // Include the CSS file for the form on reload as long as Drupal won't do it for us.
+  $path = drupal_get_path('module', 'salesforce_api');
+  drupal_add_css($path . '/misc/salesforce_api.admin.css');
 }
 
 /**

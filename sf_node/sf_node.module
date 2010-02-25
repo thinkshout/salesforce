@@ -375,31 +375,17 @@ function sf_node_salesforce_form(&$form_state, $node) {
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($node->salesforce['fieldmap']);
-
-    // Load the object definitions.
-    $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-    $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+    $sf_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+    $export_data = salesforce_api_fieldmap_export_create($node->salesforce['fieldmap'], $node);
 
     $header = array(t('Field name'), t('Drupal @type value', array('@type' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']))), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
     $rows = array();
 
-    foreach ($map['fields'] as $key => $value) {
-      if (isset($drupal_object['fields'][$value]['export'])) {
-        $drupal_field_definition = $drupal_object['fields'][$value];
-        $sf_field_definition = $object['fields'][$key];
-        $drupal_value = $drupal_object['fields'][$value]['export']($node, $value, $drupal_field_definition, $sf_field_definition);
-      }
-      elseif (isset($node->$value)) {
-        $drupal_value = $node->$value;
-      }
-      else {
-        $drupal_value = '';
-      }
-
+    foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
       $rows[] = array(
-        $object['fields'][$key]['label'],
-        $drupal_value,
-        $sf_data->$key,
+        $sf_object_definition['fields'][$sf_fieldname]['label'],
+        $export_data->$sf_fieldname,
+        $sf_data->$sf_fieldname,
       );
     }
 
