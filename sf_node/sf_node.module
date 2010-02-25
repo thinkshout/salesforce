@@ -217,20 +217,17 @@ function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition
   // Get the data array for the field.
   $data = $node->$fieldname;
 
-  // Convert data based on what SF type we're sending it to.
-  switch ($sf_field_definition['type']) {
-    case 'multipicklist':
-      // SF wants a semicolon-delimited string.
+  if ($sf_field_definition['multiple']) {
+      // SF wants a semicolon-delimited string for multipicklist values
       $values = array();
       foreach ($data as $row) {
         $values[] = $row['value'];
       }
       $result = implode(';', $values);
-    break;
-    default:
-      // Unless handled above in this switch, we don't yet handle fields with multiple values.
-      $result = $data[0]['value'];
-    break;
+  }
+  else {
+    // Unless handled above, use only the first value.
+    $result = $data[0]['value'];
   }
 
   return $result;

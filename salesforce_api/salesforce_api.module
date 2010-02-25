@@ -624,7 +624,6 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
 
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
   $sf_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-
   $object = new stdClass();
 
   // Loop through the fields on the fieldmap.
@@ -767,6 +766,16 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
   );
 
   foreach ($object->fields as $field) {
+    // Eventually, we'll need more data in our Salesforce field definitions.
+    // The following commented-out lines demonstrates storing the entire field
+    // definition as an array.
+    // $fieldmap_object['fields'][$field->name] = get_object_vars($field);
+    // if (isset($field->picklistValues) && is_array($field->picklistValues)) {
+    //   $fieldmap_object['fields'][$field->name]['picklistValues'] = array();
+    //   foreach ($field->picklistValues as $value) {
+    //     $fieldmap_object['fields'][$field->name]['picklistValues'][] = get_object_vars($value);
+    //   }
+    // }
     $fieldmap_object['fields'][$field->name]['label'] = t($field->label);
     if ($field->createable != 1) {
       $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
@@ -776,6 +785,10 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
     }
     else {
       $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_OPTIONAL;
+    }
+    
+    if ($field->type == 'multipicklist') {
+      $fieldmap_object['fields'][$field->name]['multiple'] = TRUE;
     }
   }
   return $fieldmap_object;
