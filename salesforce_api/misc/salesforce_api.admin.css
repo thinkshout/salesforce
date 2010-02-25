@@ -1,0 +1,9 @@
+/* $Id$ */
+
+.source-cell label {
+  display: none;
+}
+
+.fieldmap-extra-text label  {
+  display: inline;
+}
