@@ -51,7 +51,7 @@ class DrupalSalesforce {
    */
   function login() {
     // Default to the WSDL downloaded from the user account if available.
-    $wsdl = SALESFORCE_DIR_WSDL .'/enterprise.wsdl';
+    $wsdl = SALESFORCE_DIR_WSDL .'/enterprise.wsdl.xml';
 
     // Otherwise fall back to the one included with the Toolkit.
     if (!file_exists($wsdl)) {
