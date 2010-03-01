@@ -10,7 +10,6 @@
  * 3. Download your WSDL.
  */
 
-
 // Define directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
 define('SALESFORCE_DIR_TOOLKIT', SALESFORCE_DIR .'/toolkit');
@@ -24,12 +23,22 @@ define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN .'/fieldmap');
 define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN .'/demo');
 define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN .'/object');
 
-// Define field importing requirements.
-// TODO: I believe we need to use bitwise operators instead.
-// Reference this tutorial - http://www.litfuel.net/tutorials/bitwise.htm
-define('SALESFORCE_FIELD_OPTIONAL', 0);
-define('SALESFORCE_FIELD_REQUIRED', 1);
-define('SALESFORCE_FIELD_SOURCE_ONLY', 2);
+// Salesforce schema properties.
+// Not all these are in use yet.
+define('SALESFORCE_FIELD_CREATEABLE', 1);
+define('SALESFORCE_FIELD_DEFAULTEDONCREATE', 2);
+define('SALESFORCE_FIELD_DEPRECATEDANDHIDDEN', 4);
+define('SALESFORCE_FIELD_IDLOOKUP', 8);
+define('SALESFORCE_FIELD_NILLABLE', 16);
+define('SALESFORCE_FIELD_RESTRICTEDPICKLIST', 32);
+define('SALESFORCE_FIELD_UNIQUE', 64);
+define('SALESFORCE_FIELD_UPDATEABLE', 128);
+
+// Bitmasks for the fields above
+define('SALESFORCE_FIELD_SOURCE_ONLY', ~SALESFORCE_FIELD_CREATEABLE);
+define('SALESFORCE_FIELD_REQUIRED', SALESFORCE_FIELD_CREATEABLE & ~SALESFORCE_FIELD_NILLABLE & ~SALESFORCE_FIELD_DEFAULTEDONCREATE);
+define('SALESFORCE_FIELD_OPTIONAL', ~SALESFORCE_FIELD_REQUIRED & ~SALESFORCE_FIELD_SOURCE_ONLY);
+
 
 // Define reporting levels for watchdog messages.
 define('SALESFORCE_LOG_NONE', 0);
@@ -175,14 +184,14 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
   $password = $password ? $password : variable_get('salesforce_api_password', '');
   $token = $token ? $token : variable_get('salesforce_api_token', '');
 
+  // Include the file that defines the class.
+  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
+
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
-
-  // Include the file that defines the class.
-  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
 
   // Create a new Salesforce object with the API credentials.
   $sf = new DrupalSalesforce($username, $password, $token);
@@ -253,6 +262,13 @@ function salesforce_api_reset_expired_password($sf) {
  */
 function salesforce_api_fieldmap_objects($type = 'salesforce') {
   $objects = array();
+
+
+  // FIXME
+  return salesforce_api_cache_build();
+
+
+
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
     $cache = cache_get('salesforce_api_sf_objects');
@@ -339,7 +355,9 @@ function salesforce_api_fieldmap_load($fieldmap) {
   if (!isset($maps[$fieldmap]) && $fieldmap != '') {
     $result = db_query("SELECT * FROM {salesforce_field_map} WHERE fieldmap = %d", $fieldmap);
     $map = db_fetch_array($result);
-    $map['fields'] = unserialize($map['fields']);
+    if (isset($map['fields'])) {
+      $map['fields'] = unserialize($map['fields']);
+    }
     $maps[$fieldmap] = $map;
   }
 
@@ -628,11 +646,21 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
 
   // Loop through the fields on the fieldmap.
   foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+    $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
+    $updateable = $sf_field_definition['type'] & SALESFORCE_FIELD_UPDATEABLE;
+    $createable = $sf_field_definition['type'] & SALESFORCE_FIELD_CREATEABLE;
+
+    // Don't try to update or create fields to which those actions do not apply.
+    if ((!$updateable && !$createable)
+    || (empty($drupal_data->salesforce['sfid']) && !$createable)
+    || (!empty($drupal_data->salesforce['sfid']) && !$updateable)) {
+      continue;
+    }
+
     // If a handler is specified for retrieving a value for the Drupal field...
     if (isset($drupal_object_definition['fields'][$drupal_fieldname]['export'])) {
       $drupal_field_export_handler = $drupal_object_definition['fields'][$drupal_fieldname]['export'];
       $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
-      $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
       // Get the value for the field from the handler function.
       $object->$sf_fieldname = htmlentities($drupal_field_export_handler($drupal_data, $drupal_fieldname, $drupal_field_definition, $sf_field_definition));
     }
@@ -642,7 +670,7 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
       $object->$sf_fieldname = htmlentities($drupal_data->$drupal_fieldname);
     }
   }
-  
+
   // Before we return the object, we need to check for any fieldsToNull.
   // Leaving a field blank will not erase an existing value from Salesforce.
   // Any such value must be explicitly set to null.
@@ -651,17 +679,32 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
   foreach ($props as $key => $value) {
     $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
     // Salesforce treats the following values differently than null.
-    if($value === FALSE || $value === 0 || $value === '0' || $value === 'false') {
+    if ($value === FALSE || $value === 0 || $value === '0' || $value === 'false') {
       $object->$key = $value = 0;
     } elseif(empty($value)) {
-      unset($object->$key);
-      $object->fieldsToNull = $key;
-      // Enterprise client can only null one field per transaction.
-      // This is a bug beyond our control. For now, we just have to deal with it.
-      // The following doesn't actually work:
-      // if (!empty($object->fieldsToNull)) { 
-      //   $object->fieldsToNull .= '; '; 
-      // }
+      $nillable = $sf_field_definition['type'] & SALESFORCE_FIELD_NILLABLE;
+      // If the field is not nillable, don't try to set it to null
+      if (!$nillable) {
+        switch ($sf_field_definition['salesforce']['type']) {
+          case 'boolean': 
+            $object->$key = 0;
+            break;
+          case 'string':
+            $object->$key = t('(blank)');
+            break;
+          default:
+            unset($object->$key);
+            break;
+        }
+      } else {
+        $object->fieldsToNull = $key;
+        // Enterprise client can only null one field per transaction.
+        // This is a bug beyond our control. For now, we just have to deal with it.
+        // The following doesn't actually work:
+        // if (!empty($object->fieldsToNull)) { 
+        //   $object->fieldsToNull .= '; '; 
+        // }
+      }
     }
   }
   return $object;
@@ -764,32 +807,21 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
     'label' => t($object->label),
     'fields' => array()
   );
-
   foreach ($object->fields as $field) {
-    // Eventually, we'll need more data in our Salesforce field definitions.
-    // The following commented-out lines demonstrates storing the entire field
-    // definition as an array.
-    // $fieldmap_object['fields'][$field->name] = get_object_vars($field);
-    // if (isset($field->picklistValues) && is_array($field->picklistValues)) {
-    //   $fieldmap_object['fields'][$field->name]['picklistValues'] = array();
-    //   foreach ($field->picklistValues as $value) {
-    //     $fieldmap_object['fields'][$field->name]['picklistValues'][] = get_object_vars($value);
-    //   }
-    // }
-    $fieldmap_object['fields'][$field->name]['label'] = t($field->label);
-    if ($field->createable != 1) {
-      $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_SOURCE_ONLY;
+    $properties = array('name', 'label', 'type', 'length', 'soapType');
+    $booleans = array('createable', 'defaultedOnCreate', 'deprecatedAndHidden',
+      'idLookup', 'nillable', 'restrictedPicklist', 'unique', 'updateable');
+    $source = get_object_vars($field);
+    $sf_definition = array_intersect_key($source, array_flip($properties));
+    foreach ($booleans as $bool) {
+      $sf_definition['sf_type'] |= (int)$source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
     }
-    elseif (!$field->nillable && !$field->defaultedOnCreate) {
-      $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_REQUIRED;
-    }
-    else {
-      $fieldmap_object['fields'][$field->name]['type'] = SALESFORCE_FIELD_OPTIONAL;
-    }
-    
-    if ($field->type == 'multipicklist') {
-      $fieldmap_object['fields'][$field->name]['multiple'] = TRUE;
-    }
+    $fieldmap_object['fields'][$field->name] = array(
+      'name' => $sf_definition['name'],
+      'label' => $sf_definition['label'],
+      'type' => $sf_definition['sf_type'],
+      'salesforce' => $sf_definition,
+      );
   }
   return $fieldmap_object;
 }
