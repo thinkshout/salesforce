@@ -16,6 +16,9 @@
  * @return string sfid
  */
 function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
+  if (empty($drupal_object) || empty($map['drupal']) || empty($match_by)) {
+    return;
+  }
   // Get information to allow using handlers to get values of Drupal fields.
   $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
   $drupal_fields_info = $drupal_object_info['fields'];

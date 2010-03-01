@@ -31,6 +31,11 @@ function sf_node_perm() {
   return array('sync nodes with salesforce');
 }
 
+// Access callback for the node/%node/salesforce menu item.
+function sf_node_salesforce_form_access($node) {
+  return user_access('sync nodes with salesforce') and salesforce_api_fieldmap_options('node_'. $node->type);
+}
+
 /**
  * Implementation of hook_form_alter().
  */
@@ -141,7 +146,12 @@ function sf_node_fieldmap_objects($type) {
 
       // Add a body field if the node type has one.
       if ($type->has_body) {
-        $objects['node_'. $type->type]['fields']['body'] = array('label' => check_plain($type->body_label));
+        // Body is actually body+teaser
+        $objects['node_'. $type->type]['fields']['body'] = array(
+          'label' => check_plain($type->body_label),
+          'export' => '_sf_node_export_body',
+          'import' => '_sf_node_import_body',
+          );
       }
 
       // Add the rest of the core fields.
@@ -216,20 +226,20 @@ function sf_node_fieldmap_objects($type) {
 function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   // Get the data array for the field.
   $data = $node->$fieldname;
-
-  if ($sf_field_definition['multiple']) {
+  switch ($sf_field_definition['salesforce']['type']) {
+    case 'multipicklist':
       // SF wants a semicolon-delimited string for multipicklist values
       $values = array();
       foreach ($data as $row) {
         $values[] = $row['value'];
       }
       $result = implode(';', $values);
+      break;
+    default:
+      // Unless handled above, use only the first value.
+      $result = $data[0]['value'];
+      break;
   }
-  else {
-    // Unless handled above, use only the first value.
-    $result = $data[0]['value'];
-  }
-
   return $result;
 }
 
@@ -238,7 +248,7 @@ function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_de
   $data = array();
 
   // Convert data based on what SF type we're importing.
-  switch ($sf_field_definition['type']) {
+  switch ($sf_field_definition['salesforce']['type']) {
     case 'multipicklist':
       // SF sends multiple values as a semicolon-delimited string.
       if ($drupal_field_definition['multiple']) {
@@ -260,38 +270,33 @@ function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_de
 }
 
 // Returns the todate for a CCK date field.
-function _sf_node_export_cck_todate($source, $field) {
+function _sf_node_export_cck_todate($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   // Get the name of the actual CCK field.
   // drupal_* string functions are not necessary since these are machine names.
-  $key = substr($field, 0, strlen($field) - 7);
+  $key = substr($fieldname, 0, strlen($fieldname) - 7);
 
   // Get the data array for the field.
-  $data = $source->$key;
+  $data = $node->$key;
 
   // Return the to date from the field data.
   return $data[0]['value2'];
 }
 
 // Returns the todate for a CCK date field.
-function _sf_node_import_cck_todate(&$node, $key, $source, $field) {
+function _sf_node_import_cck_todate(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   // drupal_* string functions are not necessary since these are machine names.
-  $key = substr($key, 0, strlen($key) - 7);
+  $key = substr($drupal_fieldname, 0, strlen($drupal_fieldname) - 7);
 
   $data = $node->$key;
 
-  $data[0]['value2'] = $source->$field;
+  $data[0]['value2'] = $sf_data->$sf_fieldname;
 
   $node->$key = $data;
 }
 
-// Access callback for the node/%node/salesforce menu item.
-function sf_node_salesforce_form_access($node) {
-  return user_access('sync nodes with salesforce') and salesforce_api_fieldmap_options('node_'. $node->type);
-}
-
 // Returns the email address of the node's author, given by node->uid
-function _sf_node_export_author_email($source, $field) {
-  $uid = $source->uid;
+function _sf_node_export_author_email($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  $uid = $node->uid;
   if(!is_numeric($uid)) {
     return null;
   }
@@ -299,18 +304,27 @@ function _sf_node_export_author_email($source, $field) {
 }
 
 // Export a timestamp in a format SalesForce comprehends.
-function _sf_node_export_date($source, $field) {
-  return gmdate(DATE_ATOM, $source->$field);
+function _sf_node_export_date($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  return gmdate(DATE_ATOM, $node->$fieldname);
 }
 
 // Given a SalesForce time, import a node timestamp.
-function _sf_node_import_date(&$node, $key, $source, $field) {
-  $node->$key = strtotime($source->$field);
+function _sf_node_import_date(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $node->$drupal_fieldname = strtotime($source->$sf_fieldname);
 }
 
 // Export the text value "(blank)".
-function _sf_node_export_blank($source, $field) {
-  return '(blank)';
+function _sf_node_export_blank($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  return t('(blank)');
+}
+
+function _sf_node_export_body($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  return $node->teaser . '<!--break-->' . $node->body;
+}
+
+function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $node->teaser = node_teaser($sf_data->$sf_fieldname);
+  $node->body = $sf_data->$sf_fieldname;
 }
 
 // Displays the Salesforce synchronization form.
@@ -526,8 +540,6 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
     $node = node_load($node);
   }
 
-  // Create an object for export based on the specified fieldmap.
-  $object = salesforce_api_fieldmap_export_create($fieldmap, $node);
   // dpm($object);
   // Load the fieldmap so we can get the object name.
   $map = salesforce_api_fieldmap_load($fieldmap);
@@ -536,12 +548,16 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   if (empty($sfid)) {
     $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $fieldmap);
     if (!empty($matches)) {
-      $object->Id = reset($matches);
+      $sfid = reset($matches);
     }
-  } else {
-    $object->Id = $sfid;
+    if (empty($node)) { 
+      $node = (object)array();
+    }
+    $node->salesforce['sfid'] = $sfid;
   }
-  
+  // Create an object for export based on the specified fieldmap.
+  $object = salesforce_api_fieldmap_export_create($fieldmap, $node);
+  $object->Id = $sfid;
 
   // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
   // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
@@ -549,35 +565,31 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
   //
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
   // $response = $sf->client->upsert('Id', array($object));
-  
-  dpm($object);
+
   if (empty($object->Id)) {
     $response = $sf->client->create(array($object), $map['salesforce']);
   } else {
     $response = $sf->client->update(array($object), $map['salesforce']);
   }
-  
-  dpm($response);
+
   // If the export was successful...
   if ($response->success) {
     if (empty($node->salesforce['sfid'])) {
       // Store the Salesforce ID for the node and return TRUE.
       salesforce_api_id_save('node', $node->nid, $response->id, $fieldmap);
     }
-
     return TRUE;
   }
   else {
     // Otherwise log the error and return FALSE.
     if (user_access('administer salesforce')) {
       if (function_exists('dsm')) {
-        dsm($response);
+        dpm($response);
       } else {
         drupal_set_message(print_r($response, 1), 'error');
       }
     }
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
-
     return FALSE;
   }
 }

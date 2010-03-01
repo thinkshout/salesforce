@@ -357,20 +357,34 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
 
   // Loop through each of the target fields.
   $rows = array('required' => array(), 'optional' => array());
-  foreach ($target['fields'] as $key => $value) {
-    // Skip fields that are automatically assigned upon create for now.
-    if ($value['type'] == SALESFORCE_FIELD_SOURCE_ONLY || $value['label'] == 'Owner ID') {
-      continue;
-    }
-
+  foreach ($target['fields'] as $key => $value) {    
     // Determine to which table this field should belong.
-    if ($value['type'] == SALESFORCE_FIELD_REQUIRED) {
+    if (!($value['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+      // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="'. t('This field is required.') .'">*</span>';
-    }
+    } 
     else {
       $type = 'optional';
       $required = '';
+    }
+    
+    if ($value['type'] & SALESFORCE_FIELD_CREATEABLE
+    && !($value['type'] & SALESFORCE_FIELD_UPDATEABLE)) {
+      $type = 'optional';
+      $required = ' <span class="form-required" title="' . 
+        t('This field will only be set for new records.') . '">' . t('Create-only') . '</span>';
+    }
+    elseif (!($value['type'] & SALESFORCE_FIELD_CREATEABLE)
+    && $value['type'] & SALESFORCE_FIELD_UPDATEABLE) {
+      $type = 'optional';
+      $required = ' <span class="form-required" title="' . 
+        t('This field can only be set for existing records.') . '">' . t('Update-only') . '</span>';
+    }
+    elseif (!($value['type'] & (SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE))) {
+      $type = 'optional';
+      $required = ' <span class="form-required" title="' . 
+        t('This field will be available for imports only.') . '">' . t('Read-only') . '</span>';
     }
 
     // Create a row for this field.
