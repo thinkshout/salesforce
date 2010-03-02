@@ -87,7 +87,7 @@ function salesforce_api_settings_form() {
   $period[CACHE_PERMANENT] = t('<none>');
   $form['objects']['salesforce_api_object_expire'] = array(
     '#type' => 'select',
-    '#title' => t('Cache lifetime'),
+    '#title' => t('Minimum cache lifetime'),
     '#options' => $period,
     '#default_value' => variable_get('salesforce_api_object_expire', CACHE_PERMANENT),
   );
