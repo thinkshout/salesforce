@@ -262,13 +262,6 @@ function salesforce_api_reset_expired_password($sf) {
  */
 function salesforce_api_fieldmap_objects($type = 'salesforce') {
   $objects = array();
-
-
-  // FIXME
-  return salesforce_api_cache_build();
-
-
-
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
     $cache = cache_get('salesforce_api_sf_objects');
