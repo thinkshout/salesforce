@@ -137,6 +137,7 @@ function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
   $match_by = sf_prematch_match_by_load($fieldmap);
   if ($match_by['primary_field'] == '') { return; }
   require_once drupal_get_path('module', 'sf_prematch') . '/sf_prematch.main.inc';
+  $map = salesforce_api_fieldmap_load($map);
 	switch ($action) {
 	 	case 'export':
 	 		$result = sf_prematch_export($object_type, $object, $map, $match_by);
