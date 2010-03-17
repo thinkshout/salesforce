@@ -624,7 +624,7 @@ function sf_node_import($sf_data, $fieldmap, $nid = NULL) {
   if (empty($sf_data)) {
     return FALSE;
   }
-
+  $sfid = $sf_data->Id;
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
   
