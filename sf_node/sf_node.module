@@ -597,8 +597,8 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
 /**
  * Imports data from Salesforce into a node.
  *
- * @param $sfid
- *   The Salesforce ID of the object from which you want to import.
+ * @param $sf_data
+ *   The Salesforce Object OR The Salesforce ID of the object to be imported.
  * @param $fieldmap
  *   The index of the fieldmap to use to create the export object.
  * @param $nid
@@ -606,7 +606,7 @@ function sf_node_export($node, $fieldmap, $sfid = NULL) {
  * @return
  *   The nid of the imported node or FALSE on failure.
  */
-function sf_node_import($sfid, $fieldmap, $nid = NULL) {
+function sf_node_import($sf_data, $fieldmap, $nid = NULL) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
@@ -614,7 +614,16 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
     return FALSE;
   }
 
-  $sf_data = $sf->retrieve(array($sfid), $fieldmap);
+  if (is_sfid($sf_data)) {
+    $sf_data = $sf->retrieve(array($sf_data), $fieldmap);
+  }
+  elseif (is_array($sf_data)) {
+    $sf_data = (object) $sf_data;
+  }
+
+  if (empty($sf_data)) {
+    return FALSE;
+  }
 
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
@@ -637,6 +646,7 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
       'uid' => 1,
     );
   }
+
   // Loop through the fields on the fieldmap.
   foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
     // If a handler is specified for importing a value from Salesforce....
