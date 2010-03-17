@@ -655,6 +655,10 @@ function sf_node_import($sfid, $fieldmap, $nid = NULL) {
   }
   $node->sf_node_skip_export = TRUE;
   node_save($node);
+  if ($map['automatic'] && !empty($node->nid)) {
+    // Store the Salesforce ID for the node and return TRUE.
+    salesforce_api_id_save('node', $node->nid, $sfid, $fieldmap);
+  }
   unset($node->sf_node_skip_export);
 
   return $node->nid;
