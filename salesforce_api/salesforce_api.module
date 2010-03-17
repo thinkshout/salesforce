@@ -320,8 +320,8 @@ function salesforce_api_fieldmap_system_fields() {
  *   - fieldmap: the numeric index of the fieldmap.
  *   - drupal: the name of a Drupal object.
  *   - salesforce: the name of a Salesforce object.
- *   - action: the action this fieldmap is used for; 'import' or 'export'.
  *   - automatic: whether or not the sync should be automatic
+ *   - description: a short title or description of the fieldmap
  *   - fields: an array that maps source fields (as keys) to their corresponding
  *       target fields (as values).
  */
@@ -411,16 +411,14 @@ function salesforce_api_fieldmap_field_delete($fieldname, $drupal_type = null, $
 }
 
 /**
- * Clones a fieldmap, updating fields as necessary for a change in action.
+ * Clones a fieldmap.
  *
  * @param $fieldmap
  *   The index of the fieldmap to clone.
- * @param $action
- *   The action to switch to for the cloned fieldmap.
  * @return
  *   The newly created fieldmap or FALSE if the clone failed.
  */
-function salesforce_api_fieldmap_clone($fieldmap, $action) {
+function salesforce_api_fieldmap_clone($fieldmap) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
@@ -428,28 +426,10 @@ function salesforce_api_fieldmap_clone($fieldmap, $action) {
   if (empty($map)) {
     return FALSE;
   }
-
-  // Switch the action and update the fields if necessary.
-  if ($map['action'] != $action) {
-    $map['action'] = $action;
-    $fields = array();
-
-    // Loop through all the fields to reverse the associations.
-    foreach ($map['fields'] as $key => $value) {
-      // If a value hasn't been set for the old source field, set it now.
-      if (empty($fields[$value])) {
-        $fields[$value] = $key;
-      }
-    }
-
-    // Update the fieldmap with the new fields array.
-    $map['fields'] = $fields;
-  }
-
-  // Save the new fieldmap and return its index.
+  // Save the old fieldmap id, save a new one, and return the new one.
+  unset($map['fieldmap']);
   salesforce_api_fieldmap_save($map);
-
-  return $map;
+  return !empty($map['fieldmap']) ? $map : FALSE;
 }
 
 /**
