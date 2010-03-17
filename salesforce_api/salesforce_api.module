@@ -45,6 +45,17 @@ define('SALESFORCE_LOG_NONE', 0);
 define('SALESFORCE_LOG_SOME', 5);
 define('SALESFORCE_LOG_ALL', 10);
 
+if (!function_exists('is_sfid')) {
+  // Without a roundtrip to salesforce.com, checking the string length is the
+  // best we can do to verify a SalesForce ID.
+  function is_sfid($sfid) {
+    if (strlen($sfid) == 15 || strlen($sfid) == 18) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+}
+
 
 /**
  * Implementation of hook_menu().
