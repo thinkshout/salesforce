@@ -175,7 +175,7 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
   foreach (salesforce_api_fieldmap_objects_load('drupal') as $key => $value) {
     $options[$key] = $value['label'];
   }
-
+  asort($options);
   $form['drupal'] = array(
     '#type' => 'select',
     '#title' => t('Drupal object'),
@@ -190,7 +190,7 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
   foreach (salesforce_api_fieldmap_objects_load('salesforce') as $key => $value) {
     $options[$key] = $value['label'];
   }
-
+  asort($options);
   $form['salesforce'] = array(
     '#type' => 'select',
     '#title' => t('Salesforce object'),
