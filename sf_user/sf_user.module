@@ -406,8 +406,8 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
 /**
  * Imports data from Salesforce into a user.
  *
- * @param $sfid
- *   The Salesforce ID of the object from which you want to import.
+ * @param $sf_data
+ *   The Salesforce Object OR The Salesforce ID of the object to be imported.
  * @param $fieldmap
  *   The index of the fieldmap to use to create the export object.
  * @param $uid
@@ -415,7 +415,7 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
  * @return
  *   The uid of the imported user or FALSE on failure.
  */
-function sf_user_import($sfid, $fieldmap, $uid = NULL) {
+function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
@@ -423,9 +423,13 @@ function sf_user_import($sfid, $fieldmap, $uid = NULL) {
     return FALSE;
   }
 
-  $sf_data = $sf->retrieve(array($sfid), $fieldmap);
+  if (is_sfid($sf_data)) {
+    $sf_data = $sf->retrieve(array($sf_data), $fieldmap);
+  }
+  elseif (is_array($sf_data)) {
+    $sf_data = (object) $sf_data;
+  }
 
-  // Return FALSE if the object data was not found at Salesforce.
   if (empty($sf_data)) {
     return FALSE;
   }
