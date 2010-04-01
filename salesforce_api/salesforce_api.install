@@ -15,155 +15,40 @@ function salesforce_api_install() {
 }
 
 /**
- * Implementation of hook_uninstall().
- */
-function salesforce_api_uninstall() {
-  drupal_uninstall_schema('salesforce_api');
-  db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'");
-  db_query("DELETE FROM {cache} WHERE {cid} = 'salesforce_api_sf_objects'");
-}
-
-/**
- * Implementation of hook_enable().
- */
-function salesforce_api_enable() {
-  drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
-drupal_set_message(t('Salesforce API: The default Salesforce object have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
-}
-
-/**
  * Implementation of hook_schema().
  */
 function salesforce_api_schema() {
-  $schema['salesforce_object_map'] = array(
-    'description' => t('Drupal to Salesforce object mapping table'),
+  $schema['salesforce_ids'] = array(
+    'description' => t('Drupal to SalesForce field/id mapping table'),
     'fields' => array(
-      'fieldmap' => array(
-        'description' => 'Fieldmap id',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'oid' => array(
-        'description' => 'Specific Drupal object identifier (e.g. node id or comment id)',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0
-      ),
-      'sfid' => array(
-        'description' => 'Salesforce object identifier (e.g. "node", "comment")',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
       'drupal_type' => array(
-        'description' => 'Drupal object type (e.g. "node", "comment")',
+        'description' => 'Drupal object identifier',
         'type' => 'varchar',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ),
-    ),
-    'indexes' => array(
-      'sfid' => array('sfid'),
-    ),
-    'primary key' => array('drupal_type', 'oid'),
-  );
-  $schema['salesforce_field_map'] = array(
-    'description' => t('Drupal to Salesforce field mappings'),
-    'fields' => array(
-      'fieldmap' => array(
-        'description' => 'The primary identifier for a fieldmap.',
-        'type' => 'serial',
-        'unsigned' => TRUE,
-        'not null' => TRUE
+      'drupal_id' => array(
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
       ),
-      'automatic' => array(
-        'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
+      'sfid' => array(
+        'type' => 'varchar',
+        'length' => 18,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'fieldmap' => array(
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny'
-      ),
-      'drupal' => array(
-        'description' => 'The kind of Drupal object this map is for.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'salesforce' => array(
-        'description' => 'The kind of Salesforce object this map is for.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'action' => array(
-        'description' => 'The action this map is for (import vs export)',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'description' => array(
-        'description' => 'Name or brief description of this fieldmap',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-        'default' => ''
-      ),
-      'fields' => array(
-        'description' => 'Serialized fieldmap',
-        'type' => 'text',
-        'not null' => TRUE,
+        'default' => '0',
       ),
     ),
-    'primary key' => array('fieldmap'),
+    'primary key' => array('drupal_type', 'drupal_id'),
   );
-
+  
   return $schema;
-}
-
-/**
- * Implementation of hook_requirements().
- *
- * Check the Salesforce API configuration to see if we have valid credentials.
- */
-function salesforce_api_requirements($phase) {
-  $req = array();
-  switch ($phase) {
-    case 'install':
-      break;
-
-    case 'runtime':
-      $username = variable_get('salesforce_api_username', FALSE);
-      if (!$username) {
-        $description = l(t('Enter your Salesforce credentials.'), SALESFORCE_PATH_ADMIN);
-        $severity = REQUIREMENT_ERROR;
-      }
-      elseif (!salesforce_api_connect()) {
-        $description = t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
-        $severity = REQUIREMENT_ERROR;
-      }
-      else {
-        $description = '';
-        $severity = REQUIREMENT_OK;
-      }
-      $req[] = array(
-        'title' => t('Salesforce Configuration'),
-        'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN),
-        'description' => $description,
-        'severity' => $severity
-      );
-      break;
-  }
-
-  if (!empty($req)) {
-    return $req;
-  }
 }

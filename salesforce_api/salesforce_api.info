@@ -1,5 +1,6 @@
 ; $Id$
 name = Salesforce API
-description = Defines an API that enables modules to interact with the Salesforce server.
+description = Defines an API that enables modules to interact with the SalesForce server.
 package = Salesforce
 core = 6.x
+php = 5.1
