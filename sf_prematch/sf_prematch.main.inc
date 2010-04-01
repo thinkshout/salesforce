@@ -22,6 +22,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   // Get information to allow using handlers to get values of Drupal fields.
   $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
   $drupal_fields_info = $drupal_object_info['fields'];
+  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   $values = array();
   $select_clause = "SELECT id";
@@ -34,8 +35,11 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     $values[$match_by_field] = array();
     // If a handler is specified for retrieving a value for the source field...
     if (isset($drupal_fields_info[$drupal_field_name]['export'])) {
+      $drupal_field_definition = $drupal_fields_info[$drupal_field_name];
+      $sf_field_definition = $sf_object_info['fields'][$drupal_to_salesforce_fieldmap[$drupal_field_name]];
       // Get the value for the field from the handler function.
-      $drupal_value = $drupal_fields_info[$drupal_field_name]['export']($drupal_object, $drupal_field_name);
+      $function = $drupal_fields_info[$drupal_field_name]['export'];
+      $drupal_value = $function($drupal_object, $drupal_field_name, $drupal_field_definition, $sf_field_definition);
     }
     // Otherwise set the field on the export object to the value of the source
     // field if it's present on the source object.
@@ -101,40 +105,6 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     }
   }
 }
-/*
-$result = Object of: stdClass
-  done = (boolean) true
-  queryLocator = null
-  records = Array [1]
-    0 = Object of: stdClass
-      Email = (string:19) sid@craftyspace.com
-      FirstName = (string:3) Sid
-      Id = (string:18) 003S0000004X3aDIAS
-      LastName = (string:6) Maskit
-  size = (int) 1
-*/
-
-/*
-$map = Array [6]
-  action = (string:0)
-  automatic = (string:1) 0
-  drupal = (string:12) node_profile
-  fieldmap = (string:1) 4
-  fields = Array [4]
-    Email = (string:4) mail
-    FirstName = (string:16) field_first_name
-    LastName = (string:15) field_last_name
-    Volunteer_Interests__c = (string:25) field_volunteer_interests
-  salesforce = (string:7) Contact
-$node = Object of: stdClass
-$match_by = Array [5]
-  fieldmap = (string:1) 4
-  primary_field = (string:4) mail
-  rule = (string:1) 1
-  secondary_field = (string:15) field_last_name
-  tertiary_field = (string:16) field_first_name
-*/
-
 
 function sf_prematch_import($object_type, $object, $map, $match_by) {
   // As of 2/23/2010 there is no out of the box functionality to import a salesforce
