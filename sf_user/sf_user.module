@@ -447,7 +447,10 @@ function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
     // Look for any matching records which we might want to update instead of creating duplicates.
     $matches = salesforce_api_search_for_duplicates('import', 'user', $sf_data, $fieldmap);
     if (!empty($matches)) {
-      $account->uid = reset($matches);
+      $uid = reset($matches);
+      if (!empty($uid)) {
+        $account = user_load($uid);
+      }
     }
   }
 
