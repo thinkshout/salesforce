@@ -191,6 +191,17 @@ function sf_node_fieldmap_objects($type) {
             // case 'text':
               // For example, I might set a handler for text fields that takes
               // the selected input format into account.
+              
+            case 'nodereference':
+              $export_handler = '_sf_node_export_cck_nodereference';
+              $import_handler = '_sf_node_import_cck_nodereference';
+              break;
+
+            case 'userreference':
+              $export_handler = '_sf_node_export_cck_userreference';
+              $import_handler = '_sf_node_import_cck_userreference';
+              break;
+            
             default:
               $export_handler = '_sf_node_export_cck_default';
               $import_handler = '_sf_node_import_cck_default';
@@ -325,6 +336,36 @@ function _sf_node_export_body($node, $fieldname, $drupal_field_definition, $sf_f
 function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   $node->teaser = node_teaser($sf_data->$sf_fieldname);
   $node->body = $sf_data->$sf_fieldname;
+}
+
+// Export sfid of referenced node
+function _sf_node_export_cck_nodereference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  $sfid = ''; 
+  if ($nid = $node->{$fieldname}[0]['nid']) {
+    $sf_data = salesforce_api_id_load('node', $nid); 
+    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : ''; 
+  }
+  return $sfid;
+}
+
+// Import node id of referenced node
+function _sf_node_import_cck_nodereference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $node->{$drupal_fieldname}[0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
+}
+
+// Export sfid of referenced user
+function _sf_node_export_cck_userreference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  $sfid = ''; 
+  if ($uid = $node->{$fieldname}[0]['uid']) {
+    $sf_data = salesforce_api_id_load('user', $uid); 
+    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : ''; 
+  }
+  return $sfid;
+}
+
+// Import node id of referenced user
+function _sf_node_import_cck_userreference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $node->{$drupal_fieldname}[0]['uid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname, $type = 'user');
 }
 
 // Displays the Salesforce synchronization form.
