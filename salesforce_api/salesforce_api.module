@@ -5,12 +5,9 @@
  * @file
  * Defines an API that enables modules to interact with the Salesforce server.
  *
- * 1. Get your security token.
- * 2. Get the Toolkit.
- * 3. Download your WSDL.
  */
 
-// Define directory paths for the Toolkit and WSDL files.
+// Define default directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
 define('SALESFORCE_DIR_TOOLKIT', SALESFORCE_DIR .'/toolkit');
 define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT .'/soapclient');

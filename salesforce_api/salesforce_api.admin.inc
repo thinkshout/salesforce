@@ -96,16 +96,34 @@ function salesforce_api_settings_form() {
     '#value' => t('Clear cached object data'),
     '#submit' => array('salesforce_api_cache_build'),
   );
+
+  // WSDL file should be outside of webroot. The admin should specify a path
+  // outside the webroot, then upload a WSDL file to it.
+  $wsdl_dir = variable_get('salesforce_api_dir_wsdl', FALSE);
+  $form['wsdl'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'WSDL directory',
+    '#description' => 'Your organization\'s WSDL file can expose potentially sensitive information. It is highly recommended that your WSDL file be stored outside your webroot. Please enter either a path relative to your webroot (e.g. ../wsdl) or a fully qualified path (e.g. /home/username/wsdl) in which to store your WSDL.',
+    'salesforce_api_dir_wsdl' => array(
+      '#type' => 'textfield',
+      '#title' => 'WSDL Directory',
+      '#default_value' => $wsdl_dir,
+      ),
+    '#collapsible' => TRUE,
+    '#collapsed' => $wsdl_dir,
+    );
+
   // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
   $form['#validate'][] = 'salesforce_api_settings_form_validate';
   $form['#submit'][] = 'salesforce_api_settings_form_submit';
+
   return system_settings_form($form);
 }
 
 /**
  * Settings form validate handler to verify new salesforce credentials before saving them.
  */
-function salesforce_api_settings_form_validate(&$form, &$form_state) {
+function salesforce_api_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
   if (!salesforce_api_connect($values['salesforce_api_username'], $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE)) {
     // If not, prevent the user from overwriting the current configuration.
@@ -114,12 +132,17 @@ function salesforce_api_settings_form_validate(&$form, &$form_state) {
   else {
     drupal_set_message(t('Salesforce connection established.'));
   }
+
+  if (isset($form_state['values']['salesforce_api_dir_wsdl'])
+  && !file_exists($form_state['values']['salesforce_api_dir_wsdl'])) {
+    form_set_error('salesforce_api_dir_wsdl', 'The specified directory does not exist. Please make sure the directory exists, check your input, and try again.');
+  }
 }
 
 /**
  * Settings form submit handler so that password doesn't get deleted.
  */
-function salesforce_api_settings_form_submit(&$form, &$form_state) {
+function salesforce_api_settings_form_submit($form, &$form_state) {
   // If the user hit "Save Configuration" and the required field
   // salesforce_api_password is blank, try to get it from variables
   if ($form_state['values']['submit'] == $form_state['values']['op'] and empty($form_state['values']['salesforce_api_password'])) {
@@ -127,6 +150,13 @@ function salesforce_api_settings_form_submit(&$form, &$form_state) {
     if (isset($pass)) {
       $form_state['values']['salesforce_api_password'] = $pass;
     }
+  }
+  if (variable_get('salesforce_api_dir_wsdl', FALSE) !=
+      $form_state['values']['salesforce_api_dir_wsdl']) {
+    drupal_set_message('Please make sure the WSDL directory is writeable, and upload a valid SalesForce .xml or .wsdl file.');
+    $form_state['redirect'] = array(
+      SALESFORCE_PATH_UPDATE_WSDL,
+      'destination=' . SALESFORCE_PATH_ADMIN);
   }
 }
 
@@ -357,33 +387,33 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
 
   // Loop through each of the target fields.
   $rows = array('required' => array(), 'optional' => array());
-  foreach ($target['fields'] as $key => $value) {    
+  foreach ($target['fields'] as $key => $value) {
     // Determine to which table this field should belong.
     if (!($value['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
       // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="'. t('This field is required.') .'">*</span>';
-    } 
+    }
     else {
       $type = 'optional';
       $required = '';
     }
-    
+
     if ($value['type'] & SALESFORCE_FIELD_CREATEABLE
     && !($value['type'] & SALESFORCE_FIELD_UPDATEABLE)) {
       $type = 'optional';
-      $required = ' <span class="form-required" title="' . 
+      $required = ' <span class="form-required" title="' .
         t('This field will only be set for new records.') . '">' . t('Create-only') . '</span>';
     }
     elseif (!($value['type'] & SALESFORCE_FIELD_CREATEABLE)
     && $value['type'] & SALESFORCE_FIELD_UPDATEABLE) {
       $type = 'optional';
-      $required = ' <span class="form-required" title="' . 
+      $required = ' <span class="form-required" title="' .
         t('This field can only be set for existing records.') . '">' . t('Update-only') . '</span>';
     }
     elseif (!($value['type'] & (SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE))) {
       $type = 'optional';
-      $required = ' <span class="form-required" title="' . 
+      $required = ' <span class="form-required" title="' .
         t('This field will be available for imports only.') . '">' . t('Read-only') . '</span>';
     }
 
@@ -513,10 +543,10 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
  */
 function salesforce_api_update_wsdl_form() {
   $form = array();
-  
+
   // Need to set the form type so file upload will work
   $form['#attributes']['enctype'] = 'multipart/form-data';
-  
+
   $form['salesforce_api_wsdl_file'] = array(
     '#type' => 'file',
     '#title' => t('WSDL File'),
@@ -527,100 +557,103 @@ function salesforce_api_update_wsdl_form() {
     '#type' => 'submit',
     '#value' => t('Upload WSDL'),
   );
-  
+
   return $form;
 }
 
 
 /**
  * Validate the WSDL file upload - check upload error code and file extension
+ * and do the actual upload processing so that we can invalidate the form on any
+ * errors. This function SHOULD use file_save_upload(), but unfortunately, that
+ * function calls file_create_path() which calls file_check_location(), which
+ * fails on any destination dir that isn't in the default file upload dir. And
+ * since the enterprise.wsdl.xml file needs to go into a sub-dir in the module
+ * directory, that won't do. Instead of uploading to the default dir, then 
+ * moving, just upload it straight to the destination.
  */
 function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
   $source = 'salesforce_api_wsdl_file';
-  if (isset($_FILES['files']) && $_FILES['files']['name'][$source] && is_uploaded_file($_FILES['files']['tmp_name'][$source])) {
-    // Check for file upload errors and return FALSE if a
-    // lower level system error occurred.
-    switch ($_FILES['files']['error'][$source]) {
-      // @see http://php.net/manual/en/features.file-upload.errors.php
-      case UPLOAD_ERR_OK:
-        break;
+  // Find the dir the file should go into
+  if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
+    $dir = drupal_get_path('module', 'salesforce_api') . '/wsdl';
+  }
+  $dir = rtrim($dir, '/');
 
-      case UPLOAD_ERR_INI_SIZE:
-      case UPLOAD_ERR_FORM_SIZE:
-        drupal_set_message(t('The file %file could not be saved, because it exceeds %maxsize, the maximum allowed size for uploads.', array('%file' => $source, '%maxsize' => format_size(file_upload_max_size()))), 'error');
-        return 0;
+  // Upload file path
+  $file = $dir . '/enterprise.wsdl.xml';
 
-      case UPLOAD_ERR_PARTIAL:
-      case UPLOAD_ERR_NO_FILE:
-        drupal_set_message(t('The file %file could not be saved, because the upload did not complete.', array('%file' => $source)), 'error');
-        return 0;
+  // Make sure the directory is writeable
+  if( !file_check_directory( $dir ) ) {
+    form_set_error($source, t('Server directory %directory is not writeable. Please check directory permissions or contact a site admin to correct this.', array('%directory' => $dir)));
+    return;
+  }
 
-        // Unknown error
-      default:
-        drupal_set_message(t('The file %file could not be saved. An unknown error has occurred.', array('%file' => $source)), 'error');
-        return 0;
-    }
-    
-    // Check the file extension
-    $pathParts = pathinfo($_FILES['files']['name'][$source]);
-    if(!in_array(strtolower($pathParts['extension']), array('xml', 'wsdl'))) {
-      form_set_error($source, t('File upload error: invalid file extension. Please upload a file with an XML or WSDL  extension.'));
+  if (!isset($_FILES['files']) && $_FILES['files']['name'][$source]
+  || !is_uploaded_file($_FILES['files']['tmp_name'][$source])) {
+    form_set_error($source, t('Error uploading file. Please try again.'));
+    return;
+  }
+  // Check for file upload errors and return FALSE if a
+  // lower level system error occurred.
+  switch ($_FILES['files']['error'][$source]) {
+    // @see http://php.net/manual/en/features.file-upload.errors.php
+    case UPLOAD_ERR_OK:
+      break;
+
+    case UPLOAD_ERR_INI_SIZE:
+    case UPLOAD_ERR_FORM_SIZE:
+      drupal_set_message(t('The file %file could not be saved, because it exceeds %maxsize, the maximum allowed size for uploads.', array('%file' => $source, '%maxsize' => format_size(file_upload_max_size()))), 'error');
       return 0;
-    }
+
+    case UPLOAD_ERR_PARTIAL:
+    case UPLOAD_ERR_NO_FILE:
+      drupal_set_message(t('The file %file could not be saved, because the upload did not complete.', array('%file' => $source)), 'error');
+      return 0;
+
+      // Unknown error
+    default:
+      drupal_set_message(t('The file %file could not be saved. An unknown error has occurred.', array('%file' => $source)), 'error');
+      return 0;
+  }
+
+  // Check the file extension
+  $pathParts = pathinfo($_FILES['files']['name'][$source]);
+  if(!in_array(strtolower($pathParts['extension']), array('xml', 'wsdl'))) {
+    form_set_error($source, t('File upload error: invalid file extension. Please upload a file with an XML or WSDL  extension.'));
+  }
+
+  // Try to move the uploaded file into the right place
+  if (!move_uploaded_file($_FILES['files']['tmp_name'][$source], $file)) {
+    form_set_error($source, t('File upload error. Could not move uploaded file.'));
+    watchdog('file', 'Upload error. Could not move uploaded file to destination %destination.', array('%destination' => $dir));
   }
 }
 
 /**
- * Process form when an admin uploads a WSDL file.
- * This function SHOULD use file_save_upload(), but unfortunately, that function calls 
- * file_create_path() which calls file_check_location() - which fails on any destination 
- * dir that isn't in the default file upload dir. And since the enterprise.wsdl.xml file 
- * needs to go into a sub-dir in the module directory, that won't do.
+ * If we get this far, we've successfully uploaded the new WSDL.
+ * Clean up after ourselves and display the appropriate confirmation messages.
  */
 function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
-  // Find the dir the file should go into
-  $dir = dirname(__FILE__) . '/wsdl/';
-
-  // Upload file path
-  $file = $dir . 'enterprise.wsdl.xml';
-
-  // Array key for the file element
-  $source = 'salesforce_api_wsdl_file';
+  drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory.'));
   
-  // Make sure the directory is writeable
-  if( file_check_directory( $dir ) ) {  
-    // Try to move the uploaded file into the right place
-    if (!move_uploaded_file($_FILES['files']['tmp_name'][$source], $file)) {
-         form_set_error($source, t('File upload error. Could not move uploaded file.'));
-         watchdog('file', 'Upload error. Could not move uploaded file to destination %destination.', array('%destination' => $dir));
-         return 0;
-    }
-    else {
-      drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory: %directory.', array('%directory' => $dir)));
-      
-      // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
-      // cache permanently, but should force PHP to reload it.
-      ini_set('soap.wsdl_cache_enabled',  '0');
+  // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
+  // cache permanently, but should force PHP to reload it.
+  ini_set('soap.wsdl_cache_enabled',  '0');
 
-      // Clear the cache
-      drupal_flush_all_caches();
-      
-      // Clear WSDL files from tmp directory
-      $tmpDir = file_directory_temp();
-      // Make sure the tmp dir exists and isn't the root, just to be safe
-      if(is_dir($tmpDir) && $tmpDir != '/') {
-        $cmd = 'rm -f ' . $tmpDir . '/*.wsdl.*';
-        $execOutput = exec($cmd);
-      }
-      
-      drupal_set_message('Drupal cache emptied and WSDL files removed from temp directory.');
-    }
-  } 
-  else {
-    drupal_set_message( t('WARNING: server directory is not writeable. Please contact a site admin to correct this.'), 'error' );
-    watchdog('salesforce_api', 'WSDL file upload failed because directory is not writeable: %directory', array('%directory'=>$dir), WATCHDOG_ERROR);
-    return 0;
+  // Clear the cache
+  drupal_flush_all_caches();
+  
+  // Clear WSDL files from tmp directory
+  $tmpDir = file_directory_temp();
+  // Make sure the tmp dir exists and isn't the root, just to be safe
+  if(is_dir($tmpDir) && $tmpDir != '/') {
+    $cmd = 'rm -f ' . $tmpDir . '/*.wsdl.*';
+    $execOutput = exec($cmd);
   }
+  
+  drupal_set_message('Drupal cache emptied and WSDL files removed from temp directory.');
+
 }
 
  /**
@@ -640,7 +673,7 @@ function salesforce_api_admin_object(&$form_state) {
     return;
   }
   $defaults = array_keys(salesforce_api_fieldmap_objects());
-  
+
   $options = array();
   foreach($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label .')';
@@ -743,7 +776,7 @@ function theme_salesforce_api_object_options($element = NULL) {
 
 /**
  * Demonstrates some of the API functionality through the Salesforce class and
- * fieldmap functionality. 
+ * fieldmap functionality.
  *
  * @param $demo
  *   The name of the demonstration to perform.
@@ -796,7 +829,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
     case 'user-export':
       // TODO: This is broken. See http://drupal.org/node/692378
       break;
-      
+
       global $user;
 
       // Fully load the user account so we get profile data.
@@ -818,7 +851,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
     case 'campaign-export':
       // TODO: Also broken. See http://drupal.org/node/692378
       break;
-      
+
       // Load the campaign node.
       $node = node_load(1);
 

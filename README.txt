@@ -2,12 +2,16 @@
 
 SALESFORCE MODULE
 
-This module utilizes Salesforce's Enterprise SOAP client and generic WSDL
-functionality to allow you to work with custom fields without having to
-download your own WSDL file.
+ABOUT:
+This module implements a mapping functionality between SalesForce Objects and 
+Drupal entities. In other words, for each of your supported Drupal entities 
+(e.g. node, user, or entities supported by extensions), you can assign 
+SalesForce objects that will be created / updated when the entity is saved. For
+each such assignment, you choose which Drupal and SalesForce fields should be
+mapped to one another.
 
-It also includes an API architecture which allows for additional modules to
-be easily plugged in (e.g. for webforms, contact form submits, etc).
+This module also includes an API architecture which allows for additional 
+modules to be easily plugged in (e.g. for webforms, contact form submits, etc).
 
 
 REQUIREMENTS:
@@ -39,6 +43,9 @@ INSTALLATION:
    object modules (salesfoce_node, salesfoce_user). Node is the usual place to
    start.
 
+4) Assign a WSDL directory and upload your organization's WSDL file 
+   (admin/settings/salesforce and admin/settings/salesforce/wsdl).
+
 
 UPDATING / REINSTALLING / ENABLING / DISABLING:
 
@@ -64,9 +71,12 @@ e.g. DELETE FROM system WHERE name IN ('salesforce_api', 'sf_node', 'sf_user').
 QUICKSTART:
 
 1) Visit admin/settings/salesforce and enter your login information in the
-   "Salesforce API Settings" fieldset. Save that configuration.
+   "Salesforce API Settings" fieldset and "WSDL directory". 
+   Save that configuration.
+   
+2) Upload your organization's generated WSDL file.
 
-2) Click on the "Fieldmaps" local task, and create a fieldmap between Drupal and
+3) Click on the "Fieldmaps" local task, and create a fieldmap between Drupal and
    Salesforce objects.
 
 3) If you left the "automatic" box checked, the next time a Drupal object is
@@ -77,15 +87,18 @@ QUICKSTART:
 
 WORKING WITH WSDL FILES
 
-Salesforce module will use a default .wsdl file
-(salesforce_api/toolkit/soapclient/enterprise.wsdl.xml). Alternatively, you can
-supply your own enterprise wsdl file by placing it in the salesforce_api/wsdl/
-directory (salesforce_api/wsdl/enterprise.wsdl - no .xml at the end of the file
-name).
+If you do not upload a WSDL file, Salesforce module will use a default .wsdl
+file (salesforce_api/toolkit/soapclient/enterprise.wsdl.xml), which may not be
+compatible with your organization's SalesForce installation or the current 
+SalesForce API. It is highly recommended that you supply your own enterprise 
+wsdl file via the WSDL administration panes at admin/settings/salesforce and 
+admin/settings/salesforce/wsdl. These panes will walk you through creating a 
+directory outside your webroot and uploading the WSDL file to that directory.
 
 When switching between wsdl files, keep in mind that PHP's SoapClient is caching
-wsdl information. You can turn off caching of wsdl information by adding this
-line to your settings.php:
+wsdl information. Though PHP's SOAP WSDL cache should be cleaned when you upload
+a new WSDL file, you can permenantly disable caching of wsdl information by 
+adding this line to your settings.php:
 
 ini_set('soap.wsdl_cache_enabled',  '0');
 
@@ -108,7 +121,8 @@ Before creating a new issue, please:
 * Use latest code from CVS on a *new* Drupal install
 * Include the PHP error message
 * Turn on "log all salesforce activity" and include any relevant watchdog errors
-* Install a generated WSDL file and Clear your WSDL cache (see WORKING WITH WSDL FILES)
+* Install a generated WSDL file and Clear your WSDL cache 
+  (see WORKING WITH WSDL FILES)
 * Confirm php's SOAP support
 * Confirm whether you were able to successfully:
   - Connect to Salesforce
