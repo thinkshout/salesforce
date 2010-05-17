@@ -22,6 +22,7 @@ define('SALESFORCE_PATH_ADMIN', 'admin/settings/salesforce');
 define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN .'/fieldmap');
 define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN .'/demo');
 define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN .'/object');
+define('SALESFORCE_PATH_UPDATE_WSDL', SALESFORCE_PATH_ADMIN . '/wsdl');
 
 // Salesforce schema properties.
 // Not all these are in use yet.
@@ -148,6 +149,15 @@ function salesforce_api_menu() {
     'page arguments' => array('salesforce_api_admin_object_settings', count(explode('/', SALESFORCE_PATH_OBJECT))),
     'access arguments' => array('administer salesforce'),
     'type' => MENU_CALLBACK,
+    'file' => 'salesforce_api.admin.inc',
+  );
+  $items[SALESFORCE_PATH_UPDATE_WSDL] = array(
+    'title' => 'Update WSDL',
+    'description' => 'Upload a new WSDL XML file',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_api_update_wsdl_form'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
   return $items;

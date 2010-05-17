@@ -507,6 +507,122 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
   return theme('table', $header, $rows, $attributes, $caption);
 }
 
+
+/**
+ * Show form for admin to upload a new WSDL file
+ */
+function salesforce_api_update_wsdl_form() {
+  $form = array();
+  
+  // Need to set the form type so file upload will work
+  $form['#attributes']['enctype'] = 'multipart/form-data';
+  
+  $form['salesforce_api_wsdl_file'] = array(
+    '#type' => 'file',
+    '#title' => t('WSDL File'),
+    '#description' => t('Upload the new WSDL definition file. The name of the file is irrelevent, but it must end with an XML or WSDL extension.'),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Upload WSDL'),
+  );
+  
+  return $form;
+}
+
+
+/**
+ * Validate the WSDL file upload - check upload error code and file extension
+ */
+function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
+  $source = 'salesforce_api_wsdl_file';
+  if (isset($_FILES['files']) && $_FILES['files']['name'][$source] && is_uploaded_file($_FILES['files']['tmp_name'][$source])) {
+    // Check for file upload errors and return FALSE if a
+    // lower level system error occurred.
+    switch ($_FILES['files']['error'][$source]) {
+      // @see http://php.net/manual/en/features.file-upload.errors.php
+      case UPLOAD_ERR_OK:
+        break;
+
+      case UPLOAD_ERR_INI_SIZE:
+      case UPLOAD_ERR_FORM_SIZE:
+        drupal_set_message(t('The file %file could not be saved, because it exceeds %maxsize, the maximum allowed size for uploads.', array('%file' => $source, '%maxsize' => format_size(file_upload_max_size()))), 'error');
+        return 0;
+
+      case UPLOAD_ERR_PARTIAL:
+      case UPLOAD_ERR_NO_FILE:
+        drupal_set_message(t('The file %file could not be saved, because the upload did not complete.', array('%file' => $source)), 'error');
+        return 0;
+
+        // Unknown error
+      default:
+        drupal_set_message(t('The file %file could not be saved. An unknown error has occurred.', array('%file' => $source)), 'error');
+        return 0;
+    }
+    
+    // Check the file extension
+    $pathParts = pathinfo($_FILES['files']['name'][$source]);
+    if(!in_array(strtolower($pathParts['extension']), array('xml', 'wsdl'))) {
+      form_set_error($source, t('File upload error: invalid file extension. Please upload a file with an XML or WSDL  extension.'));
+      return 0;
+    }
+  }
+}
+
+/**
+ * Process form when an admin uploads a WSDL file.
+ * This function SHOULD use file_save_upload(), but unfortunately, that function calls 
+ * file_create_path() which calls file_check_location() - which fails on any destination 
+ * dir that isn't in the default file upload dir. And since the enterprise.wsdl.xml file 
+ * needs to go into a sub-dir in the module directory, that won't do.
+ */
+function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
+  // Find the dir the file should go into
+  $dir = dirname(__FILE__) . '/wsdl/';
+
+  // Upload file path
+  $file = $dir . 'enterprise.wsdl.xml';
+
+  // Array key for the file element
+  $source = 'salesforce_api_wsdl_file';
+  
+  // Make sure the directory is writeable
+  if( file_check_directory( $dir ) ) {  
+    // Try to move the uploaded file into the right place
+    if (!move_uploaded_file($_FILES['files']['tmp_name'][$source], $file)) {
+         form_set_error($source, t('File upload error. Could not move uploaded file.'));
+         watchdog('file', 'Upload error. Could not move uploaded file to destination %destination.', array('%destination' => $dir));
+         return 0;
+    }
+    else {
+      drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory: %directory.', array('%directory' => $dir)));
+      
+      // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
+      // cache permanently, but should force PHP to reload it.
+      ini_set('soap.wsdl_cache_enabled',  '0');
+
+      // Clear the cache
+      drupal_flush_all_caches();
+      
+      // Clear WSDL files from tmp directory
+      $tmpDir = file_directory_temp();
+      // Make sure the tmp dir exists and isn't the root, just to be safe
+      if(is_dir($tmpDir) && $tmpDir != '/') {
+        $cmd = 'rm -f ' . $tmpDir . '/*.wsdl.*';
+        $execOutput = exec($cmd);
+      }
+      
+      drupal_set_message('Drupal cache emptied and WSDL files removed from temp directory.');
+    }
+  } 
+  else {
+    drupal_set_message( t('WARNING: server directory is not writeable. Please contact a site admin to correct this.'), 'error' );
+    watchdog('salesforce_api', 'WSDL file upload failed because directory is not writeable: %directory', array('%directory'=>$dir), WATCHDOG_ERROR);
+    return 0;
+  }
+}
+
  /**
  * Ask salesforce for a list of objects and display a checklist for the user.
  * Based on user selection, set up or tear down cached/synched Salesforce data.
