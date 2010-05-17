@@ -46,6 +46,9 @@ function sf_user_form_alter(&$form, $form_state, $form_id) {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#weight' => -1,
+      // The admin form is getting cluttered. This is going to be hidden until
+      // there is actually something here:
+      '#access' => FALSE,
     );
   }
 }
