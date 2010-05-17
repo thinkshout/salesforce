@@ -50,8 +50,11 @@ class DrupalSalesforce {
    *   TRUE or FALSE indicating the success of the login.
    */
   function login() {
-    // Default to the WSDL downloaded from the user account if available.
-    $wsdl = SALESFORCE_DIR_WSDL .'/enterprise.wsdl.xml';
+    // Default to the uploaded WSDL, then any wsdl in web path if available.
+    if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
+      $dir = SALESFORCE_DIR_WSDL;
+    }
+    $wsdl = $dir .'/enterprise.wsdl.xml';
 
     // Otherwise fall back to the one included with the Toolkit.
     if (!file_exists($wsdl)) {
