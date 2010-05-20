@@ -10,29 +10,52 @@
  * 3. Download your WSDL.
  */
 
-
 // Define directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
-define('SALESFORCE_DIR_TOOLKIT', SALESFORCE_DIR .'/toolkit');
-define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT .'/soapclient');
-define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR .'/wsdl');
+define('SALESFORCE_DIR_TOOLKIT', SALESFORCE_DIR . '/toolkit');
+define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT . '/soapclient');
+define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR . '/wsdl');
+
 
 // Define Drupal paths for various parts of the Salesforce UI.
-define('SALESFORCE_PATH_ADMIN', 'admin/settings/salesforce');
-define('SALESFORCE_PATH_FIELDMAPS', 'admin/settings/salesforce/fieldmap');
-define('SALESFORCE_PATH_DEMO', 'admin/settings/salesforce/demo');
+define('SALESFORCE_PATH_ADMIN', 'admin/config/salesforce');
+define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN . '/fieldmap');
+define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN . '/demo');
+define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN . '/object');
 
-// Define field importing requirements.
-// TODO: I believe we need to use bitwise operators instead.
-// Reference this tutorial - http://www.litfuel.net/tutorials/bitwise.htm
-define('SALESFORCE_FIELD_OPTIONAL', 0);
-define('SALESFORCE_FIELD_REQUIRED', 1);
-define('SALESFORCE_FIELD_SOURCE_ONLY', 2);
+// Salesforce schema properties.
+// Not all these are in use yet.
+define('SALESFORCE_FIELD_CREATEABLE', 1);
+define('SALESFORCE_FIELD_DEFAULTEDONCREATE', 2);
+define('SALESFORCE_FIELD_DEPRECATEDANDHIDDEN', 4);
+define('SALESFORCE_FIELD_IDLOOKUP', 8);
+define('SALESFORCE_FIELD_NILLABLE', 16);
+define('SALESFORCE_FIELD_RESTRICTEDPICKLIST', 32);
+define('SALESFORCE_FIELD_UNIQUE', 64);
+define('SALESFORCE_FIELD_UPDATEABLE', 128);
+
+// Bitmasks for the fields above
+define('SALESFORCE_FIELD_SOURCE_ONLY', ~SALESFORCE_FIELD_CREATEABLE);
+define('SALESFORCE_FIELD_REQUIRED', SALESFORCE_FIELD_CREATEABLE & ~SALESFORCE_FIELD_NILLABLE & ~SALESFORCE_FIELD_DEFAULTEDONCREATE);
+define('SALESFORCE_FIELD_OPTIONAL', ~SALESFORCE_FIELD_REQUIRED & ~SALESFORCE_FIELD_SOURCE_ONLY);
+
 
 // Define reporting levels for watchdog messages.
 define('SALESFORCE_LOG_NONE', 0);
 define('SALESFORCE_LOG_SOME', 5);
 define('SALESFORCE_LOG_ALL', 10);
+
+if (!function_exists('is_sfid')) {
+  // Without a roundtrip to salesforce.com, checking the string length is the
+  // best we can do to verify a SalesForce ID.
+  function is_sfid($sfid) {
+    if (strlen($sfid) == 15 || strlen($sfid) == 18) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+}
+
 
 /**
  * Implementation of hook_menu().
@@ -47,28 +70,35 @@ function salesforce_api_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_ADMIN .'/demo'] = array(
-    'title' => 'Salesforce demo',
+  $items[SALESFORCE_PATH_ADMIN . '/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+    'file' => 'salesforce_api.admin.inc',
+  );
+  $items[SALESFORCE_PATH_DEMO] = array(
+    'title' => 'Test/Demo',
     'page callback' => 'salesforce_api_demo',
     'access arguments' => array('administer salesforce'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
   $items[SALESFORCE_PATH_FIELDMAPS] = array(
-    'title' => 'Fieldmap admin',
+    'title' => 'Fieldmaps',
     'description' => 'Administer fieldmap relationships between Drupal objects and Salesforce objects.',
     'page callback' => 'salesforce_api_fieldmap_admin',
     'access arguments' => array('administer salesforce'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/list'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/list'] = array(
     'title' => 'List',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'access arguments' => array('administer salesforce'),
     'weight' => 0,
+    'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/add'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/add'] = array(
     'title' => 'Add',
     'description' => 'Create a new fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -78,7 +108,7 @@ function salesforce_api_menu() {
     'weight' => 10,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/edit'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/edit'] = array(
     'title' => 'Edit fieldmap',
     'description' => 'Edit an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -87,7 +117,7 @@ function salesforce_api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/clone'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/clone'] = array(
     'title' => 'Clone a fieldmap',
     'description' => 'Clone an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -96,7 +126,7 @@ function salesforce_api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/delete'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/delete'] = array(
     'title' => 'Delete fieldmap',
     'description' => 'Delete an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -105,84 +135,47 @@ function salesforce_api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'salesforce_api.admin.inc',
   );
-
+  $items[SALESFORCE_PATH_OBJECT] = array(
+    'title' => 'Object setup',
+    'description' => 'Define which SalesForce objects you would like to be available in your Drupal site.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_api_admin_object'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'salesforce_api.admin.inc',
+  );
+  $items[SALESFORCE_PATH_OBJECT . '/%'] = array(
+    'title' => 'Object setup',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_api_admin_object_settings', count(explode('/', SALESFORCE_PATH_OBJECT))),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_CALLBACK,
+    'file' => 'salesforce_api.admin.inc',
+  );
   return $items;
 }
 
 /**
- * Implementation of hook_perm().
+ * Implementation of hook_permission().
  */
-function salesforce_api_perm() {
-  return array('administer salesforce');
-}
-
-// Displays the basic API settings form at admin/settings/salesforce.
-function salesforce_api_settings_form() {
-  $form = array();
-
-  // Use the username field to collapse the API settings fieldset.
-  $username = variable_get('salesforce_api_username', '');
-
-  $form['api'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Salesforce API settings'),
-    '#description' => t('Use your Salesforce.com login information for these username and password fields.'),
-    '#collapsible' => !empty($username),
-    '#collapsed' => !empty($username),
-  );
-  $form['api']['salesforce_api_username'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Username'),
-    '#description' => t('Should be in the form of an e-mail address.'),
-    '#default_value' => variable_get('salesforce_api_username', ''),
-    '#required' => TRUE,
-  );
-  $form['api']['salesforce_api_password'] = array(
-    '#type' => 'password',
-    '#title' => t('Password'),
-    '#default_value' => variable_get('salesforce_api_password', ''),
-  );
-  $form['api']['salesforce_api_token'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Security token'),
-    '#description' => t('Set your security token by logging into Salesforce and navigating to Setup > My Personal Information > Reset My Security Token.'),
-    '#default_value' => variable_get('salesforce_api_token', ''),
-  );
-
-  $form['log'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Log settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
-  $form['log']['salesforce_api_activity_log'] = array(
-    '#type' => 'radios',
-    '#title' => t('Activity log level'),
-    '#options' => array(
-      SALESFORCE_LOG_NONE => t('Do not log any Salesforce activities.'),
-      SALESFORCE_LOG_SOME => t('Log important Salesforce activities.'),
-      SALESFORCE_LOG_ALL => t('Log all Salesforce activitiies.'),
-    ),
-    '#default_value' => variable_get('salesforce_api_activitiy_log', SALESFORCE_LOG_SOME),
-  );
-  $form['log']['salesforce_api_error_log'] = array(
-    '#type' => 'radios',
-    '#title' => t('Error log level'),
-    '#options' => array(
-      SALESFORCE_LOG_NONE => t('Do not log any Salesforce errors.'),
-      SALESFORCE_LOG_SOME => t('Log important Salesforce errors.'),
-      SALESFORCE_LOG_ALL => t('Log all Salesforce errors.'),
-    ),
-    '#default_value' => variable_get('salesforce_api_error_log', SALESFORCE_LOG_ALL),
-  );
-
-  return system_settings_form($form);
+function salesforce_api_permission() {
+  return array('administer salesforce' =>
+    array('title' => t('Administer SalesForce'),
+          'description' => t('Administer SalesForce'),
+          'restrict access' => TRUE));
 }
 
 /**
  * Creates an object used for communicating with the Salesforce server and
  *   performs a login to verify the API credentials.
  *
+ * @param $username
+ *   Username for Salesforce. An email address, most likely. If none passed,
+ *     sitewide creds will be used
+ * @param $password
+ *   Password to Salesforce account.
+ * @param $token
+ *   Security token from Salesforce.
  * @param $reconnect
  *   By default, subsequent calls to this function will return the same, already
  *     connected Salesforce object as preceding calls. Setting this variable to
@@ -191,191 +184,159 @@ function salesforce_api_settings_form() {
  *   The DrupalSalesforce object used to communicate with the Salesforce server
  *     if successful or FALSE if a connection could not be established.
  */
-function salesforce_api_connect($reconnect = FALSE) {
+function salesforce_api_connect($username = FALSE, $password = FALSE, $token = FALSE, $reconnect = FALSE) {
   static $sf = FALSE;
+  module_load_include('inc', 'salesforce_api', 'salesforce.class');
 
   // Return the previously connected object.
   if ($sf && !$reconnect) {
     return $sf;
   }
 
-  // Load up the API credentials.
-  $username = variable_get('salesforce_api_username', '');
-  $password = variable_get('salesforce_api_password', '');
-  $token = variable_get('salesforce_api_token', '');
+  // Boolean, whether we are connecting with the default website user or not.
+  $default_site_user = $username == variable_get('salesforce_api_username', FALSE);
+
+  // Load up the sitewide API credentials if no others were provided:
+  $username = $username ? $username : variable_get('salesforce_api_username', '');
+  $password = $password ? $password : variable_get('salesforce_api_password', '');
+  $token = $token ? $token : variable_get('salesforce_api_token', '');
 
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
-    watchdog('salesforce', 'Connection to Salesforce failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+      failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
-
-  // Include the file that defines the class.
-  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
 
   // Create a new Salesforce object with the API credentials.
   $sf = new DrupalSalesforce($username, $password, $token);
-
-  // Attempt a login, and...
-  if ($sf->login()) {
-    // Return the object if a connection and login were successful.
-    return $sf;
-  }
-  else {
-    // Or return FALSE to indicate the failure.
-    $sf = FALSE;
-
+  if (!is_object($sf)) {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+      failed. Failed to create DrupalSalesforce wrapper.', WATCHDOG_ERROR);
     return FALSE;
   }
+
+  // Attempt a login.
+  if ($sf->login()) {
+    // Mimick expired password state to debug.
+    // $sf->login->passwordExpired = TRUE;
+    if ($sf->login->passwordExpired) {
+      if ($default_site_user) {
+        salesforce_api_reset_expired_password($sf);
+      }
+      elseif (user_access('administer salesforce')) {
+        drupal_set_message(t('Your Salesforce account password expired.  Please
+         <a href="https://login.salesforce.com/">login to Salesforce.com</a> and
+         change your password.'), 'error');
+      } 
+      else {
+        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+          due to expired password for @user.', array('@user' => $username), WATCHDOG_ERROR);
+      }
+    }
+  }
+  else {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+      failed with response @resp.', array('@resp' => $sf->client->getLastResponse()), WATCHDOG_ERROR);
+
+    // Or return FALSE to indicate the failure.
+    $sf = FALSE;
+  }
+  return $sf;
 }
 
 /**
- * Demonstrates some of the API functionality through the Salesforce class and
- * fieldmap functionality.
+ * Helper function for salesforce_api_connect() to reset an expired password,
+ *   for the website's default salesforce user only.
  *
- * @param $demo
- *   The name of the demonstration to perform.
+ * @param $sf
+ *   The logged in DrupalSalesforce object with an expired password.
  * @return
- *   A string containing the page output.
+ *   void
  */
-function salesforce_api_demo($demo = NULL) {
-  // Attempt to connect to Salesforce.
-  $sf = salesforce_api_connect();
+function salesforce_api_reset_expired_password($sf) {
+  // Append one letter and one digit to the password to make sure we meet
+  // salesforce's password validation requirements.
+  $new_password = user_password() . 'z9';
+  // setPassword() may throw InvalidIdFault or UnexpectedErrorFault exceptions.
+  $sf->client->setPassword($sf->login->userId, $new_password);
+  variable_set('salesforce_api_password', $new_password);
+  // Salesforce changes the security token when the password gets changed and
+  // sends an email with the new security token.  The new security token can
+  // not be retrieved via the API.
+  variable_del('salesforce_api_token');
 
-  // Display an error message if the connection failed.
-  if (!$sf) {
-    return t('Could not connect to Salesforce. Please doublecheck your API credentials.');
-  }
-
-  // Display the server timestamp first.
-  $response = $sf->client->getServerTimestamp();
-
-  $output = '<p>'. t('<b>Salesforce server timestamp:</b> @timestamp', array('@timestamp' => $response->timestamp)) .'</p>';
-
-  // Add a specific demo's output.
-  if ($demo == 'user-export') {
-    global $user;
-
-    // Fully load the user account so we get profile data.
-    $account = user_load(array('uid' => $user->uid));
-
-    // Create an object for export based on fieldmap 1.
-    $object = salesforce_api_fieldmap_export_create(1, $account);
-
-    $output .= t('Your user account prepared for export as a Contact based on <a href="!url">fieldmap 1</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/1/edit')))
-              .'<pre>'. print_r($object, TRUE) .'</pre>';
-
-    // Export the object to Salesforce as a Contact.
-    $response = $sf->client->create(array($object), 'Contact');
-
-    $output .= t('The response from Salesforce upon creation:')
-              .'<pre>'. print_r($response, TRUE) .'</pre>';
-
-  }
-  elseif ($demo == 'campaign-export') {
-    // Load the campaign node.
-    $node = node_load(1);
-
-    // Create an object for export based on fieldmap 10.
-    $object = salesforce_api_fieldmap_export_create(10, $node);
-
-    $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/10/edit')))
-              .'<pre>'. print_r($object, TRUE) .'</pre>';
-
-    // Export the object to Salesforce as a Contact.
-    $response = $sf->client->create(array($object), 'Campaign');
-
-    $output .= t('The response from Salesforce upon creation:')
-              .'<pre>'. print_r($response, TRUE) .'</pre>';
-  }
-
-  $items = array(
-    l(t('Export your user account as a contact'), SALESFORCE_PATH_DEMO .'/user-export'),
-    l(t('Export node 1 as a campaign'), SALESFORCE_PATH_DEMO .'/campaign-export'),
+  // Log the event and alert admins about required steps to complete.
+  $vars = array(
+    '%user' => $sf->login->userInfo->userFullName,
+    '%email' => $sf->login->userInfo->userEmail,
+    '!uri' => url(SALESFORCE_PATH_ADMIN, array('absolute' => TRUE)),
   );
 
-  $output .= '<p>'. t('<b>Choose from the following demonstrations:</b>') . theme('item_list', $items) .'</p>';
+  DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL, 'The password for the salesforce
+    account %user expired.  Drupal changed it and saved the new password.
+    Salesforce updated the security token and emailed it to %email.', $vars);
+  DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Provide the new security token
+    at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce
+    emailed it to %email.', $vars, WATCHDOG_ALERT);
 
-  return $output;
+  // If salesforce connects on pages for anonymous users then these messages should not be displayed.
+  if (user_access('administer salesforce')) {
+    drupal_set_message(t('The password for the salesforce account %user expired.
+      Drupal changed it and saved the new password.  Salesforce updated the
+      security token and emailed it to %email.', $vars));
+    drupal_set_message(t('Provide the new security token at
+      <a href="!uri">Drupal\'s Salesforce settings page</a>.
+      Salesforce emailed it to %email.', $vars), 'error');
+  }
 }
 
 /**
  * Implementation of hook_fieldmap_objects().
+ *
+ * This will pull a cached version (if possible) of the available SF fields for
+ * the object(s) in question. Prevent excess querying!
  */
-function salesforce_api_fieldmap_objects($type) {
+function salesforce_api_fieldmap_objects($type = 'salesforce') {
   $objects = array();
-
+  
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
-    $objects['campaign'] = array(
-      'label' => t('Campaign'),
-      'fields' => array(
-        'Name' => array('label' => t('Name'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'Description' => array('label' => t('Description')),
-        'StartDate' => array('label' => t('Start date')),
-        'EndDate' => array('label' => t('End date')),
-        'IsActive' => array('label' => t('Is the campaign active?')),
-        'Status' => array('label' => t('Status')),
-        'Type' => array('label' => t('Type')),
-        'NumberSent' => array('label' => t('Number of e-mails sent')),
-        'ExpectedResponse' => array('label' => t('Expected response')),
-        'BudgetedCost' => array('label' => t('Budgeted cost')),
-        'ActualCost' => array('label' => t('Actual cost')),
-        'ExpectedRevenue' => array('label' => t('Expected revenue')),
-        'OwnerID' => array('label' => t('Owner ID')),
-        //'ParentCampaign' => array('label' => t('Parent campaign')),
-      ),
-    );
+    $cache = cache_get('salesforce_api_sf_objects');
+    if (!$cache || $cache->data == '') {
+      $objects = salesforce_api_cache_build();
+    }
+    else {
+      // to mimic drupal 7's data structure -- entity->bundle->data -- add a
+      // redundant layer of indirection here.
+      $objects = $cache->data;
+    }
+  }
+  return array('salesforce' => $objects);
+}
 
-    $objects['contact'] = array(
-      'label' => t('Contact'),
-      'fields' => array(
-        'Email' => array('label' => t('E-mail address')),
-        'FirstName' => array('label' => t('First name')),
-        'LastName' => array('label' => t('Last name'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'Name' => array('label' => t('First and last name'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
-        'Phone' => array('label' => t('Primary phone number')),
-        'BirthDate' => array('label' => t('Birthdate')),
-      ),
-    );
-
-    $objects['lead'] = array(
-      'label' => t('Lead'),
-      'fields' => array(
-        'Company' => array('label' => t('Company'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'FirstName' => array('label' => t('First name')),
-        'LastName' => array('label' => t('Last name'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'Salutation' => array('label' => t('Salutation')),
-        'Name' => array('label' => t('First and last name'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
-        'Title' => array('label' => t('Title')),
-        'Street' => array('label' => t('Street address')),
-        'City' => array('label' => t('City')),
-        'State' => array('label' => t('State')),
-        'PostalCode' => array('label' => t('Zip/Postal code')),
-        'Country' => array('label' => t('Country')),
-        'Phone' => array('label' => t('Phone number')),
-        'MobilePhone' => array('label' => t('Mobile phone')),
-        'Fax' => array('label' => t('Fax number')),
-        'Email' => array('label' => t('E-mail address')),
-        //'HasOptedOutOfEmail' => array('label' => t('Has the lead opted out of e-mail?')),
-        'Website' => array('label' => t('Website')),
-        'Industry' => array('label' => t('Industry')),
-        'Description' => array('label' => t('Description')),
-        'AnnualRevenue' => array('label' => t('Annual revenue')),
-        'NumberOfEmployees' => array('label' => t('Number of employees')),
-        'LeadSource' => array('label' => t('Lead source')),
-        'Rating' => array('label' => t('Lead rating')),
-        'Status' => array('label' => t('Lead status')),
-        'IsConverted' => array('label' => t('Is the lead converted?')),
-        'IsUnreadByOwner' => array('label' => t('Is the lead unread by its owner?')),
-      ),
-    );
+/**
+ * Recreate the salesforce object cache
+ */
+function salesforce_api_cache_build() {
+  $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
+  $sf = salesforce_api_connect();
+  $result = salesforce_api_describeSObjects($sf_objects);
+  foreach ($sf_objects as $i => $obj) {
+    $objects[$obj] = salesforce_api_object_to_fieldmap_fields($result[$obj]);
   }
 
+  // find the expiry time
+  $lifetime = variable_get('salesforce_api_object_expire', CACHE_PERMANENT);
+  $expire = ($lifetime == CACHE_PERMANENT) ? CACHE_PERMANENT : REQUEST_TIME + $lifetime;
+  cache_set('salesforce_api_sf_objects', $objects, $table = 'cache', $expire, $headers = NULL);
+  drupal_set_message(t('Salesforce object cache has been refreshed.'));
   return $objects;
 }
 
-// Returns an array of system fields that are retrievable from Salesforce.
+/**
+ * Returns an array of system fields that are retrievable from Salesforce.
+ */
 function salesforce_api_fieldmap_system_fields() {
   $fields = array(
     'Id' => array('label' => t('Salesforce ID')),
@@ -390,188 +351,179 @@ function salesforce_api_fieldmap_system_fields() {
   return $fields;
 }
 
-/**
- * Creates a new fieldmap in the database and returns its index.
- *
- * @param $drupal
- *   The name of a Drupal object.
- * @param $salesforce
- *   The name of a Salesforce object.
- * @param $action
- *   A string letting us know which direction the data will be travelling when
- *     this fieldmap is used; valid actions are 'import' and 'export'.
- * @return
- *   The numeric index of the new fieldmap.
- */
-function salesforce_api_fieldmap_create($drupal, $salesforce, $action = 'export') {
-  // Create the fieldmap array.
-  $map = array(
-    'index' => salesforce_api_fieldmap_next_index(),
-    'drupal' => $drupal,
-    'salesforce' => $salesforce,
-    'action' => $action,
-    'fields' => array(),
-  );
-
-  // Save the new fieldmap.
-  salesforce_api_fieldmap_save($map);
-
-  return $map['index'];
-}
-
-// Returns the next index for use by fieldmaps.
-function salesforce_api_fieldmap_next_index() {
-  // Get the next index value.
-  $index = variable_get('salesforce_fieldmap_index', 0) + 1;
-
-  // Increment the index counter.
-  variable_set('salesforce_fieldmap_index', $index);
-
-  // Return the new index.
-  return $index;
-}
 
 /**
  * Saves a fieldmap to the database.
  *
  * @param $map;
  *   An array containing the fieldmap data using the following keys and values:
- *   - index: the numeric index of the fieldmap.
+ *   - fieldmap: the numeric index of the fieldmap.
  *   - drupal: the name of a Drupal object.
  *   - salesforce: the name of a Salesforce object.
- *   - action: the action this fieldmap is used for; 'import' or 'export'.
+ *   - automatic: whether or not the sync should be automatic
+ *   - description: a short title or description of the fieldmap
  *   - fields: an array that maps source fields (as keys) to their corresponding
  *       target fields (as values).
  */
-function salesforce_api_fieldmap_save($map) {
-  variable_set('salesforce_fieldmap_'. $map['index'], $map);
+function salesforce_api_fieldmap_save(&$map) {
+  $primary_key = !empty($map['fieldmap']) ? 'fieldmap' : NULL;
+  if (is_array($map['fields'])) {
+    $map['fields'] = serialize($map['fields']);
+  }
+  drupal_write_record('salesforce_field_map', $map, $primary_key);
 }
 
 /**
  * Loads a fieldmap from the database.
  *
- * @param $index
+ * @param $fieldmap
  *   The index of the fieldmap to load.
  * @return
  *   An array containing the fieldmap data.
  */
-function salesforce_api_fieldmap_load($index) {
+function salesforce_api_fieldmap_load($fieldmap) {
   static $maps;
-
-  if (!isset($maps[$index]) && $index != '') {
-    $maps[$index] = variable_get('salesforce_fieldmap_'. $index, array());
+  if (!isset($maps[$fieldmap]) && $fieldmap != '' && is_numeric($fieldmap)) {
+    $map = db_select('salesforce_field_map', 's')
+      ->fields('s')
+      ->condition('fieldmap', $fieldmap)
+      ->execute()
+      ->fetch(PDO::FETCH_ASSOC);
+    if (isset($map['fields'])) {
+      $map['fields'] = unserialize($map['fields']);
+    }
+    $maps[$fieldmap] = $map;
   }
 
-  return $maps[$index];
+  return $maps[$fieldmap];
 }
 
 /**
- * Clones a fieldmap, updating fields as necessary for a change in action.
+ * Remove a field from all fieldmaps. This is particularly useful for implementations
+ * of hook_content_fieldapi('delete instance'). May be use to delete an occurence
+ * in a single fieldmap (by supplying entity/bundle and/or salesforce_type), or every
+ * occurence in all fieldmaps (by supplying only fieldname).
  *
- * @param $index
+ * @param $fieldname
+ *  The name of the field to be deleted. Either a CCK field, or a Salesforce field
+ * @param $entity (optional)
+ *  If given, limit deleting of the field to this Drupal content type
+ * @param $bundle (optional)
+ *  If given, limit deleting of the field to this Drupal content type
+ * @param $salesforce_type (optional)
+ *  If given, limit
+ * @see sf_node/sf_node.module:sf_node_content_fieldapi
+ * @todo I'm sure this can be done more elegantly, but I can't spend anymore braincells on it right now.
+ */
+function salesforce_api_fieldmap_field_delete($fieldname, $entity = NULL, $bundle = NULL, $salesforce_type = NULL) {
+  $query = db_select('salesforce_field_map', 's');
+  $query->fields('s', array('fieldmap'));
+  if ($entity) {
+    $query->condition('drupal_entity', $entity);
+  }
+  if ($bundle) {
+    $query->condition('drupal_bundle', $bundle);
+  }
+  if ($salesforce_type) {
+    $query->condition('salesforce', $salesforce_type);
+  }
+  $result = $query->execute();
+  while ($fieldmap_id = $result->fetchField()) {
+    $map = salesforce_api_fieldmap_load($fieldmap_id);
+    // In the extremely unlikely event that a Salesforce field and a Drupal
+    // field share the same name, this function handles both.
+    if ($entity || $bundle) {
+      $key1 = array_search($fieldname, $map['fields']);
+      if ($key1) {
+        unset($map['fields'][$key1]);
+        drupal_set_message(t('Removed Drupal field from salesforce_api !link',
+          array('!link' => l('fieldmap ' . $fieldmap_id, SALESFORCE_PATH_OBJECT . '/' . $fieldmap_id))));
+        salesforce_api_fieldmap_save($map);
+      }
+    }
+    if ($salesforce_type) {
+      if (!empty($map['fields'][$key2])) {
+        unset($map['fields'][$key2]);
+        drupal_set_message(t('Removed Salesforce field from salesforce_api !link',
+          array('@link' => l('fieldmap ' . $fieldmap_id, SALESFORCE_PATH_OBJECT . '/' . $fieldmap_id))));
+        salesforce_api_fieldmap_save($map);
+      }
+    }
+  }
+}
+
+/**
+ * Clones a fieldmap.
+ *
+ * @param $fieldmap
  *   The index of the fieldmap to clone.
- * @param $action
- *   The action to switch to for the cloned fieldmap.
  * @return
  *   The newly created fieldmap or FALSE if the clone failed.
  */
-function salesforce_api_fieldmap_clone($index, $action) {
+function salesforce_api_fieldmap_clone($fieldmap) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
+  $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Return FALSE if the source fieldmap does not exist.
   if (empty($map)) {
     return FALSE;
   }
-
-  // Assign a new index to the fieldmap.
-  $map['index'] = salesforce_api_fieldmap_next_index();
-
-  // Switch the action and update the fields if necessary.
-  if ($map['action'] != $action) {
-    $map['action'] = $action;
-    $fields = array();
-
-    // Loop through all the fields to reverse the associations.
-    foreach ($map['fields'] as $key => $value) {
-      // If a value hasn't been set for the old source field, set it now.
-      if (empty($fields[$value])) {
-        $fields[$value] = $key;
-      }
-    }
-
-    // Update the fieldmap with the new fields array.
-    $map['fields'] = $fields;
-  }
-
-  // Save the new fieldmap and return its index.
+  // Save the old fieldmap id, save a new one, and return the new one.
+  unset($map['fieldmap']);
   salesforce_api_fieldmap_save($map);
-
-  return $map;
+  return !empty($map['fieldmap']) ? $map : FALSE;
 }
 
 /**
  * Deletes a fieldmap from the database.
  *
- * @param $index
+ * @param $fieldmap
  *   The index of the fieldmap to delete.
  */
-function salesforce_api_fieldmap_delete($index) {
-  // Force a numeric index here so other fieldmap variables are accidentally
-  // deleted. May remove if we relocate the fieldmap data.
-  if (is_numeric($index)) {
-    variable_del('salesforce_fieldmap_'. $index);
+function salesforce_api_fieldmap_delete($fieldmap) {
+  db_delete('salesforce_field_map')->condition('fieldmap', $fieldmap)->execute();
+  db_delete('salesforce_object_map')->condition('fieldmap', $fieldmap)->execute();
+  if (function_exists('sf_prematch_match_by_delete')) {
+    sf_prematch_match_by_delete($fieldmap);
   }
 }
 
 /**
  * Returns an array of fieldmaps for use as options in the Forms API.
  *
- * @param $action
- *   Filters the fieldmaps by action.
- * @param $drupal
- *   Filters the fieldmaps by Drupal object.
+ * @param $entity
+ *   Filters the fieldmaps by entity.
+ * @param $bundle
+ *   Filters the fieldmaps by bundle
  * @param $salesforce
  *   Filters the fieldmaps by Salesforce object.
+ * @param $automatic
+ *   Optional: Filter the fieldmaps to only pull those marked automatic.
  * @return
  *   A FAPI options array of all the matching fieldmaps.
  */
-function salesforce_api_fieldmap_options($action = NULL, $drupal = NULL, $salesforce = NULL) {
+function salesforce_api_fieldmap_options($entity = NULL, $bundle = NULL, $salesforce = NULL) {
   $options = array();
 
-  // Loop through all the indexed field maps.
-  for ($i = 1; $i <= variable_get('salesforce_fieldmap_index', 0); $i++) {
-    // Load the map for this index.
-    $map = variable_get('salesforce_fieldmap_'. $i, array());
-
-    // Skip the fieldmap if it is not for the appropriate action.
-    if (!empty($action) && $map['action'] != $action) {
-      continue;
-    }
-
-    // Skip the fieldmap if it is not for the appropriate Drupal object.
-    if (!empty($drupal) && $map['drupal'] != $drupal) {
-      continue;
-    }
-
-    // Skip the fieldmap if it is not for the appropriate Salesforce object.
-    if (!empty($salesforce) && $map['salesforce'] != $salesforce) {
-      continue;
-    }
-
+  // This does not need to not be optimized for perfomance since it's only an admin interface.
+  $query = db_select('salesforce_field_map', 's')->fields('s');
+  if (!empty($entity)) {
+    $query->condition('drupal_entity', $entity);
+  }
+  if (!empty($bundle)) {
+    $query->condition('drupal_bundle', $bundle);
+  }
+  if (!empty($salesforce)) {
+    $query->condition('salesforce', $salesforce, 'LIKE');
+  }
+  $result = $query->execute();
+  while ($map = $result->fetch(PDO::FETCH_ASSOC)) {
     // Setup some replacement args for the label.
     $args = array(
-      '@drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
-      '@salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
+       '@drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal_bundle'], $map['drupal_entity']),
+       '@salesforce' => salesforce_api_fieldmap_object_label('salesforce', 'salesforce', $map['salesforce']),
     );
-
-    // Add the fieldmap to the options array with an appropriate title.
-    if ($map['action'] == 'import') {
-      $options[$map['index']] = t('Salesforce @salesforce to Drupal @drupal', $args);
-    }
-    else {
-      $options[$map['index']] = t('Drupal @drupal to Salesforce @salesforce', $args);
-    }
+    $options[$map['fieldmap']] = t('Drupal @drupal to Salesforce @salesforce', $args);
   }
 
   return $options;
@@ -580,16 +532,23 @@ function salesforce_api_fieldmap_options($action = NULL, $drupal = NULL, $salesf
 /**
  * Returns all or a subset of the objects defined via hook_sf_fieldmap().
  *
- * @param $type
+ * @param (string) $type
+ *   valid values: 'drupal' or 'salesforce'
  *   Specify a type to filter the return value to objects of that type.
- * @param $name
- *   Specify an object name to filter the return value to that object alone.
- *     If this parameter is supplied, you must specify the correct type as well.
+ * @param (string) $entity
+ *   valid values: if $type == 'salesforce', this should also be 'salesforce'
+ *   if $type == 'drupal', this should be a valid entity name
+ *   Specify an entity name to filter the return value to that entity alone.
+ *   If this parameter is supplied, you must specify a type.
+ * @param (string) $bundle
+ *   Specify a bundle name to further filter the return value by bundle.
+ *   If this parameter is supplied, you must specify an entity.
  * @return
- *   An array of all objects sorted by type with no arguments.  Otherwise an
- *     array of objects filtered as specified by the parameters.
+ *  Return value structure depends on the arguments provided.
+ *  If no arguments, all fieldmap objects will be returned.
+ *  If $type is specified, only objects of that type will be returned, etc.
  */
-function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL) {
+function salesforce_api_fieldmap_objects_load($type = NULL, $entity = NULL, $bundle = NULL) {
   static $objects = array();
 
   // If we have not yet cached the object definitions...
@@ -602,61 +561,67 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL) {
 
     // Allow other modules to modify the object definitions.
     foreach (module_implements('fieldmap_objects_alter') as $module) {
-      $function = $module .'_fieldmap_objects_alter';
+      $function = $module . '_fieldmap_objects_alter';
       $function($objects);
     }
   }
-
+  
   // If a particular object type was specified...
   if (!empty($type)) {
     // And a particular object was specified...
-    if (!empty($name)) {
+    if (!empty($entity)) {
       // Return that object definition if it exists or FALSE if it does not.
-      if (isset($objects[$type][$name])) {
-        return $objects[$type][$name];
-      }
+      if (!empty($bundle)) {
+        if (isset($objects[$type][$entity][$bundle])) {
+          return $objects[$type][$entity][$bundle];
+        } 
+        else {
+          return FALSE;
+        }
+      } 
       else {
-        return FALSE;
+        if (isset($objects[$type][$entity])) {
+          return $objects[$type][$entity];
+        } 
+        else {
+          return FALSE;
+        }
       }
     }
     else {
-      // If no object was specified, return all objects of the specified type or
-      // FALSE if the type does not exist
       if (isset($objects[$type])) {
         return $objects[$type];
-      }
+      } 
       else {
         return FALSE;
       }
     }
   }
-
 
   return $objects;
 }
 
-// Returns the label for the object of the specified type and name.
-function salesforce_api_fieldmap_object_label($type, $name) {
+/**
+ * Returns the label for the object of the specified type and name.
+ * @see salesforce_api_fieldmap_objects_load
+ */
+function salesforce_api_fieldmap_object_label($type, $entity, $bundle) {
   // Get the object definition.
-  $object = salesforce_api_fieldmap_objects_load($type, $name);
+  $object = salesforce_api_fieldmap_objects_load($type, $entity, $bundle);
 
   // If no label is specified, return the object name.
   if (empty($object['label'])) {
-    return check_plain($name);
+    return check_plain($entity . ': ' . $bundle);
   }
 
   return $object['label'];
 }
 
-// Returns a string of description text for the specified fieldmap.
+/**
+ * Returns a string of description text for the specified fieldmap.
+ */
 function salesforce_api_fieldmap_description($map) {
-  // Build a description for this fieldmap based on the action.
-  if ($map['action'] == 'import') {
-    return t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('@index' => $map['index'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
-  }
-  else {
-    return t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('@index' => $map['index'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce'])));
-  }
+  return t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects.', array('@index' => $map['fieldmap'], '%drupal' => salesforce_api_fieldmap_object_label('drupal', $map['drupal_entity'], $map['drupal_bundle']), '%salesforce' => salesforce_api_fieldmap_object_label('salesforce', 'salesforce', $map['salesforce'])));
 }
 
 /**
@@ -697,92 +662,333 @@ function salesforce_api_fieldmap_field_options($object, $type = NULL, $name = NU
 }
 
 /**
- * Creates an object for export to Salesforce based on the supplied source
+ * Creates an object for export to Salesforce based on the supplied Drupal
  *   object and fieldmap.
  *
- * @param $index
- *   The index of the fieldmap used to filter the source object into the export.
- * @param $source
- *   The source object used to generate the export.
+ * @param $fieldmap
+ *   The index of the fieldmap used to filter the Drupal object into the export.
+ * @param $drupal_data
+ *   The Drupal object used to generate the export.
  * @return
- *   An object of the source type ready for export to Salesforce or FALSE if
+ *   An object containing data ready for export to Salesforce or FALSE if
  *     the operation failed.
  */
-function salesforce_api_fieldmap_export_create($index, $source = NULL) {
+function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($index);
+  $map = salesforce_api_fieldmap_load($fieldmap);
 
   // Fail if the fieldmap does not exist.
   if (!$map) {
     return FALSE;
   }
 
-  // Load the source object definition so we know how to get values for its
-  // various fields.
-  if ($map['action'] == 'import') {
-    $source_object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-  }
-  else {
-    $source_object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  }
-
+  $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal_entity'], $map['drupal_bundle']);
+  $sf_object_definition = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map['salesforce']);
   $object = new stdClass();
-
   // Loop through the fields on the fieldmap.
-  foreach ($map['fields'] as $key => $value) {
-    // If a handler is specified for retrieving a value for the source field...
-    if (isset($source_object['fields'][$value]['export'])) {
-      // Get the value for the field from the handler function.
-      $object->$key = $source_object['fields'][$value]['export']($source, $value);
+  foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+    $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
+    $updateable = $sf_field_definition['type'] & SALESFORCE_FIELD_UPDATEABLE;
+    $createable = $sf_field_definition['type'] & SALESFORCE_FIELD_CREATEABLE;
+
+    // Don't try to update or create fields to which those actions do not apply.
+    if ((!$updateable && !$createable)
+    || (empty($drupal_data->salesforce['sfid']) && !$createable)
+    || (!empty($drupal_data->salesforce['sfid']) && !$updateable)) {
+      continue;
     }
-    elseif (isset($source->$value)) {
-      // Otherwise set the field on the export object to the value of the source
-      // field if it's present on the source object.
-      $object->$key = $source->$value;
+    // If a handler is specified for retrieving a value for the Drupal field...
+    if (isset($drupal_object_definition['fields'][$drupal_fieldname]['export'])) {
+      $drupal_field_export_handler = $drupal_object_definition['fields'][$drupal_fieldname]['export'];
+      $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+      // Get the value for the field from the handler function.
+      $object->$sf_fieldname = htmlentities($drupal_field_export_handler($drupal_data, $drupal_fieldname, $drupal_field_definition, $sf_field_definition));
+    }
+    // Otherwise set the field on the export object to the value of the Drupal
+    // field if it's present on the source object.
+    elseif (isset($drupal_data->$drupal_fieldname)) {
+      $object->$sf_fieldname = htmlentities($drupal_data->$drupal_fieldname);
     }
   }
 
+  // Before we return the object, we need to check for any fieldsToNull.
+  // Leaving a field blank will not erase an existing value from Salesforce.
+  // Any such value must be explicitly set to NULL.
+  // TODO: Fields should be checked for nillable before getting added to fieldsToNull
+  $props = get_object_vars($object);
+  foreach ($props as $key => $value) {
+    $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
+    // Salesforce treats the following values differently than NULL.
+    if ($value === FALSE || $value === 0 || $value === '0' || $value === 'FALSE') {
+      $object->$key = $value = 0;
+    } 
+    elseif (empty($value)) {
+      $nillable = $sf_field_definition['type'] & SALESFORCE_FIELD_NILLABLE;
+      // If the field is not nillable, don't try to set it to NULL
+      if (!$nillable) {
+        switch ($sf_field_definition['salesforce']['type']) {
+          case 'boolean':
+            $object->$key = 0;
+            break;
+          case 'string':
+            $object->$key = t('(blank)');
+            break;
+          default:
+            unset($object->$key);
+            break;
+        }
+      } 
+      else {
+        $object->fieldsToNull = $key;
+        // Enterprise client can only NULL one field per transaction.
+        // This is a bug beyond our control. For now, we just have to deal with it.
+        // The following doesn't actually work:
+        // if (!empty($object->fieldsToNull)) {
+        //   $object->fieldsToNull .= '; ';
+        // }
+      }
+    }
+  }
   return $object;
 }
 
 /**
- * Loads the Salesforce ID and fieldmap index of a Drupal object.
+ * Loads the mapping data given identifying information.
  *
+ * @param string $entity
+ *   The entity type of the Drupal object you are requesting data for; 
+ *   e.g. node or user.
+ * @param string $bundle
+ *   The bundle the Drupal object belongs to
+ * @param mixed $id_or_ids
+ *   The associated unique ID or IDs used to identify the object in Drupal.
+ * @return
+ *   The fetched query result.
+ */
+function salesforce_api_id_load($entity, $bundle, $id_or_ids, $key = 'fieldmap') {
+  // Query the main ID table for the associated data.
+  $op = is_array($id_or_ids) ? 'IN' : '=';
+  $query = db_select('salesforce_object_map', 's')
+    ->fields('s', array('fieldmap', 'sfid', 'oid'))
+    ->condition('drupal_entity', $entity)
+    ->condition('oid', $id_or_ids, $op);
+  if ($bundle) {
+    $query->condition('drupal_bundle', $bundle);
+  }
+  return $query->execute()->fetchAllAssoc($key, PDO::FETCH_ASSOC);
+}
+
+/**
+ * Get an object id using the salesforce id
+ *
+ * @param $sfid
+ *   A saleforce id
  * @param $type
  *   The type of the Drupal object you are requesting data for; node or user.
- * @param $id
- *   The associated unique ID used to identify the object in Drupal.
  * @return
- *   An array containing the associated Salesforce object type and ID or an
- *     empty array if no data was found.
+ *   The associated unique ID used to identify the object in Drupal or FALSE.
  */
-function salesforce_api_id_load($type, $id) {
-  // Query the main ID table for the associated data.
-  $result = db_query("SELECT sfid, fieldmap FROM {salesforce_ids} WHERE drupal_type = '%s' AND drupal_id = %d", $type, $id);
-
-  // Return an empty array if no data was found.
-  if (!$data = db_fetch_array($result)) {
-    return array();
-  }
-  else {
-    // Otherwise return the Salesforce object type and ID.
-    return $data;
-  }
+function salesforce_api_get_id_with_sfid($sfid, $entity, $bundle, $key = 'sfid') {
+  return db_select('salesforce_object_map', 's')
+    ->fields('s', array('oid'))
+    ->condition('sfid', $sfid)
+    ->condition('drupal_entity', $entity)
+    ->condition('drupal_bundle', $bundle)
+    ->execute()
+    ->fetchAllAssoc($key);
 }
 
 /**
  * Saves the Salesforce ID and fieldmap index of a Drupal object.
  *
- * @param $drupal_type
- *   The type of the Drupal object you are requesting data for; node or user.
- * @param $drupal_id
+ * @param $entity
+ *   The entity you are saving; e.g. node or user.
+ * @param $bundle
+ *   The bundle you are saving for; e.g. node type or vocab name
+ * @param $oid
  *   The associated unique ID used to identify the object in Drupal.
  * @param $sfid
  *   The Salesforce ID of the associated object in the Salesforce database.
  * @param $fieldmap
  *   The index of the fieldmap used to generate the export.
  */
-function salesforce_api_id_save($drupal_type, $drupal_id, $sfid, $fieldmap) {
-  db_query("INSERT INTO {salesforce_ids} (drupal_type, drupal_id, sfid, fieldmap) VALUES ('%s', '%s', '%s', %d)",
-    $drupal_type, $drupal_id, $sfid, $fieldmap);
+function salesforce_api_id_save($entity, $bundle, $oid, $sfid, $fieldmap) {
+  db_delete('salesforce_object_map')
+    ->condition('drupal_entity', $entity)
+    ->condition('drupal_bundle', $bundle)
+    ->condition('oid', $oid)
+    ->execute();
+  db_insert('salesforce_object_map')
+    ->fields(array(
+      'drupal_entity' => $entity, 'drupal_bundle' => $bundle, 
+      'oid' => $oid, 'sfid' => $sfid, 'fieldmap' => $fieldmap))
+    ->execute();
 }
+
+function salesforce_api_search_for_duplicates($direction, $object, $fieldmap_id) {
+  // Call hook_sf_find_match to give opportunity to try to match existing sf object instead
+  // of creating a new one. No hook_sf_find_match is defined out of the box. Developers must
+  // implement their own logic for this one.
+  return module_invoke_all('sf_find_match', $direction, $object, $fieldmap_id);
+}
+
+/**
+ * Implementation of hook_theme().
+ *
+ * Registers theme callback for admin screen
+ */
+function salesforce_api_theme($existing, $type, $theme, $path) {
+  return array(
+    'salesforce_api_fieldmap_edit_form_table' => array(
+      'render element' => 'form'),
+    'salesforce_api_object_options' => array(
+      'render element' => 'element'),
+  );
+}
+
+/**
+ * Wrapper for SOAP SforceBaseClient::describeGlobal
+ * @return an SFQueryResult object (look at ->types for an array of SF object types)
+ */
+function salesforce_api_describeGlobal() {
+  static $response;
+  if (!empty($response)) {
+    return $response;
+  }
+  $sf = salesforce_api_connect();
+  if ($sf === FALSE) {
+    $link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
+    drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+    return;
+  }
+  $response = $sf->client->describeGlobal();
+  if (isset($response->sobjects)) {
+    $response->types = $response->sobjects;
+    unset($response->sobjects);
+  }
+  return $response;
+}
+
+/**
+ * Convert Salesforce object fields to fieldmap array for saving
+ */
+function salesforce_api_object_to_fieldmap_fields($object)  {
+  $fieldmap_object = array(
+    'label' => t($object->label),
+    'fields' => array()
+  );
+  foreach ($object->fields as $field) {
+    $properties = array('name', 'label', 'type', 'length', 'soapType');
+    $booleans = array('createable', 'defaultedOnCreate', 'deprecatedAndHidden',
+      'idLookup', 'nillable', 'restrictedPicklist', 'unique', 'updateable');
+    $source = get_object_vars($field);
+    $sf_definition = array_intersect_key($source, array_flip($properties));
+    $sf_definition['sf_type'] = 0;
+    foreach ($booleans as $bool) {
+      $sf_definition['sf_type'] |= ((int)$source[$bool]) * constant('SALESFORCE_FIELD_' . strtoupper($bool));
+    }
+    $fieldmap_object['fields'][$field->name] = array(
+      'name' => $sf_definition['name'],
+      'label' => $sf_definition['label'],
+      'type' => $sf_definition['sf_type'],
+      'salesforce' => $sf_definition,
+      );
+  }
+  return $fieldmap_object;
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function salesforce_api_cron() {
+  $cache = cache_get('salesforce_api_sf_objects');
+  // if the cache has already been delete or is expired then rebuild
+  if (!$cache || REQUEST_TIME > $cache->expire) salesforce_api_cache_build();
+  return;
+}
+
+
+/**
+ * Wrapper for SOAP SforceBaseClient::describeSObject
+ * Given an sf object type, return the SF Object definition
+ * @param string type : the machine-readable name of the SF object type
+**/
+function salesforce_api_describeSObject($type) {
+  if (!is_string($type)) {
+    drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
+    return FALSE;
+  }
+
+  $objects = salesforce_api_describeSObjects($type);
+  if (!empty($objects[$type])) {
+    return $objects[$type];
+  } 
+  else {
+    drupal_set_message(t('DescribeSObject failed to find ' . $type), 'error');
+    return FALSE;
+  }
+}
+
+/**
+ * Wrapper for SOAP SforceBaseClient::describeSObjects
+ * Given an array of sf object type, return an associative, normalized array of
+ * SF object definitions, indexed on machine-readable names of SObjects
+ * @param array types : an array of machine-readable names to SObjects
+ */
+function salesforce_api_describeSObjects($types) {
+  static $objects;
+  if (is_string($types)) {
+    $types = array($types);
+  }
+  if (!is_array($types)) {
+    drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
+    return FALSE;
+  }
+
+  // There is no reason to describe the same object twice in one HTTP request.
+  // Use a static cache to save API calls and bandwidth.
+  if (!empty($objects)) {
+    $outstanding = array_diff($types, array_keys($objects));
+    if (empty($outstanding)) {
+      $ret = array();
+      foreach ($types as $k) {
+        $ret[$k] = $objects[$k];
+      }
+      return $ret;
+    }
+  }
+
+  if (is_string($types)) {
+    $types = array($types);
+  }
+
+  try {
+    $sf = salesforce_api_connect();
+    if ($sf === FALSE) {
+      $link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
+      drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+      return;
+    }
+    $objects = $sf->client->describeSObjects(array_values($types));
+  } catch (Exception $e) {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
+  }
+  if (empty($objects)) {
+    return array();
+  }
+
+  // This is the normalization part: If only one object was described, SalesForce
+  // returned an object instead of an array. ALWAYS return an array of objects.
+  if (is_object($objects)) {
+    $objects = array($objects);
+  }
+
+  // And make it an associative array for good measure.
+  $tmp = array();
+  foreach ($objects as $o) {
+    $tmp[$o->name] = $o;
+  }
+  $objects = $tmp;
+  return $objects;
+}
+

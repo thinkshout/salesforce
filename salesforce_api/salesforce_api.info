@@ -1,6 +1,17 @@
 ; $Id$
+core = 7.x
 name = Salesforce API
-description = Defines an API that enables modules to interact with the SalesForce server.
 package = Salesforce
-core = 6.x
-php = 5.1
+description = Defines an API that enables modules to interact with the Salesforce server.
+configure = admin/config/salesforce
+
+files[] = salesforce_api.module
+files[] = salesforce_api.install
+files[] = salesforce_api.drush.inc
+files[] = salesforce_api.admin.inc
+files[] = salesforce_api.class.inc
+
+; You must add the following files by downloading and installing the SForce
+; PHP Toolkit as explained in README.txt
+files[] = toolkit/soapclient/SforceEnterpriseClient.php
+files[] = toolkit/soapclient/SforcePartnerClient.php

@@ -9,20 +9,19 @@
 /**
  *  Use prematch rule to find a salesforce object to match the node.
  *
- * @param string $object_type
- * @param stdObject $drupal_object
+ * @param stdObject $drupal_object - the actual instance of the entity
  * @param array $map
  * @param array $match_by
  * @return string sfid
  */
-function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
-  if (empty($drupal_object) || empty($map['drupal']) || empty($match_by)) {
+function sf_prematch_export($drupal_object, $map, $match_by) {
+  if (empty($map['drupal']) || empty($match_by)) {
     return;
   }
   // Get information to allow using handlers to get values of Drupal fields.
-  $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map['drupal_entity'], $map['drupal_bundle']);
   $drupal_fields_info = $drupal_object_info['fields'];
-  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce'], $map['salesforce']);
 
   $values = array();
   $select_clause = "SELECT id";
@@ -106,7 +105,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   }
 }
 
-function sf_prematch_import($object_type, $object, $map, $match_by) {
+function sf_prematch_import($object, $map, $match_by) {
   // As of 2/23/2010 there is no out of the box functionality to import a salesforce
   // record without already having established a mapping. Therefore, developers 
   // exposing such functionality should implement their own hook_sf_find_map:import

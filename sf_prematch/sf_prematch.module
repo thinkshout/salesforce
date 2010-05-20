@@ -132,7 +132,7 @@ function sf_prematch_match_by_delete($fieldmap) {
  * @param stdClass $object
  * @param array $map
  */
-function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
+function sf_prematch_sf_find_match($action, $object, $map) {
   $fieldmap = $map['fieldmap'];
   $match_by = sf_prematch_match_by_load($fieldmap);
   if ($match_by['primary_field'] == '') { return; }
@@ -140,10 +140,10 @@ function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
   $map = salesforce_api_fieldmap_load($map);
 	switch ($action) {
 	 	case 'export':
-	 		$result = sf_prematch_export($object_type, $object, $map, $match_by);
+	 		$result = sf_prematch_export($object, $map, $match_by);
 	 	  break;
 	 	case 'import':
-	 		$result = sf_prematch_import($object_type, $object, $map, $match_by);
+	 		$result = sf_prematch_import($object, $map, $match_by);
 	 	  break;
 	 	default:
 	 	  $result = null;

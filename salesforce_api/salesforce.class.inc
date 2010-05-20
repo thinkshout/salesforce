@@ -7,11 +7,11 @@
  */
 
 // Include the Salesforce Enterprise Client included in the PHP Toolkit.
-require(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
 
 /**
  * Defines the DrupalSalesforce class used to interact with the server.
  */
+require(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
 class DrupalSalesforce {
   // Define the object object used to connect to Salesforce.
   public $client;
@@ -131,8 +131,8 @@ class DrupalSalesforce {
     // Load the fieldmap so we can get the object name.
     $map = salesforce_api_fieldmap_load($fieldmap);
 
-    $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-
+    $object = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map['salesforce']);
+    
     $fields = array_keys($object['fields']);
 
     return $this->client->retrieve(implode(', ', $fields), $map['salesforce'], $ids);

@@ -29,9 +29,10 @@
  * @param $object_type
  *  Where does the data come from? Either "drupal" or "salesforce".
  * @return
- *  The function should return an associative array of objects and their
- *  fields that should be made available for mapping. Each field is an
- *  associative array with the following keys (optional unless noted):
+ *  The function should return an associative array of entities, each   
+ *  describing its bundles and the fields that should be made available for
+ *  mapping. Each field is an associative array with the following keys
+ *  (optional unless noted):
  *  - 'label' (required): The translated, user-friendly name of this field
  *  - 'type': Relevant for Salesforce fields only.
  *    Use one of the following constants
@@ -46,19 +47,22 @@
 function hook_fieldmap_objects($object_type) {
   if ($type == 'drupal') {
     return array(
-      'node_page' => array(
-        'label' => t('Page node'),
-        'fields' => array(
-          'nid' => array('label' => t('Node ID'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
-          'type' => array('label' => t('Node type')),
-          'status' => array('label' => t('Is the node published?')),
-          'field_sample_checkbox' => array(
-            'label' => t('Widget Label'),
-            'group' => t('CCK fields'),
-            'export' => '_sf_node_export_cck_default',
-            'import' => '_sf_node_import_cck_default',
-            'multiple' => TRUE,
-    ))));
+      // "node" is the entity
+      'node' => array(
+        // "page" is the bundle
+        'page' => array(
+          'label' => t('Page node'),
+          'fields' => array(
+            'nid' => array('label' => t('Node ID'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
+            'type' => array('label' => t('Node type')),
+            'status' => array('label' => t('Is the node published?')),
+            'field_sample_checkbox' => array(
+              'label' => t('Widget Label'),
+              'group' => t('CCK fields'),
+              'export' => '_sf_node_export_cck_default',
+              'import' => '_sf_node_import_cck_default',
+              'multiple' => TRUE,
+    )))));
   }
 }
 
@@ -70,7 +74,7 @@ function hook_fieldmap_objects($object_type) {
  *  The fieldmap object definition as defined by hook_fieldmap_objects implementations.
  */
 function hook_fieldmap_objects_alter(&$objects) {
-  $objects['node_page']['fields']['status']['label'] = "Published Status";
+  $objects['node']['page']['fields']['status']['label'] = "Published Status";
 }
 
 /**

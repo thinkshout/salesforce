@@ -1,0 +1,10 @@
+; $Id$
+core = 7.x
+name = Salesforce Entity
+package = Salesforce
+description = Implements Salesforce API to expose Drupal entities.
+configure = admin/config/salesforce/fieldmap
+
+files[] = sf_entity.module
+dependencies[] = salesforce_api
+dependencies[] = field
