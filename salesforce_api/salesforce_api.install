@@ -136,10 +136,11 @@ function salesforce_api_schema() {
  */
 function salesforce_api_requirements($phase) {
   $req = array();
+  require_once(drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module');
   switch ($phase) {
     case 'install':
       if (!file_exists(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php')) {
-        $description = t('Unable to install salesforce module. SalesForce PHP Toolkit is not installed or not available.');
+        $description = t('Unable to install salesforce module. Please make sure the SalesForce PHP Toolkit is available at ' . SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
         $severity = REQUIREMENT_ERROR;
       }
       break;
