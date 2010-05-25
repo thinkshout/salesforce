@@ -2,132 +2,196 @@
 
 SALESFORCE MODULE
 
-ABOUT:
-This module implements a mapping functionality between SalesForce Objects and 
-Drupal entities. In other words, for each of your supported Drupal entities 
-(e.g. node, user, or entities supported by extensions), you can assign 
-SalesForce objects that will be created / updated when the entity is saved. For
-each such assignment, you choose which Drupal and SalesForce fields should be
-mapped to one another.
-
-This module also includes an API architecture which allows for additional 
-modules to be easily plugged in (e.g. for webforms, contact form submits, etc).
-
-
-REQUIREMENTS:
-
-1) You need a salesforce account. Developers can register here:
-
-http://www.developerforce.com/events/regular/registration.php
-
-You will need to know your login data and your security token.
-
-2) PHP needs the SOAP web services kit installed, as per:
-
-http://php.net/soap
+  Contents of this README:
+    ABOUT
+    REQIREMENTS
+    INSTALLATION
+    UPDATING / REINSTALLING / ENABLING / DISABLING
+    QUICKSTART
+    WORKING WITH WSDL FILES
+    TROUBLESHOOTING
+    REPORTING BUGS
 
 
-INSTALLATION:
+ABOUT
+  This module implements a mapping functionality between SalesForce Objects and
+  Drupal entities. In other words, for each of your supported Drupal entities
+  (e.g. node, user, or entities supported by extensions), you can assign
+  SalesForce objects that will be created / updated when the entity is saved.
+  For each such assignment, you choose which Drupal and SalesForce fields should
+  be mapped to one another.
 
-1) Download, uncompress and situate the module as per usual.
-
-2) Download the salesforce PHP toolkit version 13:
-
-   http://wiki.apexdevnet.com/index.php/PHP_Toolkit
-
-   Place the "soapclient" directory withinin the "toolkit" directory within the
-   Drupal module's "salesforce_api directory". You should end up with something
-   like: sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
-
-3) Enable the module on admin/build/modules along with at least one of the
-   object modules (salesfoce_node, salesfoce_user). Node is the usual place to
-   start.
-
-4) Assign a WSDL directory and upload your organization's WSDL file 
-   (admin/settings/salesforce and admin/settings/salesforce/wsdl).
+  This module also includes an API architecture which allows for additional
+  modules to be easily plugged in (e.g. for webforms, contact form submits,
+  etc).
 
 
-UPDATING / REINSTALLING / ENABLING / DISABLING:
+REQUIREMENTS
 
-Since this module does not yet have a stable release, there is no upgrade path
-neither between Drupal versions nor between dev versions. If you have previously
-installed this module on your Drupal site and are upgrading, you need to do the
-following to update the module.
+  1) You need a salesforce account. Developers can register here:
+  
+  http://www.developerforce.com/events/regular/registration.php
+  
+  You will need to know your login data and your security token.
 
-0) ALWAYS backup your site's code and your database.
-
-1) Disable salesforce_api, sf_node, and sf_user.
-
-2) Remove the salesforce directory from the filesystem.
-
-3) Drop any salesforce database tables (salesforce_object_map, salesforce_field_map, etc.)
-
-4) Remove the entries in "system" database table for salesforce_api, sf_node, and sf_user
-e.g. DELETE FROM system WHERE name IN ('salesforce_api', 'sf_node', 'sf_user').
-
-5) Download or CVS checkout the latest version of salesforce module and re-enable.
+  2) PHP needs the SOAP web services kit installed, as per:
+  
+  http://php.net/soap
 
 
-QUICKSTART:
+INSTALLATION
 
-1) Visit admin/settings/salesforce and enter your login information in the
-   "Salesforce API Settings" fieldset and "WSDL directory". 
-   Save that configuration.
-   
-2) Upload your organization's generated WSDL file.
+  1) Download, uncompress and situate the module as per usual.
 
-3) Click on the "Fieldmaps" local task, and create a fieldmap between Drupal and
-   Salesforce objects.
+  2) Download the salesforce PHP toolkit version 13:
 
-3) If you left the "automatic" box checked, the next time a Drupal object is
-   created, it will create a corresponding object in Salesforce. Alternatively,
-   you can click the "salesforce" tab on any node which you've established a
-   mapping for and manually create a Salesforce object for it.
+     http://wiki.apexdevnet.com/index.php/PHP_Toolkit
+
+     Place the "soapclient" directory withinin the "toolkit" directory within
+     the Drupal module's "salesforce_api directory". You should end up with
+     something like:
+     sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
+
+  3) Enable the module on admin/build/modules along with at least one of the
+     object modules (salesfoce_node, salesfoce_user). Node is the usual place to
+     start.
+
+  4) Assign a WSDL directory and upload your organization's WSDL file
+     (admin/settings/salesforce and admin/settings/salesforce/wsdl).
+
+
+UPDATING / REINSTALLING / ENABLING / DISABLING
+
+  Since this module does not yet have a stable release, there is no upgrade path
+  neither between Drupal versions nor between dev versions. If you have
+  previously installed this module on your Drupal site and are upgrading, you
+  need to do the following to update the module.
+
+  0) ALWAYS backup your site's code and your database.
+
+  1) Disable salesforce_api, sf_node, and sf_user.
+
+  2) Remove the salesforce directory from the filesystem.
+
+  3) Drop any salesforce database tables (salesforce_object_map,
+     salesforce_field_map, etc.)
+
+  4) Remove the entries in "system" database table for salesforce_api, sf_node,
+     and sf_user e.g. DELETE FROM system WHERE name IN ('salesforce_api',
+     'sf_node', 'sf_user').
+
+  5) Download or CVS checkout the latest version of salesforce module and
+     re-enable.
+
+
+QUICKSTART
+
+  0) Enable the module.
+  
+  1) Visit admin/settings/salesforce and enter your login information in the
+     "Salesforce API Settings" fieldset and "WSDL directory".
+     Save that configuration.
+
+  2) Upload your organization's generated WSDL file.
+
+  3) Click on the "Fieldmaps" local task, and create a fieldmap between Drupal
+     and Salesforce objects.
+
+  3) If you left the "automatic" box checked, the next time a Drupal object is
+     created, it will create a corresponding object in Salesforce.
+     Alternatively, you can click the "salesforce" tab on any node which you've
+     established a mapping for and manually create a Salesforce object for it.
 
 
 WORKING WITH WSDL FILES
 
-If you do not upload a WSDL file, Salesforce module will use a default .wsdl
-file (salesforce_api/toolkit/soapclient/enterprise.wsdl.xml), which may not be
-compatible with your organization's SalesForce installation or the current 
-SalesForce API. It is highly recommended that you supply your own enterprise 
-wsdl file via the WSDL administration panes at admin/settings/salesforce and 
-admin/settings/salesforce/wsdl. These panes will walk you through creating a 
-directory outside your webroot and uploading the WSDL file to that directory.
+  If you do not upload a WSDL file, Salesforce module will use a default .wsdl
+  file (salesforce_api/toolkit/soapclient/enterprise.wsdl.xml), which may not be
+  compatible with your organization's SalesForce installation or the current
+  SalesForce API. It is highly recommended that you supply your own enterprise
+  wsdl file via the WSDL administration panes at admin/settings/salesforce and
+  admin/settings/salesforce/wsdl. These panes will walk you through creating a
+  directory outside your webroot and uploading the WSDL file to that directory.
 
-When switching between wsdl files, keep in mind that PHP's SoapClient is caching
-wsdl information. Though PHP's SOAP WSDL cache should be cleaned when you upload
-a new WSDL file, you can permenantly disable caching of wsdl information by 
-adding this line to your settings.php:
+  When switching between wsdl files, keep in mind that PHP's SoapClient is
+  caching wsdl information. Though PHP's SOAP WSDL cache should be cleaned when
+  you upload a new WSDL file, you can permenantly disable caching of wsdl
+  information by adding this line to your settings.php:
 
-ini_set('soap.wsdl_cache_enabled',  '0');
+  ini_set('soap.wsdl_cache_enabled',  '0');
 
-You can control the life time of your cache by adding this line to your
-settings.php:
+  You can control the life time of your cache by adding this line to your
+  settings.php:
 
-ini_set('soap.wsdl_cache_ttl',      '0');
+  ini_set('soap.wsdl_cache_ttl',      '0');
 
-For more information on SoapClient refer to http://php.net/manual/en/book.soap.php
+  For more information on SoapClient refer to
+  http://php.net/manual/en/book.soap.php
+
+
+TROUBLESHOOTING
+
+  Troubleshooting connection errors:
+    * Are you using the right WSDL? Generate a new one.
+    * Disable SOAP WSDL cache
+    * If you’re switching from sandbox to enterprise make sure that you switched
+      accounts when generating the wsdl
+    * Can you connect to the sandbox?
+    * Are you logging everything? Have you checked watchdog?
+    * Re-enter the token, user name and pass
+    * Try another user
+
+  In Salesforce:
+    * Regnerate the WSDL
+    * If you’re switching from sandbox to enterprise, make sure you're in the
+      right account
+    * Make sure the ip of server is not blocked
+    * Go to: setup > users. Check login attempts of the user you are trying to
+      connect with
+    * Reset the credentials associated with the user
+
+  In the Salesforce API module:
+    * Replace WSDL file with the one you want to use
+      (admin/settings/salesforce/wsdl)
+
+  Install Devel:
+    * excecute php:
+      $somevariable = salesforce_api_connect();
+      dpm($somevariable);
+
+  In the file salesforce.class.inc:
+    * Find the line$this->client->createConnection($wsdl);
+    * Before that line put dpm($wsdl);
+    * Make sure that your WSDL file is named "enterprise.wsdl.xml"
+
+  PHPinfo():
+    * Check that SOAP is enabled
+    * Check that soap.wsdl_cache_enabled is FALSE
+    * Check that openssl is enabled.
+
+  If you have shell access:
+    * curl https://login.salesforce.com to make sure your machine can connect.
 
 
 REPORTING BUGS
 
-Bug reports should adhere to Drupal standards.
-Please review the issue queue at http://drupal.org/project/issues/salesforce before
-creating a new issue.
+  Bug reports should adhere to Drupal standards.
 
-Before creating a new issue, please:
-
-* Use latest code from CVS on a *new* Drupal install
-* Include the PHP error message
-* Turn on "log all salesforce activity" and include any relevant watchdog errors
-* Install a generated WSDL file and Clear your WSDL cache 
-  (see WORKING WITH WSDL FILES)
-* Confirm php's SOAP support
-* Confirm whether you were able to successfully:
-  - Connect to Salesforce
-  - Save credentials
-  - Login to https://login.salesforce.com/ with those credentials
-  - Load the test/demo page
-  - Create a fieldmap
-* Include system information, including operating system, php version, apache version
+  Before creating a new issue, please:
+    * Review existing issues at http://drupal.org/project/issues/salesforce
+    * Use latest code from CVS on a *new* Drupal install
+    * Include the PHP error message
+    * Turn on "log all salesforce activity" and include any relevant watchdog
+      errors
+    * Install a generated WSDL file and Clear your WSDL cache
+      (see WORKING WITH WSDL FILES)
+    * Confirm php's SOAP support
+    * Confirm whether you were able to successfully:
+      - Connect to Salesforce
+      - Save credentials
+      - Login to https://login.salesforce.com/ with those credentials
+      - Load the test/demo page
+      - Create a fieldmap
+    * Go through the Troubleshooting steps above and include any relevant info
+    * Include all the information from the list above, and system information,
+      including operating system, php version, apache version
