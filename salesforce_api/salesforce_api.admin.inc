@@ -157,6 +157,7 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
     $form_state['redirect'] = array(
       SALESFORCE_PATH_UPDATE_WSDL,
       'destination=' . SALESFORCE_PATH_ADMIN);
+    ini_set('soap.wsdl_cache_enabled',  '0');
   }
 }
 
@@ -165,22 +166,32 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
  */
 function salesforce_api_fieldmap_admin() {
   // Define the header for the admin table.
-  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), t('Automatic'), t('Description'), array('data' => t('Operations'), 'colspan' => 3));
+  $header = array(t('Index'), t('Drupal object'), t('Salesforce object'), t('Automatic'), t('Description'), array('data' => t('Operations'), 'colspan' => 4));
   $rows = array();
 
   // Loop through all the indexed field maps.
   $result = db_query("SELECT fieldmap, drupal, salesforce, description, automatic FROM {salesforce_field_map}");
   while ($map = db_fetch_array($result)) {
     // Add the row to the table with the basic operations.
-    $rows[] = array(
+    $base = SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'];
+    $operations = array(
+      l(t('edit'), $base . '/edit'),
+      l(t('clone'), $base . '/clone'),
+      l(t('delete'), $base . '/delete')); 
+
+    if (module_exists('ctools')) {
+      $operations[] = l(t('export'), $base . '/export');
+    }
+
+    $row = array(
       $map['fieldmap'],
       salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
       salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
       $map['automatic'] ? t('Yes') : t('No'),
-      array('data' => check_plain($map['description']), 'class' => 'description'),
-      l(t('edit'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/edit'),
-      l(t('delete'), SALESFORCE_PATH_FIELDMAPS .'/'. $map['fieldmap'] .'/delete'),
-    );
+      array('data' => check_plain($map['description']), 
+            'class' => 'description'));
+    $row = array_merge($row, $operations);
+    $rows[] = $row;
   }
 
   // Add a message if no objects have been mapped.
@@ -275,6 +286,48 @@ function salesforce_api_fieldmap_create($values) {
 }
 
 /**
+ * Displays the form for cloning a fieldmap
+ *
+ */
+function salesforce_api_fieldmap_clone_form(&$form_state, $fieldmap) {
+  // Load the fieldmap from the database.
+  $map = salesforce_api_fieldmap_load($fieldmap);
+  // Return to the admin page if the fieldmap did not exist.
+  if (empty($map)) {
+    drupal_set_message(t('That fieldmap does not exist.'), 'error');
+    drupal_goto(SALESFORCE_PATH_FIELDMAPS);
+  }
+  $form = array();
+
+  // Add the fieldmap to the form array.
+  $form['fieldmap_index'] = array(
+    '#type' => 'value',
+    '#value' => $fieldmap,
+  );
+
+  // Build the description text for this fieldmap.
+  $desc = t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects.', array('@index' => $map['fieldmap'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
+
+  return confirm_form($form, t('Are you sure you want to clone this fieldmap?'), SALESFORCE_PATH_FIELDMAPS, $desc, t('Clone'));
+
+}
+
+function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
+  // Clone the specified fieldmap.
+  $map = salesforce_api_fieldmap_clone($form_state['values']['fieldmap_index']);
+
+  if ($map) {
+    // Display a message and return to the admin screen.
+    drupal_set_message(t('Fieldmap cloned successfully.'));
+    $form_state['redirect'] = 
+      SALESFORCE_PATH_FIELDMAPS . '/' . $map['fieldmap'] . '/edit';
+  }
+  else {
+    drupal_set_message(t('Failed to clone fieldmap.'), 'error');
+  }
+}
+
+/**
  * Displays the confirm form for deleting a fieldmap.
  */
 function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
@@ -296,12 +349,7 @@ function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
   );
 
   // Build the description text for this fieldmap.
-  if ($map['action'] == 'import') {
-    $desc = t('Fieldmap @index maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('@index' => $map['fieldmap'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
-  }
-  else {
-    $desc = t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('@index' => $map['fieldmap'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
-  }
+  $desc = t('Fieldmap @index maps Drupal %drupal objects to Salesforce %salesforce objects.', array('@index' => $map['fieldmap'], '%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
 
   return confirm_form($form, t('Are you sure you want to delete this fieldmap?'), SALESFORCE_PATH_FIELDMAPS, $desc, t('Delete'));
 }
@@ -362,7 +410,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Fail with an error message if either the source or target object
   // definitions were not found.
   if (empty($source) || empty($target)) {
-    drupal_set_message(t('This fieldmap cannot be edited, because an object definition could not be found.'), 'error');
+    drupal_set_message(t('This fieldmap cannot be edited, because an object definition could not be found. Please make sure you have required any modules with which this fieldmap was built.'), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
 
@@ -381,8 +429,8 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   );
 
   $form['fields']['header'] = array(
-    array('#value' => t('Target: @label (@type)', array('@label' => $target['label'], '@type' => $map['action'] == 'import' ? t('Drupal') : t('Salesforce')))),
-    array('#value' => t('Source: @label (@type)', array('@label' => $source['label'], '@type' => $map['action'] == 'import' ? t('Salesforce') : t('Drupal')))),
+    array('#value' => t('Target: @label', array('@label' => $target['label']))),
+    array('#value' => t('Source: @label', array('@label' => $source['label']))),
   );
 
   // Loop through each of the target fields.
@@ -468,12 +516,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   $map['fields'] = array();
 
   // Get the object definition for the target object.
-  if ($map['action'] == 'import') {
-    $object = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  }
-  else {
-    $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-  }
+  $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
 
   // Loop through all the fields on the object.
   foreach (array_keys($object['fields']) as $field) {

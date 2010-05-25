@@ -74,12 +74,34 @@ function salesforce_api_schema() {
   );
   $schema['salesforce_field_map'] = array(
     'description' => t('Drupal to Salesforce field mappings'),
+    'export' => array(
+      'key' => 'fieldmap',
+      'identifier' => 'salesforce_field_map',
+      'default hook' => 'default_salesforce_field_map',
+      'export callback' => 'salesforce_api_export_salesforce_field_map',
+      'api' => array(
+        'owner' => 'salesforce_api',
+        'api' => 'default_salesforce_api_field_maps',
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
+    ),
     'fields' => array(
+      // "name" field is only in schema for ctools exportable support and not in 
+      // use via any UI at the moment. Implementing modules can assign
+      // meaningful names if they wish to do so, but it is not required for our
+      // purposes.
+      'name' => array(
+        'description' => 'Unique ID for this object. Used to identify it programatically (initially implemented for ctools support only).',
+        'type' => 'varchar',
+        'length' => '255',
+        ),
       'fieldmap' => array(
         'description' => 'The primary identifier for a fieldmap.',
         'type' => 'serial',
         'unsigned' => TRUE,
-        'not null' => TRUE
+        'not null' => TRUE,
+        'no export' => TRUE,
       ),
       'automatic' => array(
         'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
@@ -116,7 +138,8 @@ function salesforce_api_schema() {
         'not null' => TRUE,
       ),
     ),
-    'primary key' => array('fieldmap'),
+    'primary key' => array('fid'),
+    'unique keys' => array('name' => array('name')),
   );
 
   return $schema;
@@ -165,3 +188,4 @@ function salesforce_api_requirements($phase) {
     return $req;
   }
 }
+

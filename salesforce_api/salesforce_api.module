@@ -69,6 +69,7 @@ function salesforce_api_help($section) {
  * Implementation of hook_menu().
  */
 function salesforce_api_menu() {
+  $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));
   $items[SALESFORCE_PATH_ADMIN] = array(
     'title' => 'Salesforce',
     'description' => 'Administer settings related to your Salesforce integration.',
@@ -111,35 +112,41 @@ function salesforce_api_menu() {
     'page arguments' => array('salesforce_api_fieldmap_add_form'),
     'access arguments' => array('administer salesforce'),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
+    'weight' => 5,
     'file' => 'salesforce_api.admin.inc',
   );
   $items[SALESFORCE_PATH_FIELDMAPS .'/%/edit'] = array(
-    'title' => 'Edit fieldmap',
+    'title' => 'Edit',
     'description' => 'Edit an existing fieldmap.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_api_fieldmap_edit_form', 4),
-    'access arguments' => array('administer salesforce'),
-    'type' => MENU_CALLBACK,
+    'page arguments' => array('salesforce_api_fieldmap_edit_form', $map_id_arg),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', $map_id_arg),
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
+    'weight' => 10,
   );
   $items[SALESFORCE_PATH_FIELDMAPS .'/%/clone'] = array(
-    'title' => 'Clone a fieldmap',
+    'title' => 'Clone',
     'description' => 'Clone an existing fieldmap.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_api_fieldmap_clone_form', 4),
-    'access arguments' => array('administer salesforce'),
-    'type' => MENU_CALLBACK,
+    'page arguments' => array('salesforce_api_fieldmap_clone_form', $map_id_arg),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', $map_id_arg),
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
+    'weight' => 15,
   );
   $items[SALESFORCE_PATH_FIELDMAPS .'/%/delete'] = array(
-    'title' => 'Delete fieldmap',
+    'title' => 'Delete',
     'description' => 'Delete an existing fieldmap.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_api_fieldmap_delete_form', 4),
-    'access arguments' => array('administer salesforce'),
-    'type' => MENU_CALLBACK,
+    'page arguments' => array('salesforce_api_fieldmap_delete_form', $map_id_arg),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', $map_id_arg),
+    'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
+    'weight' => 20,
   );
   $items[SALESFORCE_PATH_OBJECT] = array(
     'title' => 'Object setup',
@@ -167,6 +174,31 @@ function salesforce_api_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
+  
+  if (module_exists('ctools')) {
+    $items[SALESFORCE_PATH_FIELDMAPS .'/%/export'] = array(
+      'title' => 'Export',
+      'description' => 'Export a fieldmap.',
+      'page callback' => 'salesforce_api_export_salesforce_field_map',
+      'page arguments' => array($map_id_arg),
+      'access callback' => '_salesforce_fieldmap_access',
+      'access arguments' => array('administer salesforce', $map_id_arg),
+      'type' => MENU_LOCAL_TASK,
+      // 'file' => 'salesforce_api.admin.inc',
+      'weight' => 25,
+    );
+    $items[SALESFORCE_PATH_FIELDMAPS .'/import'] = array(
+      'title' => 'Import',
+      'description' => 'Import a fieldmap.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('salesforce_api_import_salesforce_field_map'),
+      'access arguments' => array('administer salesforce'),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'salesforce_api.admin.inc',
+      'weight' => 30,
+    );
+  }
+  
   return $items;
 }
 
@@ -175,6 +207,19 @@ function salesforce_api_menu() {
  */
 function salesforce_api_perm() {
   return array('administer salesforce');
+}
+
+/**
+ * Access callback 
+ *
+ */
+function _salesforce_fieldmap_access($perm, $map = null) {
+  if (empty($map) || !is_numeric($map)) {
+    return FALSE;
+  }
+  else {
+    return user_access($perm);
+  }
 }
 
 /**
@@ -382,6 +427,17 @@ function salesforce_api_fieldmap_save(&$map) {
   if (is_array($map['fields'])) {
     $map['fields'] = serialize($map['fields']);
   }
+  // "name" field is only in schema for ctools exportable support and not in use
+  // via any UI at the moment. Implementing modules can assign meaningful names
+  // if they wish to do so, but it is not required for our purposes.
+  if (empty($map['name'])) {
+    $map['name'] = md5(microtime());
+  }
+  else {
+    if (db_result(db_query('SELECT * FROM {salesforce_field_map} WHERE name = "%s"', $map['name']))) {
+      return FALSE;
+    }
+  }
   drupal_write_record('salesforce_field_map', $map, $primary_keys);
 }
 
@@ -479,6 +535,7 @@ function salesforce_api_fieldmap_clone($fieldmap) {
   // Save the old fieldmap id, save a new one, and return the new one.
   unset($map['fieldmap']);
   salesforce_api_fieldmap_save($map);
+
   return !empty($map['fieldmap']) ? $map : FALSE;
 }
 
@@ -957,4 +1014,117 @@ function salesforce_api_describeSObjects($types) {
   $objects = $tmp;
   return $objects;
 }
+
+
+/**
+ * @addtogroup exportables
+ * @{
+ */
+
+function salesforce_api_salesforce_field_map_load ($name) {
+  ctools_include('export');
+  $result = ctools_export_load_object('salesforce_field_map', 'names', array($name));
+  if (isset($result[$name])) {
+    return $result[$name];
+  }
+}
+
+function salesforce_api_salesforce_field_map_save (&$map) {
+  $mymap = get_object_vars($map);
+  salesforce_api_fieldmap_save($mymap);
+  $map = (object)$mymap;
+}
+
+function salesforce_api_export_salesforce_field_map ($fieldmap) {
+  $map = salesforce_api_salesforce_field_map_load($fieldmap);
+  drupal_set_title('Export Fieldmap');
+  $code = salesforce_api_salesforce_field_map_export($map);
+  return drupal_get_form('ctools_export_form', $code, 'Export Fieldmap');
+}
+
+function salesforce_api_salesforce_field_map_export ($map, $indent = '') {
+  ctools_include('export');
+  $output = ctools_export_object('salesforce_field_map', $map, $indent);
+  return $output;
+}
+
+function salesforce_api_import_salesforce_field_map(&$form_state) {
+  $form['name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Fieldmap'),
+    '#description' => t('Enter the name of the new fieldmap. This is optional and is not necessary if you do not wish to rename the object.'),
+  );
+
+  $form['object'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Paste exported code here'),
+    '#rows' => 15,
+  );
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Import'));
+  return $form;
+}
+
+/**
+ * Make sure that an import actually provides a handler.
+ */
+function salesforce_api_import_salesforce_field_map_validate($form, &$form_state) {
+  // First, run the PHP and turn the input code into an object.
+  ob_start();
+  eval($form_state['values']['object']);
+  ob_end_clean();
+
+  // The object should appear as $salesforce_fieldmap. 
+  // This was the "identifier" set in the export section of the schema.
+  if (empty($salesforce_field_map)) {
+    $errors = ob_get_contents();
+    if (empty($errors)) {
+      $errors = t('No salesforce_field_map found.');
+    }
+
+    form_error($form['object'], t('Unable to get a fieldmap from the import. Errors reported: @errors', array('@errors' => $errors)));
+  }
+
+  if (empty($salesforce_field_map->drupal)
+  || empty($salesforce_field_map->salesforce)) {
+    form_error($form['object'], t('This fieldmap cannot be imported; the object definition is invalid.'));
+    return;
+  }
+  
+  $source = salesforce_api_fieldmap_objects_load('drupal', $salesforce_field_map->drupal);
+  if (empty($source)) {
+    form_error($form['object'], t('This fieldmap cannot be imported, because the module which supports the Drupal entity "%entity" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%entity' => $salesforce_field_map->drupal)));
+  }
+  
+  // Try to enable the SF object if it was not found.
+  $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
+  if (!in_array($salesforce_field_map->salesforce, $sf_objects)) {
+    $sf_objects[] = $salesforce_field_map->salesforce;
+    variable_set('salesforce_api_enabled_objects', $sf_objects);
+    salesforce_api_cache_build();
+  }
+  $target = salesforce_api_fieldmap_objects_load('salesforce', $salesforce_field_map->salesforce);
+  if (empty($target)) {
+    form_error($form['object'], t('This fieldmap cannot be imported because salesforce_api cannot find a definition for the SalesForce object "%sfobj". Please verify your SalesForce connection and settings.', array('%sfobj' => $salesforce_field_map->salesforce)));
+  }
+
+  $form_state['obj'] = $salesforce_field_map;
+}
+
+/**
+ * Save the imported object.
+ */
+function salesforce_api_import_salesforce_field_map_submit($form, &$form_state) {
+  $salesforce_field_map = $form_state['obj'];
+
+  if (!empty($form_state['values']['name'])) {
+    $salesforce_field_map->name = $form_state['values']['name'];
+  }
+
+  salesforce_api_salesforce_field_map_save($salesforce_field_map);
+  $form_state['redirect'] =  SALESFORCE_PATH_FIELDMAPS . '/' . $salesforce_field_map->fieldmap . '/edit';
+}
+
+/**
+ * @} End of "addtogroup exportables".
+ */
 
