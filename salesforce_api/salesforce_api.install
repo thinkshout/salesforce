@@ -138,6 +138,10 @@ function salesforce_api_requirements($phase) {
   $req = array();
   switch ($phase) {
     case 'install':
+      if (!file_exists(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php')) {
+        $description = t('Unable to install salesforce module. SalesForce PHP Toolkit is not installed or not available.');
+        $severity = REQUIREMENT_ERROR;
+      }
       break;
 
     case 'runtime':
@@ -154,16 +158,16 @@ function salesforce_api_requirements($phase) {
         $description = '';
         $severity = REQUIREMENT_OK;
       }
-      $req[] = array(
-        'title' => t('Salesforce Configuration'),
-        'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN),
-        'description' => $description,
-        'severity' => $severity
-      );
       break;
   }
 
-  if (!empty($req)) {
+  if (!empty($description)) {
+    $req[] = array(
+      'title' => t('Salesforce Configuration'),
+      'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN),
+      'description' => $description,
+      'severity' => $severity
+    );
     return $req;
   }
 }
