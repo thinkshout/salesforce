@@ -54,6 +54,16 @@ if (!function_exists('is_sfid')) {
   }
 }
 
+/**
+ * Implements hook_help().
+ */
+function salesforce_api_help($section) {
+  switch ($section) {
+    case 'admin/help#salesforce_api':
+      // Return a line-break version of the module README
+      return filter_filter('process', 1, NULL, file_get_contents( drupal_get_path('module', 'salesforce_api') . "/../README.txt"));
+  }
+}
 
 /**
  * Implementation of hook_menu().
