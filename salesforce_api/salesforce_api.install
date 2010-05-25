@@ -103,13 +103,6 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'action' => array(
-        'description' => 'The action this map is for (import vs export)',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
       'description' => array(
         'description' => 'Name or brief description of this fieldmap',
         'type' => 'varchar',
