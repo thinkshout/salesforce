@@ -133,7 +133,7 @@ TROUBLESHOOTING
 
   Troubleshooting connection errors:
     * Are you using the right WSDL? Generate a new one.
-    * Disable SOAP WSDL cache
+    * Disable SOAP WSDL cache.
     * If you’re switching from sandbox to enterprise make sure that you switched
       accounts when generating the wsdl
     * Can you connect to the sandbox?
