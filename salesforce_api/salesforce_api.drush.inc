@@ -12,9 +12,9 @@
  */
 function salesforce_api_drush_help($section) {
   switch ($section) {
-    case 'drush:soql show tables':
+    case 'drush:soql-show-tables':
       return dt("List tables in salesforce.");
-    case 'drush:soql describe':
+    case 'drush:soql-describe':
       $output =  dt("Examine table metadata in salesforce.") ."\n\n";
       $output .= dt("Arguments:\n  Salesforce Object    The path of the salesforce object to examine.") ."\n\n";
       $output .= dt("Examples:\n  drush soql describe content.fields    Display the fields on the content table.");
@@ -31,17 +31,17 @@ function salesforce_api_drush_help($section) {
  * Implementation of hook_drush_command().
  */
 function salesforce_api_drush_command() {
-  $items['soql show tables'] = array(
-    'callback' => 'salesforce_api_drush_show_tables',
+  $items['soql-show-tables'] = array(
     'description' => 'List tables in salesforce.',
+    'aliases' => array('sf-show'),
   );
-  $items['soql describe'] = array(
-    'callback' => 'salesforce_api_drush_describe',
+  $items['soql-describe'] = array(
     'description' => 'Describe an individual table in salesforce.',
+    'aliases' => array('sf-desc'),
   );
   $items['soql'] = array(
-    'callback' => 'salesforce_api_drush_soql',
     'description' => 'Execute a SOQL query.',
+    'aliases' => array('sf-q'),
   );
   return $items;
 }
@@ -49,7 +49,7 @@ function salesforce_api_drush_command() {
 /**
  * Duplicates the functionality of mysql's SHOW TABLES
  */
-function salesforce_api_drush_show_tables() {
+function drush_salesforce_api_soql_show_tables() {
   _salesforce_api_drush_check_soap();
   if ($sf = salesforce_api_connect()) {
     try {
@@ -59,9 +59,10 @@ function salesforce_api_drush_show_tables() {
       drush_print($e->faultstring);
       return;
     }
-    $rows = array(array(dt('Tables')));
+    $rows = array(array(dt('Label'), dt('Name')));
+    $rows[] = array('-------', '-------');
     foreach ($response->types as $type) {
-      $rows[] = array($type);
+      $rows[] = array($type->label, $type->name);
     }
     drush_print_table($rows, TRUE);
     drush_print("\n" . dt('!count rows in set.', array('!count' => (count($rows)-1))));
@@ -78,8 +79,8 @@ function salesforce_api_drush_show_tables() {
  * For example to see fields on contact: 'contact.fields'
  * To examine the first field on a contact 'contact.fields.1'
  */
-function salesforce_api_drush_describe() {
-    _salesforce_api_drush_check_soap();
+function drush_salesforce_api_soql_describe() {
+  _salesforce_api_drush_check_soap();
   $tables = func_get_args();
   if ($sf = salesforce_api_connect()) {
     foreach ($tables as $t) {
@@ -179,7 +180,7 @@ function _salesforce_api_drush_get_fields($response, &$rows) {
 /**
  * Execute a SOQL query.
  */
-function salesforce_api_drush_soql() {
+function drush_salesforce_api_soql() {
   _salesforce_api_drush_check_soap();
   $args = func_get_args();
   $command = implode(' ', $args);
