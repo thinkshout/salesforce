@@ -17,10 +17,10 @@ function salesforce_api_drush_help($section) {
     case 'drush:soql-describe':
       $output =  dt("Examine table metadata in salesforce.") ."\n\n";
       $output .= dt("Arguments:\n  Salesforce Object    The path of the salesforce object to examine.") ."\n\n";
-      $output .= dt("Examples:\n  drush soql describe content.fields    Display the fields on the content table.");
+      $output .= dt("Examples:\n  drush soql describe Contact.fields    Display the fields on the Contact table.");
       return $output;
     case 'drush:soql':
-      $output = dt("Execute a SOQL query. Note that you may need to escape quotes in your query: select name from foo where type=\'bar\'") ."\n\n";
+      $output = dt("Execute a SOQL query. Note that you may need to escape quotes in your query: SELECT Email FROM Contact WHERE Email != \\'\\'") ."\n\n";
       $output .= dt("Arguments:\n  SOQL Query    A salesforce soql query to execute against salesforce.") ."\n\n";
       $output .= dt("Examples:\n  drush soql select Id, Name from Contact    Query the Contact table.");
       return $output;
@@ -60,7 +60,7 @@ function drush_salesforce_api_soql_show_tables() {
       return;
     }
     $rows = array(array(dt('Label'), dt('Name')));
-    $rows[] = array('-------', '-------');
+    $rows[] = array('------------', '------------');
     foreach ($response->types as $type) {
       $rows[] = array($type->label, $type->name);
     }
