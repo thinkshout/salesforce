@@ -120,24 +120,24 @@ class DrupalSalesforce {
 
   /**
    * Retrieves an object from Salesforce with standard fields and any data in
-   *   fields defined in the fieldmap object.
+   *   fields defined in the name object.
    *
    * @param $ids
    *   An array of Salesforce IDs for the objects to retrieve.
-   * @param $fieldmap
-   *   The fieldmap through which to filter the data.
+   * @param $name
+   *   The name of the fieldmap that contains the fields to retrieve.
    * @return
    *   The single matching Salesforce objects or an array of all the objects
    *     if more than one are returned.
    */
-  function retrieve($ids, $fieldmap) {
+  function retrieve($ids, $name) {
     // Load the fieldmap so we can get the object name.
-    $map = salesforce_api_fieldmap_load($fieldmap);
+    $map = salesforce_api_fieldmap_load($name);
 
-    $object = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+    $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
     $fields = array_keys($object['fields']);
 
-    return $this->client->retrieve(implode(', ', $fields), $map['salesforce'], $ids);
+    return $this->client->retrieve(implode(', ', $fields), $map->salesforce, $ids);
   }
 }

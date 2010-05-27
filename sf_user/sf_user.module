@@ -63,7 +63,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       break;
 
     case 'delete':
-      db_query('DELETE FROM {salesforce_object_map} WHERE drupal_type = "user" AND oid = %d', $account->uid);
+      salesforce_api_delete_object_map('user', $account->uid);
       break;
 
     case 'insert':
@@ -72,20 +72,20 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       if (isset($account->sf_user_skip_export) || isset($edit['sf_user_skip_export'])) {
         break;
       }
-      $salesforce = array('fieldmap' => null, 'sfid' => null);
+      $salesforce = (object)array('name' => null, 'sfid' => null);
       if ($account->uid) {
         $salesforce = salesforce_api_id_load('user', $account->uid);
       }
       
-      if (empty($salesforce['fieldmap'])) {
+      if (empty($salesforce->name)) {
         // Detect whether or not this should be an auto-update for this user
-        $result = db_query("SELECT fieldmap FROM {salesforce_field_map} WHERE drupal = 'user' AND automatic = 1");
+        $result = db_query("SELECT name FROM {salesforce_field_map} WHERE drupal = 'user' AND automatic = 1");
         $map = db_fetch_object($result);
         if (!$map) {
           break;
         }
         // Use the first fieldmap.
-        $salesforce['fieldmap'] = $map->fieldmap;
+        $salesforce->name = $map->name;
 
         // Check if there is more than one fieldmap in the result.
         if (user_access('administer salesforce') and db_fetch_object($result)) {
@@ -93,7 +93,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         }
       }
       try {
-        sf_user_export($account->uid, $salesforce['fieldmap'], $salesforce['sfid']);
+        sf_user_export($account->uid, $salesforce->name, $salesforce->sfid);
       } catch (Exception $e) {
         DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
       }
@@ -158,7 +158,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
   );
 
   // Display an export button if the user hasn't been exported before.
-  if (!$account->salesforce['sfid']) {
+  if (!$account->salesforce->sfid) {
     $form['export'] = array(
       '#type' => 'fieldset',
       '#title' => t('Export user to Salesforce'),
@@ -184,11 +184,11 @@ function sf_user_salesforce_form(&$form_state, $account) {
     // Otherwise add synchronization information.
     $form['sfid'] = array(
       '#type' => 'value',
-      '#value' => $account->salesforce['sfid'],
+      '#value' => $account->salesforce->sfid,
     );
-    $form['fieldmap'] = array(
+    $form['name'] = array(
       '#type' => 'value',
-      '#value' => $account->salesforce['fieldmap'],
+      '#value' => $account->salesforce->name,
     );
 
     // Retrieve the object from Salesforce.
@@ -198,17 +198,17 @@ function sf_user_salesforce_form(&$form_state, $account) {
       return array();
     }
 
-    $sf_data = $sf->retrieve(array($account->salesforce['sfid']), $account->salesforce['fieldmap']);
+    $sf_data = $sf->retrieve(array($account->salesforce->sfid), $account->salesforce->name);
 
     // Load the fieldmap data.
-    $map = salesforce_api_fieldmap_load($account->salesforce['fieldmap']);
-    $sf_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-    $export_data = salesforce_api_fieldmap_export_create($account->salesforce['fieldmap'], $account);
+    $map = salesforce_api_fieldmap_load($account->salesforce->name);
+    $sf_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
+    $export_data = salesforce_api_fieldmap_export_create($account->salesforce->name, $account);
 
-    $header = array(t('Field name'), t('Drupal user value'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
+    $header = array(t('Field name'), t('Drupal user value'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map->salesforce))));
     $rows = array();
 
-    foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+    foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
       $rows[] = array(
         $sf_object_definition['fields'][$sf_fieldname]['label'],
         $export_data->$sf_fieldname,
@@ -219,7 +219,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
     $form['mapped'] = array(
       '#type' => 'fieldset',
       '#title' => t('Mapped field values'),
-      '#description' => t('These fields have been mapped through <a href="!url">fieldmap @index</a>.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/'. $account->salesforce['fieldmap'] .'/edit'), '@index' => $account->salesforce['fieldmap'])),
+      '#description' => t('<a href="!url">Edit this fieldmap</a>.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/'. $account->salesforce->name .'/edit'))),
     );
     $form['mapped']['fieldmap_values'] = array(
       '#value' => theme('table', $header, $rows),
@@ -237,11 +237,11 @@ function sf_user_salesforce_form(&$form_state, $account) {
     );
 
     // Create a table for the unmapped fields.
-    $header = array(t('Field name'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']))));
+    $header = array(t('Field name'), t('Salesforce @type value', array('@type' => salesforce_api_fieldmap_object_label('salesforce', $map->salesforce))));
     $rows = array();
 
     foreach ((array) $sf_data as $key => $value) {
-      if (!isset($map['fields'][$key]) && isset($sf_field_definition['fields'][$key])) {
+      if (!isset($map->fields[$key]) && isset($sf_field_definition['fields'][$key])) {
         $rows[] = array(
           $sf_field_definition['fields'][$key]['label'],
           $value,
@@ -298,7 +298,8 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
   switch ($form_state['values']['op']) {
     // Export the user to Salesforce.
     case t('Export user'):
-      if (sf_user_export($form_state['values']['uid'], $form_state['values']['fieldmap'])) {
+    case t('Export changes to Salesforce'):
+      if (sf_user_export($form_state['values']['uid'], $form_state['values']['name'])) {
         drupal_set_message(t('User successfully exported to Salesforce.'));
       }
       else {
@@ -306,19 +307,9 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
       }
       break;
 
-    // Export changes to Salesforce.
-    case t('Export changes to Salesforce'):
-      if (sf_user_export($form_state['values']['uid'], $form_state['values']['fieldmap'], $form_state['values']['sfid'])) {
-        drupal_set_message(t('Changes successfully exported to Salesforce.'));
-      }
-      else {
-        drupal_set_message(t('An error occurred while exporting the changes to Salesforce.  Check the watchdog for more information.'), 'error');
-      }
-      break;
-
     // Import changes from Salesforce.
     case t('Import changes from Salesforce'):
-      if (sf_user_import($form_state['values']['sfid'], $form_state['values']['fieldmap'], $form_state['values']['uid'])) {
+      if (sf_user_import($form_state['values']['sfid'], $form_state['values']['name'], $form_state['values']['uid'])) {
         drupal_set_message(t('The user has been updated with values from Salesforce.'));
       }
       else {
@@ -335,15 +326,15 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
  *
  * @param $uid
  *   The uid of the user to export.
- * @param $fieldmap
- *   The index of the fieldmap to use to create the export object.
+ * @param $name
+ *   The name of the fieldmap to use to create the export object.
  * @param $sfid
  *   The Salesforce ID of the object you want to update.  If left NULL, a new
  *     object will be created at Salesforce.
  * @return
  *   TRUE or FALSE indicating the success of the operation.
  */
-function sf_user_export($uid, $fieldmap, $sfid = NULL) {
+function sf_user_export($uid, $name, $sfid = NULL) {
   // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
@@ -355,14 +346,14 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   $account = user_load(array('uid' => $uid));
 
   // Create an object for export based on the specified fieldmap.
-  $object = salesforce_api_fieldmap_export_create($fieldmap, $account);
+  $object = salesforce_api_fieldmap_export_create($name, $account);
 
   // Load the fieldmap so we can get the object name.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_fieldmap_load($name);
   
   if (empty($sfid)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
-    $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $fieldmap);
+    $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $name);
     if (!empty($matches)) {
       $object->Id = reset($matches);
     }
@@ -378,16 +369,16 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
   // $response = $sf->client->upsert('Id', array($object));
 
   if (empty($object->Id)) {
-    $response = $sf->client->create(array($object), $map['salesforce']);
+    $response = $sf->client->create(array($object), $map->salesforce);
   } else {
-    $response = $sf->client->update(array($object), $map['salesforce']);
+    $response = $sf->client->update(array($object), $map->salesforce);
   }
 
   // If the export was successful...
   if ($response->success) {
-    if (empty($account->salesforce['sfid'])) {
+    if (empty($account->salesforce->sfid)) {
       // Store the Salesforce ID for the user and return TRUE.
-      salesforce_api_id_save('user', $uid, $response->id, $fieldmap);
+      salesforce_api_id_save('user', $uid, $response->id, $name);
     }
 
     return TRUE;
@@ -411,14 +402,14 @@ function sf_user_export($uid, $fieldmap, $sfid = NULL) {
  *
  * @param $sf_data
  *   The Salesforce Object OR The Salesforce ID of the object to be imported.
- * @param $fieldmap
- *   The index of the fieldmap to use to create the export object.
+ * @param $name
+ *   The name of the fieldmap to use to create the export object.
  * @param $uid
  *   The uid of the user to update.  If left NULL, a new user will be created.
  * @return
  *   The uid of the imported user or FALSE on failure.
  */
-function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
+function sf_user_import($sf_data, $name, $uid = NULL) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
@@ -427,7 +418,7 @@ function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
   }
 
   if (is_sfid($sf_data)) {
-    $sf_data = $sf->retrieve(array($sf_data), $fieldmap);
+    $sf_data = $sf->retrieve(array($sf_data), $name);
   }
   elseif (is_array($sf_data)) {
     $sf_data = (object) $sf_data;
@@ -438,17 +429,17 @@ function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
   }
   $sfid = $sf_data->Id;
   // Load the fieldmap data.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_fieldmap_load($name);
 
   // Load the object definitions.
-  $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
-  $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+  $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
+  $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
   // If a user was specified, attempt to load it.
   $account = user_load(array('uid' => $uid));
   if (empty($uid) || empty($account)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
-    $matches = salesforce_api_search_for_duplicates('import', 'user', $sf_data, $fieldmap);
+    $matches = salesforce_api_search_for_duplicates('import', 'user', $sf_data, $name);
     if (!empty($matches)) {
       $uid = reset($matches);
       if (!empty($uid)) {
@@ -460,7 +451,7 @@ function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
   // If the user exists, simply update the existing user.
   if ($account->uid) {
     // Loop through the fields on the fieldmap.
-    foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+    foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
       // If a handler is specified for importing a value from Salesforce.
       if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
         $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
@@ -486,12 +477,29 @@ function sf_user_import($sf_data, $fieldmap, $uid = NULL) {
     $account->sf_user_skip_export = TRUE;
     $changes['sf_user_skip_export'] = TRUE;
     $account = user_save($account, $changes);
-    if ($map['automatic'] && !empty($account->uid)) {
+    if ($map->automatic && !empty($account->uid)) {
       // Store the Salesforce ID for the node and return TRUE.
-      salesforce_api_id_save('user', $account->uid, $sfid, $fieldmap);
+      salesforce_api_id_save('user', $account->uid, $sfid, $name);
     }
     unset($account->sf_user_skip_export);
   }
 
   return $account->uid;
+}
+
+/**
+ * Implements hook_default_salesforce_field_maps
+ *
+ */
+function sf_user_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
+  return array('salesforce_api_default_user_contact_field_map' => 
+  (object) array(
+    'disabled' => FALSE,
+    'name' => 'salesforce_api_default_user_contact_field_map',
+    'automatic' => FALSE,
+    'drupal' => 'user',
+    'salesforce' => 'Contact',
+    'fields' => array('LastName' => 'name', 'Email' => 'mail'),
+    'description' => 'This is a simple example fieldmap to get you started using the SalesForce API.',
+  ));
 }

@@ -91,7 +91,7 @@ function hook_fieldmap_objects_alter(&$objects) {
  *  'import': an array of matching nid's, uid's, etc.
  *  'export': an array of matching Salesforce Id's
  */
-function hook_sf_find_match($direction, $fieldmap_type, $object, $fieldmap_id) {
+function hook_sf_find_match($direction, $fieldmap_type, $object, $fieldmap_name) {
   if ($direction == 'export' 
     && ($fieldmap_type == 'user' || ($fieldmap_type == 'node' && $object == 'profile'))) {
     if (empty($object->mail)) {
@@ -108,6 +108,40 @@ function hook_sf_find_match($direction, $fieldmap_type, $object, $fieldmap_id) {
     }
   }
 }
+
+/**
+ * Builds a set of default field maps. This allows modules to offer out-of-the 
+ * box mappings based on common use cases or patterns. It is recommended but not 
+ * required that you use the following verbose naming convention for your
+ * default fieldmaps in order to avoid namespace collisions:
+ *   mymodule_default_drupalentity_sfentity_field_map
+ * The name of your default fieldmap will serve as its primary identifier.
+ * If/when your fieldmap is overridden, it will be assigned a standard fieldmap 
+ * id which will then be used to identify the fieldmap. This is a bastardization
+ * of the model ctools uses in order to avoid hard dependency on ctools.
+ * 
+ * Finally, it is highly recommended that your default fieldmap NOT be 
+ * automatic. Remember that out-of-the-box module behavior should not change
+ * Drupal's current working configuration.
+ *
+ * @param string $export - the export schema definition with defaults applied. 
+ *   (generally unused)
+ * @return an array of fieldmap objects according to salesforce_field_map schema
+ * @see salesforce_api_default_salesforce_field_maps
+ */
+
+function hook_default_salesforce_field_maps($export = array()) {
+  return array( (object) array(
+    'disabled' => FALSE,
+    'name' => 'salesforce_api_default_user_contact_field_map',
+    'automatic' => FALSE,
+    'drupal' => 'user',
+    'salesforce' => 'Contact',
+    'fields' => array('LastName' => 'name', 'Email' => 'mail'),
+    'description' => 'This is a simple example fieldmap to get you started using the SalesForce API.',
+    ));
+}
+
 
 /**
  * @} End of "addtogroup hooks".

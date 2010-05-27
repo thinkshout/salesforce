@@ -27,12 +27,10 @@ function sf_prematch_schema() {
   $schema['salesforce_prematch'] = array(
     'description' => t('Drupal to Salesforce object mapping table for pre-creation '),
     'fields' => array(
-      'fieldmap' => array(
-        'description' => 'Fieldmap id FK',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => '0',
+      'name' => array(
+        'description' => 'Fieldmap name FK',
+        'type' => 'varchar',
+        'length' => '255',
       ),
       'primary_field' => array(
         'description' => 'Primary field or object name for use in prematching.',
@@ -67,4 +65,27 @@ function sf_prematch_schema() {
   );
 
   return $schema;
+}
+
+
+/**
+ * @see salesforce_api_update_1
+ *
+ */
+function sf_prematch_update_1() {
+  $ret = array();
+  if (!db_column_exists('salesforce_field_map', 'name')) {
+    $ret[] = array('success' => FALSE, 'query' => 'N/A');
+    drupal_set_message('There are still updates to be run: Update for sf_prematch was not run. Please run update.php again to complete this update.', 'warning');
+  }
+  db_add_column($ret, 'salesforce_prematch', 'name', 'varchar(255)');
+  $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map}');
+  while($row = db_fetch_array($result)) {
+    $sql = 'UPDATE {salesforce_prematch} SET name = "%s" WHERE fieldmap = %d';
+    $update_result = db_query($sql, $name, $fieldmap);
+    $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));
+  }
+  db_add_primary_key($ret, 'salesforce_prematch', 'name', array('name'));
+  $ret[] = update_sql('ALTER TABLE {salesforce_prematch} DROP COLUMN fieldmap');
+  return $ret;
 }

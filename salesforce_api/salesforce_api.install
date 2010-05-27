@@ -38,12 +38,10 @@ function salesforce_api_schema() {
   $schema['salesforce_object_map'] = array(
     'description' => t('Drupal to Salesforce object mapping table'),
     'fields' => array(
-      'fieldmap' => array(
-        'description' => 'Fieldmap id',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
+      'name' => array(
+        'description' => 'Foreign key for salesforce_field_map - the fieldmap that corresponds to this record.',
+        'type' => 'varchar',
+        'length' => '255',
       ),
       'oid' => array(
         'description' => 'Specific Drupal object identifier (e.g. node id or comment id)',
@@ -69,33 +67,23 @@ function salesforce_api_schema() {
     ),
     'indexes' => array(
       'sfid' => array('sfid'),
+      'name' => array('name'),
     ),
     'primary key' => array('drupal_type', 'oid'),
   );
   $schema['salesforce_field_map'] = array(
     'description' => t('Drupal to Salesforce field mappings'),
     'export' => array(
-      'key' => 'fieldmap',
+      'key' => 'name',
       'identifier' => 'salesforce_field_map',
-      'default hook' => 'default_salesforce_field_map',
+      'default hook' => 'default_salesforce_field_maps',
       'export callback' => 'salesforce_api_export_salesforce_field_map',
-      'api' => array(
-        'owner' => 'salesforce_api',
-        'api' => 'default_salesforce_api_field_maps',
-        'minimum_version' => 1,
-        'current_version' => 1,
-      ),
     ),
     'fields' => array(
       // "name" field is only in schema for ctools exportable support and not in 
       // use via any UI at the moment. Implementing modules can assign
       // meaningful names if they wish to do so, but it is not required for our
       // purposes.
-      'name' => array(
-        'description' => 'Unique ID for this object. Used to identify it programatically (initially implemented for ctools support only).',
-        'type' => 'varchar',
-        'length' => '255',
-        ),
       'fieldmap' => array(
         'description' => 'The primary identifier for a fieldmap.',
         'type' => 'serial',
@@ -103,6 +91,11 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'no export' => TRUE,
       ),
+      'name' => array(
+        'description' => 'Unique ID for this object. Used to identify it programatically (initially implemented for ctools support only).',
+        'type' => 'varchar',
+        'length' => '255',
+        ),
       'automatic' => array(
         'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
         'type' => 'int',
@@ -136,9 +129,10 @@ function salesforce_api_schema() {
         'description' => 'Serialized fieldmap',
         'type' => 'text',
         'not null' => TRUE,
+        'serialize' => TRUE,
       ),
     ),
-    'primary key' => array('fid'),
+    'primary key' => array('fieldmap'),
     'unique keys' => array('name' => array('name')),
   );
 
@@ -187,5 +181,43 @@ function salesforce_api_requirements($phase) {
     );
     return $req;
   }
+}
+
+/**
+ * We have fundamentally changed the schema of SF module. Primary identifier is 
+ * now "name". Although the value of name is not particularly important, it must
+ * be set and it must be unique. In this update function, we are doing a few
+ * things:
+ * 1) Add "name" columns to salesforce_field_map and salesforce_object_map
+ * 2) Assign unique values to "name" column in salesforce_field_map
+ * 3) Assign "name" values to columns in salesforce_object_map
+ * 4) Drop "fieldmap" column from salesforce_object_map
+ * 
+ */
+function salesforce_api_update_1() {
+  module_enable(array('ctools'));
+  if (!module_exists('ctools')) {
+    // module_disable(array('salesforce_api', 'sf_node', 'sf_user', 'sf_prematch'));
+    drupal_set_message('This version of SalesForce module depends on <a href="http://drupal.org/project/ctools">Chaos Tool Suite</a>, which is not available. Please install Chaos Tool Suite, then run update again.');
+    return array(array('success' => FALSE, 'query' => 'Chaos Tool Suite not found.'));
+  }
+
+  $ret = array(array('success' => TRUE, 'query' => 'Chaos Tool Suite enabled.'));
+  db_add_column($ret, 'salesforce_field_map', 'name', 'varchar(255)');
+  db_add_column($ret, 'salesforce_object_map', 'name', 'varchar(255)');
+  $result = db_query('SELECT fieldmap FROM {salesforce_field_map}');
+  while($fieldmap = db_result($result)) {
+    $name = md5($fieldmap);
+    $sql = 'UPDATE {salesforce_object_map} SET name = "%s" WHERE fieldmap = %d';
+    $update_result = db_query($sql, $name, $fieldmap);
+    $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));
+    $sql = 'UPDATE {salesforce_field_map} SET name = "%s" WHERE fieldmap = %d';
+    $update_result = db_query($sql, $name, $fieldmap);
+    $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));
+  }
+  db_add_index($ret, 'salesforce_object_map', 'name', array('name'));
+  db_add_unique_key($ret, 'salesforce_field_map', 'name', array('name'));
+  $ret[] = update_sql('ALTER TABLE {salesforce_object_map} DROP COLUMN fieldmap');
+  return $ret;
 }
 
