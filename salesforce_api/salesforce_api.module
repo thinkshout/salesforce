@@ -727,9 +727,7 @@ function salesforce_api_fieldmap_field_options($object, $type = NULL, $name = NU
  */
 function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
   // Load the fieldmap from the database.
-  dpm($name);
   $map = salesforce_api_fieldmap_load($name);
-  dpm($map);
   // Fail if the fieldmap does not exist.
   if (!$map) {
     return FALSE;
@@ -741,7 +739,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 
   // Loop through the fields on the fieldmap.
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
-    dpm($map->fields);
     $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
     $updateable = $sf_field_definition['type'] & SALESFORCE_FIELD_UPDATEABLE;
     $createable = $sf_field_definition['type'] & SALESFORCE_FIELD_CREATEABLE;
@@ -752,7 +749,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     || (!empty($drupal_data->salesforce->sfid) && !$updateable)) {
       continue;
     }
-dpm($drupal_object_definition['fields'][$drupal_fieldname]);
     // If a handler is specified for retrieving a value for the Drupal field...
     if (isset($drupal_object_definition['fields'][$drupal_fieldname]['export'])) {
       $drupal_field_export_handler = $drupal_object_definition['fields'][$drupal_fieldname]['export'];

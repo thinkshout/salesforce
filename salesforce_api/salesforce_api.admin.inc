@@ -171,7 +171,6 @@ function salesforce_api_fieldmap_admin() {
   $content = '';
   
   $maps = salesforce_api_salesforce_field_map_load_all();
-  dpm($maps);
   foreach($maps as $map) {
     $rows[] = _salesforce_api_field_admin_format_row($map);
   }
