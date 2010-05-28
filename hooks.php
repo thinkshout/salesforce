@@ -25,6 +25,30 @@
  * salesforce_api will use the property of the object with the same fieldname.
  * For example, "nid" does not have an import/export function, because "nid" is
  * a property of the $node object.
+ * 
+ * For CCK fields, something special happens. When building the list of objects
+ * salesforce will attempt to locate export/import functions based on the naming  
+ * convention _sf_node_export_cck_FIELDTYPE and _sf_node_import_cck_FIELDTYPE.
+ * For example, see _sf_node_export_cck_date and _sf_node_import_cck_date in 
+ * sf_contrib. The default CCK handler will expose all columns from all CCK 
+ * field types for export and import to and from SalesForce. 
+ * 
+ * If the value of a particular column is not useful on its own, or if it needs 
+ * to be manipulated in a specific way before being sent to SalesForce, then an
+ * export (and/or import as appropriate) override should be declared according
+ * to the naming convention (_sf_node_export_cck_FIELDTYPE). Any such function
+ * will automatically be used to export/import ALL columns for the CCK field 
+ * type. Simple CCK fields with only a "value" column will be named after their
+ * field_name properties. CCK fields with columns other than "value" will be 
+ * referred to according to the convention: FIELDNAME:COLUMN
+ * @see _sf_node_export_cck_FIELDTYPE
+ * @see _sf_node_import_cck_FIELDTYPE
+ * 
+ * If you want to expose additional non-cck fields for mapping, you should 
+ * implement this hook, hook_fieldmap_objects.
+ * 
+ * If you want to change the default definition of a field or fields, 
+ * @see hook_fieldmap_objects_alter
  *
  * @param $object_type
  *  Where does the data come from? Either "drupal" or "salesforce".
@@ -142,10 +166,44 @@ function hook_default_salesforce_field_maps($export = array()) {
     ));
 }
 
+/**
+ * Override the default CCK export callback for a cck field type.
+ *
+ * @param object $node
+ * @param string $fieldname 
+ * @param array $drupal_field_definition 
+ * @param array $sf_field_definition 
+ * @return the value for export to SalesForce
+ */
+function _sf_node_export_cck_FIELDTYPE($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  $sf_field_definition) {
+  list($fieldname, $column) = explode(':', $fieldname, 2);
+  if (empty($column)) {
+    $column = 'value';
+  }
+  return _sf_node_export_date($node->$fieldname[0][$column]);
+}
 
-function _sf_node_export_cck_FIELDTYPE
-
-function _sf_node_import_cck_FIELDTYPE
+/**
+ * Override the default CCK import callback for a cck field type. This function
+ * should take $node by reference and make any necessary changes before the node
+ * is saved.
+ *
+ * @param object $node
+ * @param string $drupal_fieldname
+ * @param array $drupal_field_definition
+ * @param object $sf_data
+ * @param string $sf_field_definition
+ * @param array $sf_field_definition
+ * @return null
+ */
+function _sf_node_import_cck_FIELDTYPE(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  list($fieldname, $column) = explode(':', $fieldname, 2);
+  if (empty($column)) {
+    $column = 'value';
+  }
+  $node->$drupal_fieldname[0][$column] = strtotime($source->$sf_fieldname);  
+}
 
 /**
  * @} End of "addtogroup hooks".
