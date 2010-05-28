@@ -223,10 +223,29 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
     $operations[] = l(t('export'), $base . '/export');
   }
 
+  $auto = FALSE;
+  switch ($map->automatic) {
+    case SALESFORCE_AUTO_SYNC_OFF: {
+      $auto = t('No');
+      break;
+    }
+    case SALESFORCE_AUTO_SYNC_CREATE: {
+      $auto = t('On Create Only');
+      break;
+    }
+    case SALESFORCE_AUTO_SYNC_UPDATE: {
+      $auto = t('On Update Only');
+      break;
+    }    
+    case SALESFORCE_AUTO_SYNC_ALL: {
+      $auto = t('Yes');
+      break;
+    }
+  }
   $row = array(
     salesforce_api_fieldmap_object_label('drupal', $map->drupal),
     salesforce_api_fieldmap_object_label('salesforce', $map->salesforce),
-    $map->automatic ? t('Yes') : t('No'),
+    $auto,
     array('data' => check_plain($map->description), 
           'class' => 'description'));
   $row = array_merge($row, $operations);
@@ -454,11 +473,19 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   $target = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
   $form['drupal_sfapi_automatic'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Automatically Populate Salesforce?'),
+    '#type' => 'radios',
+    '#title' => t('Synchronize automatically with Salesforce'),
+    '#options' => array(
+      SALESFORCE_AUTO_SYNC_OFF => t('Never (Do not autopopulate)'), 
+      SALESFORCE_AUTO_SYNC_ALL => t('On create and update'),
+      SALESFORCE_AUTO_SYNC_CREATE => t('On create only'), 
+      SALESFORCE_AUTO_SYNC_UPDATE => t('On update only'),
+      // @see theme_salesforce_api_drupal_sfapi_automatic for option descriptions
+    ),
     '#return_value' => 1,
     '#default_value' => $map->automatic,
-    '#description' => t('Automatically create and link new salesforce objects when Drupal objects are created?'),
+    '#theme' => 'salesforce_api_drupal_sfapi_automatic',
+    '#description' => t('Please indicate how Salesforce records should be handled when Drupal records are created or updated.')
   );
 
   // Add the data to the form for the required fields table.
@@ -577,6 +604,22 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
 
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
+
+/**
+ * Theme callback for synch option radios
+ */
+function theme_salesforce_api_drupal_sfapi_automatic($element) {
+  $element[SALESFORCE_AUTO_SYNC_OFF]['#description'] = 
+    t('Do not create or update Salesforce records automatically.');
+  $element[SALESFORCE_AUTO_SYNC_ALL]['#description'] = 
+    t('Create and link Salesforce records automatically when Drupal records are created and updated.');
+  $element[SALESFORCE_AUTO_SYNC_CREATE]['#description'] = 
+    t('Create and link Salesforce records automatically when Drupal records are created, but do not update them automatically.');
+  $element[SALESFORCE_AUTO_SYNC_UPDATE]['#description'] = 
+    t('Do not create and link Salesforce records automatically, but update Salesforce records if a link already exists.');
+  return drupal_render($element);
+}
+
 
 /**
  * Themes the field associations on a fieldmap edit form into a table.

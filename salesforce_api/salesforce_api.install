@@ -35,6 +35,7 @@ drupal_set_message(t('Salesforce API: The default Salesforce object have been en
  * Implementation of hook_schema().
  */
 function salesforce_api_schema() {
+  require_once drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
   $schema['salesforce_object_map'] = array(
     'description' => t('Drupal to Salesforce object mapping table'),
     'fields' => array(
@@ -97,12 +98,12 @@ function salesforce_api_schema() {
         'length' => '255',
         ),
       'automatic' => array(
-        'description' => 'Boolean indicating whether this action/map is automatic or triggered.',
+        'description' => 'Indicates whether this action/map is automatic or triggered.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny'
+        'default' => SALESFORCE_AUTO_SYNC_OFF,
+        'size' => 'small'
       ),
       'drupal' => array(
         'description' => 'The kind of Drupal object this map is for.',
@@ -266,3 +267,9 @@ function salesforce_api_update_2() {
   return $ret;
 }
 
+function salesforce_api_update_3() {
+  $ret = array();
+  db_change_field($ret, 'salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
+  db_query('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_ALL);
+  return $ret;
+}

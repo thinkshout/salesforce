@@ -84,19 +84,23 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
 
       if (empty($salesforce->name)) {
-        // Are there any automatic fieldmaps for this node type?
-        $result = db_query("SELECT name FROM {salesforce_field_map} WHERE drupal = '%s' AND automatic = 1", 'node_'. $node->type);
-        $map = db_fetch_object($result);
-        if (!$map) {
-          // If we still didn't find a map, we're out of options. Bail out.
+        $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
+        if (empty($maps)) {
           break;
         }
-
+        $map = current($maps);
+        
+        if ($map->automatic == SALESFORCE_AUTO_SYNC_OFF
+        || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $op == 'update')
+        || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && $op == 'insert')) {
+          break;
+        }
+        $map = current($maps);
         // Use the first fieldmap.
         $salesforce->name = $map->name;
 
         // Check if there is more than one fieldmap in the result.
-        if (user_access('administer salesforce') and db_fetch_object($result)) {
+        if (user_access('administer salesforce') and next($maps)) {
           drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
         }
       }
@@ -633,6 +637,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
 
   // If the node exists, simply update the existing node.
   $node = node_load($nid);
+  $create = FALSE;
   if (empty($nid) || empty($node)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
     $matches = salesforce_api_search_for_duplicates('import', 'node', $sf_data, $name);
@@ -643,6 +648,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
       }
     }
     if (empty($node)) {
+      $create = TRUE;
       $node = (object)array(
         'type' => substr($map->drupal, 5),
         'language' => 'en',
@@ -669,7 +675,9 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
   }
   $node->sf_node_skip_export = TRUE;
   node_save($node);
-  if ($map->automatic && !empty($node->nid)) {
+  if ($map->automatic == SALESFORCE_AUTO_SYNC_ALL
+    || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $create)
+    || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && !$create)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('node', $node->nid, $sfid, $name);
   }
@@ -687,7 +695,7 @@ function sf_node_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
   (object)array(
       'disabled' => FALSE,
       'name' => 'salesforce_api_default_node_page_campaign_field_map',
-      'automatic' => FALSE,
+      'automatic' => SALESFORCE_AUTO_SYNC_OFF,
       'drupal' => 'node_page',
       'salesforce' => 'Campaign',
       'fields' => array('Name' => 'title', 'Description' => 'body'),

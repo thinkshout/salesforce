@@ -43,6 +43,13 @@ define('SALESFORCE_LOG_NONE', 0);
 define('SALESFORCE_LOG_SOME', 5);
 define('SALESFORCE_LOG_ALL', 10);
 
+define('SALESFORCE_AUTO_SYNC_OFF', 0x00);
+define('SALESFORCE_AUTO_SYNC_CREATE', 0x01);
+define('SALESFORCE_AUTO_SYNC_UPDATE', 0x02);
+define('SALESFORCE_AUTO_SYNC_ALL',
+  SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE);
+
+
 if (!function_exists('is_sfid')) {
   // Without a roundtrip to salesforce.com, checking the string length is the
   // best we can do to verify a SalesForce ID.
@@ -880,6 +887,9 @@ function salesforce_api_theme($existing, $type, $theme, $path) {
     'salesforce_api_object_options' => array(
       'arguments' => array('element' => NULL)
     ),
+    'salesforce_api_drupal_sfapi_automatic' => array(
+      'arguments' => array('element' => NULL),
+    ),
   );
 }
 
@@ -1048,6 +1058,13 @@ function salesforce_api_salesforce_field_map_load ($name) {
     return $result[$name];
   }
 }
+
+function salesforce_api_salesforce_field_map_load_by ($conditions) {
+  ctools_include('export');
+  $result = ctools_export_load_object('salesforce_field_map', 'conditions', $condition);
+  return $result;
+}
+
 
 function salesforce_api_salesforce_field_map_save (&$map) {
   salesforce_api_fieldmap_save($map);

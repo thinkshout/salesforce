@@ -78,17 +78,22 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       }
       
       if (empty($salesforce->name)) {
-        // Detect whether or not this should be an auto-update for this user
-        $result = db_query("SELECT name FROM {salesforce_field_map} WHERE drupal = 'user' AND automatic = 1");
-        $map = db_fetch_object($result);
-        if (!$map) {
+        $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
+        if (empty($maps)) {
+          break;
+        }
+        $map = current($maps);
+        
+        if ($map->automatic == SALESFORCE_AUTO_SYNC_OFF
+        || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $op == 'update')
+        || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && $op == 'insert')) {
           break;
         }
         // Use the first fieldmap.
         $salesforce->name = $map->name;
 
         // Check if there is more than one fieldmap in the result.
-        if (user_access('administer salesforce') and db_fetch_object($result)) {
+        if (user_access('administer salesforce') and next($maps)) {
           drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
         }
       }
@@ -476,8 +481,11 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     // sf_user_skip_export is a flag to tell hook_user not to export this object.
     $account->sf_user_skip_export = TRUE;
     $changes['sf_user_skip_export'] = TRUE;
+    $create = !empty($account->uid);
     $account = user_save($account, $changes);
-    if ($map->automatic && !empty($account->uid)) {
+    if ($map->automatic == SALESFORCE_AUTO_SYNC_ALL
+    || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $create)
+    || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && !$create)) {
       // Store the Salesforce ID for the node and return TRUE.
       salesforce_api_id_save('user', $account->uid, $sfid, $name);
     }
@@ -496,7 +504,7 @@ function sf_user_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
   (object) array(
     'disabled' => FALSE,
     'name' => 'salesforce_api_default_user_contact_field_map',
-    'automatic' => FALSE,
+    'automatic' => SALESFORCE_AUTO_SYNC_OFF,
     'drupal' => 'user',
     'salesforce' => 'Contact',
     'fields' => array('LastName' => 'name', 'Email' => 'mail'),
