@@ -191,7 +191,6 @@ function sf_node_fieldmap_objects($type) {
         $index = 'node_' . $type['type'];
         foreach ((array) $type['fields'] as $field) {
           // Choose a handler based on the type of the CCK field.
-          $proceed = TRUE;
           $export_handler = $import_handler = FALSE;
 
           // @see sf_contrib.module
@@ -201,46 +200,36 @@ function sf_node_fieldmap_objects($type) {
           if (function_exists('_sf_node_import_cck_' . $field['type'])) {
             $import_handler = '_sf_node_import_cck_' . $field['type'];
           }
-          
-          switch ($field['type']) {
-            // These have moved to sf_contrib
-            default: {
-              if($field['widget']['type'] == 'optionwidgets_onoff') {
-                $export_handler = $export_handler 
-                  ? $export_handler 
-                  : '_sf_node_export_cck_checkbox';
-              }
-              else {
-                $export_handler = $export_handler 
-                  ? $export_handler 
-                  : '_sf_node_export_cck_default';
-              }
-              $import_handler = $import_handler
-                ? $import_handler
-                : '_sf_node_import_cck_default';
-            }
-          }
-          
-          if (!$proceed) {
-            continue;
-          }
-          $objects[$index]['fields'][$field['field_name']] = array(
-            'label' => check_plain($field['widget']['label']),
-            'group' => $group,
-            'export' => $export_handler,
-            'import' => $import_handler,
-            'type' => $field['type'],
-            'multiple' => $field['multiple'],
-          );
 
-          // If the field was a date field, add the "To" date if enabled.
-          if ($field['type'] == 'date' && !empty($field['todate'])) {
-            $objects[$index]['fields'][$field['field_name'] .'_todate'] = array(
-              'label' => t('@label (to date)', array('@label' => $field['widget']['label'])),
-              'group' => $group,
-              'export' => '_sf_node_export_cck_todate',
-              'import' => '_sf_node_import_cck_todate',
-            );
+          if($field['widget']['type'] == 'optionwidgets_onoff') {
+            $export_handler = $export_handler 
+              ? $export_handler 
+              : '_sf_node_export_cck_checkbox';
+          }
+          else {
+            $export_handler = $export_handler 
+              ? $export_handler 
+              : '_sf_node_export_cck_default';
+          }
+          $import_handler = $import_handler
+            ? $import_handler
+            : '_sf_node_import_cck_default';
+          
+          foreach ($field['columns'] as $column => $data) {
+            $key = $field['field_name'];
+            $my_label = check_plain($field['widget']['label']);
+            if ($column != 'value') {
+              $key .= ':' . $column;
+              $my_label .= " ($column)";
+            }
+            $my_group = t('@group: @label', 
+              array('@group' => $group, '@label' => $field['widget']['label']));
+            $objects[$index]['fields'][$key] = array(
+              'group' => $my_group,
+              'label' => $my_label,
+              'export' => $export_handler,
+              'import' => $import_handler
+             );
           }
         }
       }
@@ -253,19 +242,23 @@ function sf_node_fieldmap_objects($type) {
 // Returns the basic value of a CCK field from $array[0]['value'].
 function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldname, 2);
+  if (empty($column)) {
+    $column = $value;
+  }
   $data = $node->$fieldname;
   switch ($sf_field_definition['salesforce']['type']) {
     case 'multipicklist':
       // SF wants a semicolon-delimited string for multipicklist values
       $values = array();
       foreach ($data as $row) {
-        $values[] = $row['value'];
+        $values[] = $row[$column];
       }
       $result = implode(';', $values);
       break;
     default:
       // Unless handled above, use only the first value.
-      $result = $data[0]['value'];
+      $result = $data[0][$column];
       break;
   }
   return $result;
@@ -274,7 +267,10 @@ function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition
 // Populates the value of a CCK field from its corresponding SF field's value.
 function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   $data = array();
-
+  list($drupal_fieldname, $column) = explode(':', $drupal_fieldname, 2);
+  if (empty($column)) {
+    $column = 'value';
+  }
   // Convert data based on what SF type we're importing.
   switch ($sf_field_definition['salesforce']['type']) {
     case 'multipicklist':
@@ -282,44 +278,19 @@ function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_de
       if ($drupal_field_definition['multiple']) {
         $sf_data = explode(';', $sf_data->$sf_fieldname);
         foreach ($sf_data as $row) {
-          $data[] = array('value' => $row);
+          $data[] = array($column => $row);
         }
       }
       else {
-         $data[0]['value'] = $sf_data->$sf_fieldname;
+         $data[0][$column] = $sf_data->$sf_fieldname;
       }
     break;
     default:
       // Unless handled above in this switch, we don't yet handle fields with multiple values.
-       $data[0]['value'] = $sf_data->$sf_fieldname;
+       $data[0][$column] = $sf_data->$sf_fieldname;
     break;
   }
   $node->$drupal_fieldname = $data;
-}
-
-// Returns the todate for a CCK date field.
-function _sf_node_export_cck_todate($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  // Get the name of the actual CCK field.
-  // drupal_* string functions are not necessary since these are machine names.
-  $key = substr($fieldname, 0, strlen($fieldname) - 7);
-
-  // Get the data array for the field.
-  $data = $node->$key;
-
-  // Return the to date from the field data.
-  return $data[0]['value2'];
-}
-
-// Returns the todate for a CCK date field.
-function _sf_node_import_cck_todate(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  // drupal_* string functions are not necessary since these are machine names.
-  $key = substr($drupal_fieldname, 0, strlen($drupal_fieldname) - 7);
-
-  $data = $node->$key;
-
-  $data[0]['value2'] = $sf_data->$sf_fieldname;
-
-  $node->$key = $data;
 }
 
 // Returns the email address of the node's author, given by node->uid
@@ -611,7 +582,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
   else {
     // Otherwise log the error and return FALSE.
     if (user_access('administer salesforce')) {
-      if (function_exists('dsm')) {
+      if (function_exists('dpm')) {
         dpm($response);
       } else {
         drupal_set_message(print_r($response, 1), 'error');

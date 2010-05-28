@@ -143,6 +143,10 @@ function hook_default_salesforce_field_maps($export = array()) {
 }
 
 
+function _sf_node_export_cck_FIELDTYPE
+
+function _sf_node_import_cck_FIELDTYPE
+
 /**
  * @} End of "addtogroup hooks".
  */
