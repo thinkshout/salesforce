@@ -187,32 +187,46 @@ function sf_node_fieldmap_objects($type) {
       // Loop through each of the content types.
       foreach (content_types() as $type) {
         // Add each of the fields to the node object definition.
+        $group = t('@type CCK fields', array('@type' => $type['name']));
+        $index = 'node_' . $type['type'];
         foreach ((array) $type['fields'] as $field) {
           // Choose a handler based on the type of the CCK field.
-          switch ($field['type']) {
-            // TODO: Decide if we want to make more specific handlers...
-            // case 'text':
-              // For example, I might set a handler for text fields that takes
-              // the selected input format into account.
-              
-            case 'nodereference':
-              $export_handler = '_sf_node_export_cck_nodereference';
-              $import_handler = '_sf_node_import_cck_nodereference';
-              break;
+          $proceed = TRUE;
+          $export_handler = $import_handler = FALSE;
 
-            case 'userreference':
-              $export_handler = '_sf_node_export_cck_userreference';
-              $import_handler = '_sf_node_import_cck_userreference';
-              break;
-            
-            default:
-              $export_handler = '_sf_node_export_cck_default';
-              $import_handler = '_sf_node_import_cck_default';
+          // @see sf_contrib.module
+          if (function_exists('_sf_node_export_cck_' . $field['type'])) {
+            $export_handler = '_sf_node_export_cck_' . $field['type'];
           }
-
-          $objects['node_'. $type['type']]['fields'][$field['field_name']] = array(
+          if (function_exists('_sf_node_import_cck_' . $field['type'])) {
+            $import_handler = '_sf_node_import_cck_' . $field['type'];
+          }
+          
+          switch ($field['type']) {
+            // These have moved to sf_contrib
+            default: {
+              if($field['widget']['type'] == 'optionwidgets_onoff') {
+                $export_handler = $export_handler 
+                  ? $export_handler 
+                  : '_sf_node_export_cck_checkbox';
+              }
+              else {
+                $export_handler = $export_handler 
+                  ? $export_handler 
+                  : '_sf_node_export_cck_default';
+              }
+              $import_handler = $import_handler
+                ? $import_handler
+                : '_sf_node_import_cck_default';
+            }
+          }
+          
+          if (!$proceed) {
+            continue;
+          }
+          $objects[$index]['fields'][$field['field_name']] = array(
             'label' => check_plain($field['widget']['label']),
-            'group' => t('CCK fields'),
+            'group' => $group,
             'export' => $export_handler,
             'import' => $import_handler,
             'type' => $field['type'],
@@ -221,9 +235,9 @@ function sf_node_fieldmap_objects($type) {
 
           // If the field was a date field, add the "To" date if enabled.
           if ($field['type'] == 'date' && !empty($field['todate'])) {
-            $objects['node_'. $type['type']]['fields'][$field['field_name'] .'_todate'] = array(
+            $objects[$index]['fields'][$field['field_name'] .'_todate'] = array(
               'label' => t('@label (to date)', array('@label' => $field['widget']['label'])),
-              'group' => t('CCK fields'),
+              'group' => $group,
               'export' => '_sf_node_export_cck_todate',
               'import' => '_sf_node_import_cck_todate',
             );
@@ -341,34 +355,14 @@ function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definitio
   $node->body = $sf_data->$sf_fieldname;
 }
 
-// Export sfid of referenced node
-function _sf_node_export_cck_nodereference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  $sfid = ''; 
-  if ($nid = $node->{$fieldname}[0]['nid']) {
-    $sf_data = salesforce_api_id_load('node', $nid); 
-    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : ''; 
+// Assume that a on/off checkbox is a SF boolean, which can never be set to null
+function _sf_node_export_cck_checkbox($source, $field) {
+  $data = $source->$field;
+  if(empty($source->{$field}[0]['value'])) {
+    return 'false';
+  } else {
+    return 1;
   }
-  return $sfid;
-}
-
-// Import node id of referenced node
-function _sf_node_import_cck_nodereference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  $node->{$drupal_fieldname}[0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
-}
-
-// Export sfid of referenced user
-function _sf_node_export_cck_userreference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  $sfid = ''; 
-  if ($uid = $node->{$fieldname}[0]['uid']) {
-    $sf_data = salesforce_api_id_load('user', $uid); 
-    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : ''; 
-  }
-  return $sfid;
-}
-
-// Import node id of referenced user
-function _sf_node_import_cck_userreference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  $node->{$drupal_fieldname}[0]['uid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname, $type = 'user');
 }
 
 // Displays the Salesforce synchronization form.
