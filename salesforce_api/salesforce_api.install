@@ -221,3 +221,48 @@ function salesforce_api_update_1() {
   return $ret;
 }
 
+/**
+ * Try to fix existing maps based on the new cck support
+ */
+function salesforce_api_update_2() {
+  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $ret = array();
+  $changes = array();
+  module_enable('sf_contrib');
+  $ret[] = array('success' => TRUE, 'query' => t('Enabled SF Contrib module', array('@map' => $new_map->name)));
+  
+  foreach (content_types() as $type) {
+    // Add each of the fields to the node object definition.
+    foreach ((array) $type['fields'] as $field) {
+      if (empty($field['columns']['value'])) {
+        $changes[$field['field_name']] = array(
+          'old' => $field['field_name'],
+          'new' => $field['field_name'] . ':' . key($field['columns'])
+        );
+      }
+      if ($field['type'] == 'date' && !empty($field['todate'])) {
+        $changes[$field['field_name'].'_todate'] = array(
+          'old' => $field['field_name'].'_todate',
+          'new' => $field['field_name'].':value2'
+          );
+      }
+    }
+  }
+  
+  foreach ($fieldmaps as $map) {
+    $new_map = $map;
+    $updates = FALSE;
+    foreach ($map->fields as $i => $field) {
+      if (!empty($changes[$field])) {
+        $new_map->fields[$i] = $changes[$field]['new'];
+        $updates = TRUE;
+      }
+    }
+    if ($updates) {
+      salesforce_api_fieldmap_save($new_map);
+      $ret[] = array('success' => TRUE, 'query' => t('Updated fieldmap @map', array('@map' => $new_map->name)));
+    }
+  }
+  return $ret;
+}
+
