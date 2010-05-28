@@ -626,7 +626,6 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL, $reset
       $function = $module .'_fieldmap_objects_alter';
       $function($objects);
     }
-    dpm($objects);
   }
 
   // If a particular object type was specified...

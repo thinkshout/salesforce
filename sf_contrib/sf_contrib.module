@@ -143,6 +143,19 @@ function _sf_contrib_add_fields(&$objects) {
             [$field['field_name'] . ':value2']['label'] = 
               $objects['drupal'][$index]['fields']
                 [$field['field_name']]['label'] . ' ' . t('(to date)');
+
+          $objects['drupal'][$index]['fields']
+            [$field['field_name']]['export'] = 
+          $objects['drupal'][$index]['fields']
+            [$field['field_name'] . ':value2']['export'] = 
+            '_sf_node_export_cck_date';
+
+          $objects['drupal'][$index]['fields']
+            [$field['field_name']]['import'] = 
+          $objects['drupal'][$index]['fields']
+            [$field['field_name'] . ':value2']['import'] = 
+            '_sf_node_import_cck_date';
+
           break;
         }
       }
@@ -151,21 +164,49 @@ function _sf_contrib_add_fields(&$objects) {
 }
 
 // Export a timestamp in a format SalesForce comprehends.
-function _sf_node_export_cck_date($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  list($fieldname, $column) = explode(':', $fieldname, 2);
+function _sf_node_export_cck_date($node, $drupal_fieldname, $drupal_field_definition, $sf_field_definition) {
+  list($fieldname, $column) = explode(':', $drupal_fieldname, 2);
   if (empty($column)) {
     $column = 'value';
   }
-  return _sf_node_export_date($node->$fieldname[0][$column]);
+  switch ($node->{$fieldname}[0]['date_type']) {
+    case 'datestamp': {
+      $from_type = DATE_UNIX;
+      break;
+    }
+    case 'datetime': {
+      $from_type = DATE_DATETIME;
+    }
+    case 'date': {
+      $from_type = DATE_ISO;
+      break;
+    }
+  }  
+  $date = date_convert($node->{$fieldname}[0][$column], $from_type, DATE_UNIX);
+  return gmdate(DATE_ATOM, $date);
 }
 
 // Given a SalesForce time, import a node timestamp.
 function _sf_node_import_cck_date(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  list($fieldname, $column) = explode(':', $fieldname, 2);
+  list($fieldname, $column) = explode(':', $drupal_fieldname, 2);
   if (empty($column)) {
     $column = 'value';
   }
-  $node->$drupal_fieldname[0][$column] = strtotime($source->$sf_fieldname);
+  switch ($node->{$fieldname}[0]['date_type']) {
+    case 'datestamp': {
+      $to_type = DATE_UNIX;
+      break;
+    }
+    case 'datetime': {
+      $to_type = DATE_DATETIME;
+    }
+    case 'date': {
+      $to_type = DATE_ISO;
+      break;
+    }
+  }
+  $date = date_convert($sf_data->{$sf_fieldname}, DATE_ISO, $to_type);
+  $node->{$fieldname}[0][$column] = $date;
 }
 
 // Export sfid of referenced node
@@ -182,7 +223,7 @@ function _sf_node_export_cck_nodereference($node, $fieldname, $drupal_field_defi
 // Import node id of referenced node
 function _sf_node_import_cck_nodereference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);
-  $node->{$drupal_fieldname}[0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
+  $node->{$drupal_fieldname}[0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname});
 }
 
 // Export sfid of referenced user
@@ -200,14 +241,14 @@ function _sf_node_export_cck_userreference($node, $fieldname, $drupal_field_defi
 function _sf_node_import_cck_userreference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);  
   $node->{$drupal_fieldname}[0]['uid'] =
-   salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname, $type = 'user');
+   salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname}, $type = 'user');
 }
 
 // Export an element of a CCK location field
 function _sf_node_export_cck_location($source, $field, $drupal_field_definition, $sf_field_definition) {
   static $locations;
   list($field, $type) = explode(':', $field, 2);
-  $data = $source->$field;
+  $data = $source->{$field};
   $lid = $data[0]['lid'];
   if(empty($locations[$lid])) {
     $locations[$lid] = location_load_location($lid);
@@ -226,7 +267,7 @@ function _sf_node_export_cck_location($source, $field, $drupal_field_definition,
 function _sf_node_import_cck_location(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   static $locations;
   list($local_field, $type) = explode(':', $drupal_fieldname, 2);
-  $data = $sf_data->$sf_fieldname;
+  $data = $sf_data->{$sf_fieldname};
   if(!isset($node->{$local_field})) {
     $node->{$local_field} = array();
   }
@@ -272,7 +313,7 @@ function _sf_contrib_export_location($source, $fieldname, $drupal_field_definiti
   
   // Primary not set, so make first location primary.
   $source->locations[0]['is_primary'] = 1;
-  $criteria = array($key => $source->$key);
+  $criteria = array($key => $source->{$key});
   location_save_locations($source->locations, $criteria);
 
   return $source->locations[0][$fieldname];
@@ -286,31 +327,31 @@ function _sf_contrib_import_location(&$object, $drupal_fieldname, $drupal_field_
   }
   foreach ($object->locations as $location) {
     if ($location['is_primary'] == 1) {
-      $location[$drupal_fieldname] = $sf_data->$sf_fieldname;
+      $location[$drupal_fieldname] = $sf_data->{$sf_fieldname};
       return;
     }
   }
   
   // No primary location so use the first one.
-  $object->locations[0][$drupal_fieldname] = $sf_data->$fieldname;
+  $object->locations[0][$drupal_fieldname] = $sf_data->{$fieldname};
 }
 
 
 function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   $info = _content_type_info();
   $info = $info['content types'][$object->type]['fields'][$drupal_fieldname];
-  if(strpos($sf_data->$sf_fieldname, ';') === FALSE) {
+  if(strpos($sf_data->{$sf_fieldname}, ';') === FALSE) {
     $tid = db_result(db_query('SELECT tid FROM {term_data} WHERE name = "%s" AND vid = %d', 
-      $sf_data->$sf_fieldname, $info['vid']));
-    $object->$drupal_fieldname = array(array('value' => $tid));
+      $sf_data->{$sf_fieldname}, $info['vid']));
+    $object->{$drupal_fieldname} = array(array('value' => $tid));
   } else {
-    $terms = str_replace(array('"'), array('\"'), $sf_data->$sf_fieldname);
+    $terms = str_replace(array('"'), array('\"'), $sf_data->{$sf_fieldname});
     $terms = explode(';', $terms);
     $ph = db_placeholders($terms, 'text');
     $sql = 'SELECT tid FROM {term_data}
       WHERE vid = ' . $info['vid'] . ' AND name in ("' . implode('", "', $terms)  . '")';
     $result = db_query($sql);
-    $object->$drupal_fieldname = array();
+    $object->{$drupal_fieldname} = array();
     while($row = db_fetch_array($result)) {
       $object->{$drupal_fieldname}[] = array('value' => $row['tid']);
     }
@@ -318,10 +359,10 @@ function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drup
 }
 
 function _sf_node_export_cck_content_taxonomy($source, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  if(empty($source->$fieldname)) { 
+  if(empty($source->{$fieldname})) { 
     return; 
   }
-  $data = $source->$fieldname;
+  $data = $source->{$fieldname};
   $terms = null;
   if (!empty($data) && is_array($data)) {
     foreach($data as $value) {
