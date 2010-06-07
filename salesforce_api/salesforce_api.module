@@ -46,8 +46,7 @@ define('SALESFORCE_LOG_ALL', 10);
 define('SALESFORCE_AUTO_SYNC_OFF', 0x00);
 define('SALESFORCE_AUTO_SYNC_CREATE', 0x01);
 define('SALESFORCE_AUTO_SYNC_UPDATE', 0x02);
-define('SALESFORCE_AUTO_SYNC_ALL',
-  SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE);
+define('SALESFORCE_AUTO_SYNC_DELETE', 0x04);
 
 
 if (!function_exists('is_sfid')) {
@@ -864,6 +863,33 @@ function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
 function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
   db_query("DELETE FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid);
   db_query("INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name) VALUES ('%s', %d, '%s', '%s')", $drupal_type, $oid, $sfid, $name);
+}
+
+/**
+ * Wrapper for SFBaseClient::delete
+ *
+ * @param string $sfid a SalesForce ID
+ */
+function salesforce_api_delete_salesforce_objects($sfids) {
+  if (is_string($sfids)) {
+    $sfids = array($sfids);
+  }
+  $real_sfids = array();
+  foreach ($sfids as $i => $sfid) {
+    if (is_sfid($sfid)) {
+      $real_sfids[$i] = $sfid;
+    }
+  }
+  if (empty($real_sfids)) {
+    return FALSE;
+  }
+  try {
+    $sf = salesforce_api_connect();
+    return $sf->client->delete($real_sfids);
+  } catch (Exception $e) {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Failed to delete SalesForce objects with ids %s : %s.', array(implode(', ', $real_sfids), $e->getMessage()), WATCHDOG_ERROR);
+    return FALSE;
+  }
 }
 
 function salesforce_api_search_for_duplicates($direction, $fieldmap_type, $object, $fieldmap_name) {

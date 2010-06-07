@@ -65,6 +65,11 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
       
     case 'delete':
+      $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
+      $map = current($maps);
+      if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
+        salesforce_api_delete_salesforce_objects($node->salesforce['sfid']);
+      }
       salesforce_api_delete_object_map('node_'.$node->type, $node->uid);
       break;
       
@@ -84,15 +89,14 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
 
       if (empty($salesforce->name)) {
-        $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
+        $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
         if (empty($maps)) {
           break;
         }
         $map = current($maps);
         
-        if ($map->automatic == SALESFORCE_AUTO_SYNC_OFF
-        || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $op == 'update')
-        || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && $op == 'insert')) {
+        if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $op == 'update')
+        || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && $op == 'insert')) {
           break;
         }
         $map = current($maps);
@@ -675,9 +679,8 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
   }
   $node->sf_node_skip_export = TRUE;
   node_save($node);
-  if ($map->automatic == SALESFORCE_AUTO_SYNC_ALL
-    || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $create)
-    || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && !$create)) {
+  if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
+    || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('node', $node->nid, $sfid, $name);
   }

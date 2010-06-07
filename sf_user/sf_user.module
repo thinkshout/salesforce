@@ -63,6 +63,11 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       break;
 
     case 'delete':
+      $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
+      $map = current($maps);
+      if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
+        salesforce_api_delete_salesforce_objects($account->salesforce['sfid']);
+      }
       salesforce_api_delete_object_map('user', $account->uid);
       break;
 
@@ -84,9 +89,8 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         }
         $map = current($maps);
         
-        if ($map->automatic == SALESFORCE_AUTO_SYNC_OFF
-        || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $op == 'update')
-        || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && $op == 'insert')) {
+        if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $op == 'update')
+        || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && $op == 'insert')) {
           break;
         }
         // Use the first fieldmap.
@@ -483,9 +487,8 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     $changes['sf_user_skip_export'] = TRUE;
     $create = !empty($account->uid);
     $account = user_save($account, $changes);
-    if ($map->automatic == SALESFORCE_AUTO_SYNC_ALL
-    || ($map->automatic == SALESFORCE_AUTO_SYNC_CREATE && $create)
-    || ($map->automatic == SALESFORCE_AUTO_SYNC_UPDATE && !$create)) {
+    if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
+    || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
       // Store the Salesforce ID for the node and return TRUE.
       salesforce_api_id_save('user', $account->uid, $sfid, $name);
     }

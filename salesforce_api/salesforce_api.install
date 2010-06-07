@@ -270,6 +270,7 @@ function salesforce_api_update_2() {
 function salesforce_api_update_3() {
   $ret = array();
   db_change_field($ret, 'salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
-  db_query('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_ALL);
+  db_query('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE);
   return $ret;
 }
+

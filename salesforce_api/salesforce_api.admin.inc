@@ -223,25 +223,22 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
     $operations[] = l(t('export'), $base . '/export');
   }
 
-  $auto = FALSE;
+  $auto = array();
   switch ($map->automatic) {
-    case SALESFORCE_AUTO_SYNC_OFF: {
-      $auto = t('No');
-      break;
-    }
     case SALESFORCE_AUTO_SYNC_CREATE: {
-      $auto = t('On Create Only');
+      $auto[] = t('Create');
       break;
     }
     case SALESFORCE_AUTO_SYNC_UPDATE: {
-      $auto = t('On Update Only');
+      $auto[] = t('Update');
       break;
     }    
-    case SALESFORCE_AUTO_SYNC_ALL: {
-      $auto = t('Yes');
+    case SALESFORCE_AUTO_SYNC_DELETE: {
+      $auto[] = t('Delete');
       break;
     }
   }
+  $auto = implode(', ', $auto);
   $row = array(
     salesforce_api_fieldmap_object_label('drupal', $map->drupal),
     salesforce_api_fieldmap_object_label('salesforce', $map->salesforce),
@@ -473,13 +470,12 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   $target = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
   $form['drupal_sfapi_automatic'] = array(
-    '#type' => 'radios',
-    '#title' => t('Synchronize automatically with Salesforce'),
+    '#type' => 'checkboxes',
+    '#title' => t('Synchronize automatically with Salesforce on (check all that apply)'),
     '#options' => array(
-      SALESFORCE_AUTO_SYNC_OFF => t('Never (Do not autopopulate)'), 
-      SALESFORCE_AUTO_SYNC_ALL => t('On create and update'),
-      SALESFORCE_AUTO_SYNC_CREATE => t('On create only'), 
-      SALESFORCE_AUTO_SYNC_UPDATE => t('On update only'),
+      SALESFORCE_AUTO_SYNC_CREATE => t('Create'), 
+      SALESFORCE_AUTO_SYNC_UPDATE => t('Update'),
+      SALESFORCE_AUTO_SYNC_DELETE => t('Delete'),
       // @see theme_salesforce_api_drupal_sfapi_automatic for option descriptions
     ),
     '#return_value' => 1,
@@ -609,17 +605,14 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
  * Theme callback for synch option radios
  */
 function theme_salesforce_api_drupal_sfapi_automatic($element) {
-  $element[SALESFORCE_AUTO_SYNC_OFF]['#description'] = 
-    t('Do not create or update Salesforce records automatically.');
-  $element[SALESFORCE_AUTO_SYNC_ALL]['#description'] = 
-    t('Create and link Salesforce records automatically when Drupal records are created and updated.');
   $element[SALESFORCE_AUTO_SYNC_CREATE]['#description'] = 
-    t('Create and link Salesforce records automatically when Drupal records are created, but do not update them automatically.');
+    t('Create and link SalesForce records automatically when Drupal records are created.');
   $element[SALESFORCE_AUTO_SYNC_UPDATE]['#description'] = 
-    t('Do not create and link Salesforce records automatically, but update Salesforce records if a link already exists.');
+    t('Update SalesForce records if a link already exists.');
+  $element[SALESFORCE_AUTO_SYNC_DELETE]['#description'] = 
+    t('Delete linked SalesForce records when a Drupal record is deleted.');
   return drupal_render($element);
 }
-
 
 /**
  * Themes the field associations on a fieldmap edit form into a table.
