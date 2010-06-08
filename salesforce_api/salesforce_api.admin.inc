@@ -469,6 +469,14 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   $source = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
   $target = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
+  $automatic = array(
+    SALESFORCE_AUTO_SYNC_CREATE =>
+      $map->automatic & SALESFORCE_AUTO_SYNC_CREATE,
+    SALESFORCE_AUTO_SYNC_UPDATE =>
+      $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE,
+    SALESFORCE_AUTO_SYNC_DELETE =>
+      $map->automatic & SALESFORCE_AUTO_SYNC_DELETE,
+    );
   $form['drupal_sfapi_automatic'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Synchronize automatically with Salesforce on (check all that apply)'),
@@ -479,7 +487,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
       // @see theme_salesforce_api_drupal_sfapi_automatic for option descriptions
     ),
     '#return_value' => 1,
-    '#default_value' => $map->automatic,
+    '#default_value' => $automatic,
     '#theme' => 'salesforce_api_drupal_sfapi_automatic',
     '#description' => t('Please indicate how Salesforce records should be handled when Drupal records are created or updated.')
   );
@@ -588,9 +596,11 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
       $map->fields[$field] = $form_state['values'][$field];
     }
   }
-
+  $map->automatic = 0;
   // set the automatic flag on the map
-  $map->automatic = $form_state['values']['drupal_sfapi_automatic'];
+  foreach ($form_state['values']['drupal_sfapi_automatic'] as $auto) {
+    $map->automatic |= $auto;
+  }
 
   // Save the updated fieldmap.
   salesforce_api_fieldmap_save($map);
@@ -799,8 +809,9 @@ function salesforce_api_admin_object(&$form_state) {
 
   // Disable any SF Object types currently in use by fieldmap(s).
   $result = db_query('SELECT DISTINCT salesforce FROM {salesforce_field_map}');
-  while ($type = db_result($result)) {
-    $disabled[$type] = $type;
+  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  foreach ($fieldmaps as $map) {
+    $disabled[$map->salesforce] = $map->salesforce;
   }
 
   $fields = array(
