@@ -68,15 +68,27 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
       $map = current($maps);
       if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
-        salesforce_api_delete_salesforce_objects($node->salesforce['sfid']);
+        $continue = TRUE;
+        $continues = module_invoke_all('salesforce_api_delete', $node->salesforce->sfid, $map, $node->nid);
+        if (!empty($continues)) {
+          foreach ($continues as $continue) {
+            if ($continue === FALSE) {
+              break;
+            }
+          }
+        }
+        if ($continue) {
+          salesforce_api_delete_salesforce_objects($node->salesforce->sfid);
+        }
       }
       salesforce_api_delete_object_map('node_'.$node->type, $node->uid);
       break;
-      
+
     case 'update':
     case 'insert':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
       if (isset($node->sf_node_skip_export)) {
+        watchdog('sf_node', __LINE__);
         break;
       }
 
@@ -95,8 +107,11 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         }
         $map = current($maps);
         
-        if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $op == 'update')
-        || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && $op == 'insert')) {
+        $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+        $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+        if ((!$auto_create && $op == 'insert')
+        || (!$auto_update && $op == 'update')) {
+        watchdog('sf_node', __LINE__);
           break;
         }
         $map = current($maps);
@@ -110,8 +125,10 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
       // Finally, export the node to Salesforce.
       try {
+        watchdog('sf_node', __LINE__);
         sf_node_export($node, $salesforce->name, $salesforce->sfid);
       } catch (Exception $e) {
+        watchdog('sf_node', __LINE__);
         DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
       }
       break;
@@ -566,6 +583,17 @@ function sf_node_export($node, $name, $sfid = NULL) {
   $object = salesforce_api_fieldmap_export_create($name, $node);
   $object->Id = $sfid;
 
+  $continue = module_invoke_all('salesforce_api_pre_export', $object, $map, $node->nid);
+  watchdog('sf_node', __LINE__ . '<pre>' . print_r($continue, 1));
+  if (!empty($continue)) {
+    foreach ($continue as $value) {
+      if ($value === FALSE) {
+        watchdog('sf_queue', __LINE__);
+        return;
+      }
+    }
+  }
+
   // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
   // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
   // parameter. Until it is fixed, we have to update/create.
@@ -585,7 +613,6 @@ function sf_node_export($node, $name, $sfid = NULL) {
       // Store the Salesforce ID for the node and return TRUE.
       salesforce_api_id_save('node', $node->nid, $response->id, $name);
     }
-    return TRUE;
   }
   else {
     // Otherwise log the error and return FALSE.
@@ -597,8 +624,9 @@ function sf_node_export($node, $name, $sfid = NULL) {
       }
     }
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
-    return FALSE;
   }
+  module_invoke_all('salesforce_api_post_export', $object, $map, $node->nid, $response);
+  return $response->success;
 }
 
 /**

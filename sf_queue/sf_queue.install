@@ -1,0 +1,113 @@
+<?php
+
+/**
+ * Implementation of hook_install().
+ */
+function sf_queue_install() {
+  drupal_install_schema('sf_queue');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function sf_queue_uninstall() {
+  drupal_uninstall_schema('sf_queue');
+  db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_queue_%'");
+}
+
+/**
+ * Implementation of hook_schema
+ *
+ */
+function sf_queue_schema() {
+  $schema['salesforce_export_queue'] = array(
+    'description' => t('Salesforce objects queued for export'),
+    'fields' => array(
+      'sf_op' => array(
+        'description' => 'The SalesForce export operation: "create", "update", or "delete"',
+        'type' => 'varchar',
+        'length' => 8,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'id' => array(
+        'description' => 'Primary key for this table.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'no export' => TRUE,
+        ),
+      'oid' => array(
+        'description' => 'Specific Drupal object identifier (e.g. node id or user id)',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0
+      ),
+      'attempts' => array(
+        'description' => 'How many export attempts have been made for this record.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'Unix timestamp for this record\'s creation date',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sfid' => array(
+        'description' => 'Salesforce object identifier, if applicable (e.g. "node", "comment")',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'drupal_type' => array(
+        'description' => 'Drupal object type (e.g. "node", "comment")',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        ),
+      'sf_type' => array(
+        'description' => 'SalesForce object type (e.g. "node", "comment")',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'name' => array(
+        'description' => 'Unique ID for this object. Used to identify it programatically.',
+        'type' => 'varchar',
+        'length' => '255',
+        'not null' => TRUE,
+      ),
+      'fieldmap_name' => array(
+        'description' => 'Foreign key for salesforce_field_map - the fieldmap that corresponds to this record.',
+        'type' => 'varchar',
+        'length' => '255',
+      ),
+      'sf_data' => array(
+        'description' => 'Serialized SalesForce object data',
+        'type' => 'text',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+    ),
+    'indexes' => array(
+      'drupal_type' => array('drupal_type'),
+      'sf_type' => array('sf_type'),
+      'sf_op' => array('sf_op'),
+      'created' => array('created'),
+    ),
+    'unique keys' => array(
+      'name' => array('name'),
+      'fieldmap_drupal' => array('fieldmap_name', 'drupal_type'),
+      ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+
+}

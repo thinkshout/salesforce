@@ -1,0 +1,6 @@
+; $Id$
+name = Salesforce Export Queue - EXPERIMENTAL
+description = Implements an export queue for SalesForce API
+dependencies[] = salesforce_api
+package = Salesforce
+core = 6.x

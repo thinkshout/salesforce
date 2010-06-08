@@ -66,7 +66,18 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
       $map = current($maps);
       if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
-        salesforce_api_delete_salesforce_objects($account->salesforce['sfid']);
+        $continue = TRUE;
+        $continues = module_invoke_all('salesforce_api_delete', $account->salesforce->sfid, $map, $account->uid);
+        if (!empty($continues)) {
+          foreach ($continues as $continue) {
+            if ($continue === FALSE) {
+              break;
+            }
+          }
+        }
+        if ($continue) {
+          salesforce_api_delete_salesforce_objects($account->salesforce->sfid);
+        }
       }
       salesforce_api_delete_object_map('user', $account->uid);
       break;
@@ -89,8 +100,10 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         }
         $map = current($maps);
         
-        if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $op == 'update')
-        || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && $op == 'insert')) {
+        $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+        $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+        if ((!$auto_create && $op == 'insert')
+        || (!$auto_update && $op == 'update')) {
           break;
         }
         // Use the first fieldmap.
@@ -370,6 +383,13 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     $object->Id = $sfid;
   }
 
+  $continue = module_invoke_all('salesforce_api_pre_export', $object, $map, $uid);
+  if (!empty($continue)) {
+    foreach ($continue as $value) {
+      if ($value === FALSE) { return; }
+    }
+  }
+  
   // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
   // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
   // parameter. Until it is fixed, we have to update/create.
@@ -389,8 +409,6 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       // Store the Salesforce ID for the user and return TRUE.
       salesforce_api_id_save('user', $uid, $response->id, $name);
     }
-
-    return TRUE;
   }
   else {
     // Otherwise log the error and return FALSE.
@@ -402,8 +420,9 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       }
     }
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
-    return FALSE;
   }
+  module_invoke_all('salesforce_api_post_export', $object, $map, $uid, $response);
+  return $response->success;
 }
 
 /**

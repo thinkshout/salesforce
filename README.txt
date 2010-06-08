@@ -1,19 +1,23 @@
 // $Id$
 
 SALESFORCE MODULE
-
+-----------------
   Contents of this README:
     ABOUT
     REQIREMENTS
     INSTALLATION
     UPDATING / REINSTALLING / ENABLING / DISABLING
     QUICKSTART
+    PREMATCHING
+    EXPORT QUEUE
     WORKING WITH WSDL FILES
+    EXTENDING
     TROUBLESHOOTING
     REPORTING BUGS
 
 
 ABOUT
+-----
   This module implements a mapping functionality between SalesForce Objects and
   Drupal entities. In other words, for each of your supported Drupal entities
   (e.g. node, user, or entities supported by extensions), you can assign
@@ -27,7 +31,7 @@ ABOUT
 
 
 REQUIREMENTS
-
+------------
   1) You need a salesforce account. Developers can register here:
   
   http://www.developerforce.com/events/regular/registration.php
@@ -40,7 +44,7 @@ REQUIREMENTS
 
 
 INSTALLATION
-
+------------
   1) Download, uncompress and situate the module as per usual.
 
   2) Download the salesforce PHP toolkit version 13:
@@ -61,7 +65,7 @@ INSTALLATION
 
 
 UPDATING / REINSTALLING / ENABLING / DISABLING
-
+----------------------------------------------
   Since this module does not yet have a stable release, there is no upgrade path
   neither between Drupal versions nor between dev versions. If you have
   previously installed this module on your Drupal site and are upgrading, you
@@ -85,8 +89,10 @@ UPDATING / REINSTALLING / ENABLING / DISABLING
 
 
 QUICKSTART
-
-  0) Enable the module.
+----------
+  0) Minimal: enable salesforce_api and sf_node or sf_user.
+     Kitchen sink: enable salesforce_api, sf_node, sf_user, sf_prematch, and 
+     sf_queue
   
   1) Visit admin/settings/salesforce and enter your login information in the
      "Salesforce API Settings" fieldset and "WSDL directory".
@@ -103,8 +109,31 @@ QUICKSTART
      established a mapping for and manually create a Salesforce object for it.
 
 
-WORKING WITH WSDL FILES
+PREMATCHING
+-----------
+  The module sf_prematch provides administrators the ability to set up duplicate
+  prevention criteria on each fieldmap. When sf_permatch is enabled, 
+  administrators will be directed to set up matching criteria after creating a 
+  fieldmap. Each time a SalesForce export is triggered, this criteria will be 
+  used to identify any pre-existing records. If any matching record is found, 
+  the matched record will be updated instead of a new record being created. The 
+  impetus for this is to reduce the database management workload for 
+  SalesForce.com administrators.
 
+
+EXPORT QUEUE
+------------
+  The module sf_queue implements a queueing system for exports. Since SalesForce 
+  API's create and update functions can modify up to 200 records at a time, this 
+  module offers significant efficiencies for users trying to minimize their API 
+  usage. Further, if an account's API limit is exceeded, the queue provides a 
+  failsafe so that data is not lost. Failed API transactions will be queued for 
+  future reprocessing. In addition, sf_queue is highly configurable to allow 
+  administrators maximum flexibility in setting up the queue.
+
+
+WORKING WITH WSDL FILES
+-----------------------
   If you do not upload a WSDL file, Salesforce module will use a default .wsdl
   file (salesforce_api/toolkit/soapclient/enterprise.wsdl.xml), which may not be
   compatible with your organization's SalesForce installation or the current
@@ -129,8 +158,21 @@ WORKING WITH WSDL FILES
   http://php.net/manual/en/book.soap.php
 
 
-TROUBLESHOOTING
+EXTENDING
+----------
+  Support for mapping fields from commonly used modules like location and cck is 
+  provided by sf_contrib module. If you use node_location, user_location, 
+  cck_location, or any cck other fields and you'd like them to be available for 
+  export, you need to enable this module.
+  
+  In addition to out of the box support for various cck fields, an extensible 
+  framework is available for developers to build or alter support for contrib 
+  modules. See sf_contrib for examples and best practices, as well as hooks.php 
+  for documentation of the available integration points.
 
+
+TROUBLESHOOTING
+---------------
   Troubleshooting connection errors:
     * Are you using the right WSDL? Generate a new one.
     * Disable SOAP WSDL cache.
@@ -174,7 +216,7 @@ TROUBLESHOOTING
 
 
 REPORTING BUGS
-
+--------------
   Bug reports should adhere to Drupal standards.
 
   Before creating a new issue, please:

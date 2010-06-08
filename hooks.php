@@ -167,6 +167,70 @@ function hook_default_salesforce_field_maps($export = array()) {
 }
 
 /**
+ * Called immediately before a SalesForce object is to be created or updated
+ * during export (e.g. sf_user_export, sf_node_export). Entity-based modules
+ * that invoke SalesForce create, update, or upsert methods should always invoke
+ * this hook before calling SalesForce. This feature was primarily designed for
+ * queue/batch support, but could have other use cases as well.
+ * 
+ * This hook is invoked after a prematching attempt. For modules that may care
+ * about such a situation, when $sf_object->sfid is empty, this is a SalesForce 
+ * "create" operation. Otherwise, this is a SalesForce "update" operation.
+ *
+ * @param string $sf_object
+ *   The object about to be exported to SalesForce
+ * @param mixed $map 
+ *   The fully loaded fieldmapping object used to create sf_object
+ * @param string $drupal_id 
+ *   The unique id of the drupal object associated with the sf_object, e.g. nid
+ * @return
+ *   Implementing modules should return FALSE if the current export should NOT
+ *   proceed. Note that this will not prevent further processing of 
+ *   implementations of this hook.
+ */
+function hook_salesforce_api_pre_export($sf_object, $map, $drupal_id) {
+
+}
+
+/**
+ * Called after a SalesForce create or update attempt.
+ * @see hook_salesforce_api_pre_export
+ *
+ * @param string $sf_object
+ * @param string $map 
+ * @param string $drupal_id 
+ * @param object $salesforce_response
+ *   The response object from the SalesForce SOAP server. This object has three
+ *   properties:
+ *   - errors: A single error array, or an an array of one or more errors with
+ *     three keys:
+ *     - fields: A single field name, or an array of one or more field names
+ *     - message: A human readable failure message
+ *     - statusCode: A machine readable failure code
+ *   - id: If there was no error, the SalesForce id of the touched object.
+ *   - success: boolean
+ * @return void
+ */
+function hook_salesforce_api_post_export($sf_object, $map, $drupal_id, $salesforce_response) {
+  
+}
+
+/**
+ * Called before SalesForce delete
+ * @see hook_salesforce_api_pre_export
+ * This hook can be used to prevent deletion of SalesForce records entities, but
+ * cannot prevent deletion of Drupal entities (@see hook_nodeapi or hook_user).
+ *
+ * @param object $sfid
+ * @param object $map
+ * @param string $drupal_id
+ * @return FALSE if the SalesForce record should not be deleted.
+ */
+function hook_salesforce_api_delete($sfid, $map, $drupal_id) {
+  
+}
+
+/**
  * Override the default CCK export callback for a cck field type.
  *
  * @param object $node

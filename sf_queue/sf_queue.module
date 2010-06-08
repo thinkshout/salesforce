@@ -1,0 +1,451 @@
+<?php
+
+/**
+ * @file sf_queue.module
+ * Implements export queue and administrativa for SalesForce API
+ */
+
+function sf_queue_menu() {
+  return array(
+    'admin/reports/sf_queue' => array(
+      'type' => MENU_LOCAL_TASK,
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sf_queue_admin_form'),
+      'access arguments' => array('administer salesforce'),
+      'file' => 'sf_queue.admin.inc',
+      ),
+    );
+}
+
+/**
+ * Implements hook_salesforce_api_pre_export
+ */
+function sf_queue_salesforce_api_pre_export($sf_object, $map, $oid) {
+  // If queue is not in use, return;
+  watchdog('sf_queue', __LINE__ . '<pre>' . print_r($sf_object, 1) . '</pre>');
+  if (!variable_get('sf_queue_enabled', FALSE)) {
+    watchdog('sf_queue', __LINE__);
+    return;
+  }
+  watchdog('sf_queue', __LINE__);
+  $op = empty($sf_object->Id) ? 'create' : 'update';
+  $settings = variable_get('sf_queue_settings', _sf_queue_default_settings());
+  if (!in_array($op, $settings['cron_operations'])) {
+    return TRUE;
+  }
+  return sf_queue_enqueue($op, $sf_object, $map, $oid);
+}
+
+/**
+ * Implements hook_salesforce_api_post_export
+ */
+function sf_queue_salesforce_api_post_export($sf_object, $map, $oid, $response) {
+  // If queue is not in use, return;  
+  // Nothing yet.
+}
+
+/**
+ * Implements hook_salesforce_api_delete()
+ */
+function sf_queue_salesforce_api_delete($sfid, $map, $oid) {
+  // If queue is not in use, return;
+  // If queue is not in use, return;
+  if (!variable_get('sf_queue_enabled', FALSE)) {
+    return;
+  }
+  if (!in_array('delete', $settings['cron_operations'])) {
+    return TRUE;
+  }
+  return sf_queue_enqueue('delete', (object)array('Id' => $sfid), $map, $oid);
+}
+
+/**
+ * Helper function to add / update a queue item.
+ */
+function sf_queue_enqueue($op, $sf_object, $map, $oid) {
+  $object = (object)array(
+    'sf_op' => $op,
+    'oid' => $oid,
+    'attempts' => 0,
+    'created' => time(),
+    'sfid' => empty($sf_object->Id) ? '' : $sf_object->Id,
+    'drupal_type' => $map->drupal,
+    'sf_type' => $map->salesforce,
+    'name' => md5(microtime()),
+    'fieldmap_name' => $map->name,
+    'sf_data' => $sf_object,
+    );
+  watchdog('sf_queue', __LINE__ . '<pre>' . print_r($object, 1) . '</pre>');
+  $update = array();
+  $sql =
+    'SELECT oid, sf_data
+      FROM {salesforce_export_queue} 
+      WHERE drupal_type = "%s" AND fieldmap_name = "%s" AND oid = %d';
+  // If an existing operation is queued for this drupal object / fieldmap pair,
+  // update the queue by merging the two records instead of appending to it.
+  $existing = db_fetch_array(db_query($sql, $map->drupal, $map->name, $oid));
+  if (!empty($existing)) {
+    $update = 'oid';
+    $object->oid = $existing['oid'];
+
+    // One sf_data to rule them all.
+    $existing_sf_data = get_object_vars(unserialize($existing['sf_data']));
+    $new_sf_data = get_object_vars($sf_object);
+    $object->sf_data = (object)array_merge($existing_sf_data, $new_sf_data);
+  }
+
+  // If we successfully wrote to the queue, then we return FALSE to prevent an
+  // immediate salesforce export. If we failed to write to the queue, log an 
+  // error but don't prevent the export.
+  if (drupal_write_record('salesforce_export_queue', $object, $update)) {
+    watchdog('sf_queue', __LINE__);
+    return FALSE;
+  }
+  else {
+    watchdog('sf_queue', 'Failed to queue SalesForce export. <pre>' . print_r($object, 1) . print_r(func_get_args(), 1) . '</pre>');
+    return TRUE;
+  }
+}
+
+/**
+ * Implements hook_cron
+ */
+function sf_queue_cron() {
+  if (!variable_get('sf_queue_enabled', FALSE)) {
+    return FALSE;
+  }
+  $settings = variable_get('sf_queue_settings', _sf_queue_default_settings());
+  $state = variable_get('sf_queue_state', _sf_queue_default_state());
+  if ((REQUEST_TIME - $settings['cron_frequency']) > $state['last_attempt']) {
+    $state['last_attempt'] = REQUEST_TIME;
+    variable_set('sf_queue_state', $state);
+    sf_queue_process_queue($settings, $state);
+  }
+}
+
+function sf_queue_process_queue($settings, $state) {
+  $duration = $settings['cron_period'];
+  if ($duration > .5) {
+    $duration = .5;
+  }
+  $limit = ini_get('max_execution_time') * $duration;
+  $start_time = REQUEST_TIME;
+
+  // Clean up the queue before we do any processing.
+  db_query('DELETE FROM {salesforce_export_queue} WHERE sf_op IN ("delete", "update") AND (sfid IS NULL OR sfid = NULL OR sfid = "")');
+
+  $settings = array_merge($settings, array('start_time' => $start_time, 'limit' => $limit));
+  // Order of operations: delete, update, create
+  if (in_array('delete', $settings['cron_operations'])) {
+    sf_queue_handle_deletes($settings);
+  }
+  
+  if (in_array('create', $settings['cron_operations'])
+  || in_array('update', $settings['cron_operations'])) {
+    sf_queue_handle_upserts($settings);
+  }
+}
+
+/**
+ * Helper function to process queue deletes. Since we can delete across object
+ * types by SFID alone, plow through 200 deletes at a time, oldest first. Break
+ * if we exceed the time limit.
+ */
+function sf_queue_handle_deletes($settings) {
+  $args = array();
+  $sql = "SELECT id, oid, fieldmap_name, drupal_type, sf_type, sfid 
+            FROM {salesforce_export_queue}
+            WHERE sf_op = 'delete'";
+  if ($settings['retry_num_attempts'] >= 0) {
+    $sql .= ' AND attempts < %d';
+    $args[] = $settings['retry_num_attempts'] + 1;
+  }
+  $sql .= 'ORDER BY created LIMIT 200';
+  $done = FALSE;
+  while ($settings['start_time'] + $settings['limit'] < time()) {
+    $sfids = $deletes = $real_deletes = $fails = array();
+    $result = db_query($sql, $args);
+    if (empty($result)) {
+      break;
+    }
+    while ($row = db_fetch_array($result)) {
+      $sfids[] = $row['sfid'];
+      $deletes[$row['sfid']] = $row;
+    }
+    if ($settings['cron_min_threshold']
+    && count($deletes) < $settings['cron_min_threshold']) {
+      break;
+    }
+    try {
+      $sf = salesforce_api_connect();
+      $responses = $sf->client->delete($sfids);
+      sf_queue_handle_responses($responses, $deletes);
+    }
+    catch (Exception $e) {
+      sf_queue_handle_exception($e, $deletes);
+    }
+  }
+}
+
+/**
+ * Helper function to process queue updates and inserts (creates). The logic 
+ * proceeds basically like this:
+ * - Get a list of object types that we're going to upsert by eliminating those
+ *   queue item groups that do not meet the criteria (too many fails, threshold
+ *   not met, etc.)
+ * - For each object type:
+ *   - update up to 200 records at a time
+ *   - then, create up to 200 records at a time
+ * - On each iteration of each major loop, break if we have exceeded our 
+ *   allotted processing time limit.
+ */
+function sf_queue_handle_upserts($settings) {
+  $ph_op = db_placeholders(array_filter($settings['cron_operations']), 'text');
+  $count_args = $settings['cron_operations'];
+
+  $count_sql = 
+    'SELECT sf_type, count(sf_type) as total
+      FROM {salesforce_export_queue}
+      WHERE sf_op IN ("create", "update")';
+  $sql = "SELECT id, oid, fieldmap_name, drupal_type, sf_type, sfid 
+            FROM {salesforce_export_queue}
+            WHERE sf_op = '%s' AND sf_type = '%s";
+  $count_having = '';
+  if ($settings['retry_num_attempts'] >= 0) {
+    $count_sql .= ' AND attempts < %d';
+    $sql .= ' AND attempts < %d';
+    $count_args[] = $settings['retry_num_attempts'] + 1;
+  }
+  if ($settings['cron_min_threshold']) {
+    $count_args[] = $settings['cron_min_threshold'];
+    $count_having = ' HAVING total >= %d';
+  }
+  $count_sql .= "GROUP BY sf_type " . $count_having . " ORDER BY total DESC";
+  $count_result = db_query($count_sql, $count_args);
+  $sql .= ' ORDER BY created LIMIT 200';
+  $done = FALSE;
+  
+  while ($start_time + $limit < time()
+  && $row = db_fetch_array($count_result)) {
+    $sf_type = $row['sf_type'];
+    foreach (array('update', 'create') as $op) {
+      $args = array($op, $sf_type, $settings['retry_num_attempts'] + 1);
+      while($start_time + $limit < time()
+      && $result = db_query($sql, $args)) {
+        $items = $ids = $items = $objects = array();
+        while ($queue_item = db_fetch_array($result)) {
+          $ids[$queue_item['sfid']] = $queue_item['id'];
+          $items[$queue_item['sfid']] = $queue_item;
+          $objects[] = $queue_item['sf_data'];
+        }
+        try {
+          $sf = salesforce_api_connect();
+          $responses = $sf->client->{$op}($objects, $sf_type);
+          list($wins, $fails) = sf_queue_handle_responses($responses, $items);
+        }
+        catch (Exception $e) {
+          sf_queue_handle_exception($e, $deletes);
+          continue;
+        }
+        if (empty($wins)) {
+          continue;
+        }
+        // Instead of using salesforce_api_id_save to generate 2 SQL queries per
+        // record, we collect them all to do 2 massive queries for all the
+        // records at once.
+        // @TODO: salesforce_api_id_save_multi
+        $delete_sql = 'DELETE FROM {salesforce_object_map} WHERE drupal_type = "%s" AND oid IN (' . db_placeholders($wins) . ')';
+        $insert_sql = 'INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name) VALUES ';
+        $row_ph = '("%s", %d, "%s", "%s")';
+        $rows = '';
+        $args = array();
+        //, $drupal_type, $oid, $sfid, $name);
+        foreach ($wins as $sfid => $oid) {
+          if (!empty($rows)) {
+            $rows .= ', ';
+          }
+          $rows .= $row_ph;
+          $args[] = $items[$sfid]['drupal_type'];
+          $args[] = $oid;
+          $args[] = $sfid;
+          $args[] = $items[$sfid]['name'];
+        }
+        $insert_sql .= ' ' . $rows;
+        db_query($delete_sql, $wins);
+        db_query($insert_sql, $args);
+      }
+    }
+  }
+  
+}
+
+function sf_queue_handle_responses($responses, $dataset) {
+  $wins = $fails = array();
+  if (!is_array($responses)) {
+    $responses = array($responses);
+  }
+  foreach ($responses as $response) {
+    if (!empty($response->success)) {
+      $wins[$response->id] = $dataset[$response->id];
+    }
+    else {
+      $fails[$response->id] = $deletes[$response->id];
+    }
+  }
+  if (!empty($wins)) {
+    db_query('DELETE FROM {salesforce_export_queue} WHERE id IN (' . db_placeholders($wins) . ')', $wins);
+  }
+  if (!empty($fails)) {
+    db_query('UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($fails) . ')', $fails);
+  }
+  return array($wins, $fails);
+}
+
+/**
+ * Set global state if API limit is exceeded, password is expired, creds are
+ * wrong, or if there are any other "blocker" exceptions. Otherwise, log the
+ * exception and update the queue records with failure attempts.
+ */
+function sf_queue_handle_exception($e, $dataset) {
+  // TODO: Parse the exception and take action on it
+  $oids = array();
+  foreach ($dataset as $data) {
+    $oids[] = $data['oid'];  
+  }
+  db_query('UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($oids) . ')', $oids);
+}
+
+/**
+ * Implementation of hook_form_salesforce_api_settings_form_alter().
+ * @see salesforce_api/salesforce_api.admin.inc::salesforce_api_settings_form
+ */
+function sf_queue_form_salesforce_api_settings_form_alter(&$form, $form_state) {
+  $enabled = variable_get('sf_queue_enabled', FALSE);
+  $form['sf_queue'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Queue Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => -1,
+  );
+  if ($enabled) {
+    $description = l('View the export queue', 'admin/reports/sf_queue');
+  }
+  else {
+    $description = t('SalesForce Export Queue will attempt to optimize your SalesForce API usage by scheduling transactions for delayed processing, combining multiple object insert/updates, and backlogging failed transactions for re-processing. Enable the Export Queue to configure settings for these features.');
+  }
+  $form['sf_queue']['sf_queue_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable SalesForce Export Queue'),
+    '#description' => $description,
+    '#default_value' => $enabled,
+  );
+  if (!$enabled) {
+    return;
+  }
+  
+  $sf_queue_settings = variable_get('sf_queue_settings', _sf_queue_default_settings());
+  $frequency = drupal_map_assoc(array(0, 60, 180, 300, 600, 900, 1800, 2700, 3600, 10800, 21600, 32400, 43200, 86400), 'format_interval');
+  $frequency[0] = t('Every cron run');
+
+  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $objects = array();
+  foreach ($fieldmaps as $map) {
+    $objects[$map->salesforce] = $map->salesforce;
+  }
+  $num_objects = drupal_map_assoc(range(1, count($num_objects)));
+
+  $threshold = drupal_map_assoc(array(0, 5, 10, 15, 30, 50, 75, 100, 125, 150, 175, 200));
+  $threshold[0] = t('No minimum');
+  
+  $attempts = drupal_map_assoc(array(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -1));
+  $attempts[-1] = t('No limit');
+  
+  $period = array(
+    '.05' => t('5% of cron run'),
+    '.1' => t('10% of cron run'),
+    '.15' => t('15% of cron run'),
+    '.2' => t('20% of cron run'),
+    '.25' => t('25% of cron run'),
+    '.3' => t('30% of cron run'),
+    '.35' => t('35% of cron run'),
+    '.4' => t('40% of cron run'),
+    '.45' => t('45% of cron run'),
+    '.5' => t('50% of cron run'),
+  );
+  
+  $settings = array(
+    '#tree' => TRUE,
+    'cron_operations' => array(
+      '#title' => 'Queued Operations',
+      '#type' => 'checkboxes',
+      '#options' => array('create' => t('Create'), 'update' => t('Update'), 'delete' => t('Delete')),
+      '#default_value' => $sf_queue_settings['cron_operations'],
+      '#description' => t('Which operations should be queued? Check each operation that should cause an API transaction to be queued. Unchecked operations will trigger an API transaction immediately. <strong>Check more of these options if you are running out of API calls.</strong>'),
+      ),
+    'cron_frequency' => array(
+      '#title' => 'Frequency',
+      '#type' => 'select',
+      '#options' => $frequency,
+      '#default_value' => $sf_queue_settings['cron_frequency'],
+      '#description' => t('How often should exports be attempted? Note: exports will only be attempted when cron is run. If your site-wide cron runs less frequently than this setting, the exports will be attempted on every cron run. <strong>If cron is timing out, you should lower this setting so that the queue is processed more frequently.</strong>'),
+      ),
+    'cron_period' => array(
+      '#title' => 'Time',
+      '#type' => 'select',
+      '#options' => $period,
+      '#default_value' => $sf_queue_settings['cron_period'],
+      '#description' => t('Amount of time as a percentage of allotted cron run time that should be devoted to the export queue.'),
+      ),
+    // Holding off on this setting for now:
+    // 'cron_num_objects' => array(
+    //   '#title' => 'Number of Object Types',
+    //   '#type' => 'select',
+    //   '#options' => $num_objects,
+    //   '#default_value' => $sf_queue_settings['cron_num_objects'],
+    //   '#description' => t('How many object types should be processed per cron run? SalesForce allows up to 200 objects of the same type to be created, updated, or deleted in a single API transaction. The export queue will group objects of the same type to maximize efficient use of API transactions. This setting determines how many such object groups should be processed per cron run. <strong>If cron is timing out, you should lower this setting so that fewer API transactions are attempted per cron run.</strong>'),
+    //   ),
+    'cron_min_threshold' => array(
+      '#title' => 'Minimum Number of Objects to Trigger Export',
+      '#type' => 'select',
+      '#options' => $threshold,
+      '#default_value' => $sf_queue_settings['cron_min_threshold'],
+      '#description' => t('How many objects of should be required to trigger an export? The settings "No minimum" means that the export queue will be processed as fully as possible on each cron run, even if only one object is to be created, updated, or deleted. Setting this value too high may delay processing of queued data. <strong>If you are running out of API calls, try raising this setting so that more objects are queued before an API call is made. If your cron runs are timing out, try lowering this setting so that the queue load is smaller on each cron run.</strong>')
+      ),
+    'retry_num_attempts' => array(
+      '#title' => 'Number of Retry Attempts',
+      '#type' => 'select',
+      '#options' => $attempts,
+      '#default_value' => $sf_queue_settings['retry_num_attempts'],
+      '#description' => t('How many times should an API transacrion be retried after a failed attempt? "No limit" means that failed attempts will be retried either until they succeed or are manually removed from the queue. <strong>If you are running out of API calls, try lowering this setting. If your cron runs are timing out, try lowering this setting.</strong>'),
+      ),
+    );
+  $form['sf_queue']['sf_queue_settings'] = $settings;
+}
+
+/**
+ * Helper function for sf_queue_settings variable. Should be used for default
+ * sf_queue_settings if it is empty, e.g. 
+ * variable_get('sf_queue_settings', _sf_queue_default_settings())
+ */
+function _sf_queue_default_settings() {
+  return array(
+    'cron_operations' => array('create', 'update', 'delete'),
+    'cron_min_threshold' => array(0),
+    'cron_num_objects' => 1,
+    'cron_frequency' => 0,
+    'cron_period' => '.25',
+    'retry_num_attempts' => 1,
+  );
+}
+
+/**
+ * Helper function for sf_queue_state, which keeps track of which objects 
+ * have been processed, when they were last processed, etc.
+ */
+function _sf_queue_default_state() {
+  return array(
+    'last_attempt' => NULL,
+    );
+}
+

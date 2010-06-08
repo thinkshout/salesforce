@@ -871,6 +871,9 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
  * @param string $sfid a SalesForce ID
  */
 function salesforce_api_delete_salesforce_objects($sfids) {
+  if (empty($sfids)) {
+    return;
+  }
   if (is_string($sfids)) {
     $sfids = array($sfids);
   }
@@ -1087,7 +1090,7 @@ function salesforce_api_salesforce_field_map_load ($name) {
 
 function salesforce_api_salesforce_field_map_load_by ($conditions) {
   ctools_include('export');
-  $result = ctools_export_load_object('salesforce_field_map', 'conditions', $condition);
+  $result = ctools_export_load_object('salesforce_field_map', 'conditions', $conditions);
   return $result;
 }
 
