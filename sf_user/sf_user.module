@@ -191,7 +191,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
     $options = salesforce_api_fieldmap_options('user');
 
     // Add the export form
-    $form['export']['fieldmap'] = array(
+    $form['export']['name'] = array(
       '#type' => 'select',
       '#title' => t('Export fieldmap'),
       '#options' => $options,
