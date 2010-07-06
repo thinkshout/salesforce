@@ -61,7 +61,7 @@ function sf_prematch_schema() {
         'default' => 0
       ),
     ),
-    'primary key' => array('fieldmap'),
+    'primary key' => array('name'),
   );
 
   return $schema;
