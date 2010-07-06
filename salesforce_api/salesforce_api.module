@@ -425,6 +425,21 @@ function salesforce_api_fieldmap_system_fields() {
   return $fields;
 }
 
+/**
+ * SalesForce does not accept email addresses with relative domains, like
+ * root@localhost. This function is based on Drupal's valid_email_address.
+ * Greater men than I have tried and failed to capture valid email addresses
+ * with simple regular expressions. This function merely tries to mimic
+ * SalesForce's validation rules, NOT to capture all valid email addresses.
+ */
+function salesforce_api_valid_email_address($mail) {
+  $user = '[a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
+  $domain = '(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])';
+  $tld = '(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])+';
+  $domain = '(?:' . $domain . '\.)+' . $tld;
+  $ipv4 = '[0-9]{1,3}(\.[0-9]{1,3}){3}';
+  return preg_match("/^$user@($domain|(\[($ipv4)\]))$/", $mail);
+}
 
 /**
  * Saves a fieldmap to the database.
@@ -748,6 +763,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
     $updateable = $sf_field_definition['type'] & SALESFORCE_FIELD_UPDATEABLE;
     $createable = $sf_field_definition['type'] & SALESFORCE_FIELD_CREATEABLE;
+    $nillable = $sf_field_definition['type'] & SALESFORCE_FIELD_NILLABLE;
 
     // Don't try to update or create fields to which those actions do not apply.
     if ((!$updateable && !$createable)
@@ -757,53 +773,126 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     }
     // If a handler is specified for retrieving a value for the Drupal field...
     if (isset($drupal_object_definition['fields'][$drupal_fieldname]['export'])) {
-      $drupal_field_export_handler = $drupal_object_definition['fields'][$drupal_fieldname]['export'];
-      $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+      $drupal_field_export_handler =
+        $drupal_object_definition['fields'][$drupal_fieldname]['export'];
+      $drupal_field_definition =
+        $drupal_object_definition['fields'][$drupal_fieldname];
+
       // Get the value for the field from the handler function.
-      $object->$sf_fieldname = htmlentities($drupal_field_export_handler($drupal_data, $drupal_fieldname, $drupal_field_definition, $sf_field_definition));
+      $value =
+        htmlentities($drupal_field_export_handler($drupal_data,
+          $drupal_fieldname, $drupal_field_definition, $sf_field_definition));
     }
     // Otherwise set the field on the export object to the value of the Drupal
     // field if it's present on the source object.
     elseif (isset($drupal_data->$drupal_fieldname)) {
-      $object->$sf_fieldname = htmlentities($drupal_data->$drupal_fieldname);
+      $value = htmlentities($drupal_data->$drupal_fieldname);
+    }
+
+    // Ignore null values for non-nillable fields
+    if (is_null($value) && !$nillable) {
+      continue;
+    } elseif (is_null($value)) {
+      // Enterprise client can only nullify one field per transaction even with
+      // the proper values set in fieldsToNull. This is a bug in a 3rd-party
+      // library, beyond our control. In other words, this should be an array
+      // but in fact must be a string. This is going to get overwritten on
+      // every iteration of this loop, meaning that only one null field gets
+      // nullified per transaction.
+      $fieldsToNull = $sf_fieldname;
+      continue;
+    }
+
+    // Evaluate field-type-specific syntax rules. The point here is not to
+    // massage data in any way - that should have been done in the export
+    // handler. All we want to do is avoid creating a syntactically invalid
+    // object for export. For example, an "id" or "reference" field must contain
+    // a SalesForce ID. We do not check to make sure the given SalesForce ID
+    // exists, merely that the format matches that of a SalesForce ID.
+    //
+    // For any errors, just continue to the next iteration and log the error.
+    $type = $sf_field_definition['salesforce']['type'];
+    $errors = array();
+    switch ($type) {
+      case 'boolean': {
+        if (empty($value)) {
+          $object->$sf_fieldname  = 0;
+        } else {
+          $object->$sf_fieldname  = 1;
+        }
+        break;
+      }
+  
+      case 'time':
+      case 'date':
+      case 'datetime': {
+        $time = strtotime($value);
+        if (empty($time)) {
+          $errors[] = array('message' => 'SalesForce cannot accept empty values for @type fields: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value));
+        } else {
+          // The export handler should have handled this, but reformat to
+          // DATE_ATOM, just in case.
+          $object->$sf_fieldname  = gmdate(DATE_ATOM, $time);
+        }
+        break;
+      }
+
+      case 'email': {
+        if (salesforce_api_valid_email_address($value)) {
+          $object->$sf_fieldname  = $value;
+        } else {
+          $errors[] = array('message' => 'Invalid email address provided for SalesForce export: @value', 'vars' => array('@value' => $value));
+          continue;
+        }
+        break;
+      }
+
+      case 'percent':
+      case 'currency':
+      case 'int':
+      case 'double': {
+        if (is_numeric($value)) {
+          $object->$sf_fieldname = $value;
+        } else {
+          $errors[] = array('message' => 'Invalid value provided for SalesForce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
+        }
+        break;
+      }
+
+      case 'reference':
+      case 'id': {
+        if (!is_sfid($value)) {
+          $errors[] = array('message' => 'Invalid value provided for SalesForce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
+        } else {
+          $object->$sf_fieldname  = $value;
+        }
+        break;
+      }
+
+      case 'string':
+      case 'picklist':
+      case 'multipicklist':
+      case 'combobox':
+      case 'base64':
+      case 'textarea':
+      case 'phone':
+      case 'url':
+      case 'encryptedstring':
+      default: {
+        $object->$sf_fieldname  = $value;
+        break;
+      }
     }
   }
 
-  // Before we return the object, we need to check for any fieldsToNull.
-  // Leaving a field blank will not erase an existing value from Salesforce.
-  // Any such value must be explicitly set to null.
-  // TODO: Fields should be checked for nillable before getting added to fieldsToNull
-  $props = get_object_vars($object);
-  foreach ($props as $key => $value) {
-    $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
-    // Salesforce treats the following values differently than null.
-    if ($value === FALSE || $value === 0 || $value === '0' || $value === 'false') {
-      $object->$key = $value = 0;
-    } elseif(empty($value)) {
-      $nillable = $sf_field_definition['type'] & SALESFORCE_FIELD_NILLABLE;
-      // If the field is not nillable, don't try to set it to null
-      if (!$nillable) {
-        switch ($sf_field_definition['salesforce']['type']) {
-          case 'boolean': 
-            $object->$key = 0;
-            break;
-          case 'string':
-            $object->$key = t('(blank)');
-            break;
-          default:
-            unset($object->$key);
-            break;
-        }
-      } else {
-        $object->fieldsToNull = $key;
-        // Enterprise client can only null one field per transaction.
-        // This is a bug beyond our control. For now, we just have to deal with it.
-        // The following doesn't actually work:
-        // if (!empty($object->fieldsToNull)) { 
-        //   $object->fieldsToNull .= '; '; 
-        // }
-      }
+  if (!empty($errors)) {
+    foreach ($errors as $error) {
+      DrupalSalesforce::watchdog(
+        SALESFORCE_LOG_SOME, $error['message'], $error['vars'], WATCHDOG_ERROR);
     }
+  }
+  if (!empty($fieldsToNull)) {
+    $object->fieldsToNull = $fieldsToNull;
   }
   return $object;
 }
