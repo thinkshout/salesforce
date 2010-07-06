@@ -343,12 +343,28 @@ function _sf_node_export_blank($node, $fieldname, $drupal_field_definition, $sf_
 }
 
 function _sf_node_export_body($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  return $node->teaser . '<!--break-->' . $node->body;
+  // Only add teaser text to the begining of the body if it is excluded
+  // on the node object.
+  if (!empty($node->teaser) AND strpos($node->body, '<!--break-->') === 0) {
+    return $node->teaser . $node->body;
+  }
+  return $node->body;
 }
 
 function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  $node->teaser = node_teaser($sf_data->$sf_fieldname);
-  $node->body = $sf_data->$sf_fieldname;
+  // Preserve Drupal configuration for this node in terms of whether or not
+  // the teaser is included in the body text.
+  $import_data = html_entity_decode($sf_data->$sf_fieldname);
+  if (!empty($node->teaser) AND strpos($node->body, '<!--break-->') !== 0) {
+    // Teaser is included in body.
+    $node->body = $import_data;
+  }
+  else {
+    // Teaser is not included in body.
+    $offset = strpos($import_data, '<!--break-->');
+    $node->body = substr($import_data, $offset);
+  }
+  $node->teaser = node_teaser($import_data);
 }
 
 // Assume that a on/off checkbox is a SF boolean, which can never be set to null
