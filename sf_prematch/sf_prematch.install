@@ -30,7 +30,7 @@ function sf_prematch_schema() {
       'name' => array(
         'description' => 'Fieldmap name FK',
         'type' => 'varchar',
-        'length' => '255',
+        'length' => 64,
       ),
       'primary_field' => array(
         'description' => 'Primary field or object name for use in prematching.',

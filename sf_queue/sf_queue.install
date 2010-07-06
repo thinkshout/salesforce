@@ -67,27 +67,27 @@ function sf_queue_schema() {
       'drupal_type' => array(
         'description' => 'Drupal object type (e.g. "node", "comment")',
         'type' => 'varchar',
-        'length' => 128,
+        'length' => 64,
         'not null' => TRUE,
         'default' => '',
         ),
       'sf_type' => array(
         'description' => 'SalesForce object type (e.g. "node", "comment")',
         'type' => 'varchar',
-        'length' => 128,
+        'length' => 64,
         'not null' => TRUE,
         'default' => '',
       ),
       'name' => array(
         'description' => 'Unique ID for this object. Used to identify it programatically.',
         'type' => 'varchar',
-        'length' => '255',
+        'length' => 64,
         'not null' => TRUE,
       ),
       'fieldmap_name' => array(
         'description' => 'Foreign key for salesforce_field_map - the fieldmap that corresponds to this record.',
         'type' => 'varchar',
-        'length' => '255',
+        'length' => 64,
       ),
       'sf_data' => array(
         'description' => 'Serialized SalesForce object data',

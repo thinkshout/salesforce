@@ -42,7 +42,7 @@ function salesforce_api_schema() {
       'name' => array(
         'description' => 'Foreign key for salesforce_field_map - the fieldmap that corresponds to this record.',
         'type' => 'varchar',
-        'length' => '255',
+        'length' => 64,
       ),
       'oid' => array(
         'description' => 'Specific Drupal object identifier (e.g. node id or comment id)',
@@ -95,7 +95,7 @@ function salesforce_api_schema() {
       'name' => array(
         'description' => 'Unique ID for this object. Used to identify it programatically (initially implemented for ctools support only).',
         'type' => 'varchar',
-        'length' => '255',
+        'length' => 64,
         ),
       'automatic' => array(
         'description' => 'Indicates whether this action/map is automatic or triggered.',
@@ -108,7 +108,7 @@ function salesforce_api_schema() {
       'drupal' => array(
         'description' => 'The kind of Drupal object this map is for.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 40,
         'not null' => TRUE,
         'default' => '',
       ),
