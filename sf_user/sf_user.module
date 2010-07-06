@@ -476,43 +476,47 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     }
   }
 
-  // If the user exists, simply update the existing user.
-  if ($account->uid) {
-    // Loop through the fields on the fieldmap.
-    foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
-      // If a handler is specified for importing a value from Salesforce.
-      if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
-        $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
-        $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
-        $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
-        // Get the value for the field from the handler function.
-        $change = $drupal_field_import_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
+  // Loop through the fields on the fieldmap.
+  foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
+    // If a handler is specified for importing a value from Salesforce.
+    if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
+      $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
+      $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
+      $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
+      // Get the value for the field from the handler function.
+      $change = $drupal_field_import_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
 
-        $changes = array_merge($changes, $change);
-      }
-      // Otherwise set the field on the export object to the value of the source
-      // field if it's present on the source object.
-      elseif (isset($sf_data->$sf_fieldname)) {
-        if ($account->$drupal_fieldname != $sf_data->$sf_fieldname) {
-          $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
-        }
+      $changes = array_merge($changes, $change);
+    }
+    // Otherwise set the field on the export object to the value of the source
+    // field if it's present on the source object.
+    elseif (isset($sf_data->$sf_fieldname)) {
+      if ($account->$drupal_fieldname != $sf_data->$sf_fieldname) {
+        $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
       }
     }
-
-    //drupal_set_message('<pre>'. print_r($changes, TRUE) .'</pre>');
-    // We don't want to trigger an export while we're running import.
-    // sf_user_skip_export is a flag to tell hook_user not to export this object.
-    $account->sf_user_skip_export = TRUE;
-    $changes['sf_user_skip_export'] = TRUE;
-    $create = !empty($account->uid);
-    $account = user_save($account, $changes);
-    if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
-    || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
-      // Store the Salesforce ID for the node and return TRUE.
-      salesforce_api_id_save('user', $account->uid, $sfid, $name);
-    }
-    unset($account->sf_user_skip_export);
   }
+
+  //drupal_set_message('<pre>'. print_r($changes, TRUE) .'</pre>');
+  // We don't want to trigger an export while we're running import.
+  // sf_user_skip_export is a flag to tell hook_user not to export this object.
+  $account->sf_user_skip_export = TRUE;
+  $changes['sf_user_skip_export'] = TRUE;
+  
+  // If the user exists, update the existing user.
+  if ($account->uid) {
+    $account = user_save($account, $changes);
+    $create = FALSE;
+  } else {
+    $account = user_save(null, $changes);
+    $create = TRUE;
+  }
+  if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
+  || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
+    // Store the Salesforce ID for the node and return TRUE.
+    salesforce_api_id_save('user', $account->uid, $sfid, $name);
+  }
+  unset($account->sf_user_skip_export);
 
   return $account->uid;
 }
