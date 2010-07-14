@@ -28,7 +28,7 @@ function sf_prematch_schema() {
     'description' => t('Drupal to Salesforce object mapping table for pre-creation '),
     'fields' => array(
       'name' => array(
-        'description' => 'Fieldmap name FK',
+        'description' => 'Foreign key for salesforce_field_map name',
         'type' => 'varchar',
         'length' => 64,
       ),

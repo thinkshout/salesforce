@@ -52,7 +52,7 @@ function salesforce_api_schema() {
         'default' => 0
       ),
       'sfid' => array(
-        'description' => 'Salesforce object identifier (e.g. "node", "comment")',
+        'description' => 'Salesforce object identifier (e.g. 000000000000000000)',
         'type' => 'varchar',
         'length' => 32,
         'not null' => TRUE,
@@ -81,7 +81,7 @@ function salesforce_api_schema() {
       'export callback' => 'salesforce_api_export_salesforce_field_map',
     ),
     'fields' => array(
-      // "name" field is only in schema for ctools exportable support and not in 
+      // "name" field is only in schema for ctools exportable support and not in
       // use via any UI at the moment. Implementing modules can assign
       // meaningful names if they wish to do so, but it is not required for our
       // purposes.
@@ -185,7 +185,7 @@ function salesforce_api_requirements($phase) {
 }
 
 /**
- * We have fundamentally changed the schema of SF module. Primary identifier is 
+ * We have fundamentally changed the schema of SF module. Primary identifier is
  * now "name". Although the value of name is not particularly important, it must
  * be set and it must be unique. In this update function, we are doing a few
  * things:
@@ -193,7 +193,7 @@ function salesforce_api_requirements($phase) {
  * 2) Assign unique values to "name" column in salesforce_field_map
  * 3) Assign "name" values to columns in salesforce_object_map
  * 4) Drop "fieldmap" column from salesforce_object_map
- * 
+ *
  */
 function salesforce_api_update_1() {
   module_enable(array('ctools'));
@@ -231,7 +231,7 @@ function salesforce_api_update_2() {
   $changes = array();
   module_enable('sf_contrib');
   $ret[] = array('success' => TRUE, 'query' => t('Enabled SF Contrib module', array('@map' => $new_map->name)));
-  
+
   foreach (content_types() as $type) {
     // Add each of the fields to the node object definition.
     foreach ((array) $type['fields'] as $field) {
@@ -249,7 +249,7 @@ function salesforce_api_update_2() {
       }
     }
   }
-  
+
   foreach ($fieldmaps as $map) {
     $new_map = $map;
     $updates = FALSE;

@@ -1,5 +1,11 @@
-<?php 
+<?php
+// $Id$
 
+/**
+ * @file
+ * Provides integration with Location and CCK.
+ */
+ 
 /**
  * Implementation of hook_fieldmap_objects().
 **/
@@ -11,72 +17,72 @@ function sf_contrib_fieldmap_objects_alter(&$objects) {
 function _sf_contrib_add_location(&$objects) {
   // Define the data fields available for Drupal objects.
   $extra_fields = array();
-  
+
   // Use first, last & organization fields if module installed.
   if (module_exists('location_first_last_org')) {
     $extra_fields = array_merge($extra_fields, array(
       'first_name' => array(
-        'label' => t('First Name'), 
-        'group' => t('Location fields'), 
-        'export' => '_sf_location_export_location', 
+        'label' => t('First Name'),
+        'group' => t('Location fields'),
+        'export' => '_sf_location_export_location',
         'import' => '_sf_location_import_location'
       ),
       'last_name' => array(
-        'label' => t('Last Name'), 
-        'group' => t('Location fields'), 
-        'export' => '_sf_location_export_location', 
+        'label' => t('Last Name'),
+        'group' => t('Location fields'),
+        'export' => '_sf_location_export_location',
         'import' => '_sf_location_import_location'
       ),
       'organization' => array(
-        'label' => t('Organization'), 
-        'group' => t('Location fields'), 
-        'export' => '_sf_location_export_location', 
+        'label' => t('Organization'),
+        'group' => t('Location fields'),
+        'export' => '_sf_location_export_location',
         'import' => '_sf_location_import_location'
       ),
     ));
   }
-  
+
   $extra_fields = array_merge($extra_fields, array(
     'street' => array(
-      'label' => t('Street'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('Street'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
     'additional' => array(
-      'label' => t('Additional'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('Additional'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
     'city' => array(
-      'label' => t('City'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('City'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
     'province_name' => array(
-      'label' => t('Province'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('Province'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
     'postal_code' => array(
-      'label' => t('Postal code'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('Postal code'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
     'country_name' => array(
-      'label' => t('Country'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('Country'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
     'phone' => array(
-      'label' => t('Phone'), 
-      'group' => t('Location fields'), 
-      'export' => '_sf_location_export_location', 
+      'label' => t('Phone'),
+      'group' => t('Location fields'),
+      'export' => '_sf_location_export_location',
       'import' => '_sf_location_import_location'
     ),
   ));
@@ -113,15 +119,15 @@ function _sf_contrib_add_fields(&$objects) {
             $dummy = null;
             $location_field_definitions = location_locationapi($dummy, 'fields');
           }
-          // Location is special: add each of its fields individually 
+          // Location is special: add each of its fields individually
           //  and use a special import/export handler
-          if(empty($field['location_settings']['form']['fields']) 
+          if(empty($field['location_settings']['form']['fields'])
           || !is_array($field['location_settings']['form']['fields'])) {
             break;
           }
           foreach($field['location_settings']['form']['fields'] as $key => $loc_setting) {
-            if($key == 'additional') { 
-              // Salesforce street address is a textarea. 
+            if($key == 'additional') {
+              // Salesforce street address is a textarea.
               // Append "additional" to "address1" instead of using a separate field
               continue;
             }
@@ -140,20 +146,20 @@ function _sf_contrib_add_fields(&$objects) {
         case 'datestamp':
         case 'date': {
           $objects['drupal'][$index]['fields']
-            [$field['field_name'] . ':value2']['label'] = 
+            [$field['field_name'] . ':value2']['label'] =
               $objects['drupal'][$index]['fields']
                 [$field['field_name']]['label'] . ' ' . t('(to date)');
 
           $objects['drupal'][$index]['fields']
-            [$field['field_name']]['export'] = 
+            [$field['field_name']]['export'] =
           $objects['drupal'][$index]['fields']
-            [$field['field_name'] . ':value2']['export'] = 
+            [$field['field_name'] . ':value2']['export'] =
             '_sf_node_export_cck_date';
 
           $objects['drupal'][$index]['fields']
-            [$field['field_name']]['import'] = 
+            [$field['field_name']]['import'] =
           $objects['drupal'][$index]['fields']
-            [$field['field_name'] . ':value2']['import'] = 
+            [$field['field_name'] . ':value2']['import'] =
             '_sf_node_import_cck_date';
 
           break;
@@ -181,7 +187,7 @@ function _sf_node_export_cck_date($node, $drupal_fieldname, $drupal_field_defini
       $from_type = DATE_ISO;
       break;
     }
-  }  
+  }
   $date = date_convert($node->{$fieldname}[0][$column], $from_type, DATE_UNIX);
   return gmdate(DATE_ATOM, $date);
 }
@@ -212,10 +218,10 @@ function _sf_node_import_cck_date(&$node, $drupal_fieldname, $drupal_field_defin
 // Export sfid of referenced node
 function _sf_node_export_cck_nodereference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   list($fieldname, $dummy) = explode(':', $fieldname, 2);
-  $sfid = ''; 
+  $sfid = '';
   if ($nid = $node->{$fieldname}[0]['nid']) {
-    $sf_data = salesforce_api_id_load('node', $nid); 
-    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : ''; 
+    $sf_data = salesforce_api_id_load('node', $nid);
+    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : '';
   }
   return $sfid;
 }
@@ -229,17 +235,17 @@ function _sf_node_import_cck_nodereference(&$node, $drupal_fieldname, $drupal_fi
 // Export sfid of referenced user
 function _sf_node_export_cck_userreference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   list($fieldname, $dummy) = explode(':', $fieldname, 2);
-  $sfid = ''; 
+  $sfid = '';
   if ($uid = $node->{$fieldname}[0]['uid']) {
-    $sf_data = salesforce_api_id_load('user', $uid); 
-    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : ''; 
+    $sf_data = salesforce_api_id_load('user', $uid);
+    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : '';
   }
   return $sfid;
 }
 
 // Import node id of referenced user
 function _sf_node_import_cck_userreference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);  
+  list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);
   $node->{$drupal_fieldname}[0]['uid'] =
    salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname}, $type = 'user');
 }
@@ -253,13 +259,13 @@ function _sf_node_export_cck_location($source, $field, $drupal_field_definition,
   if(empty($locations[$lid])) {
     $locations[$lid] = location_load_location($lid);
   }
-  
-  if($type == 'street' 
+
+  if($type == 'street'
   && !empty($locations[$lid]['street'])
   && !empty($locations[$lid]['additional'])) {
     $locations[$lid]['street'] .= "\n".$locations[$lid]['additional'];
   }
-  
+
   return $locations[$lid][$type];
 }
 
@@ -275,7 +281,7 @@ function _sf_node_import_cck_location(&$node, $drupal_fieldname, $drupal_field_d
     $node->{$local_field}[0] = array();
   }
   $node->{$local_field}[0][$type] = $data;
-  
+
 }
 
 // Wrapper for user objects to use _sf_contrib_export_location
@@ -302,15 +308,15 @@ function _sf_node_import_location(&$node, $drupal_fieldname, $drupal_field_defin
 function _sf_contrib_export_location($source, $fieldname, $drupal_field_definition, $sf_field_definition, $key = 'nid') {
   // If locations doesn't exist, fail fast.
   if (empty($source->locations)) {
-    return FALSE; 
+    return FALSE;
   }
-  
+
   foreach ($source->locations as $location) {
     if ($location['is_primary'] == 1) {
       return $location[$fieldname];
     }
   }
-  
+
   // Primary not set, so make first location primary.
   $source->locations[0]['is_primary'] = 1;
   $criteria = array($key => $source->{$key});
@@ -331,7 +337,7 @@ function _sf_contrib_import_location(&$object, $drupal_fieldname, $drupal_field_
       return;
     }
   }
-  
+
   // No primary location so use the first one.
   $object->locations[0][$drupal_fieldname] = $sf_data->{$fieldname};
 }
@@ -341,7 +347,7 @@ function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drup
   $info = _content_type_info();
   $info = $info['content types'][$object->type]['fields'][$drupal_fieldname];
   if(strpos($sf_data->{$sf_fieldname}, ';') === FALSE) {
-    $tid = db_result(db_query('SELECT tid FROM {term_data} WHERE name = "%s" AND vid = %d', 
+    $tid = db_result(db_query('SELECT tid FROM {term_data} WHERE name = "%s" AND vid = %d',
       $sf_data->{$sf_fieldname}, $info['vid']));
     $object->{$drupal_fieldname} = array(array('value' => $tid));
   } else {
@@ -359,8 +365,8 @@ function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drup
 }
 
 function _sf_node_export_cck_content_taxonomy($source, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  if(empty($source->{$fieldname})) { 
-    return; 
+  if(empty($source->{$fieldname})) {
+    return;
   }
   $data = $source->{$fieldname};
   $terms = null;

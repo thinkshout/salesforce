@@ -394,7 +394,6 @@ function salesforce_api_fieldmap_objects($type = 'salesforce') {
  */
 function salesforce_api_cache_build() {
   $sf_objects = variable_get('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
-  $sf = salesforce_api_connect();
   $result = salesforce_api_describeSObjects($sf_objects);
   foreach ($sf_objects as $i => $obj) {
     $objects[$obj] = salesforce_api_object_to_fieldmap_fields($result[$obj]);
@@ -978,7 +977,8 @@ function salesforce_api_delete_salesforce_objects($sfids) {
   try {
     $sf = salesforce_api_connect();
     return $sf->client->delete($real_sfids);
-  } catch (Exception $e) {
+  }
+  catch (Exception $e) {
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Failed to delete SalesForce objects with ids %s : %s.', array(implode(', ', $real_sfids), $e->getMessage()), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -1072,7 +1072,6 @@ function salesforce_api_cron() {
   if (!$cache || time() > $cache->expire) salesforce_api_cache_build();
   return;
 }
-
 
 /**
  * Wrapper for SOAP SforceBaseClient::describeSObject

@@ -20,13 +20,13 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     return;
   }
   // Get information to allow using handlers to get values of Drupal fields.
-  $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map['drupal']);
+  $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
   $drupal_fields_info = $drupal_object_info['fields'];
-  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
   $values = array();
   $select_clause = "SELECT id";
-  $drupal_to_salesforce_fieldmap = array_flip($map['fields']);
+  $drupal_to_salesforce_fieldmap = array_flip($map->fields);
 
   // Create $values array allowing easy mapping from match_by fields to query fields and values.
   // Also build out SOQL select clause to include all match by sf fields.
@@ -58,7 +58,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     }
   }
 
-  $sf_class = $map['salesforce'];
+  $sf_class = $map->salesforce;
   $from_where_clause = " FROM $sf_class WHERE ";
 
   // Use match by rule to build out where clause.
@@ -108,7 +108,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
 
 function sf_prematch_import($object_type, $object, $map, $match_by) {
   // As of 2/23/2010 there is no out of the box functionality to import a salesforce
-  // record without already having established a mapping. Therefore, developers 
+  // record without already having established a mapping. Therefore, developers
   // exposing such functionality should implement their own hook_sf_find_map:import
   return;
 }

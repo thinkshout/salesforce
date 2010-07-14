@@ -92,14 +92,14 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       if ($account->uid) {
         $salesforce = salesforce_api_id_load('user', $account->uid);
       }
-      
+
       if (empty($salesforce->name)) {
         $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
         if (empty($maps)) {
           break;
         }
         $map = current($maps);
-        
+
         $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
         $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
         if ((!$auto_create && $op == 'insert')
@@ -116,7 +116,8 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       }
       try {
         sf_user_export($account->uid, $salesforce->name, $salesforce->sfid);
-      } catch (Exception $e) {
+      }
+      catch (Exception $e) {
         DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
       }
       break;
@@ -372,7 +373,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
 
   // Load the fieldmap so we can get the object name.
   $map = salesforce_api_fieldmap_load($name);
-  
+
   if (empty($sfid)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
     $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $name);
@@ -389,9 +390,9 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       if ($value === FALSE) { return; }
     }
   }
-  
-  // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
-  // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
+
+  // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client
+  // is BROKEN -- it always tries to update "Contact" instead of accepting a "type"
   // parameter. Until it is fixed, we have to update/create.
   //
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
@@ -420,6 +421,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       }
     }
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+    return FALSE;
   }
   module_invoke_all('salesforce_api_post_export', $object, $map, $uid, $response);
   return $response->success;
@@ -502,7 +504,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   // sf_user_skip_export is a flag to tell hook_user not to export this object.
   $account->sf_user_skip_export = TRUE;
   $changes['sf_user_skip_export'] = TRUE;
-  
+
   // If the user exists, update the existing user.
   if ($account->uid) {
     $account = user_save($account, $changes);
@@ -526,7 +528,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
  *
  */
 function sf_user_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
-  return array('salesforce_api_default_user_contact_field_map' => 
+  return array('salesforce_api_default_user_contact_field_map' =>
   (object) array(
     'disabled' => FALSE,
     'name' => 'salesforce_api_default_user_contact_field_map',

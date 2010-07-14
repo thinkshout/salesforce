@@ -14,35 +14,34 @@ function sf_prematch_list() {
     array('data' => t('Operations'), 'colspan' => 3),
   );
 
-  $maps = salesforce_api_salesforce_field_map_load_all();
-  $sql = 'SELECT * FROM salesforce_prematch WHERE name IN (' . db_placeholders($names, 'text') . ')';
-  $result = db_query("SELECT salesforce_field_map.*, salesforce_prematch.rule " .
-    "FROM salesforce_field_map LEFT JOIN  " .
-    "ON salesforce_field_map.name = salesforce_prematch.name"
+  //$maps = salesforce_api_salesforce_field_map_load_all();
+  $result = db_query("SELECT fm.*, pm.rule " .
+    "FROM {salesforce_field_map} fm LEFT JOIN {salesforce_prematch} pm " .
+    "ON fm.name = pm.name"
   );
   $rows = array();
 
   // Loop through all the indexed field maps.
-  while ($map = db_fetch_array($result)) {
-    if ($map['rule']) {
-    	$op_0 =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map['name']);
-    	$op1 = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map['name'] . '/delete');
+  while ($map = db_fetch_object($result)) {
+    if ($map->rule) {
+    	$op_add_edit =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map->name);
+    	$op_del = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map->name . '/delete');
     }
     else {
-    	$op_0 =  l(t('add prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map['name']);
-    	$op1 = '';
+    	$op_add_edit =  l(t('add prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map->name);
+    	$op_del = '';
     }
     // Add the row to the table with the basic operations.
     $rows[] = array(
-      salesforce_api_fieldmap_object_label('drupal', $map['drupal']),
-      salesforce_api_fieldmap_object_label('salesforce', $map['salesforce']),
-      $op_0,
-      $op1,
+      salesforce_api_fieldmap_object_label('drupal', $map->drupal),
+      salesforce_api_fieldmap_object_label('salesforce', $map->salesforce),
+      $op_add_edit,
+      $op_del,
     );
   }
 
   // Add a message if no objects have been mapped.
-  if (count($rows) == 0) {
+  if (empty($rows)) {
     $rows[] = array(
       array('data' => t('You have not yet defined any fieldmaps.'), 'colspan' => 7),
     );
@@ -64,7 +63,7 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
   }
 
   // Return to the admin page if the fieldmap has no mapped fields.
-  if (empty($map['fields'])) {
+  if (empty($map->fields)) {
     drupal_set_message(t('That fieldmap exists, but does not have any fields.'), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
@@ -81,7 +80,6 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
   );
 
   // Set flag for use in deciding where to redirect to on form submit.
-  $is_new =
   $form['new_prematch'] = array(
     '#type' => 'value',
     '#value' => ($prematch['primary_field'] == '' ||
@@ -119,11 +117,11 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
     '#required' => false,
   );
 
-  // Create options to use in rule select.
+  // Create options to use in rule select, primary only first
   $options = array(
-    SF_PREMATCH_PRIMARY_SECONDARY_AND_TERTIARY => 'primary, secondary and tertiary fields',
-    SF_PREMATCH_PRIMARY_AND_SECONDARY => 'primary and secondary fields',
     SF_PREMATCH_PRIMARY => 'primary field',
+    SF_PREMATCH_PRIMARY_AND_SECONDARY => 'primary and secondary fields',
+    SF_PREMATCH_PRIMARY_SECONDARY_AND_TERTIARY => 'primary, secondary and tertiary fields',
   );
 
   // Add the select list for prematching rule.
@@ -153,7 +151,7 @@ function sf_prematch_edit_form_submit($form, &$form_state) {
 
   // Store data in the database.
   if ($values['new_prematch']) {
-    db_query("INSERT INTO {salesforce_prematch} (name, primary_field, secondary_field, tertiary_field, rule) VALUES (%d, '%s', '%s', '%s', %d)", $values['name'], $values['primary'], $values['secondary'], $values['tertiary'], $values['rule']);
+    db_query("INSERT INTO {salesforce_prematch} (name, primary_field, secondary_field, tertiary_field, rule) VALUES ('%s', '%s', '%s', '%s', %d)", $values['name'], $values['primary'], $values['secondary'], $values['tertiary'], $values['rule']);
   }
   else {
   	db_query("UPDATE {salesforce_prematch} SET primary_field = '%s', secondary_field = '%s', tertiary_field = '%s', rule = %d WHERE name = '%s'", $values['primary'], $values['secondary'], $values['tertiary'], $values['rule'], $values['name']);
@@ -192,11 +190,11 @@ function sf_prematch_delete_form(&$form_state, $fieldmap) {
 
   // Build the description text for this prematch.
   $desc = t('You are about to delete the prematch for fieldmap ');
-  if ($map['action'] == 'import') {
-    $desc .= t('Maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
+  if ($map->action == 'import') {
+    $desc .= t('Maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('%drupal' => $map->drupal, '%salesforce' => $map->salesforce));
   }
   else {
-    $desc .= t('That fieldmap maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('%drupal' => $map['drupal'], '%salesforce' => $map['salesforce']));
+    $desc .= t('That fieldmap maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('%drupal' => $map->drupal, '%salesforce' => $map->salesforce));
   }
 
   return confirm_form($form, t('Are you sure you want to delete this prematch?'), SALESFORCE_PATH_FIELDMAPS . '/prematching', $desc, t('Delete'));
@@ -214,11 +212,11 @@ function sf_prematch_delete_form_submit($form, &$form_state) {
 
 function sf_prematch_get_options($map, $required = false) {
   // Extract terms from $map.
-  if ($map['action'] == 'import') {
-  	$terms = array_keys($map['fields']);
+  if ($map->actions == 'import') {
+  	$terms = array_keys($map->fields);
   }
   else {
-  	$terms = array_values($map['fields']);
+  	$terms = array_values($map->fields);
   }
   sort($terms);
 
