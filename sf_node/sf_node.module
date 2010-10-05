@@ -120,7 +120,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
         // Check if there is more than one fieldmap in the result.
         if (user_access('administer salesforce') and next($maps)) {
-          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'error');
+          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'warning');
         }
       }
       // Finally, export the node to Salesforce.
