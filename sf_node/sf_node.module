@@ -269,7 +269,7 @@ function _sf_node_export_cck_default($node, $fieldname, $drupal_field_definition
   // Get the data array for the field.
   list($fieldname, $column) = explode(':', $fieldname, 2);
   if (empty($column)) {
-    $column = $value;
+    $column = 'value';
   }
   $data = $node->$fieldname;
   switch ($sf_field_definition['salesforce']['type']) {
