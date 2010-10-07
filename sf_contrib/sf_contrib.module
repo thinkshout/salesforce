@@ -291,7 +291,7 @@ function _sf_user_export_location($source, $fieldname, $drupal_field_definition,
 
 // Wrapper for user objects to use _sf_contrib_import_location
 function _sf_user_import_location(&$user, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  _sf_contrib_import_location(&$user, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
+  _sf_contrib_import_location($user, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
 }
 
 // Wrapper for node objects to use _sf_contrib_export_location
