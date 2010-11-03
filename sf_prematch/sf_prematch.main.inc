@@ -16,7 +16,7 @@
  * @return string sfid
  */
 function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
-  if (empty($drupal_object) || empty($map['drupal']) || empty($match_by)) {
+  if (empty($drupal_object) || empty($map->drupal) || empty($match_by)) {
     return;
   }
   // Get information to allow using handlers to get values of Drupal fields.

@@ -988,7 +988,7 @@ function salesforce_api_search_for_duplicates($direction, $fieldmap_type, $objec
   // Call hook_sf_find_match to give opportunity to try to match existing sf object instead
   // of creating a new one. No hook_sf_find_match is defined out of the box. Developers must
   // implement their own logic for this one.
-  return module_invoke_all('sf_find_match', $direction, $fieldmap_type, $object, $fieldmap_naem);
+  return module_invoke_all('sf_find_match', $direction, $fieldmap_type, $object, $fieldmap_name);
 }
 
 /**
