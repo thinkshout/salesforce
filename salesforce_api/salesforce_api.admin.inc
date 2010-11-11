@@ -307,7 +307,7 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
   $map = salesforce_api_fieldmap_create($form_state['values']);
   $form_state['values']['fieldmap'] = $map;
   // Redirect to its edit form.
-  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $index .'/edit';
+  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $map->name .'/edit';
 }
 
 /**
