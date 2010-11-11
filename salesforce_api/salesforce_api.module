@@ -1174,6 +1174,13 @@ function salesforce_api_salesforce_field_map_load ($name) {
   if (isset($result[$name])) {
     return $result[$name];
   }
+  // For backwards compatibility, search on fieldmap (numeric id)
+  $result = ctools_export_load_object('salesforce_field_map', 'conditions', array('fieldmap' => $name));
+  if (!empty($result)) {
+    // "fieldmap" is always unique - if nonempty, this will always contain a
+    // direct hit.
+    return current($result);
+  }
 }
 
 function salesforce_api_salesforce_field_map_load_by ($conditions) {
