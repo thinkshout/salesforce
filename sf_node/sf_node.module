@@ -253,7 +253,9 @@ function sf_node_fieldmap_objects($type) {
               'group' => $my_group,
               'label' => $my_label,
               'export' => $export_handler,
-              'import' => $import_handler
+              'import' => $import_handler,
+              'type' => $field['type'],
+              'multiple' => $field['multiple'],
              );
           }
         }
