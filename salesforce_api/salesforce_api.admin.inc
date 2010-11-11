@@ -304,8 +304,8 @@ function salesforce_api_fieldmap_add_form(&$form_state) {
  */
 function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
   // Create the new fieldmap.
-  $index = salesforce_api_fieldmap_create($form_state['values']);
-
+  $map = salesforce_api_fieldmap_create($form_state['values']);
+  $form_state['values']['fieldmap'] = $map;
   // Redirect to its edit form.
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $index .'/edit';
 }
@@ -327,7 +327,7 @@ function salesforce_api_fieldmap_create($values) {
   // Save the new fieldmap.
   salesforce_api_fieldmap_save($map);
 
-  return $map->name;
+  return $map;
 }
 
 /**
