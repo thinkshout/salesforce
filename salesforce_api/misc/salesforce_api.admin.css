@@ -7,3 +7,8 @@
 .fieldmap-extra-text label  {
   display: inline;
 }
+
+#salesforce-api-fieldmap-edit-form #edit-new-field-wrapper {
+  display: inline;
+  margin-right: 15px;
+}

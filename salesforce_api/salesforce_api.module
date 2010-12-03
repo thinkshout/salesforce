@@ -76,6 +76,7 @@ function salesforce_api_help($section) {
  */
 function salesforce_api_menu() {
   $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));
+
   $items[SALESFORCE_PATH_ADMIN] = array(
     'title' => 'Salesforce',
     'description' => 'Administer settings related to your Salesforce integration.',
@@ -131,6 +132,16 @@ function salesforce_api_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
     'weight' => 10,
+  );
+  $items[SALESFORCE_PATH_FIELDMAPS .'/%/remove/%'] = array(
+    'title' => 'Edit',
+    'description' => 'Edit an existing fieldmap.',
+    'page callback' => 'salesforce_api_fieldmap_remove_field',
+    'page arguments' => array($map_id_arg, $map_id_arg + 2),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', 'edit', $map_id_arg),
+    'type' => MENU_CALLBACK,
+    'file' => 'salesforce_api.admin.inc',
   );
   $items[SALESFORCE_PATH_FIELDMAPS .'/%/clone'] = array(
     'title' => 'Clone',

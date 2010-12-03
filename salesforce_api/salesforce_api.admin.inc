@@ -423,7 +423,7 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
  */
 function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_fieldmap_load($fieldmap, TRUE);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -492,11 +492,31 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     '#description' => t('Please indicate how Salesforce records should be handled when Drupal records are created or updated.')
   );
 
-  // Add the data to the form for the required fields table.
-  $form['fields'] = array(
-    '#theme' => 'salesforce_api_fieldmap_edit_form_table',
-    'rows' => array(),
+  // Get a list of Salesforce-side fields which haven't been set yet.
+  asort($target['fields']);
+  $not_set = array('');
+  foreach($target['fields'] as $key => $field) {
+    if(!isset($map->fields[$key])) {
+      $not_set[$key] = $field['label'];
+    }
+  }
+
+  // Provide a control for setting a new field
+  $form['add_field'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Add a field'),
+    'new_field' => array(
+      '#type' => 'select',
+      '#options' => $not_set,
+    ),
+    'add_button' => array(
+      '#type' => 'submit',
+      '#value' => t('Add'),
+    ),
   );
+
+  // Add the data to the form for the required fields table.
+  $form['fields'] = array('#theme' => 'salesforce_api_fieldmap_edit_form_table');
 
   $form['fields']['header'] = array(
     array('#value' => t('Target: @label', array('@label' => $target['label']))),
@@ -505,9 +525,10 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
 
   // Loop through each of the target fields.
   $rows = array('required' => array(), 'optional' => array());
+  $form['fake_required'] = array('#type' => 'value', '#value' => array());
   foreach ($target['fields'] as $key => $value) {
     // Determine to which table this field should belong.
-    if (!($value['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+    if (!($value['type'] & (SALESFORCE_FIELD_NILLABLE |   SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
       // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="'. t('This field is required.') .'">*</span>';
@@ -535,6 +556,10 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
         t('This field will be available for imports only.') . '">' . t('Read-only') . '</span>';
     }
 
+    if ($type == 'optional' && !isset($map->fields[$key])) {
+      continue;
+    }
+
     // Create a row for this field.
     $row = array(
       'target' => array('#value' => $value['label'] . $required),
@@ -546,16 +571,25 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
       '#title' => $value['label'],
       '#options' => salesforce_api_fieldmap_field_options($source),
       '#default_value' => $map->fields[$key],
-      '#required' => $type == 'required',
     );
+    
+    if ($type != 'required') {
+      $row['remove'][$key] = array(
+        '#type' => 'markup',
+        '#value' => l('Remove', SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/remove/' . $key),
+      );
+    }
+    else {
+      $form['fake_required']['#value'][] = $key;
+    }
 
     // Add the row to the correct rows array.
-    $rows[$type][] = $row;
+    $rows[$type][$key] = $row;
   }
 
   // Combine the rows arrays into one with required fields displayed first.
   $form['fields']['rows'] = array_merge($rows['required'], $rows['optional']);
-
+  $form['fields']['rows']['#tree'] = TRUE;
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save changes'),
@@ -573,6 +607,21 @@ function salesforce_api_fieldmap_edit_form_validate($form, &$form_state) {
   // Include the CSS file for the form on reload as long as Drupal won't do it for us.
   $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
+
+  if ($form_state['values']['add_button'] == $form_state['values']['op']
+  && empty($form_state['values']['new_field'])) {
+    form_set_error('new_field', t('Please select a target field.'));
+  }
+  elseif ($form_state['values']['submit'] == $form_state['values']['op']
+  && !empty($form_state['values']['fake_required'])
+  && empty($form_state['values']['new_field'])) {
+    $rows = $form_state['values']['rows'];
+    foreach ($form_state['values']['fake_required'] as $name) {
+      if (empty($form_state['values']['rows'][$name]['source'][$name])) {
+        form_error($form['fields']['rows'][$name]['source'][$name], '"' . $form['fields']['rows'][$name]['source'][$name]['#title'] . '" field is required.');
+      }
+    }
+  }
 }
 
 /**
@@ -587,28 +636,78 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
 
   // Get the object definition for the target object.
   $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
+  $rows = $form_state['values']['rows'];
 
-  // Loop through all the fields on the object.
-  foreach (array_keys($object['fields']) as $field) {
-    // If a field has been mapped to this field on the form...
-    if (!empty($form_state['values'][$field])) {
-      // Add the association to the fieldmap's fields array.
-      $map->fields[$field] = $form_state['values'][$field];
-    }
+  // Loop through all the select inputs. 
+  foreach ($rows as $row) {
+    // Add the association to the fieldmap's fields array.
+    $map->fields[key($row['source'])] = current($row['source']);
   }
+
   $map->automatic = 0;
   // set the automatic flag on the map
   foreach ($form_state['values']['drupal_sfapi_automatic'] as $auto) {
     $map->automatic |= $auto;
   }
+  
+  if(!empty($form_state['values']['new_field'])) {
+    $field = $form_state['values']['new_field'];
+    $map->fields[$field] = '';
+  }
 
   // Save the updated fieldmap.
   salesforce_api_fieldmap_save($map);
 
-  // Display a message and return to the admin page.
-  drupal_set_message(t('The changes have been saved.'));
+  // In most cases, we will want to remain on this page and rebuild the form.
+  $form_state['rebuild'] = TRUE;
+  switch ($form_state['values']['op']) {
+    case $form_state['values']['add_button']: {
+      drupal_set_message(t('Field added.'));
+      break;
+    }
+    case $form_state['values']['submit']: {
+      if(!empty($form_state['values']['new_field'])) {
+        drupal_set_message(t('Field added.'));
+      }
+      else {
+        drupal_set_message(t('The changes have been saved.'));
+        $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
+        $form_state['rebuild'] = FALSE;
+      }
+      break;
+    }
+  }
+}
 
-  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
+/**
+ * Given a fieldmap name and a field, remove the field from the fieldmap.
+ * Redirect to the fieldmap edit page unless specified.
+ * @param string or object $fieldmap - the name of the fieldmap, or the fieldmap itself
+ * @param string $field - the name of the field to be removed
+ * @param bool $redirect (optional) - default true. Whether to redirect to the fieldmap edit form
+ */
+function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRUE) {
+  if (is_string($fieldmap)) {
+    $fieldmap = salesforce_api_fieldmap_load($fieldmap);
+  }
+  $object = salesforce_api_fieldmap_objects_load('salesforce', $fieldmap->salesforce);
+  $success = TRUE;
+  if (empty($object->fields[$field])) {
+    $success = FALSE;
+  }
+  elseif (!($object->fields[$field]['type'] & (SALESFORCE_FIELD_NILLABLE |   SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+    // Don't allow removing required fields.
+    $success = FALSE;
+  }
+  else {
+    unset($fieldmap->fields[$field]);
+    salesforce_api_fieldmap_save($fieldmap);
+  }
+  if ($redirect) {
+    drupal_goto(SALESFORCE_PATH_FIELDMAPS . '/' . $fieldmap->name . '/edit');
+    exit;
+  }
+  return $success;
 }
 
 /**
@@ -637,18 +736,18 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
 
   // Build the rows array.
   $rows = array();
-
   foreach (element_children($form['rows']) as $element) {
     $rows[] = array(
       drupal_render($form['rows'][$element]['target']),
       array('data' => drupal_render($form['rows'][$element]['source']), 'class' => 'source-cell'),
+      drupal_render($form['rows'][$element]['remove']),
     );
   }
 
   // Add a message if no rows were found.
   if (empty($rows)) {
     $rows[] = array(
-      array('data' => t('There are no fields of this type to set.'), 'colspan' => 2),
+      array('data' => t('No fields set.'), 'colspan' => 2),
     );
   }
 
