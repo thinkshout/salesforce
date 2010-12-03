@@ -9,7 +9,7 @@
 
 // Define default directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
-define('SALESFORCE_DIR_TOOLKIT', SALESFORCE_DIR .'/toolkit');
+define('SALESFORCE_DIR_TOOLKIT', function_exists('libraries_get_path') ? libraries_get_path('salesforce') : SALESFORCE_DIR .'/toolkit');
 define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT .'/soapclient');
 define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR .'/wsdl');
 

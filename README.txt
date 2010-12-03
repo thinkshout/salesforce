@@ -42,6 +42,12 @@ REQUIREMENTS
   
   http://php.net/soap
 
+  3) Required modules
+     Chaos Tool Suite - http://drupal.org/project/ctools
+  
+  4) Recommended modules
+     Libraries API - http://drupal.org/project/libraries
+
 
 INSTALLATION
 ------------
@@ -51,9 +57,14 @@ INSTALLATION
 
      http://wiki.apexdevnet.com/index.php/PHP_Toolkit
 
-     Place the "soapclient" directory withinin the "toolkit" directory within
-     the Drupal module's "salesforce_api directory". You should end up with
-     something like:
+     If "libraries" module is installed, place "soapclient" in
+     "salesforce/soapclient" in your libraries path.
+     You should end up with something like:
+     sites/all/libraries/salesforce/soapclient
+
+     If "libraries" modules is not installed, place the "soapclient" directory
+     within the "toolkit" directory in "salesforce_api". 
+     You should end up with something like:
      sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
 
   3) Enable the module on admin/build/modules along with at least one of the
