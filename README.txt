@@ -55,9 +55,11 @@ INSTALLATION
 ------------
   1) Download, uncompress and situate the module as per usual.
 
-  2) Download the salesforce PHP toolkit version 13:
+  2) Download the Salesforce PHP Toolkit
 
-     http://wiki.apexdevnet.com/index.php/PHP_Toolkit
+     https://github.com/messageagency/soapclient
+     or 
+     git://github.com/messageagency/soapclient.git
 
      If "libraries" module is installed, place "soapclient" in
      "salesforce/soapclient" in your libraries path.

@@ -1,9 +1,21 @@
-This directory is where the PHP soapClient directory goes. From main README:
+IT IS HIGHLY RECOMMENDED THAT YOU INSTALL LIBRARIES API
+http://drupal.org/project/libraries
 
-2) Download the salesforce PHP toolkit version 13:
+If Libraries API is not installed, this directory is where the PHP soapClient
+directory goes.
 
-   http://wiki.apexdevnet.com/index.php/PHP_Toolkit
+Download the Salesforce PHP Toolkit:
 
-   Place the "soapclient" directory withinin the "toolkit" directory within the
-   Drupal module's "salesforce_api directory". You should end up with something
-   like: sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
+   https://github.com/messageagency/soapclient
+   or 
+   git://github.com/messageagency/soapclient.git
+
+   If "libraries" module is installed, place "soapclient" in
+   "salesforce/soapclient" in your libraries path.
+   You should end up with something like:
+   sites/all/libraries/salesforce/soapclient
+
+   If "libraries" modules is not installed, place the "soapclient" directory
+   within the "toolkit" directory in "salesforce_api". 
+   You should end up with something like:
+   sites/all/modules/salesforce/salesforce_api/toolkit/soapclient

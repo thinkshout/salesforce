@@ -672,7 +672,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   // Get the object definition for the target object.
   $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
   $rows = $form_state['values']['rows'];
-dpm($rows);
+
   // Loop through all the select inputs. 
   foreach ($rows as $row) {
     $source = key($row['source']);
