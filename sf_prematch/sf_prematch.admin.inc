@@ -223,10 +223,16 @@ function sf_prematch_get_options($map, $required = false) {
   // Build terms into ordered options to use in select.
   $options = array();
   // Start with empty option if select is not required.
-  if (!$required) {$options[] = '';}
+  if (!$required) { $options[] = ''; }
 
   // Add terms to options, making key = value so form value is key not integer.
   foreach ($terms as $term) {
+    if (is_array($term)) {
+      $term = implode(' : ', $term);
+      if (strlen($term) > 50) {
+        $term = substr($term, 0, 50) . ' ...';
+      }
+    }
   	$options[$term] = $term;
   }
 

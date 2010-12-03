@@ -26,6 +26,12 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
 
   $values = array();
   $select_clause = "SELECT id";
+  $safe_fields = array();
+  foreach ($map->fields as $key => $value) {
+    if (is_array($value)) { continue; }
+    $safe_fields[$key] = $value;
+  }
+  $map->fields = $safe_fields;
   $drupal_to_salesforce_fieldmap = array_flip($map->fields);
 
   // Create $values array allowing easy mapping from match_by fields to query fields and values.

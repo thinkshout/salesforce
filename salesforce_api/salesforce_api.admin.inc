@@ -422,6 +422,12 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
  * Displays the edit form for adding field associations to a fieldmap.
  */
 function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
+  
+  // Include the CSS and JS for the form.
+  $path = drupal_get_path("module", "salesforce_api");
+  drupal_add_css($path .'/misc/salesforce_api.admin.css');
+  drupal_add_js($path ."/misc/salesforce_api.admin.js"); 
+  
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap, TRUE);
 
@@ -434,6 +440,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Include the CSS file for the form.
   $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
+  drupal_add_js($path . '/misc/salesforce_api.admin.js'); 
 
   $form = array();
 
@@ -523,9 +530,17 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     array('#value' => t('Source: @label', array('@label' => $source['label']))),
   );
 
+  // Adding fixed value option
+  $options = salesforce_api_fieldmap_field_options($source);
+  $options['Other']['fixed'] = t('Fixed value');
+  if( user_access('use php for salesforce fixed values') ) {
+    $options['Other']['php'] = t('Evaluate PHP');
+  }
+
   // Loop through each of the target fields.
   $rows = array('required' => array(), 'optional' => array());
   $form['fake_required'] = array('#type' => 'value', '#value' => array());
+
   foreach ($target['fields'] as $key => $value) {
     // Determine to which table this field should belong.
     if (!($value['type'] & (SALESFORCE_FIELD_NILLABLE |   SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
@@ -565,12 +580,31 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
       'target' => array('#value' => $value['label'] . $required),
     );
 
+    if (is_array($map->fields[$key])) {
+      $default_key = $map->fields[$key]['type'];
+      $default_value = $map->fields[$key]['value'];
+    } else {
+      $default_key = $map->fields[$key];
+      $default_value = null;
+    }
+
     // Add the select list for the associated target field.
     $row['source'][$key] = array(
       '#type' => 'select',
       '#title' => $value['label'],
-      '#options' => salesforce_api_fieldmap_field_options($source),
-      '#default_value' => $map->fields[$key],
+      '#options' => $options,
+      '#default_value' => $default_key,
+      '#attributes' => array('class' => 'sf_fieldmap_options', 'id' => 'sf-fieldmap-option-' . $key),
+    );
+    $row['source'][$key ."_extra"] = array(
+      '#type' => 'textfield',
+      '#title' => t('Value'),
+      '#default_value' => $default_value,
+      '#size' => 20,
+      '#maxlength' => 512,
+      '#prefix' => '<div id="'. $key .'-extra-hidden" class="fieldmap-extra-text">',
+      '#suffix' => '</div>',
+      '#description' => 'Omit &lt;?php ?&gt; tags. Return the value to set. Standard caveats apply.',
     );
     
     if ($type != 'required') {
@@ -607,6 +641,7 @@ function salesforce_api_fieldmap_edit_form_validate($form, &$form_state) {
   // Include the CSS file for the form on reload as long as Drupal won't do it for us.
   $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
+  drupal_add_js($path . '/misc/salesforce_api.admin.js'); 
 
   if ($form_state['values']['add_button'] == $form_state['values']['op']
   && empty($form_state['values']['new_field'])) {
@@ -637,11 +672,21 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   // Get the object definition for the target object.
   $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
   $rows = $form_state['values']['rows'];
-
+dpm($rows);
   // Loop through all the select inputs. 
   foreach ($rows as $row) {
-    // Add the association to the fieldmap's fields array.
-    $map->fields[key($row['source'])] = current($row['source']);
+    $source = key($row['source']);
+    $target = current($row['source']);
+    if (!empty($row['source'][$source . '_extra'])) {
+      $map->fields[$source] = array(
+        'type' => $target, 
+        'value' => $row['source'][$source . '_extra'],
+      );
+    }
+    else {
+      // Add the association to the fieldmap's fields array.
+      $map->fields[$source] = $target;
+    }
   }
 
   $map->automatic = 0;
@@ -738,7 +783,7 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
   $rows = array();
   foreach (element_children($form['rows']) as $element) {
     $rows[] = array(
-      drupal_render($form['rows'][$element]['target']),
+      array('data' => drupal_render($form['rows'][$element]['target']), 'class' => 'target-cell'),
       array('data' => drupal_render($form['rows'][$element]['source']), 'class' => 'source-cell'),
       drupal_render($form['rows'][$element]['remove']),
     );
