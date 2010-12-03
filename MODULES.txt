@@ -1,0 +1,24 @@
+// $Id$
+
+SALESFORCE SUITE MODULES
+  
+  salesforce_api
+    Core suite module including implementations of Salesforce API and various wrappers. Offers utilities for managing API settings, drush utilities, CRUD for fieldmappings, and CRUD for mapped objects. This is a pre-requisite for all other suite modules.
+
+  sf_contrib
+    Helper module implementing import / export handlers for contrib modules like date, location, and various cck field types.
+    
+  sf_import
+    Implements bulk fieldmap-based import functionality for one-off imports of Salesforce data. Specifically useful for bootstrapping Drupal-Salesforce sites.
+   
+  sf_node
+    Object mapping module. Handles all the needs for node mappings.
+    
+  sf_prematch
+    Defines an API to allow object mapping modules to define "matching" criteria against which to search for and update existing objects before creating new ones. Primarly useful in reducing duplicate object creation.
+    
+  sf_queue
+    Implements a queueing system for outbound object data. Primarly useful in reducing Salesforce API usage.
+    
+  sf_user
+    Object mapping module. Handles all the needs for user mappings.

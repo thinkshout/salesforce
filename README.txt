@@ -18,16 +18,18 @@ SALESFORCE MODULE
 
 ABOUT
 -----
-  This module implements a mapping functionality between SalesForce Objects and
-  Drupal entities. In other words, for each of your supported Drupal entities
-  (e.g. node, user, or entities supported by extensions), you can assign
-  SalesForce objects that will be created / updated when the entity is saved.
-  For each such assignment, you choose which Drupal and SalesForce fields should
-  be mapped to one another.
+  This module suite implements a mapping functionality between SalesForce
+  Objects and Drupal entities. In other words, for each of your supported Drupal
+  entities (e.g. node, user, or entities supported by extensions), you can 
+  assign SalesForce objects that will be created / updated when the entity is
+  saved. For each such assignment, you choose which Drupal and SalesForce fields
+  should be mapped to one another.
 
-  This module also includes an API architecture which allows for additional
+  This suite also includes an API architecture which allows for additional
   modules to be easily plugged in (e.g. for webforms, contact form submits,
   etc).
+  
+  For a more detailed description of each component module, see MODULES.txt
 
 
 REQUIREMENTS
@@ -68,7 +70,7 @@ INSTALLATION
      sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
 
   3) Enable the module on admin/build/modules along with at least one of the
-     object modules (salesfoce_node, salesfoce_user). Node is the usual place to
+     object modules (sf_node, sf_user, sf_contrib). Node is the usual place to
      start.
 
   4) Assign a WSDL directory and upload your organization's WSDL file
