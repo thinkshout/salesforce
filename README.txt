@@ -57,9 +57,9 @@ INSTALLATION
 
   2) Download the Salesforce PHP Toolkit
 
-     https://github.com/messageagency/soapclient
+     https://github.com/messageagency/salesforce
      or 
-     git://github.com/messageagency/soapclient.git
+     git://github.com/messageagency/salesforce
 
      If "libraries" module is installed, place "soapclient" in
      "salesforce/soapclient" in your libraries path.
