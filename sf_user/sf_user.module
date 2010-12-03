@@ -398,11 +398,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
   // $response = $sf->client->upsert('Id', array($object));
 
-  if (empty($object->Id)) {
-    $response = $sf->client->create(array($object), $map->salesforce);
-  } else {
-    $response = $sf->client->update(array($object), $map->salesforce);
-  }
+  $response = $sf->client->upsert(array($object), $map->salesforce);
 
   // If the export was successful...
   if ($response->success) {
