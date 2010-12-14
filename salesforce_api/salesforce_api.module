@@ -7,6 +7,9 @@
  *
  */
 
+define('SALESFORCE_API_MINIMUM_VERSION', 1);
+define('SALESFORCE_API_CURRENT_VERSION', 1);
+
 // Define default directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
 define('SALESFORCE_DIR_TOOLKIT', function_exists('libraries_get_path') ? libraries_get_path('salesforce') : SALESFORCE_DIR .'/toolkit');
@@ -69,6 +72,21 @@ function salesforce_api_help($section) {
       // Return a line-break version of the module README
       return filter_filter('process', 1, NULL, file_get_contents( drupal_get_path('module', 'salesforce_api') . "/../README.txt"));
   }
+}
+
+ /**
+ * Implementation of hook_features_api().
+ */
+function salesforce_api_features_api() {
+  return array(
+    'salesforce_field_map' => array(
+      'name' => t('Salesforce Field Maps'),
+      'feature_source' => TRUE,
+      'default_hook' => 'default_salesforce_field_maps',
+      'default_file' => FEATURES_DEFAULTS_INCLUDED,
+      'file' => drupal_get_path('module', 'salesforce_api') .'/salesforce_api.features.inc',
+    ),
+  );
 }
 
 /**
