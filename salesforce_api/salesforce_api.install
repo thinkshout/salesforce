@@ -80,6 +80,7 @@ function salesforce_api_schema() {
       'default hook' => 'default_salesforce_field_maps',
       'export callback' => 'salesforce_api_salesforce_field_map_export',
       'api' => array(
+        'api' => 'salesforce_field_map',
         'owner' => 'salesforce_api',
         'minimum_version' => SALESFORCE_API_MINIMUM_VERSION,
         'current_version' => SALESFORCE_API_CURRENT_VERSION,
