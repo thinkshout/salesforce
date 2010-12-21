@@ -804,12 +804,12 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       switch ($map->fields[$sf_fieldname]['type']) {
         case 'fixed':
           if (isset($map->fields[$sf_fieldname]['value'])) {
-            $object->$sf_fieldname = htmlentities($map->fields[$sf_fieldname]['value']);
+            $value = htmlentities($map->fields[$sf_fieldname]['value']);
           }
           break;
         case 'php':
           if(isset($map->fields[$sf_fieldname]['value'])) {
-            $object->$sf_fieldname = htmlentities(eval($map->fields[$sf_fieldname]['value']));
+            $value = htmlentities(eval($map->fields[$sf_fieldname]['value']));
           }
           break;
       }
