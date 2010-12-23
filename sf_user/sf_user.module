@@ -361,6 +361,8 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
+    // Let modules react to a failure to export this user.
+    module_invoke_all('salesforce_api_export_connect_fail', $uid, $name, $sfid);
     drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
     return FALSE;
   }
