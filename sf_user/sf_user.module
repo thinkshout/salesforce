@@ -83,7 +83,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       break;
 
     case 'insert':
-    case 'update':
+    case 'after_update':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
       if (isset($account->sf_user_skip_export) || isset($edit['sf_user_skip_export'])) {
         break;
