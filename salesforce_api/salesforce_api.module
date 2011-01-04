@@ -432,7 +432,9 @@ function salesforce_api_cache_build() {
   $lifetime = variable_get('salesforce_api_object_expire', CACHE_PERMANENT);
   $expire = ($lifetime == CACHE_PERMANENT) ? CACHE_PERMANENT : time() + $lifetime;
   cache_set('salesforce_api_sf_objects', $objects, $table = 'cache', $expire, $headers = NULL);
-  drupal_set_message(t('Salesforce object cache has been refreshed.'));
+  if (user_access('administer salesforce')) {
+    drupal_set_message(t('Salesforce object cache has been refreshed.'));
+  }
   return $objects;
 }
 
@@ -788,6 +790,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 
   // Loop through the fields on the fieldmap.
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
+    $value = '';
     $sf_field_definition = $sf_object_definition['fields'][$sf_fieldname];
     $updateable = $sf_field_definition['type'] & SALESFORCE_FIELD_UPDATEABLE;
     $createable = $sf_field_definition['type'] & SALESFORCE_FIELD_CREATEABLE;
@@ -859,9 +862,9 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     switch ($type) {
       case 'boolean': {
         if (empty($value)) {
-          $object->$sf_fieldname  = 0;
+          $object->$sf_fieldname = 0;
         } else {
-          $object->$sf_fieldname  = 1;
+          $object->$sf_fieldname = 1;
         }
         break;
       }
@@ -925,6 +928,10 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         $object->$sf_fieldname  = $value;
         break;
       }
+    }
+    $max_len = $sf_field_definition['salesforce']['length'];
+    if ($max_len && drupal_strlen($object->$sf_fieldname) > $max_len) {
+      $object->$sf_fieldname = substr($object->$sf_fieldname, 0, $max_len);
     }
   }
 
