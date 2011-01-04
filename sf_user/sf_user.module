@@ -148,14 +148,23 @@ function sf_user_fieldmap_objects($type) {
     // Add profile fields to the user object if the module is enabled.
     if (module_exists('profile')) {
       // Load all the profile fields from the database.
-      $result = db_query("SELECT fid, name, title, category FROM {profile_fields} ORDER BY category, weight");
+      $result = db_query("SELECT fid, name, title, category, type FROM {profile_fields} ORDER BY category, weight");
 
       // Loop through the fields and add them to the Drupal user object.
       while ($field = db_fetch_array($result)) {
-        $objects['user']['fields'][$field['name']] = array(
-          'label' => t('@category: @title', array('@category' => $field['category'], '@title' => $field['title'])),
-          'group' => t('Profile fields'),
-        );
+        if($field['type'] != 'date') {
+          $objects['user']['fields'][$field['name']] = array(
+            'label' => t('@category: @title', array('@category' => $field['category'], '@title' => $field['title'])),
+            'group' => t('Profile fields'),
+          );
+        }
+        else {
+          $objects['user']['fields'][$field['name']] = array(
+            'label' => t('@category: @title', array('@category' => $field['category'], '@title' => $field['title'])),
+            'group' => t('Profile fields'),
+            'export' => '_sf_user_export_profile_date',
+          );
+        }
       }
     }
   }
@@ -529,4 +538,42 @@ function sf_user_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
     'fields' => array('LastName' => 'name', 'Email' => 'mail'),
     'description' => 'This is a simple example fieldmap to get you started using the SalesForce API.',
   ));
+}
+
+/**
+ * Custom export handler for user profile date field
+ *
+ * @param object $user
+ *   The user object.
+ * @param string $fieldname
+ *   The name of the field being exported.
+ * @param array $drupal_field_definition 
+ * @param array $sf_field_definition 
+ * @return
+ *   An Atom-formatted date for Salesforce export,
+ *   or NULL if no valid date.
+ */
+function _sf_user_export_profile_date($user, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  $date = $user->$fieldname;
+  // checks to see if the date is in valid format for profile.module
+  if(isset($date) && _sf_user_profile_date_valid($date)) { $timestamp = mktime(0, 0, 0, $date['month'], $date['day'], $date['year']);
+    return gmdate(DATE_ATOM, $timestamp);
+  }
+  // otherwise, returns null
+  else {
+    return NULL;
+  }
+}
+
+/**
+ * Helper function to check user profile date field validity
+ *
+ * @param string $date
+ *   The date to be checked.
+ * @return boolean
+ *   Whether date is valid for use with _sf_user_export_profile_date().
+ */
+function _sf_user_profile_date_valid($date) {
+  $is_valid = (is_array($date) && (isset($date['month']) && is_numeric($date['month'])) && (isset($date['day']) && is_numeric($date['day'])) && (isset($date['year']) && is_numeric($date['year']))) ? TRUE : FALSE;
+  return $is_valid;
 }
