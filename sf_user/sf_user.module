@@ -492,7 +492,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     }
     // Otherwise set the field on the export object to the value of the source
     // field if it's present on the source object.
-    elseif (isset($sf_data->$sf_fieldname)) {
+    elseif (isset($sf_data->$sf_fieldname) && isset($account->$drupal_fieldname)) {
       if ($account->$drupal_fieldname != $sf_data->$sf_fieldname) {
         $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
       }
