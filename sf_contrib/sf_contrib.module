@@ -194,6 +194,9 @@ function _sf_node_export_cck_date($node, $drupal_fieldname, $drupal_field_defini
 
 // Given a SalesForce time, import a node timestamp.
 function _sf_node_import_cck_date(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   list($fieldname, $column) = explode(':', $drupal_fieldname, 2);
   if (empty($column)) {
     $column = 'value';
@@ -228,6 +231,9 @@ function _sf_node_export_cck_nodereference($node, $fieldname, $drupal_field_defi
 
 // Import node id of referenced node
 function _sf_node_import_cck_nodereference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);
   $node->{$drupal_fieldname}[0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname});
 }
@@ -245,6 +251,9 @@ function _sf_node_export_cck_userreference($node, $fieldname, $drupal_field_defi
 
 // Import node id of referenced user
 function _sf_node_import_cck_userreference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);
   $node->{$drupal_fieldname}[0]['uid'] =
    salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname}, $type = 'user');
@@ -271,6 +280,9 @@ function _sf_node_export_cck_location($source, $field, $drupal_field_definition,
 
 // Import an element of a CCK location field
 function _sf_node_import_cck_location(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   static $locations;
   list($local_field, $type) = explode(':', $drupal_fieldname, 2);
   $data = $sf_data->{$sf_fieldname};
@@ -281,7 +293,6 @@ function _sf_node_import_cck_location(&$node, $drupal_fieldname, $drupal_field_d
     $node->{$local_field}[0] = array();
   }
   $node->{$local_field}[0][$type] = $data;
-
 }
 
 // Wrapper for user objects to use _sf_contrib_export_location
@@ -291,6 +302,9 @@ function _sf_user_export_location($source, $fieldname, $drupal_field_definition,
 
 // Wrapper for user objects to use _sf_contrib_import_location
 function _sf_user_import_location(&$user, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   _sf_contrib_import_location($user, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
 }
 
@@ -328,6 +342,9 @@ function _sf_contrib_export_location($source, $fieldname, $drupal_field_definiti
 // Import a location element
 function _sf_contrib_import_location(&$object, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   // Find primary location, set field and return.
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   if (empty($object->locations)) {
     $object->locations = array();
   }
@@ -339,11 +356,14 @@ function _sf_contrib_import_location(&$object, $drupal_fieldname, $drupal_field_
   }
 
   // No primary location so use the first one.
-  $object->locations[0][$drupal_fieldname] = $sf_data->{$fieldname};
+  $object->locations[0][$drupal_fieldname] = $sf_data->{$sf_fieldname};
 }
 
 
 function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  if (empty($sf_data->{$sf_fieldname})) {
+    return;
+  }
   $info = _content_type_info();
   $info = $info['content types'][$object->type]['fields'][$drupal_fieldname];
   if(strpos($sf_data->{$sf_fieldname}, ';') === FALSE) {
