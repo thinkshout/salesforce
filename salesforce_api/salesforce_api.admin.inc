@@ -735,18 +735,20 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
   if (is_string($fieldmap)) {
     $fieldmap = salesforce_api_fieldmap_load($fieldmap);
   }
-  $object = salesforce_api_fieldmap_objects_load('salesforce', $fieldmap->salesforce);
+  $object_definition = salesforce_api_fieldmap_objects_load('salesforce', $fieldmap->salesforce);
   $success = TRUE;
-  if (empty($object->fields[$field])) {
+
+  if (empty($object_definition['fields'][$field])) {
     $success = FALSE;
   }
-  elseif (!($object->fields[$field]['type'] & (SALESFORCE_FIELD_NILLABLE |   SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+  elseif (!($object_definition['fields'][$field]['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
     // Don't allow removing required fields.
     $success = FALSE;
   }
   else {
     unset($fieldmap->fields[$field]);
     salesforce_api_fieldmap_save($fieldmap);
+    $success = TRUE;
   }
   if ($redirect) {
     drupal_goto(SALESFORCE_PATH_FIELDMAPS . '/' . $fieldmap->name . '/edit');
