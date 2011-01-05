@@ -329,12 +329,12 @@ function _sf_node_export_author_email($node, $fieldname, $drupal_field_definitio
   return db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $uid));
 }
 
-// Export a timestamp in a format SalesForce comprehends.
+// Export a timestamp in a format Salesforce comprehends.
 function _sf_node_export_date($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   return gmdate(DATE_ATOM, $node->$fieldname);
 }
 
-// Given a SalesForce time, import a node timestamp.
+// Given a Salesforce time, import a node timestamp.
 function _sf_node_import_date(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
   $node->$drupal_fieldname = strtotime($source->$sf_fieldname);
 }
@@ -739,6 +739,6 @@ function sf_node_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
       'drupal' => 'node_page',
       'salesforce' => 'Campaign',
       'fields' => array('Name' => 'title', 'Description' => 'body'),
-      'description' => 'This is a simple example fieldmap to get you started using the SalesForce API.',      
+      'description' => 'This is a simple example fieldmap to get you started using the Salesforce API.',      
     ));
 }

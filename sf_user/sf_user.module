@@ -536,7 +536,7 @@ function sf_user_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
     'drupal' => 'user',
     'salesforce' => 'Contact',
     'fields' => array('LastName' => 'name', 'Email' => 'mail'),
-    'description' => 'This is a simple example fieldmap to get you started using the SalesForce API.',
+    'description' => 'This is a simple example fieldmap to get you started using the Salesforce API.',
   ));
 }
 

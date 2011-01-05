@@ -54,7 +54,7 @@ define('SALESFORCE_AUTO_SYNC_DELETE', 0x04);
 
 if (!function_exists('is_sfid')) {
   // Without a roundtrip to salesforce.com, checking the string length is the
-  // best we can do to verify a SalesForce ID.
+  // best we can do to verify a Salesforce ID.
   function is_sfid($sfid) {
     if (strlen($sfid) == 15 || strlen($sfid) == 18) {
       return TRUE;
@@ -192,7 +192,7 @@ function salesforce_api_menu() {
 
   $items[SALESFORCE_PATH_OBJECT] = array(
     'title' => 'Object setup',
-    'description' => 'Define which SalesForce objects you would like to be available in your Drupal site.',
+    'description' => 'Define which Salesforce objects you would like to be available in your Drupal site.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_api_admin_object'),
     'access arguments' => array('administer salesforce'),
@@ -456,11 +456,11 @@ function salesforce_api_fieldmap_system_fields() {
 }
 
 /**
- * SalesForce does not accept email addresses with relative domains, like
+ * Salesforce does not accept email addresses with relative domains, like
  * root@localhost. This function is based on Drupal's valid_email_address.
  * Greater men than I have tried and failed to capture valid email addresses
  * with simple regular expressions. This function merely tries to mimic
- * SalesForce's validation rules, NOT to capture all valid email addresses.
+ * Salesforce's validation rules, NOT to capture all valid email addresses.
  */
 function salesforce_api_valid_email_address($mail) {
   $user = '[a-zA-Z0-9_\-\.\+\^!#\$%&*+\/\=\?\`\|\{\}~\']+';
@@ -853,8 +853,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     // massage data in any way - that should have been done in the export
     // handler. All we want to do is avoid creating a syntactically invalid
     // object for export. For example, an "id" or "reference" field must contain
-    // a SalesForce ID. We do not check to make sure the given SalesForce ID
-    // exists, merely that the format matches that of a SalesForce ID.
+    // a Salesforce ID. We do not check to make sure the given Salesforce ID
+    // exists, merely that the format matches that of a Salesforce ID.
     //
     // For any errors, just continue to the next iteration and log the error.
     $type = $sf_field_definition['salesforce']['type'];
@@ -874,7 +874,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'datetime': {
         $time = strtotime($value);
         if (empty($time)) {
-          $errors[] = array('message' => 'SalesForce cannot accept empty values for @type fields: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value));
+          $errors[] = array('message' => 'Salesforce cannot accept empty values for @type fields: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value));
         } else {
           // The export handler should have handled this, but reformat to
           // DATE_ATOM, just in case.
@@ -887,7 +887,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         if (salesforce_api_valid_email_address($value)) {
           $object->$sf_fieldname  = $value;
         } else {
-          $errors[] = array('message' => 'Invalid email address provided for SalesForce export: @value', 'vars' => array('@value' => $value));
+          $errors[] = array('message' => 'Invalid email address provided for Salesforce export: @value', 'vars' => array('@value' => $value));
           continue;
         }
         break;
@@ -900,7 +900,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         if (is_numeric($value)) {
           $object->$sf_fieldname = $value;
         } else {
-          $errors[] = array('message' => 'Invalid value provided for SalesForce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
+          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
         }
         break;
       }
@@ -908,7 +908,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'reference':
       case 'id': {
         if (!is_sfid($value)) {
-          $errors[] = array('message' => 'Invalid value provided for SalesForce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
+          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
         } else {
           $object->$sf_fieldname  = $value;
         }
@@ -1007,7 +1007,7 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
 /**
  * Wrapper for SFBaseClient::delete
  *
- * @param string $sfid a SalesForce ID
+ * @param string $sfid a Salesforce ID
  */
 function salesforce_api_delete_salesforce_objects($sfids) {
   if (empty($sfids)) {
@@ -1030,7 +1030,7 @@ function salesforce_api_delete_salesforce_objects($sfids) {
     return $sf->client->delete($real_sfids);
   }
   catch (Exception $e) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Failed to delete SalesForce objects with ids %s : %s.', array(implode(', ', $real_sfids), $e->getMessage()), WATCHDOG_ERROR);
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Failed to delete Salesforce objects with ids %s : %s.', array(implode(', ', $real_sfids), $e->getMessage()), WATCHDOG_ERROR);
     return FALSE;
   }
 }
@@ -1073,8 +1073,8 @@ function salesforce_api_describeGlobal() {
   }
   $sf = salesforce_api_connect();
   if ($sf === FALSE) {
-    $link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
-    drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+    $link = l('Please verify that you have completed your Salesforce credentials', SALESFORCE_PATH_ADMIN);
+    drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');
     return;
   }
   $response = $sf->client->describeGlobal();
@@ -1181,8 +1181,8 @@ function salesforce_api_describeSObjects($types) {
   try {
     $sf = salesforce_api_connect();
     if ($sf === FALSE) {
-      $link = l('Please verify that you have completed your SalesForce credentials', SALESFORCE_PATH_ADMIN);
-      drupal_set_message(t('Unable to connect to SalesForce. !link', array('!link' => $link)), 'error');
+      $link = l('Please verify that you have completed your Salesforce credentials', SALESFORCE_PATH_ADMIN);
+      drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');
       return;
     }
     $objects = $sf->client->describeSObjects(array_values($types));
@@ -1193,7 +1193,7 @@ function salesforce_api_describeSObjects($types) {
     return array();
   }
 
-  // This is the normalization part: If only one object was described, SalesForce
+  // This is the normalization part: If only one object was described, Salesforce
   // returned an object instead of an array. ALWAYS return an array of objects.
   if (is_object($objects)) {
     $objects = array($objects);
@@ -1310,7 +1310,7 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
   
   // Try to enable the SF object if it was not found.
   if (!salesforce_api_fieldmap_target_enabled($map)) {
-    form_error($form['object'], t('This fieldmap cannot be imported because salesforce_api cannot find a definition for the SalesForce object "%sfobj". Please verify your SalesForce connection and settings.', array('%sfobj' => $salesforce_field_map->salesforce)));
+    form_error($form['object'], t('This fieldmap cannot be imported because salesforce_api cannot find a definition for the Salesforce object "%sfobj". Please verify your Salesforce connection and settings.', array('%sfobj' => $salesforce_field_map->salesforce)));
   }
   $form_state['obj'] = $salesforce_field_map;
 }
@@ -1328,7 +1328,7 @@ function salesforce_api_fieldmap_source_enabled($map) {
 }
 
 /**
- * Helper function to determine whether the SalesForce object (target) for a
+ * Helper function to determine whether the Salesforce object (target) for a
  *given fieldmap is available.
  *
  * @param object $map 

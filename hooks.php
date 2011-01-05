@@ -31,10 +31,10 @@
  * convention _sf_node_export_cck_FIELDTYPE and _sf_node_import_cck_FIELDTYPE.
  * For example, see _sf_node_export_cck_date and _sf_node_import_cck_date in 
  * sf_contrib. The default CCK handler will expose all columns from all CCK 
- * field types for export and import to and from SalesForce. 
+ * field types for export and import to and from Salesforce. 
  * 
  * If the value of a particular column is not useful on its own, or if it needs 
- * to be manipulated in a specific way before being sent to SalesForce, then an
+ * to be manipulated in a specific way before being sent to Salesforce, then an
  * export (and/or import as appropriate) override should be declared according
  * to the naming convention (_sf_node_export_cck_FIELDTYPE). Any such function
  * will automatically be used to export/import ALL columns for the CCK field 
@@ -123,7 +123,7 @@ function hook_sf_find_match($direction, $fieldmap_type, $object, $fieldmap_name)
     }
     $sf = salesforce_api_connect();
     if (!is_object($sf)) {
-      watchdog('sf_find_match', 'SalesForce connection failed when looking for a match.');
+      watchdog('sf_find_match', 'Salesforce connection failed when looking for a match.');
       return;
     }
     $result = $sf->client->query('SELECT Id FROM Contact WHERE Email = \''.$obj->mail.'\'');
@@ -162,23 +162,23 @@ function hook_default_salesforce_field_maps($export = array()) {
     'drupal' => 'user',
     'salesforce' => 'Contact',
     'fields' => array('LastName' => 'name', 'Email' => 'mail'),
-    'description' => 'This is a simple example fieldmap to get you started using the SalesForce API.',
+    'description' => 'This is a simple example fieldmap to get you started using the Salesforce API.',
     ));
 }
 
 /**
- * Called immediately before a SalesForce object is to be created or updated
+ * Called immediately before a Salesforce object is to be created or updated
  * during export (e.g. sf_user_export, sf_node_export). Entity-based modules
- * that invoke SalesForce create, update, or upsert methods should always invoke
- * this hook before calling SalesForce. This feature was primarily designed for
+ * that invoke Salesforce create, update, or upsert methods should always invoke
+ * this hook before calling Salesforce. This feature was primarily designed for
  * queue/batch support, but could have other use cases as well.
  * 
  * This hook is invoked after a prematching attempt. For modules that may care
- * about such a situation, when $sf_object->sfid is empty, this is a SalesForce 
- * "create" operation. Otherwise, this is a SalesForce "update" operation.
+ * about such a situation, when $sf_object->sfid is empty, this is a Salesforce 
+ * "create" operation. Otherwise, this is a Salesforce "update" operation.
  *
  * @param string $sf_object
- *   The object about to be exported to SalesForce
+ *   The object about to be exported to Salesforce
  * @param mixed $map 
  *   The fully loaded fieldmapping object used to create sf_object
  * @param string $drupal_id 
@@ -193,21 +193,21 @@ function hook_salesforce_api_pre_export($sf_object, $map, $drupal_id) {
 }
 
 /**
- * Called after a SalesForce create or update attempt.
+ * Called after a Salesforce create or update attempt.
  * @see hook_salesforce_api_pre_export
  *
  * @param string $sf_object
  * @param string $map 
  * @param string $drupal_id 
  * @param object $salesforce_response
- *   The response object from the SalesForce SOAP server. This object has three
+ *   The response object from the Salesforce SOAP server. This object has three
  *   properties:
  *   - errors: A single error array, or an an array of one or more errors with
  *     three keys:
  *     - fields: A single field name, or an array of one or more field names
  *     - message: A human readable failure message
  *     - statusCode: A machine readable failure code
- *   - id: If there was no error, the SalesForce id of the touched object.
+ *   - id: If there was no error, the Salesforce id of the touched object.
  *   - success: boolean
  * @return void
  */
@@ -216,15 +216,15 @@ function hook_salesforce_api_post_export($sf_object, $map, $drupal_id, $salesfor
 }
 
 /**
- * Called before SalesForce delete
+ * Called before Salesforce delete
  * @see hook_salesforce_api_pre_export
- * This hook can be used to prevent deletion of SalesForce records entities, but
+ * This hook can be used to prevent deletion of Salesforce records entities, but
  * cannot prevent deletion of Drupal entities (@see hook_nodeapi or hook_user).
  *
  * @param object $sfid
  * @param object $map
  * @param string $drupal_id
- * @return FALSE if the SalesForce record should not be deleted.
+ * @return FALSE if the Salesforce record should not be deleted.
  */
 function hook_salesforce_api_delete($sfid, $map, $drupal_id) {
   
@@ -237,7 +237,7 @@ function hook_salesforce_api_delete($sfid, $map, $drupal_id) {
  * @param string $fieldname 
  * @param array $drupal_field_definition 
  * @param array $sf_field_definition 
- * @return the value for export to SalesForce
+ * @return the value for export to Salesforce
  */
 function _sf_node_export_cck_FIELDTYPE($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   $sf_field_definition) {

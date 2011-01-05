@@ -18,11 +18,11 @@ SALESFORCE MODULE
 
 ABOUT
 -----
-  This module suite implements a mapping functionality between SalesForce
+  This module suite implements a mapping functionality between Salesforce
   Objects and Drupal entities. In other words, for each of your supported Drupal
   entities (e.g. node, user, or entities supported by extensions), you can 
-  assign SalesForce objects that will be created / updated when the entity is
-  saved. For each such assignment, you choose which Drupal and SalesForce fields
+  assign Salesforce objects that will be created / updated when the entity is
+  saved. For each such assignment, you choose which Drupal and Salesforce fields
   should be mapped to one another.
 
   This suite also includes an API architecture which allows for additional
@@ -129,16 +129,16 @@ PREMATCHING
   The module sf_prematch provides administrators the ability to set up duplicate
   prevention criteria on each fieldmap. When sf_permatch is enabled, 
   administrators will be directed to set up matching criteria after creating a 
-  fieldmap. Each time a SalesForce export is triggered, this criteria will be 
+  fieldmap. Each time a Salesforce export is triggered, this criteria will be 
   used to identify any pre-existing records. If any matching record is found, 
   the matched record will be updated instead of a new record being created. The 
   impetus for this is to reduce the database management workload for 
-  SalesForce.com administrators.
+  Salesforce.com administrators.
 
 
 EXPORT QUEUE
 ------------
-  The module sf_queue implements a queueing system for exports. Since SalesForce 
+  The module sf_queue implements a queueing system for exports. Since Salesforce 
   API's create and update functions can modify up to 200 records at a time, this 
   module offers significant efficiencies for users trying to minimize their API 
   usage. Further, if an account's API limit is exceeded, the queue provides a 
@@ -151,8 +151,8 @@ WORKING WITH WSDL FILES
 -----------------------
   If you do not upload a WSDL file, Salesforce module will use a default .wsdl
   file (salesforce_api/toolkit/soapclient/enterprise.wsdl.xml), which may not be
-  compatible with your organization's SalesForce installation or the current
-  SalesForce API. It is highly recommended that you supply your own enterprise
+  compatible with your organization's Salesforce installation or the current
+  Salesforce API. It is highly recommended that you supply your own enterprise
   wsdl file via the WSDL administration panes at admin/settings/salesforce and
   admin/settings/salesforce/wsdl. These panes will walk you through creating a
   directory outside your webroot and uploading the WSDL file to that directory.

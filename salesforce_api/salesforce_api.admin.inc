@@ -153,7 +153,7 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
   }
   if (variable_get('salesforce_api_dir_wsdl', FALSE) !=
       $form_state['values']['salesforce_api_dir_wsdl']) {
-    drupal_set_message('Please make sure the WSDL directory is writeable, and upload a valid SalesForce .xml or .wsdl file.');
+    drupal_set_message('Please make sure the WSDL directory is writeable, and upload a valid Salesforce .xml or .wsdl file.');
     $form_state['redirect'] = array(
       SALESFORCE_PATH_UPDATE_WSDL,
       'destination=' . SALESFORCE_PATH_ADMIN);
@@ -469,7 +469,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   } 
   if (!salesforce_api_fieldmap_target_enabled($map)) {
-    drupal_set_message(t('This fieldmap cannot be edited because salesforce_api cannot find a definition for the SalesForce object "%sfobj". Please verify your SalesForce connection and settings.', array('%sfobj' => $map->salesforce)), 'error');
+    drupal_set_message(t('This fieldmap cannot be edited because salesforce_api cannot find a definition for the Salesforce object "%sfobj". Please verify your Salesforce connection and settings.', array('%sfobj' => $map->salesforce)), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
 
@@ -760,11 +760,11 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
  */
 function theme_salesforce_api_drupal_sfapi_automatic($element) {
   $element[SALESFORCE_AUTO_SYNC_CREATE]['#description'] = 
-    t('Create and link SalesForce records automatically when Drupal records are created.');
+    t('Create and link Salesforce records automatically when Drupal records are created.');
   $element[SALESFORCE_AUTO_SYNC_UPDATE]['#description'] = 
-    t('Update SalesForce records if a link already exists.');
+    t('Update Salesforce records if a link already exists.');
   $element[SALESFORCE_AUTO_SYNC_DELETE]['#description'] = 
-    t('Delete linked SalesForce records when a Drupal record is deleted.');
+    t('Delete linked Salesforce records when a Drupal record is deleted.');
   return drupal_render($element);
 }
 
@@ -932,7 +932,7 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
  * Ask salesforce for a list of objects and display a checklist for the user.
  * Based on user selection, set up or tear down cached/synched Salesforce data.
  * @TODO make this more user friendly. At the moment it's possible for an admin user to blow away
- * their entire local SalesForce cache with a few clicks. This is not necessarily desirable.
+ * their entire local Salesforce cache with a few clicks. This is not necessarily desirable.
  *
  * @param string $form_state
  * @return void
@@ -941,7 +941,7 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
 function salesforce_api_admin_object(&$form_state) {
   $response = salesforce_api_describeGlobal();
   if (empty($response->types)) {
-    drupal_set_message(t('There was an error retrieving the list of SalesForce objects. Please verify that your SalesForce instance is properly configured.'), 'error');
+    drupal_set_message(t('There was an error retrieving the list of Salesforce objects. Please verify that your Salesforce instance is properly configured.'), 'error');
     return;
   }
   $defaults = array_keys(salesforce_api_fieldmap_objects());
@@ -962,7 +962,7 @@ function salesforce_api_admin_object(&$form_state) {
     'objects' => array(
       '#type' => 'checkboxes',
       '#title' => 'Object Name (Object Label)',
-      '#description' => 'Check the SalesForce objects you would like to synchronize locally.',
+      '#description' => 'Check the Salesforce objects you would like to synchronize locally.',
       '#options' => $options,
       '#default_value' => $defaults,
     ),
