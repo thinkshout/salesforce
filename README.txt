@@ -11,6 +11,7 @@ SALESFORCE MODULE
     PREMATCHING
     EXPORT QUEUE
     WORKING WITH WSDL FILES
+    NOTIFICATIONS
     EXTENDING
     TROUBLESHOOTING
     REPORTING BUGS
@@ -176,6 +177,29 @@ WORKING WITH WSDL FILES
 
   For more information on SoapClient refer to
   http://php.net/manual/en/book.soap.php
+
+
+NOTIFICATIONS
+-------------
+  Salesforce Outbound Messages (referred to as Notifications) are XML messages
+  from Salesforce that can be sent based on Salesforce Workflow actions to any
+  web endpoint. The included module sf_notifications handles processing of any
+  such Notifications.
+
+  To allow Drupal to respond to Notifications, enable the sf_notifications
+  module as you would any other module, and point your Outbound Message(s) to
+  the notification endpoint:
+
+    http://example.com/sf_notifications/endpoint
+    
+  Configuring Salesforce Outbound Messages and Workflow is outside the scope of
+  this documentation.
+  
+  SF_notifications will expose your existing fieldmaps to function as
+  handlers for notifications. You can configure which of your fieldmaps should
+  be active, and set conditions upon which the Notifications will be used to
+  create Drupal objects. One application of Notifications is to implement full
+  two-way synchronization between Salesforce and Drupal.  
 
 
 EXTENDING

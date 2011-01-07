@@ -1,0 +1,400 @@
+<?php
+
+define('SALESFORCE_PATH_NOTIFICATIONS_ADMIN', SALESFORCE_PATH_ADMIN . '/notifications');
+define('SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT', 'sf_notifications/endpoint');
+
+/**
+ * hook_menu implementation
+ */
+function sf_notifications_menu() {
+  return array(
+    SALESFORCE_PATH_NOTIFICATIONS_ADMIN => array(
+      'title' => 'Notifications',
+      'description' => 'Placeholder for more SalesForce Notifications settings',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sf_notifications_settings_form'),
+      'access arguments' => array('administer salesforce'),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'sf_notifications.admin.inc',
+      ),
+    SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT => array(
+      'title' => FALSE,
+      'page callback' => 'sf_notifications_endpoint',
+      'access arguments' => array('access content'),
+      'access callback' => 'sf_notifications_allowed_ips',
+      'type' => MENU_CALLBACK,
+      ),
+    SALESFORCE_PATH_FIELDMAPS . '/%/notifications' => array(
+      'title' => 'Notifications',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sf_notifications_fieldmap_settings', 4),
+      'access callback' => 'sf_notifications_fieldmap_settings_access',
+      'access arguments' => array(4, 'administer salesforce'),
+      'file' => 'sf_notifications.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+      'weight' => 15,
+     ),
+    );
+}
+
+/**
+ * Access callback for SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT
+ *
+ * @return TRUE if IP is in whitelist and FALSE if not.
+ */
+function sf_notifications_allowed_ips() {
+  $ip = $_SERVER['REMOTE_ADDR'];
+  $ips = variable_get('sf_notifications_allowed_ips', FALSE);
+  $allowed_ips = ($ips === FALSE) ? sf_notifications_default_allowed_ips() : explode("\n", $ips);
+
+  if (in_array($ip, $allowed_ips, TRUE)) {
+    watchdog('sf_notifications', 'IP address @ip accessed @endpoint successfully.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
+    return TRUE;
+  } 
+  else {
+    foreach ($allowed_ips as $range) {
+      if (_sf_notifications_cidr_match($ip, $range)) {
+        return TRUE;
+      }
+    }
+    watchdog('sf_notifications', 'Access denied to IP address @ip in attempt to access @endpoint.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT), WATCHDOG_WARNING);
+    return FALSE;
+  }
+}
+
+/**
+ * Given a CIDR mask and an IP address, return TRUE or FALSE if the IP address
+ * matches or doesn't match the CIDR mask.
+ * Adapted from http://stackoverflow.com/questions/594112
+ */
+function _sf_notifications_cidr_match($ip, $range) {
+  list ($subnet, $bits) = split('/', $range);
+  $ip = ip2long($ip);
+  $subnet = ip2long($subnet);
+  // Sanity check: ip2long() returns FALSE for an invalid IP address.
+  if (empty($subnet) || empty($bits) || empty($ip)) {
+    return FALSE;
+  }
+  $mask = -1 << (32 - $bits);
+  $subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
+  return ($ip & $mask) == $subn;
+}
+
+/**
+ * Return an array of CIDR notation masks for allowed Salesforce IPs.
+ * These are taken from Knowledge Article #102757.
+ * https://help.salesforce.com/apex/HTViewSolution?id=102757&language=en
+ */
+function sf_notifications_default_allowed_ips() {
+  return array('204.14.232.0/23', '204.14.237.0/24', '96.43.144.0/22', '96.43.148.0/22', '204.14.234.0/23', '204.14.238.0/23', '202.129.242.0/25');
+}
+
+function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
+  $active = variable_get('sf_notifications_active_maps', array());
+  if (!empty($active[$fieldmap_id])) {
+    return user_access($perm);
+  }
+  return FALSE;
+}
+
+/**
+ * Menu callback for SalesForce notifications endpoint
+ * @todo Add authentication. see "Downloading the Salesforce.com Client Certificate" at
+ * http://www.salesforce.com/us/developer/docs/ajax/Content/sforce_api_ajax_queryresultiterator.htm
+ */
+function sf_notifications_endpoint() {
+  // SF Toolkit only gets included on salesforce_api_connect, which we've no reason to call.
+  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
+
+  // Needed for the reference to SObject in parse_message, otherwise it just seems to die
+  // when it tries to call new SObject()
+  require_once(drupal_get_path('module', 'salesforce_api') .'/toolkit/soapclient/SforcePartnerClient.php');
+
+  $content = file_get_contents('php://input');
+  if (empty($content)) {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'SalesForce Notifications: Empty request.');
+    exit;
+  }
+	$dom = new DOMDocument();
+	$dom->loadXML($content);
+	if (empty($dom) || !$dom->hasChildNodes()) {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_NONE,
+      'SalesForce Notifications: Failed to parse into DOM Document.
+      <pre>' . print_r($content) . '</pre>');
+		_sf_notifications_soap_respond('false');
+    exit;
+	}
+	$resultArray = _sf_notifications_parse_message($dom);
+	$ret = _sf_notifications_handle_message($resultArray);
+
+	// Sends SOAP response to SFDC
+	if ($ret) {
+		_sf_notifications_soap_respond('true');
+	}
+	else {
+		_sf_notifications_soap_respond('false');
+	}
+	exit;
+}
+
+/**
+ * Loop through an array of SObjects from SalesForce and save them according to
+ * any existing sf fieldmaps, notification settings, and data.
+ *
+ * @param array $objects
+ *  A numerically indexed array of SObjects (as returned by
+ *  _sf_notifications_parse_message())
+ * @return (boolean) FALSE if there were errors. TRUE otherwise.
+ * @see sf_notifications_fieldmap_settings()
+ * @see sf_notifications_settings_form()
+ */
+function _sf_notifications_handle_message($objects) {
+  $success = TRUE;
+  // For each object received from Salesforce, gather all relevant fieldmaps.
+  // For each relevant fieldmap, perform the appropriate C(r)UD operation.
+  $new_records = $objects['salesforce'];
+  $active = variable_get('sf_notifications_active_maps', array());
+  $active = array_filter($active);
+  foreach ($objects['drupal'] as $object_record) {
+    $sfid = $object_record['sfid'];
+    $obj = $objects['salesforce'][$sfid];
+
+    // We'll handle inserts later on
+    unset($new_records[$sfid]);
+
+    // Break on fieldmap-specific conditions
+    $map = salesforce_api_fieldmap_load($object_record['name']);
+    if (empty($active[$map->name])) {
+      continue;
+    }
+    $operation = $obj->fields->IsDeleted == 'true' ? 'delete' : 'update';
+    if (!sf_notifications_check_condition($operation, $object_record, $map)) {
+      continue;
+    }
+
+    switch ($operation) {
+      case 'delete': {
+        $success = $success && sf_notifications_delete_record($object_record);
+        break;
+      }
+      case 'update': {
+        $object_record['fields'] = $obj->fields;
+        $success = $success && sf_notifications_update_record($object_record);
+        break;
+      }
+    }
+  }
+
+  foreach ($new_records as $sfid => $obj) {
+    $maps = salesforce_api_salesforce_field_map_load_by(array('salesforce' => $obj->type));
+    if (empty($maps)) {
+      DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME,
+            'SalesForce Notifications: No fieldmap found.
+            <pre>' . print_r($obj, 1) . '</pre>');
+      $success = FALSE;
+      continue;
+    }
+    // For each map, check active, check conditions and insert.
+    foreach ($maps as $map) {
+      if (empty($active[$map->name])) {
+        continue;
+      }
+      // Forge an object record to proceed.
+      // Insert is the same as update, just without an oid.
+      $object_record = array(
+        'oid' => NULL,
+        'name' => $map->name,
+        'drupal_type' => $fieldmap_type,
+        'fields' => $obj->fields,
+      );
+      if (!sf_notifications_check_condition('insert', $object_record, $map)) {
+        continue;
+      }
+      $success = $success && sf_notifications_update_record($object_record);
+    }
+  }
+
+  // Clear the page and block caches, for good measure.
+  cache_clear_all();
+
+  return $success;
+}
+
+/**
+ * Helper function for _sf_notifications_handle_message() - attempt to delete
+ * the local object data, given the salesforce object_record.
+ */
+function sf_notifications_delete_record($object_record) {
+  // Try to delete the local record. Since the record is no more, in this
+  // case we're agnostic to the drupal_type ("node" or "user").
+  $success = TRUE;
+  switch ($object_record['drupal_type']) {
+    case 'user': {
+      user_delete(array(), $object_record['oid']);
+      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+        'SalesForce Notificaitions deleted user '
+        . $object_record['oid'] . ' sfid ' . $sfid);
+      break;
+    }
+    case 'node': {
+      // Can't use node_delete() since it's wrapped in node_access and we're
+      // probably anonymous. The following is adapted from node_delete().
+      $node = node_load($nid, NULL, TRUE);
+
+      db_query('DELETE FROM {node} WHERE nid = %d', $node->nid);
+      db_query('DELETE FROM {node_revisions} WHERE nid = %d', $node->nid);
+
+      // Call the node-specific callback (if any):
+      node_invoke($node, 'delete');
+      node_invoke_nodeapi($node, 'delete');
+      search_wipe($node->nid, 'node');
+
+      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+        'SalesForce Notificaitions deleted node '
+        . $object_record['oid'] . ' sfid ' . $sfid);
+      break;
+    }
+    default: {
+      if (function_exists($object_record['drupal_type'] . '_delete')) {
+        $function = $object_record['drupal_type'] . '_delete';
+        $function($object_record['oid']);
+        DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+          'SalesForce Notificaitions deleted '
+          . $object_record['drupal_type'] . ' ' . $object_record['oid']
+          . ' sfid ' . $sfid);
+      }
+      else {
+        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME,
+          ' SalesForce Notifications: Could not find delete handler for deleted
+          SalesForce record <pre>' . print_r($object_record, 1) . '</pre>');
+        $success = FALSE;
+      }
+      break;
+    }
+  }
+  return $success;
+}
+
+/**
+ * Helper function for _sf_notifications_handle_message() - attempt to update
+ * (or insert if $object_record['oid'] is empty) the local object data, given
+ * the salesforce object_record.
+ */
+function sf_notifications_update_record($object_record) {
+  $success = TRUE;
+  $drupal_type = $object_record['drupal_type'];
+  if (strpos($drupal_type, 'node_') === 0) {
+    $drupal_type = 'node';
+  }
+  $function = 'sf_' . $drupal_type . '_import';
+  if (function_exists($function)) {
+    $drupal_id = $function($object_record['fields'], $object_record['name'], $object_record['oid']);
+    if ($drupal_id) {
+      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+        'SalesForce Notificaitions updated '
+        . $object_record['drupal_type'] . ' ' . $drupal_id);
+    }
+    else {
+      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+        'SalesForce Notificaitions failed to update '
+        . $object_record['drupal_type'] . ' from record.
+        <pre>' . print_r($object_record, 1) . '</pre>');
+      $success = FALSE;
+    }
+  }
+  else {
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+        'SalesForce Notifications: Import handler ' . $function . ' undefined.
+        Drupal ' . $object_record['drupal_type'] . ' with id '
+        . $object_record['oid'] . ' was not updated.');
+    $success = FALSE;
+  }
+  return $success;
+}
+
+/**
+ * Helper function to check condition of a fieldmap. Adapted from drupal_eval()
+ * since we need to pass a couple variables along to the eval() call.
+ */
+function sf_notifications_check_condition($operation, $object_record, $map) {
+  $settings = variable_get('sf_notifications_settings', array());
+  $setting = $settings[$map->name];
+  if (empty($setting['condition'])) {
+    return TRUE;
+  }
+  $code = $setting['condition'];
+  unset($setting, $settings);
+
+  ob_start();
+  print eval('?><?php ' . $code);
+  $output = ob_get_contents();
+  ob_end_clean();
+  return $output;
+}
+
+/**
+ * Parse SOAP message into its component args.
+ *
+ * @param (object) $domDoc
+ *  A DOMDocument representation of the outbound SOAP message from SalesForce.
+ * @return (array) $result
+ *  An array with two sub-arrays, keyed as:
+ *  'drupal':
+ *    A sequential array containing relevant salesforce_ids records.
+ *    We don't index on drupal_id because there could be overlap.
+ *  'salesforce':
+ *    An indexed array mapping sfids to SObject records from SalesForce.
+ */
+function _sf_notifications_parse_message($domDoc) {
+  $result = array('salesforce' => array(), 'drupal' => array());
+  $sfids = array();
+  // Create sObject array and fill fields provided in notification
+  $objects = $domDoc->getElementsByTagName('sObject');
+  foreach ($objects as $sObjectNode) {
+    $sObjType = $sObjectNode->getAttribute('xsi:type');
+    if (substr_count($sObjType,'sf:')) {
+      $sObjType = substr($sObjType,3);
+  	}
+    $obj = new SObject();
+    $obj->type = $sObjType;
+    $elements = $sObjectNode->getElementsByTagNameNS('urn:sobject.enterprise.soap.sforce.com','*');
+    $obj->fieldnames = array();
+    foreach ($elements as $node) {
+      if ($node->localName == 'Id') {
+        // "Id" is a property of the SObject as well as SObject->fields
+        $sfids[] = $obj->Id = $node->textContent;
+      }
+      $fieldname = $node->localName;
+      $obj->fields->$fieldname = $node->nodeValue;
+      array_push($obj->fieldnames,$fieldname);
+    }
+  	$result['salesforce'][$obj->Id] = $obj;
+  }
+
+  $dbresult = db_query('SELECT name, oid, sfid, drupal_type FROM salesforce_object_map WHERE sfid IN (' . db_placeholders($sfids, 'varchar') . ')', $sfids);
+  while($row = db_fetch_array($dbresult)) {
+    $result['drupal'][] = $row;
+  }
+
+  return $result;
+}
+
+/**
+ * Format and send a SOAP response message.
+ *
+ * @param boolean $tf
+ * @return void
+**/
+function _sf_notifications_soap_respond($tf = 'true') {
+print '<?xml version = "1.0" encoding = "utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+		<soapenv:Body>
+			<notifications xmlns="http://soap.sforce.com/2005/09/outbound">
+				<Ack>'.$tf.'</Ack>
+			</notifications>
+		</soapenv:Body>
+</soapenv:Envelope>
+';
+}
