@@ -201,19 +201,24 @@ function salesforce_api_requirements($phase) {
  * 4) Drop "fieldmap" column from salesforce_object_map
  *
  */
-function salesforce_api_update_1() {
+function salesforce_api_update_6201() {
+  
   module_enable(array('ctools'));
+  
   if (!module_exists('ctools')) {
-    // module_disable(array('salesforce_api', 'sf_node', 'sf_user', 'sf_prematch'));
-    drupal_set_message('This version of SalesForce module depends on <a href="http://drupal.org/project/ctools">Chaos Tool Suite</a>, which is not available. Please install Chaos Tool Suite, then run update again.');
+    drupal_set_message(t('This version of SalesForce module depends on <a href="@ctools">Chaos Tool Suite</a>, which is not available. Please install Chaos Tool Suite, then run update again.', array('@ctools' => url('http://drupal.org/project/ctools'))), 'error');
     return array(array('success' => FALSE, 'query' => 'Chaos Tool Suite not found.'));
   }
 
-  $ret = array(array('success' => TRUE, 'query' => 'Chaos Tool Suite enabled.'));
+  $ret[] = array('success' => TRUE, 'query' => 'Chaos Tool Suite enabled.');
+  
+  db_add_column($ret, 'salesforce_field_map', 'description', 'varchar(255)');
   db_add_column($ret, 'salesforce_field_map', 'name', 'varchar(255)');
   db_add_column($ret, 'salesforce_object_map', 'name', 'varchar(255)');
+  
   $result = db_query('SELECT fieldmap FROM {salesforce_field_map}');
-  while($fieldmap = db_result($result)) {
+  
+  while ($fieldmap = db_result($result)) {
     $name = md5($fieldmap);
     $sql = 'UPDATE {salesforce_object_map} SET name = "%s" WHERE fieldmap = %d';
     $update_result = db_query($sql, $name, $fieldmap);
@@ -225,13 +230,26 @@ function salesforce_api_update_1() {
   db_add_index($ret, 'salesforce_object_map', 'name', array('name'));
   db_add_unique_key($ret, 'salesforce_field_map', 'name', array('name'));
   $ret[] = update_sql('ALTER TABLE {salesforce_object_map} DROP COLUMN fieldmap');
+  
+  // Set the WSDL directory
+  if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
+    $dir = SALESFORCE_DIR_WSDL;
+    $wsdl = $dir .'/enterprise.wsdl';
+    if (file_exists($wsdl)) {
+      variable_set('salesforce_api_dir_wsdl', $dir);
+    } 
+    else {
+      variable_set('salesforce_api_dir_wsdl', SALESFORCE_DIR_SOAPCLIENT);
+    }
+  }
+
   return $ret;
 }
 
 /**
  * Try to fix existing maps based on the new cck support
  */
-function salesforce_api_update_2() {
+function salesforce_api_update_6202() {
   $fieldmaps = salesforce_api_salesforce_field_map_load_all();
   $ret = array();
   $changes = array();
@@ -248,9 +266,9 @@ function salesforce_api_update_2() {
         );
       }
       if ($field['type'] == 'date' && !empty($field['todate'])) {
-        $changes[$field['field_name'].'_todate'] = array(
-          'old' => $field['field_name'].'_todate',
-          'new' => $field['field_name'].':value2'
+        $changes[$field['field_name'] . '_todate'] = array(
+          'old' => $field['field_name'] . '_todate',
+          'new' => $field['field_name'] . ':value2'
           );
       }
     }
@@ -273,10 +291,9 @@ function salesforce_api_update_2() {
   return $ret;
 }
 
-function salesforce_api_update_3() {
+function salesforce_api_update_6203() {
   $ret = array();
   db_change_field($ret, 'salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
   db_query('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE);
   return $ret;
 }
-

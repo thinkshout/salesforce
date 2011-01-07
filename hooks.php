@@ -216,6 +216,21 @@ function hook_salesforce_api_post_export($sf_object, $map, $drupal_id, $salesfor
 }
 
 /**
+ * Called when a connection attempt to Salesforce fails. 
+ * @see salesforce_api_export()
+ *
+ * @param string $drupal_objects
+ *   The Drupal objects that were being exported.
+ * @param string $name
+ *   The name of the fieldmap to have been used for the export.
+ * @param string $sfid
+ *   Any sfid or sfids to have been used for export, if provided.
+ */
+function hook_salesforce_api_export_connect_fail($drupal_objects, $name, $sfid) {
+  // respond to connection failure
+}
+
+/**
  * Called before Salesforce delete
  * @see hook_salesforce_api_pre_export
  * This hook can be used to prevent deletion of Salesforce records entities, but

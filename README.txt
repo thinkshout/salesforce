@@ -81,27 +81,32 @@ INSTALLATION
 
 UPDATING / REINSTALLING / ENABLING / DISABLING
 ----------------------------------------------
-  Since this module does not yet have a stable release, there is no upgrade path
-  neither between Drupal versions nor between dev versions. If you have
-  previously installed this module on your Drupal site and are upgrading, you
-  need to do the following to update the module.
+  If you have previously installed this module on your Drupal site and are 
+  upgrading, you need to do the following to update the module.
 
   0) ALWAYS backup your site's code and your database.
 
-  1) Disable salesforce_api, sf_node, and sf_user.
+  1) Download the latest version of Salesforce Suite and then run update.php,
+     or use the following drush command: "drush up salesforce"
 
-  2) Remove the salesforce directory from the filesystem.
+  ### Older versions
 
-  3) Drop any salesforce database tables (salesforce_object_map,
-     salesforce_field_map, etc.)
+  If you are using an older version of the Salesforce 2.x module (2009 or 
+  earlier), follow these directions:
+  
+  0) Backup your site's code and database. Download your WSDL, which would be
+     in sites/all/modules/salesforce_api/wsdl/enterprise.wsdl
 
-  4) Remove the entries in "system" database table for salesforce_api, sf_node,
-     and sf_user e.g. DELETE FROM system WHERE name IN ('salesforce_api',
-     'sf_node', 'sf_user').
-
-  5) Download or CVS checkout the latest version of salesforce module and
-     re-enable.
-
+  1) Download the latest version of Salesforce Suite and then run update.php,
+     or use the following drush command: "drush up salesforce"
+  
+  2) You will have to update your WSDL directory. It is recommended that your 
+     WSDL file be stored outside your webroot. After enabling the new version 
+     of Salesforce, visit admin/settings/salesforce and set the WSDL directory 
+     and click "Save configuration". You will then be prompted to upload a new 
+     WSDL file (admin/settings/salesforce/wsdl).
+     
+  Note that your fieldmaps may need adjustment after upgrading.
 
 QUICKSTART
 ----------
