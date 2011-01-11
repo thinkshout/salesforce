@@ -76,7 +76,7 @@ function sf_notifications_fieldmap_settings(&$form_state, $fieldmap_id) {
     '#type' => 'textarea',
     '#title' => FALSE,
     '#default_value' => $settings['condition'],
-    '#description' => t('PHP code - <strong>do not include &lt;?php ?> tags</strong>. This code should return TRUE or FALSE to determine whether this fieldmap should be triggered on a relevant Outbound Message event. Available variables are $map (fieldmap object to be used to create the import), $notification_data (parsed object data from salesforce), $operation ("insert", "update", or "delete")'),
+    '#description' => t('PHP code - <strong>do not include &lt;?php ?> tags</strong>. This code should return TRUE or FALSE to determine whether this fieldmap should be triggered on a relevant Outbound Message event. Available variables are $map (fieldmap object to be used to create the import), $notification_data (array of parsed object data from salesforce, keys are "oid" - drupal object id on update or empty on insert; "name" - machine name of fieldmap used for this operation; "fields" - object with the actual data from Salesforce), $operation ("insert", "update", or "delete")'),
   );
   return system_settings_form($form);
 }

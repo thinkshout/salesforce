@@ -168,6 +168,8 @@ function _sf_notifications_handle_message($objects) {
       continue;
     }
     $operation = $obj->fields->IsDeleted == 'true' ? 'delete' : 'update';
+    $object_record['fields'] = $obj->fields;
+    $object_record['operation'] = $operation;
     if (!sf_notifications_check_condition($operation, $object_record, $map)) {
       continue;
     }
@@ -178,7 +180,6 @@ function _sf_notifications_handle_message($objects) {
         break;
       }
       case 'update': {
-        $object_record['fields'] = $obj->fields;
         $success = $success && sf_notifications_update_record($object_record);
         break;
       }
@@ -206,6 +207,7 @@ function _sf_notifications_handle_message($objects) {
         'name' => $map->name,
         'drupal_type' => $fieldmap_type,
         'fields' => $obj->fields,
+        'operation' => 'insert',
       );
       if (!sf_notifications_check_condition('insert', $object_record, $map)) {
         continue;
@@ -283,6 +285,15 @@ function sf_notifications_delete_record($object_record) {
 function sf_notifications_update_record($object_record) {
   $success = TRUE;
   $drupal_type = $object_record['drupal_type'];
+  if (empty($drupal_type)) {
+    $map = salesforce_api_fieldmap_load($object_record['name']);
+    if (empty($map)) {
+      $success = FALSE;
+    }
+    else {
+      $drupal_type = $map->drupal;
+    }
+  }
   if (strpos($drupal_type, 'node_') === 0) {
     $drupal_type = 'node';
   }
@@ -291,8 +302,8 @@ function sf_notifications_update_record($object_record) {
     $drupal_id = $function($object_record['fields'], $object_record['name'], $object_record['oid']);
     if ($drupal_id) {
       DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
-        'SalesForce Notificaitions updated '
-        . $object_record['drupal_type'] . ' ' . $drupal_id);
+        'SalesForce Notificaitions successful ' . $object_record['operation'] .
+        ' of ' . $drupal_type . ' ' . $drupal_id);
     }
     else {
       DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
@@ -316,7 +327,7 @@ function sf_notifications_update_record($object_record) {
  * Helper function to check condition of a fieldmap. Adapted from drupal_eval()
  * since we need to pass a couple variables along to the eval() call.
  */
-function sf_notifications_check_condition($operation, $object_record, $map) {
+function sf_notifications_check_condition($operation, $notification_data, $map) {
   $settings = variable_get('sf_notifications_settings', array());
   $setting = $settings[$map->name];
   if (empty($setting['condition'])) {
