@@ -104,11 +104,11 @@ function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
  */
 function sf_notifications_endpoint() {
   // SF Toolkit only gets included on salesforce_api_connect, which we've no reason to call.
-  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
+  require_once(SALESFORCE_DIR .'/salesforce.class.inc');
 
   // Needed for the reference to SObject in parse_message, otherwise it just seems to die
   // when it tries to call new SObject()
-  require_once(drupal_get_path('module', 'salesforce_api') .'/toolkit/soapclient/SforcePartnerClient.php');
+  require_once(SALESFORCE_DIR_SOAPCLIENT . '/SforcePartnerClient.php');
 
   $content = file_get_contents('php://input');
   if (empty($content)) {
