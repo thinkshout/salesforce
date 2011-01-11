@@ -77,7 +77,7 @@ function _sf_notifications_cidr_match($ip, $range) {
   }
   $mask = -1 << (32 - $bits);
   $subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
-  return ($ip & $mask) == $subn;
+  return ($ip & $mask) == $subnet;
 }
 
 /**
