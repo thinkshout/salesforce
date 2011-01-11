@@ -56,6 +56,9 @@ if (!function_exists('is_sfid')) {
   // Without a roundtrip to salesforce.com, checking the string length is the
   // best we can do to verify a Salesforce ID.
   function is_sfid($sfid) {
+    if (!is_string($sfid)) {
+      return FALSE;
+    }
     if (strlen($sfid) == 15 || strlen($sfid) == 18) {
       return TRUE;
     }
