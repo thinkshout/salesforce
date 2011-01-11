@@ -88,7 +88,6 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'insert':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
       if (isset($node->sf_node_skip_export)) {
-        watchdog('sf_node', __LINE__);
         break;
       }
 
@@ -111,7 +110,6 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
         if ((!$auto_create && $op == 'insert')
         || (!$auto_update && $op == 'update')) {
-        watchdog('sf_node', __LINE__);
           break;
         }
         $map = current($maps);
@@ -125,10 +123,8 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
       // Finally, export the node to Salesforce.
       try {
-        watchdog('sf_node', __LINE__);
         sf_node_export($node, $salesforce->name, $salesforce->sfid);
       } catch (Exception $e) {
-        watchdog('sf_node', __LINE__);
         DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
       }
       break;
@@ -604,11 +600,9 @@ function sf_node_export($node, $name, $sfid = NULL) {
   $object->Id = $sfid;
 
   $continue = module_invoke_all('salesforce_api_pre_export', $object, $map, $node->nid);
-  watchdog('sf_node', __LINE__ . '<pre>' . print_r($continue, 1));
   if (!empty($continue)) {
     foreach ($continue as $value) {
       if ($value === FALSE) {
-        watchdog('sf_queue', __LINE__);
         return;
       }
     }
@@ -701,7 +695,12 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
   // Loop through the fields on the fieldmap.
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
     // If a handler is specified for importing a value from Salesforce....
-    if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
+    if (is_array($drupal_fieldname)) {
+      // There is no logical way to import Salesforce values into Drupal fixed
+      // or php values.
+      continue;
+    }
+    elseif (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
       $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
       $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
       $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
