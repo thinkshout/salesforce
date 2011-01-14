@@ -103,7 +103,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
         $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
         if ((!$auto_create && $op == 'insert')
-        || (!$auto_update && $op == 'update')) {
+        || (!$auto_update && $op == 'after_update')) {
           break;
         }
         // Use the first fieldmap.
