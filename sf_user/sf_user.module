@@ -479,6 +479,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   }
 
   // Loop through the fields on the fieldmap.
+  $changes = array();
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
     // If a handler is specified for importing a value from Salesforce.
     if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
