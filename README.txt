@@ -47,7 +47,7 @@ REQUIREMENTS
 
   3) Required modules
      Chaos Tool Suite - http://drupal.org/project/ctools
-  
+
   4) Recommended modules
      Libraries API - http://drupal.org/project/libraries
 
@@ -58,18 +58,29 @@ INSTALLATION
 
   2) Download the Salesforce PHP Toolkit
 
-     https://github.com/messageagency/salesforce
-     or 
-     git://github.com/messageagency/salesforce
+     The official Force.com PHP toolkit is available here:
 
-     If "libraries" module is installed, place "soapclient" in
+     https://github.com/developerforce/Force.com-Toolkit-for-PHP
+
+     You can get a tarball:
+     https://github.com/developerforce/Force.com-Toolkit-for-PHP/tarball/master
+
+     or a zipfile:
+     https://github.com/developerforce/Force.com-Toolkit-for-PHP/zipball/master
+
+     or a git clone:
+     http://github.com/developerforce/Force.com-Toolkit-for-PHP.git
+
+     If "libraries" module is installed, place the "soapclient" directory in
      "salesforce/soapclient" in your libraries path.
-     You should end up with something like:
+     You should end up with:
+
      sites/all/libraries/salesforce/soapclient
 
-     If "libraries" modules is not installed, place the "soapclient" directory
-     within the "toolkit" directory in "salesforce_api". 
-     You should end up with something like:
+     Otherwise, if "libraries" modules is not installed, place the "soapclient"
+     directory within the "toolkit" directory in "salesforce_api".
+     You should end up with:
+
      sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
 
   3) Enable the module on admin/build/modules along with at least one of the
