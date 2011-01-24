@@ -177,7 +177,7 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
   $options = array();
   foreach ($drupal_objects as $entity => $bundles) {
     foreach ($bundles as $bundle_name => $bundle_data) {
-      $options[$entity.':'.$bundle_name] = $bundle_data['label'];
+      $options[$entity . ':' . $bundle_name] = $bundle_data['label'];
     }
   }
   asort($options);
@@ -227,7 +227,7 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
   $index = salesforce_api_fieldmap_create($form_state['values']);
 
   // Redirect to its edit form.
-  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/'. $index .'/edit';
+  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/' . $index . '/edit';
 }
 
 /**
@@ -241,7 +241,7 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
  *   The numeric index of the new fieldmap.
  */
 function salesforce_api_fieldmap_create($values) {
-  list($values['drupal_entity'], $values['drupal_bundle']) = 
+  list($values['drupal_entity'], $values['drupal_bundle']) =
     explode(':', $values['drupal'], 2);
   unset($values['drupal']);
   // Create the fieldmap array.
@@ -320,7 +320,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
 
   // Add a description of the source fieldmap to the form array.
   $form['fieldmap_desc'] = array(
-    '#markup' => '<p>'. salesforce_api_fieldmap_description($map) .'</p>',
+    '#markup' => '<p>' . salesforce_api_fieldmap_description($map) . '</p>',
   );
 
   $form['description'] = array(
@@ -402,10 +402,9 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
     // Add the select list for the associated target field.
     $row['source'][$key] = array(
       '#type' => 'select',
-      '#title' => $value['label'],
+      '#title' => check_plain($value['label']),
       '#options' => salesforce_api_fieldmap_field_options($source),
-      '#default_value' => !empty($map['fields'][$key]) 
-        ? $map['fields'][$key] : NULL,
+      '#default_value' => !empty($map['fields'][$key]) ? $map['fields'][$key] : NULL,
       '#required' => $type == 'required',
     );
 
@@ -474,7 +473,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
  */
 function theme_salesforce_api_fieldmap_edit_form_table($variables) {
   $form = $variables['form'];
-  
+
   // Build the header array.
   $header = array();
 
@@ -710,7 +709,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
       $response = $sf->client->create(array($object), 'Contact');
 
       $output .= t('The response from Salesforce upon creation:')
-                .'<pre>'. print_r($response, TRUE) .'</pre>';
+                . '<pre>' . print_r($response, TRUE) . '</pre>';
       break;
 
     case 'campaign-export':
@@ -723,7 +722,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
       // Create an object for export based on fieldmap 10.
       $object = salesforce_api_fieldmap_export_create(10, $node);
 
-      $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/10/edit')))
+      $output .= t('Your campaign prepared for export as a Campaign based on <a href="!url">fieldmap 10</a>:', array('!url' => url(SALESFORCE_PATH_FIELDMAPS . '/10/edit')))
                 . '<pre>' . print_r($object, TRUE) . '</pre>';
 
       // Export the object to Salesforce as a Contact.
@@ -741,7 +740,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
 //    l(t('Export node 1 as a campaign'), SALESFORCE_PATH_DEMO .'/campaign-export'),
   );
 
-  $output .= '<p>'. t('<b>Choose from the following demonstrations:</b>') . theme('item_list', array('items' => $items)) .'</p>';
+  $output .= '<p>' . t('<b>Choose from the following demonstrations:</b>') . theme('item_list', array('items' => $items)) . '</p>';
 
   return $output;
 }

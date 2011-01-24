@@ -8,14 +8,14 @@
 
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  */
 function salesforce_api_install() {
   // nothing yet.
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function salesforce_api_uninstall() {
   drupal_uninstall_schema('salesforce_api');
@@ -24,15 +24,15 @@ function salesforce_api_uninstall() {
 }
 
 /**
- * Implementation of hook_enable().
+ * Implements hook_enable().
  */
 function salesforce_api_enable() {
   drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
-drupal_set_message(t('Salesforce API: The default Salesforce object have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
+  drupal_set_message(t('Salesforce API: The default Salesforce object have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
 }
 
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function salesforce_api_schema() {
   $schema['salesforce_object_map'] = array(
@@ -137,7 +137,7 @@ function salesforce_api_schema() {
 }
 
 /**
- * Implementation of hook_requirements().
+ * Implements hook_requirements().
  *
  * Check the Salesforce API configuration to see if we have valid credentials.
  */

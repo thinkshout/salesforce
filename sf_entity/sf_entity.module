@@ -7,7 +7,7 @@
  */
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  * Create a %/salesforce menu callback for all fieldable entities.
  */
 function sf_entity_menu() {
@@ -36,7 +36,8 @@ function sf_entity_menu() {
         $parts[$i] = '%' . $entity;
         $page_args[] = $i;
         $access_args[] = $i;
-      } elseif ($part == '__ENTITY_VID__' || $part == '__ENTITY_BUNDLE__') {
+      }
+      elseif ($part == '__ENTITY_VID__' || $part == '__ENTITY_BUNDLE__') {
         $parts[$i] = '%';
       }
     }
@@ -55,15 +56,15 @@ function sf_entity_menu() {
 }
 
 /**
- * Implementation of hook_permission().
+ * Implements hook_permission().
  */
 function sf_entity_permission() {
   return array(
     'sync user with salesforce' => array(
-      'title' => t('Sync users with salesforce'), 
+      'title' => t('Sync users with salesforce'),
       'description' => t('Sync users with salesforce')),
     'sync node with salesforce' => array(
-      'title' => t('Sync nodes with salesforce'), 
+      'title' => t('Sync nodes with salesforce'),
       'description' => t('Sync nodes with salesforce')),
     'sync taxonomy_term with salesforce' => array(
       'title' => t('Sync terms with salesforce'),
@@ -78,11 +79,10 @@ function sf_entity_permission() {
 function sf_entity_salesforce_form_access($entity_type, $entity) {
   list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
   return user_access('sync ' . $entity_type . ' with salesforce');
-//  && salesforce_api_fieldmap_options($entity_type, $bundle);
 }
 
 /**
- * Implementation of hook_form_salesforce_api_settings_form_alter().
+ * Implements hook_form_salesforce_api_settings_form_alter().
  */
 function sf_entity_form_salesforce_api_settings_form_alter(&$form, $form_state) {
   return FALSE;
@@ -106,14 +106,14 @@ function sf_entity_form_salesforce_api_settings_form_alter(&$form, $form_state) 
 }
 
 /**
- * Implementation of hook_entity_load
+ * Implements hook_entity_load().
  */
 function sf_entity_entity_load(&$entities, $type) {
   $ids = array_keys($entities);
   $results = salesforce_api_id_load($type, $bundle = NULL, $ids, 'oid');
   foreach ($results as $oid => $result) {
     if (empty($entities[$oid])) {
-      continue; 
+      continue;
     }
     $entities[$oid]->salesforce = $result;
   }
@@ -125,10 +125,10 @@ function sf_entity_save($entity, $type, $op) {
     return;
   }
 
-  // If this is an update, and the node already has a salesforce mapping, 
-  // try to load it. If the load fails, we need to fetch the appropriate 
+  // If this is an update, and the node already has a salesforce mapping,
+  // try to load it. If the load fails, we need to fetch the appropriate
   // fieldmap. Either way, we're upserting the salesforce record.
-  $salesforce = array('fieldmap' => null, 'sfid' => null);
+  $salesforce = array('fieldmap' => NULL, 'sfid' => NULL);
   list($oid, $vid, $bundle) = entity_extract_ids($type, $entity);
   if ($oid) {
     $salesforce = salesforce_api_id_load($type, $bundle, $oid);
@@ -172,10 +172,10 @@ function sf_entity_entity_update($entity, $type) {
 }
 
 /**
- * Implementation of future hook_entity_delete
+ * Implements hook_entity_delete().
  *
- * @param string $entity 
- * @param string $type 
+ * @param string $entity
+ * @param string $type
  */
 function sf_entity_entity_delete($entity, $type) {
   list($id, $vid, $bundle) = entity_extract_ids($type, $entity);
@@ -187,7 +187,7 @@ function sf_entity_entity_delete($entity, $type) {
 }
 
 /**
- * Implementation of hook_node_delete. Entity API is not quite here yet.
+ * Implements hook_node_delete().
  */
 function sf_entity_node_delete($node) {
   list($id, $vid, $bundle) = entity_extract_ids('node', $node);
@@ -199,7 +199,7 @@ function sf_entity_node_delete($node) {
 }
 
 /**
- * Implementation of hook_user_delete. Entity API is not quite here yet.
+ * Implements hook_user_delete().
  */
 function sf_entity_user_delete($account) {
   list($id, $vid, $bundle) = entity_extract_ids('user', $account);
@@ -211,7 +211,8 @@ function sf_entity_user_delete($account) {
 }
 
 /**
- * Implementation of hook_content_fieldapi
+ * Implements hook_content_fieldapi().
+ *
  * Delete a field from a Salesforce fieldmap when the field instance is deleted.
  */
 function sf_entity_field_delete($entity_type, $entity, $field, $instance, $langcode, &$items) {
@@ -220,7 +221,7 @@ function sf_entity_field_delete($entity_type, $entity, $field, $instance, $langc
 }
 
 /**
- * Implementation of hook_fieldmap_objects_alter().
+ * Implements hook_fieldmap_objects_alter().
  */
 function sf_entity_fieldmap_objects($type) {
   $objects = array();
@@ -228,21 +229,25 @@ function sf_entity_fieldmap_objects($type) {
   if ($type == 'drupal') {
     $entities = field_info_bundles();
     $fields = field_info_fields();
-    
+
     // For each entity-bundle-field-column combo, assign a field definition.
     foreach ($entities as $entity => $bundles) {
       $entity_info = entity_get_info($entity);
-      if (!$entity_info['fieldable']) { continue; }
+      if (!$entity_info['fieldable']) {
+        continue;
+      }
       $objects[$entity] = array();
       foreach ($bundles as $bundle_name => $bundle_info) {
         $objects[$entity][$bundle_name] = array(
           'label' => $entity_info['label'] . ': ' . $bundle_info['label'],
           'fields' => array(),
           );
-        
+
         // Add entity keys (id, revision, & bundle).
         foreach ($entity_info['entity keys'] as $key => $value) {
-          if (empty($value)) { continue; }
+          if (empty($value)) {
+            continue;
+          }
           $objects[$entity][$bundle_name]['fields'][$value] = array(
             'label' => $value,
             'group' => 'IDs',
@@ -253,8 +258,8 @@ function sf_entity_fieldmap_objects($type) {
         $fields = field_info_instances($entity, $bundle_name);
         foreach ($fields as $field_name => $field_info) {
           $more_field_info = field_info_field($field_name);
-          foreach($more_field_info['columns'] as $col_name => $col_data) {
-            // There's probably no reason to clutter the admin UI with the 
+          foreach ($more_field_info['columns'] as $col_name => $col_data) {
+            // There's probably no reason to clutter the admin UI with the
             // "format" value for this field.
             if ($col_name == 'format') {
               continue;
@@ -265,11 +270,11 @@ function sf_entity_fieldmap_objects($type) {
               'export' => 'sf_entity_export_field_default',
               'import' => 'sf_entity_import_field_default',
             );
-            $key = $field_name.':'.$col_name;
+            $key = $field_name . ':' . $col_name;
             $objects[$entity][$bundle_name]['fields'][$key] = $data;
           }
         }
-        
+
         // Add core fields which are outside of Field API
         switch ($entity) {
           case 'node': {
@@ -356,12 +361,12 @@ function sf_entity_import_field_default(&$entity, $drupal_fieldname, $drupal_fie
         }
       }
       else {
-         $data[0]['value'] = $sf_data->$sf_fieldname;
+        $data[0]['value'] = $sf_data->$sf_fieldname;
       }
     break;
     default:
       // Unless handled above in this switch, we don't yet handle fields with multiple values.
-       $data[0]['value'] = $sf_data->$sf_fieldname;
+      $data[0]['value'] = $sf_data->$sf_fieldname;
     break;
   }
   $entity->$drupal_fieldname = $data;
@@ -395,8 +400,8 @@ function _sf_node_import_cck_todate(&$node, $drupal_fieldname, $drupal_field_def
 // Returns the email address of the node's author, given by node->uid
 function _sf_node_export_author_email($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   $uid = $node->uid;
-  if(!is_numeric($uid)) {
-    return null;
+  if (!is_numeric($uid)) {
+    return NULL;
   }
   return db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $uid));
 }
@@ -427,10 +432,10 @@ function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definitio
 
 // Export sfid of referenced node
 function _sf_node_export_cck_nodereference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  $sfid = ''; 
+  $sfid = '';
   if ($nid = $node->{$fieldname}[0]['nid']) {
-    $sf_data = salesforce_api_id_load('node', $nid); 
-    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : ''; 
+    $sf_data = salesforce_api_id_load('node', $nid);
+    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : '';
   }
   return $sfid;
 }
@@ -442,10 +447,10 @@ function _sf_node_import_cck_nodereference(&$node, $drupal_fieldname, $drupal_fi
 
 // Export sfid of referenced user
 function _sf_node_export_cck_userreference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  $sfid = ''; 
+  $sfid = '';
   if ($uid = $node->{$fieldname}[0]['uid']) {
-    $sf_data = salesforce_api_id_load('user', $uid); 
-    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : ''; 
+    $sf_data = salesforce_api_id_load('user', $uid);
+    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : '';
   }
   return $sfid;
 }
@@ -468,7 +473,7 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
     exit;
   }
 
-  drupal_set_title('SalesForce Export/Import');
+  drupal_set_title(t('SalesForce Export/Import'));
 
   $info = entity_get_info($entity_type);
   // Set the node page title.
@@ -509,7 +514,8 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
         '#type' => 'submit',
         '#value' => t('Export'),
       );
-    } else {
+    }
+    else {
       $form['export']['notice'] = array(
         '#type' => 'item',
         '#title' => t('No @entity fieldmaps', array('@entity' => $info['label'])),
@@ -558,7 +564,7 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
     $form['mapped'] = array(
       '#type' => 'fieldset',
       '#title' => t('Mapped field values'),
-      '#description' => t('These fields have been mapped through <a href="!url">fieldmap @index</a>.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS .'/'. $entity->salesforce['fieldmap'] .'/edit'), '@index' => $entity->salesforce['fieldmap'])),
+      '#description' => t('These fields have been mapped through <a href="!url">fieldmap @index</a>.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS . '/' . $entity->salesforce['fieldmap'] . '/edit'), '@index' => $entity->salesforce['fieldmap'])),
     );
     $form['mapped']['fieldmap_values'] = array(
       '#markup' => theme('table', array('header' => $header, 'rows' => $rows)),
@@ -626,7 +632,7 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
       '#collapsed' => TRUE,
     );
     $form['raw']['data'] = array(
-      '#markup' => '<pre>'. print_r($sf_data, TRUE) .'</pre>',
+      '#markup' => '<pre>' . print_r($sf_data, TRUE) . '</pre>',
     );
   }
 
@@ -642,7 +648,7 @@ function sf_entity_salesforce_form_submit($form, &$form_state) {
   switch ($values['op']) {
     // Export the node to Salesforce.
     case t('Export'): {
-      $sfid = empty($form_state['values']['sfid']) 
+      $sfid = empty($form_state['values']['sfid'])
         ? NULL : $form_state['values']['sfid'];
       if (sf_entity_export($entity, $form_state['values']['fieldmap'], $sfid)) {
         drupal_set_message(t('%entity successfully exported to Salesforce.', array('%entity' => $values['entity type'])));
@@ -687,7 +693,7 @@ function sf_entity_export($entity, $fieldmap, $sfid = NULL) {
     drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
     return FALSE;
   }
-  
+
   if (empty($entity)) {
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'sf_entity_export was provided an empty entity to export: ' . print_r($entity, 1), array(), WATCHDOG_ERROR);
     return FALSE;
@@ -709,8 +715,8 @@ function sf_entity_export($entity, $fieldmap, $sfid = NULL) {
   $object = salesforce_api_fieldmap_export_create($fieldmap, $entity);
   $object->Id = $sfid;
 
-  // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client 
-  // is BROKEN -- it always tries to update "Contact" instead of accepting a "type" 
+  // TODO: Salesforce's PHP Toolkit's implementation of "upsert" for Enterprise client
+  // is BROKEN -- it always tries to update "Contact" instead of accepting a "type"
   // parameter. Until it is fixed, we have to update/create.
   //
   // Upsert creates a new object if object->Id is empty, otherwise updates an existing object.
@@ -718,7 +724,8 @@ function sf_entity_export($entity, $fieldmap, $sfid = NULL) {
 
   if (empty($object->Id)) {
     $response = $sf->client->create(array($object), $map['salesforce']);
-  } else {
+  }
+  else {
     $response = $sf->client->update(array($object), $map['salesforce']);
   }
 
@@ -735,8 +742,9 @@ function sf_entity_export($entity, $fieldmap, $sfid = NULL) {
     if (user_access('administer salesforce')) {
       if (function_exists('dpm')) {
         dpm($response);
-      } else {
-        drupal_set_message(print_r($response, 1), 'error');
+      }
+      else {
+        drupal_set_message(check_plain(print_r($response, 1)), 'error');
       }
     }
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('entity ' . $id, entity_uri($map['drupal_entity'], $entity)));
@@ -777,7 +785,7 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
   $sfid = $sf_data->Id;
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
-  
+
   // Load the object definitions.
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map['drupal_entity'], $map['drupal_bundle']);
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce'], $map['salesforce']);
@@ -786,7 +794,8 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
   $entities = entity_load($map['drupal_entity'], $id);
   if (is_array($entities)) {
     $entity = current($entities);
-  } else {
+  }
+  else {
     $entity = $entities;
   }
   if (empty($id) || empty($entity)) {
@@ -798,7 +807,8 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
         $entities = entity_load($map['drupal_entity'], $id);
         if (is_array($entities)) {
           $entity = current($entities);
-        } else {
+        }
+        else {
           $entity = $entities;
         }
       }
@@ -830,11 +840,11 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
   }
 
   $entity->sf_entity_skip_export = TRUE;
-  // It would be nice if we could just call entity_save($entity), but there is 
+  // It would be nice if we could just call entity_save($entity), but there is
   // no entity_save (wtf?). Fortunately core modules all implement their save
   // functions in almost the exact same way, and they all call entity_invoke()
   // so that our hook_entity_update and hook_entity_insert will fire properly.
-  // I really don't understand why node_save still exists since we now have 
+  // I really don't understand why node_save still exists since we now have
   // entity_invoke.
   $function = $map['drupal_entity'] . '_save';
   if (function_exists($function)) {
@@ -849,7 +859,7 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
     }
   }
   list($id, $vid, $bundle) = entity_extract_ids($type, $entity);
-  
+
   if ($map['automatic'] && !empty($id)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save($map['drupal_entity'], $bundle, $id, $sfid, $fieldmap);

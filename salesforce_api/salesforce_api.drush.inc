@@ -8,27 +8,27 @@
  */
 
 /**
- * Implementation of hook_drush_help().
+ * Implements hook_drush_help().
  */
 function salesforce_api_drush_help($section) {
   switch ($section) {
     case 'drush:soql show tables':
       return dt("List tables in salesforce.");
     case 'drush:soql describe':
-      $output =  dt("Examine table metadata in salesforce.") ."\n\n";
-      $output .= dt("Arguments:\n  Salesforce Object    The path of the salesforce object to examine.") ."\n\n";
+      $output =  dt("Examine table metadata in salesforce.") . "\n\n";
+      $output .= dt("Arguments:\n  Salesforce Object    The path of the salesforce object to examine.") . "\n\n";
       $output .= dt("Examples:\n  drush soql describe content.fields    Display the fields on the content table.");
       return $output;
     case 'drush:soql':
-      $output = dt("Execute a SOQL query. Note that you may need to escape quotes in your query: select name from foo where type=\'bar\'") ."\n\n";
-      $output .= dt("Arguments:\n  SOQL Query    A salesforce soql query to execute against salesforce.") ."\n\n";
+      $output = dt("Execute a SOQL query. Note that you may need to escape quotes in your query: select name from foo where type=\'bar\'") . "\n\n";
+      $output .= dt("Arguments:\n  SOQL Query    A salesforce soql query to execute against salesforce.") . "\n\n";
       $output .= dt("Examples:\n  drush soql select Id, Name from Contact    Query the Contact table.");
       return $output;
   }
 }
 
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  */
 function salesforce_api_drush_command() {
   $items['soql show tables'] = array(
@@ -146,7 +146,7 @@ function _salesforce_api_drush_get_info($response, &$rows) {
       else {
         $label = '';
       }
-      $rows[] = array($k ." [+]", $label);
+      $rows[] = array($k . " [+]", $label);
     }
   }
 }
@@ -162,7 +162,7 @@ function _salesforce_api_drush_get_fields($response, &$rows) {
     if (is_array($item)) {
       if (!empty($item['type'])) {
         $row = array();
-        $row[] = $key ." [+]";
+        $row[] = $key . " [+]";
         $row[] = $item['type'];
         $row[] = $item['name'];
         $row[] = $item['label'];

@@ -58,7 +58,7 @@ if (!function_exists('is_sfid')) {
 
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function salesforce_api_menu() {
   $items[SALESFORCE_PATH_ADMIN] = array(
@@ -156,7 +156,7 @@ function salesforce_api_menu() {
 }
 
 /**
- * Implementation of hook_permission().
+ * Implements hook_permission().
  */
 function salesforce_api_permission() {
   return array('administer salesforce' =>
@@ -228,7 +228,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
         drupal_set_message(t('Your Salesforce account password expired.  Please
          <a href="https://login.salesforce.com/">login to Salesforce.com</a> and
          change your password.'), 'error');
-      } 
+      }
       else {
         DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
           due to expired password for @user.', array('@user' => $username), WATCHDOG_ERROR);
@@ -292,14 +292,14 @@ function salesforce_api_reset_expired_password($sf) {
 }
 
 /**
- * Implementation of hook_fieldmap_objects().
+ * Implements hook_fieldmap_objects().
  *
  * This will pull a cached version (if possible) of the available SF fields for
  * the object(s) in question. Prevent excess querying!
  */
 function salesforce_api_fieldmap_objects($type = 'salesforce') {
   $objects = array();
-  
+
   // Define the data fields available for Salesforce objects.
   if ($type == 'salesforce') {
     $cache = cache_get('salesforce_api_sf_objects');
@@ -565,7 +565,7 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $entity = NULL, $bun
       $function($objects);
     }
   }
-  
+
   // If a particular object type was specified...
   if (!empty($type)) {
     // And a particular object was specified...
@@ -574,15 +574,15 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $entity = NULL, $bun
       if (!empty($bundle)) {
         if (isset($objects[$type][$entity][$bundle])) {
           return $objects[$type][$entity][$bundle];
-        } 
+        }
         else {
           return FALSE;
         }
-      } 
+      }
       else {
         if (isset($objects[$type][$entity])) {
           return $objects[$type][$entity];
-        } 
+        }
         else {
           return FALSE;
         }
@@ -591,7 +591,7 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $entity = NULL, $bun
     else {
       if (isset($objects[$type])) {
         return $objects[$type];
-      } 
+      }
       else {
         return FALSE;
       }
@@ -603,7 +603,7 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $entity = NULL, $bun
 
 /**
  * Returns the label for the object of the specified type and name.
- * @see salesforce_api_fieldmap_objects_load
+ * @see salesforce_api_fieldmap_objects_load()
  */
 function salesforce_api_fieldmap_object_label($type, $entity, $bundle) {
   // Get the object definition.
@@ -721,7 +721,7 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
     // Salesforce treats the following values differently than NULL.
     if ($value === FALSE || $value === 0 || $value === '0' || $value === 'FALSE') {
       $object->$key = $value = 0;
-    } 
+    }
     elseif (empty($value)) {
       $nillable = $sf_field_definition['type'] & SALESFORCE_FIELD_NILLABLE;
       // If the field is not nillable, don't try to set it to NULL
@@ -737,7 +737,7 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
             unset($object->$key);
             break;
         }
-      } 
+      }
       else {
         $object->fieldsToNull = $key;
         // Enterprise client can only NULL one field per transaction.
@@ -756,7 +756,7 @@ function salesforce_api_fieldmap_export_create($fieldmap, $drupal_data = NULL) {
  * Loads the mapping data given identifying information.
  *
  * @param string $entity
- *   The entity type of the Drupal object you are requesting data for; 
+ *   The entity type of the Drupal object you are requesting data for;
  *   e.g. node or user.
  * @param string $bundle
  *   The bundle the Drupal object belongs to
@@ -820,7 +820,7 @@ function salesforce_api_id_save($entity, $bundle, $oid, $sfid, $fieldmap) {
     ->execute();
   db_insert('salesforce_object_map')
     ->fields(array(
-      'drupal_entity' => $entity, 'drupal_bundle' => $bundle, 
+      'drupal_entity' => $entity, 'drupal_bundle' => $bundle,
       'oid' => $oid, 'sfid' => $sfid, 'fieldmap' => $fieldmap))
     ->execute();
 }
@@ -833,7 +833,7 @@ function salesforce_api_search_for_duplicates($direction, $object, $fieldmap_id)
 }
 
 /**
- * Implementation of hook_theme().
+ * Implements hook_theme().
  *
  * Registers theme callback for admin screen
  */
@@ -898,7 +898,7 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
 }
 
 /**
- * Implementation of hook_cron().
+ * Implements hook_cron().
  */
 function salesforce_api_cron() {
   $cache = cache_get('salesforce_api_sf_objects');
@@ -911,20 +911,20 @@ function salesforce_api_cron() {
 /**
  * Wrapper for SOAP SforceBaseClient::describeSObject
  * Given an sf object type, return the SF Object definition
- * @param string type : the machine-readable name of the SF object type
-**/
+ * @param string type : the machine-readable name of the SF object type.
+ */
 function salesforce_api_describeSObject($type) {
   if (!is_string($type)) {
-    drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
+    drupal_set_message(t('DescribeSObject expects a string. @type recieved.', array('@type' => gettype($type))) , 'error');
     return FALSE;
   }
 
   $objects = salesforce_api_describeSObjects($type);
   if (!empty($objects[$type])) {
     return $objects[$type];
-  } 
+  }
   else {
-    drupal_set_message(t('DescribeSObject failed to find ' . $type), 'error');
+    drupal_set_message(t('DescribeSObject failed to find @type.', array('@type' => $type)), 'error');
     return FALSE;
   }
 }
@@ -941,7 +941,7 @@ function salesforce_api_describeSObjects($types) {
     $types = array($types);
   }
   if (!is_array($types)) {
-    drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
+    drupal_set_message(t('DescribeSObjects expects an array. @types recieved.', array('@types' => gettype($types))), 'error');
     return FALSE;
   }
 
@@ -991,4 +991,3 @@ function salesforce_api_describeSObjects($types) {
   $objects = $tmp;
   return $objects;
 }
-

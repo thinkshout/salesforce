@@ -1,0 +1,5 @@
+# $Id
+
+Salesforce Suite 7.x-1.x-dev, xxxx-xx-xx
+-----------------------------------
+by brianV: Fix coding standards errors and some minor migration issues in salesforce_api and sf_entity modules. Also add CHANGELOG.txt.

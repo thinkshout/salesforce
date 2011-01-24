@@ -11,7 +11,7 @@
 /**
  * Defines the DrupalSalesforce class used to interact with the server.
  */
-require(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
+require(SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php');
 class DrupalSalesforce {
   // Define the object object used to connect to Salesforce.
   public $client;
@@ -51,11 +51,11 @@ class DrupalSalesforce {
    */
   function login() {
     // Default to the WSDL downloaded from the user account if available.
-    $wsdl = SALESFORCE_DIR_WSDL .'/enterprise.wsdl.xml';
+    $wsdl = SALESFORCE_DIR_WSDL . '/enterprise.wsdl.xml';
 
     // Otherwise fall back to the one included with the Toolkit.
     if (!file_exists($wsdl)) {
-      $wsdl = SALESFORCE_DIR_SOAPCLIENT .'/enterprise.wsdl.xml';
+      $wsdl = SALESFORCE_DIR_SOAPCLIENT . '/enterprise.wsdl.xml';
     }
 
     // Connect to the server and login, logging any failures to the watchdog.
@@ -132,7 +132,7 @@ class DrupalSalesforce {
     $map = salesforce_api_fieldmap_load($fieldmap);
 
     $object = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map['salesforce']);
-    
+
     $fields = array_keys($object['fields']);
 
     return $this->client->retrieve(implode(', ', $fields), $map['salesforce'], $ids);
