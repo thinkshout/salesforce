@@ -372,7 +372,9 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   if (!$sf) {
     // Let modules react to a failure to export this user.
     module_invoke_all('salesforce_api_export_connect_fail', $uid, $name, $sfid);
-    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    }
     return FALSE;
   }
 
@@ -417,7 +419,9 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       if (function_exists('dsm')) {
         dsm($response);
       } else {
-        drupal_set_message(print_r($response, 1), 'error');
+        if (user_access('administer salesforce')) {
+          drupal_set_message(print_r($response, 1), 'error');
+        }
       }
     }
     DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
@@ -443,7 +447,9 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
-    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    }
     return FALSE;
   }
 

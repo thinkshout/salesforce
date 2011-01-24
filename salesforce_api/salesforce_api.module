@@ -546,16 +546,20 @@ function salesforce_api_fieldmap_field_delete($fieldname, $drupal_type = null, $
       $key1 = array_search($fieldname, $map->fields);
       if ($key1) {
         unset($map->fields[$key1]);
-        drupal_set_message(t('Removed Drupal field from salesforce_api !link',
-          array('!link' => l('fieldmap ' . $fieldmap_id, SALESFORCE_PATH_OBJECT . '/' . $fieldmap_id))));
+        if (user_access('administer salesforce')) {
+          drupal_set_message(t('Removed Drupal field from salesforce_api !link',
+            array('!link' => l('fieldmap ' . $fieldmap_id, SALESFORCE_PATH_OBJECT . '/' . $fieldmap_id))));
+        }
         salesforce_api_fieldmap_save($map);
       }
     }
     if ($salesforce_type) {
       if (!empty($map->fields[$key2])) {
         unset($map->fields[$key2]);
-        drupal_set_message(t('Removed Salesforce field from salesforce_api !link',
-          array('@link' => l('fieldmap ' . $fieldmap_id, SALESFORCE_PATH_OBJECT . '/' . $fieldmap_id))));
+        if (user_access('administer salesforce')) {
+          drupal_set_message(t('Removed Salesforce field from salesforce_api !link',
+            array('@link' => l('fieldmap ' . $fieldmap_id, SALESFORCE_PATH_OBJECT . '/' . $fieldmap_id))));
+        }
         salesforce_api_fieldmap_save($map);
       }
     }
@@ -1077,7 +1081,9 @@ function salesforce_api_describeGlobal() {
   $sf = salesforce_api_connect();
   if ($sf === FALSE) {
     $link = l('Please verify that you have completed your Salesforce credentials', SALESFORCE_PATH_ADMIN);
-    drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');
+    }
     return;
   }
   $response = $sf->client->describeGlobal();
@@ -1134,7 +1140,9 @@ function salesforce_api_cron() {
 **/
 function salesforce_api_describeSObject($type) {
   if (!is_string($type)) {
-    drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
+    }
     return false;
   }
 
@@ -1142,7 +1150,9 @@ function salesforce_api_describeSObject($type) {
   if(!empty($objects[$type])) {
     return $objects[$type];
   } else {
-    drupal_set_message(t('DescribeSObject failed to find ' . $type), 'error');
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('DescribeSObject failed to find ' . $type), 'error');
+    }
     return false;
   }
 }
@@ -1159,7 +1169,9 @@ function salesforce_api_describeSObjects($types) {
     $types = array($types);
   }
   if (!is_array($types)) {
-    drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');  
+    }
     return false;
   }
   $types = array_filter($types);
@@ -1185,7 +1197,9 @@ function salesforce_api_describeSObjects($types) {
     $sf = salesforce_api_connect();
     if ($sf === FALSE) {
       $link = l('Please verify that you have completed your Salesforce credentials', SALESFORCE_PATH_ADMIN);
-      drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');
+      if (user_access('administer salesforce')) {
+        drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');  
+      }
       return;
     }
     $objects = $sf->client->describeSObjects(array_values($types));
