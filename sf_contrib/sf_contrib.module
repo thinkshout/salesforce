@@ -182,6 +182,7 @@ function _sf_node_export_cck_date($node, $drupal_fieldname, $drupal_field_defini
     }
     case 'datetime': {
       $from_type = DATE_DATETIME;
+      break;
     }
     case 'date': {
       $from_type = DATE_ISO;
