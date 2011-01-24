@@ -103,10 +103,8 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     		return;
     	break;
     	case 1:
-    		return $result->records[0]->Id;
-    	break;
     	default:
-    	  // TODO: handle multiple records
+    		return $result->records[0]->Id;
     	break;
     }
   }
