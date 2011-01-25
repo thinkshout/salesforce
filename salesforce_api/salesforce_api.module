@@ -186,7 +186,7 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 20,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/revert'] = 
+  $items[SALESFORCE_PATH_FIELDMAPS .'/%/revert'] =
     $items[SALESFORCE_PATH_FIELDMAPS .'/%/delete'];
   $items[SALESFORCE_PATH_FIELDMAPS .'/%/revert']['title'] = 'Revert';
   unset($items[SALESFORCE_PATH_FIELDMAPS .'/%/revert']['type'],
@@ -219,7 +219,7 @@ function salesforce_api_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
-  
+
   if (module_exists('ctools')) {
     $items[SALESFORCE_PATH_FIELDMAPS .'/%/export'] = array(
       'title' => 'Export',
@@ -243,7 +243,7 @@ function salesforce_api_menu() {
       'weight' => 30,
     );
   }
-  
+
   return $items;
 }
 
@@ -255,7 +255,7 @@ function salesforce_api_perm() {
 }
 
 /**
- * Access callback 
+ * Access callback
  *
  */
 function _salesforce_fieldmap_access($perm, $op = 'edit', $id = null) {
@@ -313,7 +313,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
 
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce 
+    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
       failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
@@ -325,7 +325,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
       failed. Failed to create DrupalSalesforce wrapper.', WATCHDOG_ERROR);
     return FALSE;
   }
-  
+
   // Attempt a login.
   if ($sf->login()) {
     // Mimick expired password state to debug.
@@ -336,10 +336,10 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
       }
       elseif (user_access('administer salesforce')) {
         drupal_set_message(t('Your Salesforce account password expired.  Please
-         <a href="https://login.salesforce.com/">login to Salesforce.com</a> and 
+         <a href="https://login.salesforce.com/">login to Salesforce.com</a> and
          change your password.', 'error'));
       } else {
-        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce 
+        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
           due to expired password for @user.', array('@user' => $username), WATCHDOG_ERROR);
       }
     }
@@ -382,20 +382,20 @@ function salesforce_api_reset_expired_password($sf) {
     '!uri' => url(SALESFORCE_PATH_ADMIN, array('absolute' => TRUE)),
   );
 
-  DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL, 'The password for the salesforce 
-    account %user expired.  Drupal changed it and saved the new password.  
+  DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL, 'The password for the salesforce
+    account %user expired.  Drupal changed it and saved the new password.
     Salesforce updated the security token and emailed it to %email.', $vars);
-  DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Provide the new security token 
-    at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce 
+  DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Provide the new security token
+    at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce
     emailed it to %email.', $vars, WATCHDOG_ALERT);
 
   // If salesforce connects on pages for anonymous users then these messages should not be displayed.
   if (user_access('administer salesforce')) {
-    drupal_set_message(t('The password for the salesforce account %user expired.  
-      Drupal changed it and saved the new password.  Salesforce updated the 
+    drupal_set_message(t('The password for the salesforce account %user expired.
+      Drupal changed it and saved the new password.  Salesforce updated the
       security token and emailed it to %email.', $vars));
-    drupal_set_message(t('Provide the new security token at 
-      <a href="!uri">Drupal\'s Salesforce settings page</a>.  
+    drupal_set_message(t('Provide the new security token at
+      <a href="!uri">Drupal\'s Salesforce settings page</a>.
       Salesforce emailed it to %email.', $vars), 'error');
   }
 }
@@ -512,7 +512,7 @@ function salesforce_api_fieldmap_load($fieldmap) {
 /**
  * Remove a field from all fieldmaps. This is particularly useful for implementations
  * of hook_content_fieldapi('delete instance'). May be use to delete an occurence
- * in a single fieldmap (by supplying drupal_type and/or salesforce_type), or every 
+ * in a single fieldmap (by supplying drupal_type and/or salesforce_type), or every
  * occurence in all fieldmaps (by supplying only fieldname).
  *
  * @param $fieldname
@@ -530,14 +530,14 @@ function salesforce_api_fieldmap_field_delete($fieldname, $drupal_type = null, $
   }
   elseif ($drupal_type) {
     $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map} WHERE drupal = "%s"', $drupal_type);
-  } 
+  }
   elseif ($salesforce_type) {
     $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map} WHERE salesforce = "%s"', $salesforce_type);
-  } 
+  }
   else {
     $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map}');
   }
-  
+
   while ($row = db_fetch_array($result)) {
     $map = salesforce_api_fieldmap_load($row['name']);
     // In the extremely unlikely event that a Salesforce field and a Drupal
@@ -614,8 +614,8 @@ function salesforce_api_fieldmap_delete($fieldmap) {
 /**
  * Given a drupal type and oid, delete an object mapping
  *
- * @param string $drupal_type 
- * @param string $oid 
+ * @param string $drupal_type
+ * @param string $oid
  */
 function salesforce_api_delete_object_map($drupal_type, $oid) {
   db_query('DELETE FROM {salesforce_object_map} WHERE drupal_type = "%s" AND oid = %d', $drupal_type, $oid);
@@ -867,18 +867,18 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     $type = $sf_field_definition['salesforce']['type'];
     $errors = array();
     switch ($type) {
-      case 'boolean': {
+      case 'boolean':
         if (empty($value)) {
           $object->$sf_fieldname = 0;
         } else {
           $object->$sf_fieldname = 1;
         }
         break;
-      }
-  
+
+
       case 'time':
       case 'date':
-      case 'datetime': {
+      case 'datetime':
         $time = strtotime($value);
         if (empty($time)) {
           $errors[] = array('message' => 'Salesforce cannot accept empty values for @type fields: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value));
@@ -888,9 +888,9 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
           $object->$sf_fieldname  = gmdate(DATE_ATOM, $time);
         }
         break;
-      }
 
-      case 'email': {
+
+      case 'email':
         if (salesforce_api_valid_email_address($value)) {
           $object->$sf_fieldname  = $value;
         } else {
@@ -898,29 +898,29 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
           continue;
         }
         break;
-      }
+
 
       case 'percent':
       case 'currency':
       case 'int':
-      case 'double': {
+      case 'double':
         if (is_numeric($value)) {
           $object->$sf_fieldname = $value;
         } else {
           $errors[] = array('message' => 'Invalid value provided for Salesforce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
         }
         break;
-      }
+
 
       case 'reference':
-      case 'id': {
+      case 'id':
         if (!is_sfid($value)) {
           $errors[] = array('message' => 'Invalid value provided for Salesforce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
         } else {
           $object->$sf_fieldname  = $value;
         }
         break;
-      }
+
 
       case 'string':
       case 'picklist':
@@ -931,10 +931,10 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'phone':
       case 'url':
       case 'encryptedstring':
-      default: {
+      default:
         $object->$sf_fieldname  = $value;
         break;
-      }
+      
     }
     $max_len = $sf_field_definition['salesforce']['length'];
     if ($max_len && drupal_strlen($object->$sf_fieldname) > $max_len) {
@@ -988,9 +988,9 @@ function salesforce_api_id_load($type, $id) {
  *   The type of the Drupal object you are requesting data for; node or user.
  * @return
  *   The associated unique ID used to identify the object in Drupal or FALSE.
- */ 
+ */
 function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
-  $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = '%s' AND drupal_type = '%s'", $sfid, $type); 
+  $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = '%s' AND drupal_type = '%s'", $sfid, $type);
   return db_result($result);
 }
 
@@ -1102,7 +1102,7 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
     'label' => t($object->label),
     'fields' => array()
   );
-  if (!empty($object->fields) && is_array($object->fields)) { 
+  if (!empty($object->fields) && is_array($object->fields)) {
     foreach ($object->fields as $field) {
       $properties = array('name', 'label', 'type', 'length', 'soapType');
       $booleans = array('createable', 'defaultedOnCreate', 'deprecatedAndHidden',
@@ -1170,7 +1170,7 @@ function salesforce_api_describeSObjects($types) {
   }
   if (!is_array($types)) {
     if (user_access('administer salesforce')) {
-      drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');  
+      drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
     }
     return false;
   }
@@ -1198,7 +1198,7 @@ function salesforce_api_describeSObjects($types) {
     if ($sf === FALSE) {
       $link = l('Please verify that you have completed your Salesforce credentials', SALESFORCE_PATH_ADMIN);
       if (user_access('administer salesforce')) {
-        drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');  
+        drupal_set_message(t('Unable to connect to Salesforce. !link', array('!link' => $link)), 'error');
       }
       return;
     }
@@ -1304,7 +1304,7 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
   eval($form_state['values']['object']);
   ob_end_clean();
 
-  // The object should appear as $salesforce_fieldmap. 
+  // The object should appear as $salesforce_fieldmap.
   // This was the "identifier" set in the export section of the schema.
   if (empty($salesforce_field_map)) {
     $errors = ob_get_contents();
@@ -1320,11 +1320,11 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
     form_error($form['object'], t('This fieldmap cannot be imported; the object definition is invalid.'));
     return;
   }
-  
+
   if (!salesforce_api_fieldmap_source_enabled($map)) {
     form_error($form['object'], t('This fieldmap cannot be imported, because the module which supports the Drupal entity "%entity" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%entity' => $salesforce_field_map->drupal)));
   }
-  
+
   // Try to enable the SF object if it was not found.
   if (!salesforce_api_fieldmap_target_enabled($map)) {
     form_error($form['object'], t('This fieldmap cannot be imported because salesforce_api cannot find a definition for the Salesforce object "%sfobj". Please verify your Salesforce connection and settings.', array('%sfobj' => $salesforce_field_map->salesforce)));
@@ -1336,7 +1336,7 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
  * Helper function to determine whether the Drupal object (source) for a given
  * fieldmap is available.
  *
- * @param object $map 
+ * @param object $map
  * @return boolean
  */
 function salesforce_api_fieldmap_source_enabled($map) {
@@ -1348,8 +1348,8 @@ function salesforce_api_fieldmap_source_enabled($map) {
  * Helper function to determine whether the Salesforce object (target) for a
  *given fieldmap is available.
  *
- * @param object $map 
- * @param boolean $enable (optional) - 
+ * @param object $map
+ * @param boolean $enable (optional) -
  *   if the object is not initially available, whether or not to try and enable
  *   it before returning.
  * @return boolean
@@ -1382,4 +1382,3 @@ function salesforce_api_import_salesforce_field_map_submit($form, &$form_state) 
 /**
  * @} End of "addtogroup exportables".
  */
-

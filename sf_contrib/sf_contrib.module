@@ -5,7 +5,7 @@
  * @file
  * Provides integration with Location and CCK.
  */
- 
+
 /**
  * Implementation of hook_fieldmap_objects().
 **/
@@ -108,7 +108,7 @@ function _sf_contrib_add_fields(&$objects) {
     $index = 'node_' . $type['type'];
     foreach ((array) $type['fields'] as $field) {
       switch ($field['type']) {
-        case 'location': {
+        case 'location':
           unset($objects['drupal'][$index]['fields'][$field['field_name']]);
           $proceed = FALSE;
           if(!module_exists('location')) {
@@ -141,10 +141,10 @@ function _sf_contrib_add_fields(&$objects) {
              );
           }
           break;
-        }
+
         case 'datetime':
         case 'datestamp':
-        case 'date': {
+        case 'date':
           $objects['drupal'][$index]['fields']
             [$field['field_name'] . ':value2']['label'] =
               $objects['drupal'][$index]['fields']
@@ -163,7 +163,7 @@ function _sf_contrib_add_fields(&$objects) {
             '_sf_node_import_cck_date';
 
           break;
-        }
+
       }
     }
   }
@@ -176,18 +176,18 @@ function _sf_node_export_cck_date($node, $drupal_fieldname, $drupal_field_defini
     $column = 'value';
   }
   switch ($node->{$fieldname}[0]['date_type']) {
-    case 'datestamp': {
+    case 'datestamp':
       $from_type = DATE_UNIX;
       break;
-    }
-    case 'datetime': {
+
+    case 'datetime':
       $from_type = DATE_DATETIME;
       break;
-    }
-    case 'date': {
+
+    case 'date':
       $from_type = DATE_ISO;
       break;
-    }
+
   }
   $date = date_convert($node->{$fieldname}[0][$column], $from_type, DATE_UNIX);
   return gmdate(DATE_ATOM, $date);
@@ -203,17 +203,18 @@ function _sf_node_import_cck_date(&$node, $drupal_fieldname, $drupal_field_defin
     $column = 'value';
   }
   switch ($node->{$fieldname}[0]['date_type']) {
-    case 'datestamp': {
+    case 'datestamp':
       $to_type = DATE_UNIX;
       break;
-    }
-    case 'datetime': {
+
+    case 'datetime':
       $to_type = DATE_DATETIME;
-    }
-    case 'date': {
+      break;
+
+    case 'date':
       $to_type = DATE_ISO;
       break;
-    }
+
   }
   $date = date_convert($sf_data->{$sf_fieldname}, DATE_ISO, $to_type);
   $node->{$fieldname}[0][$column] = $date;

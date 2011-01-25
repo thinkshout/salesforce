@@ -169,7 +169,7 @@ function salesforce_api_fieldmap_admin() {
   $header = array(t('Drupal object'), t('Salesforce object'), t('Automatic'), t('Description'), array('data' => t('Operations'), 'colspan' => 4));
   $rows = $default_maps = $new_default_maps = array();
   $content = '';
-  
+
   $maps = salesforce_api_salesforce_field_map_load_all();
   foreach($maps as $map) {
     $rows[] = _salesforce_api_field_admin_format_row($map);
@@ -195,55 +195,55 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
   $base = SALESFORCE_PATH_FIELDMAPS .'/'. $map->name;
 
   switch($map->type) {
-    case 'Normal': {
+    case 'Normal':
       $operations = array(
         l(t('edit'), $base . '/edit'),
         l(t('clone'), $base . '/clone'),
         l(t('delete'), $base . '/delete'));
       break;
-    }
-    case 'Default': {
+
+    case 'Default':
       $operations = array(
         l(t('override'), $base . '/edit'),
         l(t('clone'), $base . '/clone'));
       break;
-    }
-    case 'Overridden': {
+
+    case 'Overridden':
       $operations = array(
         l(t('edit'), $base . '/edit'),
         l(t('clone'), $base . '/clone'),
         l(t('revert'), $base . '/revert'));
       break;
-    }
+
   }
 
   $operations = array_pad($operations, 3, '&nbsp;');
-  
+
   if (module_exists('ctools')) {
     $operations[] = l(t('export'), $base . '/export');
   }
 
   $auto = array();
   switch ($map->automatic) {
-    case SALESFORCE_AUTO_SYNC_CREATE: {
+    case SALESFORCE_AUTO_SYNC_CREATE:
       $auto[] = t('Create');
       break;
-    }
-    case SALESFORCE_AUTO_SYNC_UPDATE: {
+
+    case SALESFORCE_AUTO_SYNC_UPDATE:
       $auto[] = t('Update');
       break;
-    }    
-    case SALESFORCE_AUTO_SYNC_DELETE: {
+
+    case SALESFORCE_AUTO_SYNC_DELETE:
       $auto[] = t('Delete');
       break;
-    }
+
   }
   $auto = implode(', ', $auto);
   $row = array(
     salesforce_api_fieldmap_object_label('drupal', $map->drupal),
     salesforce_api_fieldmap_object_label('salesforce', $map->salesforce),
     $auto,
-    array('data' => check_plain($map->description), 
+    array('data' => check_plain($map->description),
           'class' => 'description'));
   $row = array_merge($row, $operations);
   return $row;
@@ -364,7 +364,7 @@ function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
   if ($map) {
     // Display a message and return to the admin screen.
     drupal_set_message(t('Fieldmap cloned successfully.'));
-    $form_state['redirect'] = 
+    $form_state['redirect'] =
       SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit';
   }
   else {
@@ -396,9 +396,9 @@ function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
 
   // Build the description text for this fieldmap.
   $desc = salesforce_api_fieldmap_description($map);
-  
+
   $action = end($args);
-  $text = t('Are you sure you want to @action this fieldmap?', 
+  $text = t('Are you sure you want to @action this fieldmap?',
     array('@action' => $action));
   $button = t('@action', array('@action' => ucfirst($action)));
   return confirm_form($form, $text, SALESFORCE_PATH_FIELDMAPS, $desc, $button);
@@ -422,12 +422,12 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
  * Displays the edit form for adding field associations to a fieldmap.
  */
 function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
-  
+
   // Include the CSS and JS for the form.
   $path = drupal_get_path("module", "salesforce_api");
   drupal_add_css($path .'/misc/salesforce_api.admin.css');
-  drupal_add_js($path ."/misc/salesforce_api.admin.js"); 
-  
+  drupal_add_js($path ."/misc/salesforce_api.admin.js");
+
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap, TRUE);
 
@@ -440,7 +440,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Include the CSS file for the form.
   $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
-  drupal_add_js($path . '/misc/salesforce_api.admin.js'); 
+  drupal_add_js($path . '/misc/salesforce_api.admin.js');
 
   $form = array();
 
@@ -467,7 +467,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   if (!salesforce_api_fieldmap_source_enabled($map)) {
     drupal_set_message(t('This fieldmap cannot be edited because the module which supports the Drupal entity "%entity" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%entity' => $map->drupal)), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
-  } 
+  }
   if (!salesforce_api_fieldmap_target_enabled($map)) {
     drupal_set_message(t('This fieldmap cannot be edited because salesforce_api cannot find a definition for the Salesforce object "%sfobj". Please verify your Salesforce connection and settings.', array('%sfobj' => $map->salesforce)), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
@@ -488,7 +488,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     '#type' => 'checkboxes',
     '#title' => t('Synchronize automatically with Salesforce on (check all that apply)'),
     '#options' => array(
-      SALESFORCE_AUTO_SYNC_CREATE => t('Create'), 
+      SALESFORCE_AUTO_SYNC_CREATE => t('Create'),
       SALESFORCE_AUTO_SYNC_UPDATE => t('Update'),
       SALESFORCE_AUTO_SYNC_DELETE => t('Delete'),
       // @see theme_salesforce_api_drupal_sfapi_automatic for option descriptions
@@ -606,7 +606,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
       '#suffix' => '</div>',
       '#description' => 'Omit &lt;?php ?&gt; tags. Return the value to set. Standard caveats apply.',
     );
-    
+
     if ($type != 'required') {
       $row['remove'][$key] = array(
         '#type' => 'markup',
@@ -641,7 +641,7 @@ function salesforce_api_fieldmap_edit_form_validate($form, &$form_state) {
   // Include the CSS file for the form on reload as long as Drupal won't do it for us.
   $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
-  drupal_add_js($path . '/misc/salesforce_api.admin.js'); 
+  drupal_add_js($path . '/misc/salesforce_api.admin.js');
 
   if ($form_state['values']['add_button'] == $form_state['values']['op']
   && empty($form_state['values']['new_field'])) {
@@ -673,13 +673,13 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
   $rows = $form_state['values']['rows'];
 
-  // Loop through all the select inputs. 
+  // Loop through all the select inputs.
   foreach ($rows as $row) {
     $source = key($row['source']);
     $target = current($row['source']);
     if (!empty($row['source'][$source . '_extra'])) {
       $map->fields[$source] = array(
-        'type' => $target, 
+        'type' => $target,
         'value' => $row['source'][$source . '_extra'],
       );
     }
@@ -694,7 +694,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   foreach ($form_state['values']['drupal_sfapi_automatic'] as $auto) {
     $map->automatic |= $auto;
   }
-  
+
   if(!empty($form_state['values']['new_field'])) {
     $field = $form_state['values']['new_field'];
     $map->fields[$field] = '';
@@ -706,11 +706,11 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   // In most cases, we will want to remain on this page and rebuild the form.
   $form_state['rebuild'] = TRUE;
   switch ($form_state['values']['op']) {
-    case $form_state['values']['add_button']: {
+    case $form_state['values']['add_button']:
       drupal_set_message(t('Field added.'));
       break;
-    }
-    case $form_state['values']['submit']: {
+
+    case $form_state['values']['submit']:
       if(!empty($form_state['values']['new_field'])) {
         drupal_set_message(t('Field added.'));
       }
@@ -720,7 +720,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
         $form_state['rebuild'] = FALSE;
       }
       break;
-    }
+    
   }
 }
 
@@ -761,11 +761,11 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
  * Theme callback for synch option radios
  */
 function theme_salesforce_api_drupal_sfapi_automatic($element) {
-  $element[SALESFORCE_AUTO_SYNC_CREATE]['#description'] = 
+  $element[SALESFORCE_AUTO_SYNC_CREATE]['#description'] =
     t('Create and link Salesforce records automatically when Drupal records are created.');
-  $element[SALESFORCE_AUTO_SYNC_UPDATE]['#description'] = 
+  $element[SALESFORCE_AUTO_SYNC_UPDATE]['#description'] =
     t('Update Salesforce records if a link already exists.');
-  $element[SALESFORCE_AUTO_SYNC_DELETE]['#description'] = 
+  $element[SALESFORCE_AUTO_SYNC_DELETE]['#description'] =
     t('Delete linked Salesforce records when a Drupal record is deleted.');
   return drupal_render($element);
 }
@@ -843,7 +843,7 @@ function salesforce_api_update_wsdl_form() {
  * function calls file_create_path() which calls file_check_location(), which
  * fails on any destination dir that isn't in the default file upload dir. And
  * since the enterprise.wsdl.xml file needs to go into a sub-dir in the module
- * directory, that won't do. Instead of uploading to the default dir, then 
+ * directory, that won't do. Instead of uploading to the default dir, then
  * moving, just upload it straight to the destination.
  */
 function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
@@ -910,14 +910,14 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
  */
 function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
   drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory.'));
-  
+
   // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
   // cache permanently, but should force PHP to reload it.
   ini_set('soap.wsdl_cache_enabled',  '0');
 
   // Clear the cache
   drupal_flush_all_caches();
-  
+
   // Clear WSDL files from tmp directory
   $tmpDir = file_directory_temp();
   // Make sure the tmp dir exists and isn't the root, just to be safe
@@ -925,7 +925,7 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
     $cmd = 'rm -f ' . $tmpDir . '/*.wsdl.*';
     $execOutput = exec($cmd);
   }
-  
+
   drupal_set_message('Drupal cache emptied and WSDL files removed from temp directory.');
 
 }
@@ -1103,7 +1103,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
 
       break;
   }
-  
+
   $items = array(
     l(t('Examine Data Structure'), SALESFORCE_PATH_DEMO .'/data-structure'));
   if (module_exists('sf_user')) {
@@ -1117,5 +1117,3 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
 
   return $output;
 }
-
-

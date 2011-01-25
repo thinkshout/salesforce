@@ -49,7 +49,7 @@ function sf_notifications_allowed_ips() {
   $access = FALSE;
   if (in_array($ip, $allowed_ips, TRUE)) {
     $access = TRUE;
-  } 
+  }
   else {
     foreach ($allowed_ips as $range) {
       if (_sf_notifications_cidr_match($ip, $range)) {
@@ -179,14 +179,14 @@ function _sf_notifications_handle_message($objects) {
     }
 
     switch ($operation) {
-      case 'delete': {
+      case 'delete':
         $success = $success && sf_notifications_delete_record($object_record);
         break;
-      }
-      case 'update': {
+
+      case 'update':
         $success = $success && sf_notifications_update_record($object_record);
         break;
-      }
+
     }
   }
 
@@ -235,14 +235,14 @@ function sf_notifications_delete_record($object_record) {
   // case we're agnostic to the drupal_type ("node" or "user").
   $success = TRUE;
   switch ($object_record['drupal_type']) {
-    case 'user': {
+    case 'user':
       user_delete(array(), $object_record['oid']);
       DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
         'SalesForce Notificaitions deleted user '
         . $object_record['oid'] . ' sfid ' . $sfid);
       break;
-    }
-    case 'node': {
+
+    case 'node':
       // Can't use node_delete() since it's wrapped in node_access and we're
       // probably anonymous. The following is adapted from node_delete().
       $node = node_load($nid, NULL, TRUE);
@@ -259,8 +259,8 @@ function sf_notifications_delete_record($object_record) {
         'SalesForce Notificaitions deleted node '
         . $object_record['oid'] . ' sfid ' . $sfid);
       break;
-    }
-    default: {
+
+    default:
       if (function_exists($object_record['drupal_type'] . '_delete')) {
         $function = $object_record['drupal_type'] . '_delete';
         $function($object_record['oid']);
@@ -276,7 +276,7 @@ function sf_notifications_delete_record($object_record) {
         $success = FALSE;
       }
       break;
-    }
+    
   }
   return $success;
 }
