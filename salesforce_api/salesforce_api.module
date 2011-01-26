@@ -875,7 +875,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         }
         break;
 
-
       case 'time':
       case 'date':
       case 'datetime':
@@ -889,7 +888,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         }
         break;
 
-
       case 'email':
         if (salesforce_api_valid_email_address($value)) {
           $object->$sf_fieldname  = $value;
@@ -898,7 +896,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
           continue;
         }
         break;
-
 
       case 'percent':
       case 'currency':
@@ -911,7 +908,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         }
         break;
 
-
       case 'reference':
       case 'id':
         if (!is_sfid($value)) {
@@ -920,7 +916,6 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
           $object->$sf_fieldname  = $value;
         }
         break;
-
 
       case 'string':
       case 'picklist':
@@ -934,7 +929,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       default:
         $object->$sf_fieldname  = $value;
         break;
-      
+
     }
     $max_len = $sf_field_definition['salesforce']['length'];
     if ($max_len && drupal_strlen($object->$sf_fieldname) > $max_len) {
