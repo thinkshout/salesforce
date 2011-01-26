@@ -24,11 +24,11 @@ function sf_prematch_list() {
   // Loop through all the indexed field maps.
   while ($map = db_fetch_object($result)) {
     if ($map->rule) {
-    	$op_add_edit =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map->name);
-    	$op_del = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map->name . '/delete');
+    	$op_add_edit =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/' .  $map->name . '/prematching');
+    	$op_del = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching/delete');
     }
     else {
-    	$op_add_edit =  l(t('add prematch'), SALESFORCE_PATH_FIELDMAPS . '/prematching/' . $map->name);
+    	$op_add_edit =  l(t('add prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching');
     	$op_del = '';
     }
     // Add the row to the table with the basic operations.
@@ -43,7 +43,7 @@ function sf_prematch_list() {
   // Add a message if no objects have been mapped.
   if (empty($rows)) {
     $rows[] = array(
-      array('data' => t('You have not yet defined any fieldmaps.'), 'colspan' => 7),
+      array('data' => t('You have not yet assigned prematching to any fieldmaps.'), 'colspan' => 7),
     );
   }
 
@@ -136,7 +136,7 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save changes'),
-    '#suffix' => l(t('Cancel'), SALESFORCE_PATH_FIELDMAPS),
+    '#suffix' => l(t('Cancel'), SALESFORCE_PATH_FIELDMAPS . '/prematching'),
   );
 
   return $form;
@@ -161,12 +161,7 @@ function sf_prematch_edit_form_submit($form, &$form_state) {
   drupal_set_message(t('The changes have been saved.'));
 
   // Redirect to fieldmap list or prematching page.
-  if ($values['new_prematch']) {
-  	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
-  }
-  else {
-  	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/prematching';
-  }
+	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
 
 function sf_prematch_delete_form(&$form_state, $fieldmap) {

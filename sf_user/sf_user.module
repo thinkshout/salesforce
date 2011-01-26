@@ -15,7 +15,7 @@ function sf_user_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('sf_user_salesforce_form', 1),
     'access callback' => 'sf_user_salesforce_form_access',
-    'access arguments' => array('sync users with salesforce'),
+    'access arguments' => array('administer salesforce'),
     'type' => MENU_LOCAL_TASK,
   );
 
@@ -24,14 +24,7 @@ function sf_user_menu() {
 
 // Access callback for the user/%user/salesforce menu item.
 function sf_user_salesforce_form_access() {
-  return user_access('sync users with salesforce') and salesforce_api_fieldmap_options('user');
-}
-
-/**
- * Implementation of hook_perm().
- */
-function sf_user_perm() {
-  return array('sync users with salesforce');
+  return user_access('administer salesforce') and salesforce_api_fieldmap_options('user');
 }
 
 /**

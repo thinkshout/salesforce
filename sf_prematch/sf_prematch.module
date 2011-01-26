@@ -15,30 +15,35 @@ define('SF_PREMATCH_PRIMARY', 3);
  * Implementation of hook_menu().
  */
 function sf_prematch_menu() {
+  $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));  
   $items[SALESFORCE_PATH_FIELDMAPS . '/prematching'] = array(
     'title' => 'Prematching',
     'description' => 'Create or edit prematching for a fieldmap.',
     'page callback' => 'sf_prematch_list',
-    'access arguments' => array('administer prematching'),
+    'access callback' => '_sf_prematch_fieldmap_access',
+    'access arguments' => array('administer salesforce', 'edit', $map_id_arg),
     'type' => MENU_LOCAL_TASK,
     'weight' => 15,
     'file' => 'sf_prematch.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/prematching/%'] = array(
-    'title' => 'Edit fieldmap prematching',
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/prematching'] = array(
+    'title' => 'Prematching',
     'description' => 'Edit an existing fieldmap prematch.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('sf_prematch_edit_form', 5),
-    'access arguments' => array('administer prematching'),
-    'type' => MENU_CALLBACK,
+    'page arguments' => array('sf_prematch_edit_form', $map_id_arg),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', 'edit', $map_id_arg),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 16,
     'file' => 'sf_prematch.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/prematching/%/delete'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/prematching/delete'] = array(
     'title' => 'Delete prematching from a fieldmap',
     'description' => 'Delete an existing fieldmap prematch.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('sf_prematch_delete_form', 5),
-    'access arguments' => array('administer prematching'),
+    'page arguments' => array('sf_prematch_delete_form', $map_id_arg),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', 'edit', $map_id_arg),
     'type' => MENU_CALLBACK,
     'file' => 'sf_prematch.admin.inc',
   );
@@ -47,10 +52,17 @@ function sf_prematch_menu() {
 }
 
 /**
- * Implementation of hook_perm().
+ * Prematching access callback. There are two prematching local tasks
+ * prematching overview and fieldmap prematching. The latter only applies when
+ * we're looking at a specific fieldmap, so hide the former if this is the case.
  */
-function sf_prematch_perm() {
-  return array('administer prematching');
+function _sf_prematch_fieldmap_access($perm, $op = 'edit', $id = null) {
+  if (empty($id) || $id == 'prematching') {
+    return user_access('administer salesforce');
+  }
+  else {
+    return FALSE;
+  }
 }
 
 /**
@@ -85,7 +97,7 @@ function sf_prematch_form_alter(&$form, $form_state, $form_id) {
  */
 function sf_prematch_fieldmap_edit_form_submit($form, &$form_state) {
   $fieldmap = $form_state['values']['fieldmap_index'];
-	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS .'/prematching/'. $fieldmap;
+	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/' . $fieldmap . '/prematching';
 }
 
 /**
