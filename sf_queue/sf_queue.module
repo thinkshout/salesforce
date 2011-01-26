@@ -102,7 +102,7 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
     return FALSE;
   }
   else {
-    watchdog('sf_queue', 'Failed to queue SalesForce export. <pre>' . print_r($object, 1) . print_r(func_get_args(), 1) . '</pre>');
+    watchdog('sf_queue', 'Failed to queue SalesForce export. <pre>' . print_r($object, 1) . print_r($sf_object, 1) . '</pre>');
     return TRUE;
   }
 }

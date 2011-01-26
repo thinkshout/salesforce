@@ -86,7 +86,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   	break;
   }
 
-  $query = $select_clause . $from_where_clause;
+  $query = $select_clause . $from_where_clause . ' ORDER BY CreatedDate ASC';
 
   // Run the SOQL query against the Salesforce API
   if ($sf = salesforce_api_connect()) {
