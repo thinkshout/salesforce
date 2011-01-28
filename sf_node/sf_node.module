@@ -24,16 +24,9 @@ function sf_node_menu() {
   return $items;
 }
 
-/**
- * Implementation of hook_perm().
- */
-function sf_node_perm() {
-  return array('sync nodes with salesforce');
-}
-
 // Access callback for the node/%node/salesforce menu item.
 function sf_node_salesforce_form_access($node) {
-  return user_access('sync nodes with salesforce') and salesforce_api_fieldmap_options('node_'. $node->type);
+  return user_access('administer salesforce') and salesforce_api_fieldmap_options('node_'. $node->type);
 }
 
 /**
