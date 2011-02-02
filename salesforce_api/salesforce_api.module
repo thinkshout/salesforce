@@ -1220,6 +1220,50 @@ function salesforce_api_describeSObjects($types) {
   return $objects;
 }
 
+/**
+ * Compares mixed 15- and 18-character Salesforce IDs. Up-converts 15-character
+ * strings for comparison when applicable. Based Christian G. Warden's code at http://xn.pinkhamster.net/blog/tech/salesforce/convert-15-character-salesforce-ids-to-18-characters-with-php.html
+ *
+ * @return TRUE if IDs match, or FALSE
+ * @see http://salesforce-id.com
+ */
+function salesforce_api_id_compare($a, $b) {
+  if (strlen($a) != strlen($b)) {
+    if (strlen($a) == 15) {
+      $a = salesforce_api_id_convert($a);
+    }
+    if (strlen($b) == 15) {
+      $b = salesforce_api_id_convert($b);
+    }
+  }
+  return $a == $b;
+}
+
+/**
+ * Converts a 15-character Salesforce ID to 18-character ID.
+ *
+ * @param string $sfid15 
+ * @return case-insensitive 18-character Salesforce ID
+ */
+function salesforce_api_id_convert($sfid15) {
+  if (strlen($sfid15) != 15) {
+    return $sfid15;
+  }
+
+  $chunks = str_split($sfid15, 5);
+  $extra = '';
+  foreach ($chunks as $chunk) {
+    $chars = str_split($chunk, 1);
+    $bits = '';
+    foreach ($chars as $char) {
+      $bits .= (!is_numeric($char) && $char == strtoupper($char)) ? '1' : '0';
+    }
+    $map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
+    $extra .= substr($map, base_convert(strrev($bits), 2, 10), 1);
+  }
+   
+  return $sfid15 . $extra;
+}
 
 /**
  * @addtogroup exportables
