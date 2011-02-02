@@ -384,7 +384,9 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     // Look for any matching records which we might want to update instead of creating duplicates.
     $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $name);
     if (!empty($matches)) {
-      $object->Id = reset($matches);
+      $object->Id = $sfid = reset($matches);
+      $account->salesforce = array('sfid' => $sfid, 'name' => $name);
+      salesforce_api_id_save('user', $account->uid, $sfid, $name);
     }
   } else {
     $object->Id = $sfid;
@@ -401,10 +403,8 @@ function sf_user_export($uid, $name, $sfid = NULL) {
 
   // If the export was successful...
   if ($response->success) {
-    if (empty($account->salesforce->sfid)) {
-      // Store the Salesforce ID for the user and return TRUE.
-      salesforce_api_id_save('user', $uid, $response->id, $name);
-    }
+    // Store the Salesforce ID for the user and return TRUE.
+    salesforce_api_id_save('user', $uid, $response->id, $name);
   }
   else {
     // Otherwise log the error and return FALSE.

@@ -586,11 +586,13 @@ function sf_node_export($node, $name, $sfid = NULL) {
     $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $name);
     if (!empty($matches)) {
       $sfid = reset($matches);
+      $node->salesforce = array('sfid' => $sfid, 'name' => $name);
+      salesforce_api_id_save('node', $node->nid, $sfid, $name);
+      $node = node_load($node->nid, NULL, TRUE);
     }
     if (empty($node)) { 
       $node = (object)array();
     }
-    $node->salesforce->sfid = $sfid;
   }
   // Create an object for export based on the specified fieldmap.
   $object = salesforce_api_fieldmap_export_create($name, $node);
@@ -609,10 +611,8 @@ function sf_node_export($node, $name, $sfid = NULL) {
 
   // If the export was successful...
   if ($response->success) {
-    if (empty($node->salesforce->sfid)) {
-      // Store the Salesforce ID for the node and return TRUE.
-      salesforce_api_id_save('node', $node->nid, $response->id, $name);
-    }
+    // Store the Salesforce ID for the node and return TRUE.
+    salesforce_api_id_save('node', $node->nid, $response->id, $name);
   }
   else {
     // Otherwise log the error and return FALSE.
