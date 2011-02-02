@@ -166,6 +166,14 @@ function salesforce_api_requirements($phase) {
         $description = t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
         $severity = REQUIREMENT_ERROR;
       }
+      elseif (!salesforce_api_encryption_available(array('check_config' => FALSE))) {
+        $description = t('Encryption is unavailable. Using encryption is <strong>highly recommended</strong> in order to better secure your data.');
+        $severity = REQUIREMENT_WARNING;
+      }
+      elseif (!salesforce_api_encryption_available(array('check_config' => TRUE))) {
+        $description = t('SalesForce encryption is enabled but not configured securely.');
+        $severity = REQUIREMENT_WARNING;
+      }
       else {
         $description = '';
         $severity = REQUIREMENT_OK;

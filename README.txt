@@ -52,6 +52,17 @@ REQUIREMENTS
      Libraries API - http://drupal.org/project/libraries
 
 
+RECOMMENDED
+-----------
+
+  1) Download and install your organization's generated Enterprise WSDL file.
+     (see WORKING WITH WSDL FILES)
+
+  2) AES encryption
+     http://drupal.org/project/aes
+     (see SOME NOTES ABOUT SECURITY)
+
+
 INSTALLATION
 ------------
   1) Download, uncompress and situate the module as per usual.
@@ -162,6 +173,20 @@ EXPORT QUEUE
   failsafe so that data is not lost. Failed API transactions will be queued for 
   future reprocessing. In addition, sf_queue is highly configurable to allow 
   administrators maximum flexibility in setting up the queue.
+
+
+SOME NOTES ABOUT SECURITY
+--------------------------
+  By default all SalesForce credentials are stored in the variables table,
+  unencrypted. If this is a problem for you, this module supports encryption via
+  aes module http://drupal.org/project/aes. You will need to create a directory
+  outside your webroot (you can use the same one you used for your WSDL) wherein
+  your encryption key will be stored. Your credentials will thus forth be
+  encrypted as securely as AES allows. PLEASE NOTE: your data is still only as
+  secure as your network. It may be possible for a savvy attacker to access your
+  data at any of various points between your Drupal site and SalesForce.com. As
+  this always, you should educate yourself about the risks involved before storing
+  and transferring sensitive data across the internet.
 
 
 WORKING WITH WSDL FILES

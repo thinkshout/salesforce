@@ -10,7 +10,7 @@
 /**
  * The settings form at admin/settings/salesforce.
  */
-function salesforce_api_settings_form() {
+function salesforce_api_settings_form($form_state) {
   $form = array();
 
   // Use the username field to collapse the API settings fieldset.
@@ -25,25 +25,60 @@ function salesforce_api_settings_form() {
     '#weight' => -10,
   );
   $form['api']['salesforce_api_username'] = array(
-    '#type' => 'textfield',
+    '#type' => 'password',
     '#title' => t('Username'),
     '#description' => t('Should be in the form of an e-mail address.'),
-    '#default_value' => variable_get('salesforce_api_username', ''),
-    '#required' => TRUE,
+    '#default_value' => $form_state['values']['salesforce_api_username'],
+    '#required' => !variable_get('salesforce_api_username', FALSE),
   );
   $form['api']['salesforce_api_password'] = array(
     '#type' => 'password',
     '#title' => t('Password'),
     '#description' => t('Enter the password used when logging into Salesforce.'),
-    '#default_value' => variable_get('salesforce_api_password', ''),
+    '#default_value' => $form_state['values']['salesforce_api_password'],
+    '#required' => !variable_get('salesforce_api_password', FALSE),
   );
   $form['api']['salesforce_api_token'] = array(
-    '#type' => 'textfield',
+    '#type' => 'password',
     '#title' => t('Security token'),
-    '#description' => t('Set your security token by logging into Salesforce and navigating to Setup > My Personal Information > Reset My Security Token.'),
-    '#required' => TRUE,
-    '#default_value' => variable_get('salesforce_api_token', ''),
+    '#description' => t('Set your security token by logging into Salesforce and
+      navigating to Setup > My Personal Information > Reset My Security Token.'),
+    '#default_value' => $form_state['values']['salesforce_api_token'],
+    '#required' => !variable_get('salesforce_api_token', FALSE),
   );
+
+  if (!empty($username)) {
+    $form['api']['#description'] = 
+      t('Salesforce.com connection is working properly.<br />Edit the following
+        fields only if you wish to change your login credentials.');
+    $form['api']['salesforce_api_reset_credentials'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Clear SalesForce API credentials',
+      '#description' => 'Erase current API login settings. Clearing SalesForce 
+        API credentials will prevent your website from connecting to Salesforce.com',
+      );
+  }
+  $form['api']['encryption'] = array(
+    '#type' => 'item',
+    '#title' => 'Encryption',
+    '#value' => t('It is highly recommended that you use encryption to protect your SalesForce.com credentials. Encryption is supported via <a href="http://drupal.org/project/aes">AES module</a>.'),
+    'status' => array('#type' => 'item', '#title' => FALSE),
+    );
+  if (salesforce_api_encryption_available(array('display_all' => TRUE))) {
+    $form['api']['encryption']['status']['#value'] =
+      'Encryption is available and configured properly.';
+    $form['api']['encryption']['salesforce_api_encrypt'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Encrypt SalesForce credentials (HIGHLY RECOMMENDED)',
+      '#description' => 'Note: enabling this setting will not encrypt existing credentials.',
+      '#default_value' => TRUE,
+    );
+  }
+  else {
+    $form['api']['encryption']['status']['#value'] = 
+      '<span class="error">AES is not installed - encryption is not
+      available.</span>';
+  }
 
   $form['log'] = array(
     '#type' => 'fieldset',
@@ -102,11 +137,11 @@ function salesforce_api_settings_form() {
   $wsdl_dir = variable_get('salesforce_api_dir_wsdl', FALSE);
   $form['wsdl'] = array(
     '#type' => 'fieldset',
-    '#title' => 'WSDL directory',
-    '#description' => 'Your organization\'s WSDL file can expose potentially sensitive information. It is highly recommended that your WSDL file be stored outside your webroot. Please enter either a path relative to your webroot (e.g. ../wsdl) or a fully qualified path (e.g. /home/username/wsdl) in which to store your WSDL.',
+    '#title' => t('WSDL directory'),
+    '#description' => t('Your organization\'s WSDL file can expose potentially sensitive information. It is highly recommended that your WSDL file be stored outside your webroot. Please enter either a path relative to your webroot (e.g. ../wsdl) or a fully qualified path (e.g. /home/username/wsdl) in which to store your WSDL.'),
     'salesforce_api_dir_wsdl' => array(
       '#type' => 'textfield',
-      '#title' => 'WSDL Directory',
+      '#title' => t('WSDL Directory'),
       '#default_value' => $wsdl_dir,
       ),
     '#collapsible' => TRUE,
@@ -121,21 +156,56 @@ function salesforce_api_settings_form() {
 }
 
 /**
- * Settings form validate handler to verify new salesforce credentials before saving them.
+ * Settings form validate handler to verify new salesforce credentials before
+ * saving them.
  */
 function salesforce_api_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
-  if (!salesforce_api_connect($values['salesforce_api_username'], $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE)) {
-    // If not, prevent the user from overwriting the current configuration.
-    form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
+
+  if (isset($values['salesforce_api_dir_wsdl'])
+  && !file_exists($values['salesforce_api_dir_wsdl'])) {
+    form_set_error('salesforce_api_dir_wsdl', 'The specified WSDL directory does not exist. Please make sure the directory exists, check your input, and try again.');
   }
-  else {
-    drupal_set_message(t('Salesforce connection established.'));
+  
+  // If we are clearing values, no need to continue validation.
+  if ($values['salesforce_api_reset_credentials']) {
+    return;
   }
 
-  if (isset($form_state['values']['salesforce_api_dir_wsdl'])
-  && !file_exists($form_state['values']['salesforce_api_dir_wsdl'])) {
-    form_set_error('salesforce_api_dir_wsdl', 'The specified directory does not exist. Please make sure the directory exists, check your input, and try again.');
+  foreach (array('salesforce_api_username', 'salesforce_api_password', 'salesforce_api_token') as $value) {
+    if (empty($values[$value])) {
+      $errors[$value] = ucwords(str_replace('salesforce_api_', ' ', $value)) . ' is required';
+    }
+  }
+
+  if (count($errors) == 3) {
+    // If all 3 fields are empty, the user has not tried to change credentials.
+    // Unset the form values in order to preserve existing credentials.
+    unset($form_state['values']['salesforce_api_username'],
+          $form_state['salesforce_api_password'],
+          $form_state['values']['salesforce_api_token']);
+    return;
+  }
+  elseif (!empty($errors)) {
+    drupal_set_message(t('Unable to reset SalesForce API credentials.'), 'error');
+    foreach ($errors as $field => $error) {
+      form_set_error($field, $error);
+    }
+    // If we got errors already no need to continue with validation.
+    return;
+  }
+  
+  // If we are setting or resetting values, test the connection.
+  $connection = salesforce_api_connect($values['salesforce_api_username'],
+    $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE);
+  if (is_object($connection)) {
+     drupal_set_message(t('Connection established. SalesForce credentials updated.'));
+  } else {
+    drupal_set_message(
+      t('Resetting SalesForce API credentials failed.', 'error'));
+    form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
+    form_set_error('salesforce_api_password');
+    form_set_error('salesforce_api_token');
   }
 }
 
@@ -145,20 +215,39 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
 function salesforce_api_settings_form_submit($form, &$form_state) {
   // If the user hit "Save Configuration" and the required field
   // salesforce_api_password is blank, try to get it from variables
-  if ($form_state['values']['submit'] == $form_state['values']['op'] and empty($form_state['values']['salesforce_api_password'])) {
-    $pass = variable_get('salesforce_api_password', FALSE);
-    if (isset($pass)) {
-      $form_state['values']['salesforce_api_password'] = $pass;
-    }
-  }
-  if (variable_get('salesforce_api_dir_wsdl', FALSE) !=
-      $form_state['values']['salesforce_api_dir_wsdl']) {
+  
+  $values = $form_state['values'];
+  
+  if (variable_get('salesforce_api_dir_wsdl', FALSE) 
+    != $values['salesforce_api_dir_wsdl']) {
     drupal_set_message('Please make sure the WSDL directory is writeable, and upload a valid Salesforce .xml or .wsdl file.');
     $form_state['redirect'] = array(
       SALESFORCE_PATH_UPDATE_WSDL,
       'destination=' . SALESFORCE_PATH_ADMIN);
     ini_set('soap.wsdl_cache_enabled',  '0');
   }
+    
+  if ($values['salesforce_api_reset_credentials']) {
+    unset($form_state['values']['salesforce_api_reset_credentials']);
+    foreach (array('username', 'password', 'token', 'encrypt') as $value) {
+      variable_del('salesforce_api_' . $value);
+      unset($form_state['values']['salesforce_api_' . $value]);
+    }
+    
+    drupal_set_message('SalesForce credentials reset.');
+    // If credentials were reset, we don't need to continue to encryption.
+    return;
+  }
+
+  if ($values['salesforce_api_encrypt'] && 
+  !empty($values['salesforce_api_username'])) {
+    $form_state['values']['salesforce_api_username'] =
+     salesforce_api_encrypt($values['salesforce_api_username']);
+   $form_state['values']['salesforce_api_password'] =
+     salesforce_api_encrypt($values['salesforce_api_password']);
+   $form_state['values']['salesforce_api_token'] =
+     salesforce_api_encrypt($values['salesforce_api_token']);
+ }
 }
 
 /**

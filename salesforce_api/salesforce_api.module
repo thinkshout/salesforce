@@ -300,13 +300,25 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
     return $sf;
   }
 
-  // Boolean, whether we are connecting with the default website user or not.
-  $default_site_user = $username == variable_get('salesforce_api_username', FALSE);
+  // Load up the sitewide API credentials if none were provided.
+  $encrypted = variable_get('salesforce_api_encrypt', FALSE);
+  $default_username = $encrypted
+    ? salesforce_api_decrypt(variable_get('salesforce_api_username', ''))
+    : variable_get('salesforce_api_username', '');
+  $username = $username ? $username : $default_username;
+  $password = $password
+    ? $password
+    : ($encrypted 
+        ? salesforce_api_decrypt(variable_get('salesforce_api_password', ''))
+        : variable_get('salesforce_api_password', ''));
+  $token = $token
+    ? $token
+    : ($encrypted 
+        ? salesforce_api_decrypt(variable_get('salesforce_api_token', ''))
+        : variable_get('salesforce_api_token', ''));
 
-  // Load up the sitewide API credentials if no others were provided:
-  $username = $username ? $username : variable_get('salesforce_api_username', '');
-  $password = $password ? $password : variable_get('salesforce_api_password', '');
-  $token = $token ? $token : variable_get('salesforce_api_token', '');
+  // Boolean, whether we are connecting with the default website user or not.
+  $default_site_user = $username == $default_username;
 
   // Include the file that defines the class.
   require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
@@ -1296,6 +1308,68 @@ function salesforce_api_salesforce_field_map_load_by ($conditions) {
   return $result;
 }
 
+/**
+ * Wrappers for encryption lib. Right now only AES encryption is supported.
+ * If/when other methods are supported, this abstraction layer will make the 
+ * transition easier.
+ */
+function salesforce_api_decrypt($value) {
+  return aes_decrypt($value);
+}
+function salesforce_api_encrypt($value) {
+  return aes_encrypt($value);
+}
+function salesforce_api_encryption_available($options = array()) {
+  $defaults = array(
+    'check_config' => TRUE,
+    'display_errors' => FALSE,
+    'display_warnings' => FALSE,
+    'display_all' => FALSE,
+    'fail_threshold' => 'warnings',
+    );
+  $options = array_merge($defaults, $options);
+  extract($options);
+  $errors = array();
+  $warnings = array();
+
+  if (!module_exists('aes')) {
+    $errors[] = 'AES Encryption module is not installed.';
+  }
+  elseif ($check_config) {
+    if (!variable_get('aes_key_path', FALSE)
+    || variable_get('aes_key_storage_method', FALSE) != 'File') {
+      $warnings[] = 'AES Encryption is installed but not configured securely.
+        Please go <a href="/admin/settings/aes">configure AES Encryption to use
+        file storage</a> to enable encryption for SalesForce credentials.';
+    }
+  }
+
+  if ($display_errors || $display_all) {
+    foreach ($errors as $msg) {
+      drupal_set_message(t($msg), 'error');
+    }
+  }
+
+  if ($display_warnings || $display_all) {
+    foreach ($warnings as $msg) {
+      drupal_set_message(t($msg), 'warning');
+    }
+  }
+
+  switch ($fail_threshold) {
+    case 'errors': {
+      if (empty($errors)) {
+        return TRUE;
+      }
+    }
+    case 'warnings': {
+      if (empty($errors) && empty($warnings)) {
+        return TRUE;
+      }
+    }
+  }
+  return FALSE;
+}
 
 function salesforce_api_salesforce_field_map_save (&$map) {
   salesforce_api_fieldmap_save($map);
