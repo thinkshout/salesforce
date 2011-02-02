@@ -57,6 +57,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     }
     $values[$match_by_field]['drupal_value'] = $drupal_value;
     $values[$match_by_field]['salesforce_field_name'] = $drupal_to_salesforce_fieldmap[$drupal_field_name];
+    $values[$match_by_field]['salesforce_type'] = $sf_field_definition['salesforce']['type'];
 
     // If there's a salesforce field to match by, include it in the select clause.
     if ($values[$match_by_field]['salesforce_field_name']) {
@@ -67,23 +68,40 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   $sf_class = $map->salesforce;
   $from_where_clause = " FROM $sf_class WHERE ";
 
+  foreach ($values as $key => $value) {
+    switch ($value['salesforce_type']) {
+      case 'boolean':
+      case 'time':
+      case 'date':
+      case 'datetime':
+      case 'percent':
+      case 'currency':
+      case 'int':
+      case 'double':
+        // no quotes around SOQL field expressions for dates and numbers
+        break;
+      default:
+        // singlq quotes around SOQL field expressions for all others
+        $values[$key][$value]['drupal_value'] = 
+          "'" . $values[$key][$value]['drupal_value'] . "'";
+        break;
+    }
+  }
+  
   // Use match by rule to build out where clause.
   switch ($match_by['rule']) {
   	case SF_PREMATCH_PRIMARY_SECONDARY_AND_TERTIARY:
-  		$from_where_clause .= $values['tertiary_field']['salesforce_field_name'] . " = '" .
-  		  $values['tertiary_field']['drupal_value'] . "' AND ";
-  	// no break;
+  		$from_where_clause .= $values['tertiary_field']['salesforce_field_name'] . " = " . $values['tertiary_field']['drupal_value'] . " AND ";
+  	  // no break;
   	case SF_PREMATCH_PRIMARY_AND_SECONDARY:
-  		$from_where_clause .= $values['secondary_field']['salesforce_field_name'] . " = '" .
-  		  $values['secondary_field']['drupal_value'] . "' AND ";
-  	// no break;
+  		$from_where_clause .= $values['secondary_field']['salesforce_field_name'] . " = " . $values['secondary_field']['drupal_value'] . " AND ";
+  	  // no break;
   	case SF_PREMATCH_PRIMARY:
-  		$from_where_clause .= $values['primary_field']['salesforce_field_name'] . " = '" .
-  		  $values['primary_field']['drupal_value'] . "'";
-  	break;
+  		$from_where_clause .= $values['primary_field']['salesforce_field_name'] . " = " . $values['primary_field']['drupal_value'];
+  	  break;
   	default:
+      // no prematch is set
   	  return;
-  	break;
   }
 
   $query = $select_clause . $from_where_clause . ' ORDER BY CreatedDate ASC';
@@ -101,18 +119,18 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     switch ($result->size) {
     	case 0:
     		return;
-    	break;
     	case 1:
     	default:
     		return $result->records[0]->Id;
-    	break;
+    	  break;
     }
   }
 }
 
 function sf_prematch_import($object_type, $object, $map, $match_by) {
-  // As of 2/23/2010 there is no out of the box functionality to import a salesforce
-  // record without already having established a mapping. Therefore, developers
-  // exposing such functionality should implement their own hook_sf_find_map:import
+  // As of 2/23/2010 there is no out of the box functionality to import a
+  // salesforce record without already having established a mapping. Therefore,
+  // developers exposing such functionality should implement their own
+  // hook_sf_find_map:import
   return;
 }
