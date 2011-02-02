@@ -7,7 +7,7 @@
  */
 
 // Include the Salesforce Enterprise Client included in the PHP Toolkit.
-require(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
+include(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
 
 /**
  * Defines the DrupalSalesforce class used to interact with the server.

@@ -57,12 +57,16 @@ function sf_notifications_allowed_ips() {
       }
     }
   }
-  if ($access) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce Notifications: IP address @ip accessed @endpoint successfully.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
-  }
-  else {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce Notifications: Access denied to IP address @ip in attempt to access @endpoint.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
-  }
+
+  // Uncomment this if/else block for watchdog debugging messages if you are
+  // concerned that your Outbound Messages are getting 404'd
+  // if ($access) {
+  //   DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce Notifications: IP address @ip accessed @endpoint successfully.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
+  // }
+  // else {
+  //   DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce Notifications: Access denied to IP address @ip in attempt to access @endpoint.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
+  // }
+
   return $access;
 }
 

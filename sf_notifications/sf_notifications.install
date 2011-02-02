@@ -14,7 +14,7 @@ function sf_notifications_enable() {
     <a href="!message">set up some outbound messages</a> and <a href="!workflow">
     associate them with workflow rules</a>. Point the outbound message(s) to 
     !base_url and set up the workflow rules to fire when the user is NOT your 
-    SFDC API user. Use the following formula if you are unsure: !formula.', $args));
+    SFDC API user. Use the following formula if you are unsure: !formula.', $args), 'warning');
 }
 
 function sf_notifications_disable() {

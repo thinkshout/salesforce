@@ -66,6 +66,16 @@ if (!function_exists('is_sfid')) {
   }
 }
 
+function salesforce_api_init() {
+  module_load_include('inc', 'salesforce', 'salesforce.class');
+
+  if (!salesforce_api_toolkit_installed() && user_access('administer salesforce')) {
+    drupal_set_message(t('Salesforce API installed, but missing Salesforce PHP Toolkit. Please make sure Salesforce PHP Toolkit is available at ' . SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php'), 'error');
+    drupal_set_message(t('This message will appear as long as Salesforce API is enabled and the Salesforce PHP Toolkit is missing. Please refer to README.txt or INSTALL.txt for additional information.'), 'error');
+
+  }
+}
+
 /**
  * Implements hook_help().
  */
@@ -321,7 +331,9 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
   $default_site_user = $username == $default_username;
 
   // Include the file that defines the class.
-  require_once(drupal_get_path('module', 'salesforce_api') .'/salesforce.class.inc');
+  if (!salesforce_api_toolkit_installed()) {
+    return FALSE;
+  }
 
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
@@ -722,6 +734,14 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL, $reset
     }
   }
 
+function salesforce_api_toolkit_installed() {
+  if (file_exists(SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php')) {
+    return TRUE;
+  }
+  else {
+    return FALSE;
+  }
+}
 
   return $objects;
 }

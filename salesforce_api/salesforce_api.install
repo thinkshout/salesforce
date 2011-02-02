@@ -28,7 +28,7 @@ function salesforce_api_uninstall() {
  */
 function salesforce_api_enable() {
   drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
-drupal_set_message(t('Salesforce API: The default Salesforce object have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
+drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
 }
 
 /**
@@ -148,37 +148,32 @@ function salesforce_api_schema() {
 function salesforce_api_requirements($phase) {
   $req = array();
   require_once(drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module');
-  switch ($phase) {
-    case 'install':
-      if (!file_exists(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php')) {
-        $description = t('Unable to install salesforce module. Please make sure the SalesForce PHP Toolkit is available at ' . SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
-        $severity = REQUIREMENT_ERROR;
-      }
-      break;
-
-    case 'runtime':
-      $username = variable_get('salesforce_api_username', FALSE);
-      if (!$username) {
-        $description = l(t('Enter your Salesforce credentials.'), SALESFORCE_PATH_ADMIN);
-        $severity = REQUIREMENT_ERROR;
-      }
-      elseif (!salesforce_api_connect()) {
-        $description = t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
-        $severity = REQUIREMENT_ERROR;
-      }
-      elseif (!salesforce_api_encryption_available(array('check_config' => FALSE))) {
-        $description = t('Encryption is unavailable. Using encryption is <strong>highly recommended</strong> in order to better secure your data.');
-        $severity = REQUIREMENT_WARNING;
-      }
-      elseif (!salesforce_api_encryption_available(array('check_config' => TRUE))) {
-        $description = t('SalesForce encryption is enabled but not configured securely.');
-        $severity = REQUIREMENT_WARNING;
-      }
-      else {
-        $description = '';
-        $severity = REQUIREMENT_OK;
-      }
-      break;
+  if ($phase == 'runtime') {
+    $username = variable_get('salesforce_api_username', FALSE);
+    if (!salesforce_api_toolkit_installed()) {
+      $description = t('Salesforce module installed, but missing Salesforce PHP Toolkit. Please make sure Salesforce PHP Toolkit is available at ' . SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php');
+      $severity = REQUIREMENT_WARNING;
+    }
+    elseif (!$username) {
+      $description = l(t('Salesforce module installed but not configured. Please enter your credentials.'), SALESFORCE_PATH_ADMIN);
+      $severity = REQUIREMENT_WARNING;
+    }
+    elseif (!salesforce_api_connect()) {
+      $description = t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN)));
+      $severity = REQUIREMENT_WARNING;
+    }
+    elseif (!salesforce_api_encryption_available(array('check_config' => FALSE))) {
+      $description = t('Encryption is unavailable. Using encryption is <strong>highly recommended</strong> in order to better secure your data.');
+      $severity = REQUIREMENT_WARNING;
+    }
+    elseif (!salesforce_api_encryption_available(array('check_config' => TRUE))) {
+      $description = t('SalesForce encryption is enabled but not configured securely.');
+      $severity = REQUIREMENT_WARNING;
+    }
+    else {
+      $description = t('Salesforce libraries and credentials OK.');
+      $severity = REQUIREMENT_OK;
+    }
   }
 
   if (!empty($description)) {
