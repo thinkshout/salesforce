@@ -81,9 +81,9 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
         // no quotes around SOQL field expressions for dates and numbers
         break;
       default:
-        // singlq quotes around SOQL field expressions for all others
-        $values[$key][$value]['drupal_value'] = 
-          "'" . $values[$key][$value]['drupal_value'] . "'";
+        // single quotes around SOQL field expressions for all others
+        $values[$key]['drupal_value'] = 
+          "'" . $values[$key]['drupal_value'] . "'";
         break;
     }
   }
@@ -112,7 +112,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
       $result = $sf->client->query($query);
     }
     catch (Exception $e) {
-      DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception in sf_prematch stage: ' . $e->getMessage(), array(), WATCHDOG_ALERT);
+      salesforce_api_watchdog(SALESFORCE_LOG_SOME, 'Exception in sf_prematch stage: ' . $e->getMessage(), array(), WATCHDOG_ALERT);
       return;
     }
 
