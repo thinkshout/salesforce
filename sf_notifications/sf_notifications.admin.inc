@@ -29,7 +29,7 @@ function sf_notifications_settings_form(&$form_state) {
     '#description' => t('Settings for an IP whitelist of valid Salesforce IPs.'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
-    '#access' => user_access('administer sf_notifications'),
+    '#access' => user_access('administer salesforce'),
   );
   
   $form['sf_notifications_ip_whitelist']['sf_notifications_allowed_ips'] = array(
