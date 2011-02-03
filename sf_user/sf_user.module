@@ -527,7 +527,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
  * Implements hook_default_salesforce_field_maps
  *
  */
-function sf_user_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
+function sf_user_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
   return array('salesforce_api_default_user_contact_field_map' =>
   (object) array(
     'disabled' => FALSE,

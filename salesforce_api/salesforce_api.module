@@ -1302,12 +1302,12 @@ function salesforce_api_id_convert($sfid15) {
  * @{
  */
 
-function salesforce_api_salesforce_field_map_load_all () {
+function salesforce_api_salesforce_field_map_load_all() {
   ctools_include('export');
   return ctools_export_load_object('salesforce_field_map');
 }
 
-function salesforce_api_salesforce_field_map_load ($name) {
+function salesforce_api_salesforce_field_map_load($name) {
   ctools_include('export');
   $result = ctools_export_load_object('salesforce_field_map', 'names', array($name));
   if (isset($result[$name])) {
@@ -1322,7 +1322,7 @@ function salesforce_api_salesforce_field_map_load ($name) {
   }
 }
 
-function salesforce_api_salesforce_field_map_load_by ($conditions) {
+function salesforce_api_salesforce_field_map_load_by($conditions) {
   ctools_include('export');
   $result = ctools_export_load_object('salesforce_field_map', 'conditions', $conditions);
   return $result;
@@ -1391,18 +1391,18 @@ function salesforce_api_encryption_available($options = array()) {
   return FALSE;
 }
 
-function salesforce_api_salesforce_field_map_save (&$map) {
+function salesforce_api_salesforce_field_map_save(&$map) {
   salesforce_api_fieldmap_save($map);
 }
 
-function salesforce_api_export_salesforce_field_map ($fieldmap) {
+function salesforce_api_export_salesforce_field_map($fieldmap) {
   $map = salesforce_api_salesforce_field_map_load($fieldmap);
   drupal_set_title('Export Fieldmap');
   $code = salesforce_api_salesforce_field_map_export($map);
   return drupal_get_form('ctools_export_form', $code, 'Export Fieldmap');
 }
 
-function salesforce_api_salesforce_field_map_export ($map, $indent = '') {
+function salesforce_api_salesforce_field_map_export($map, $indent = '') {
   ctools_include('export');
   $output = ctools_export_object('salesforce_field_map', $map, $indent);
   return $output;

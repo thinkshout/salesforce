@@ -728,7 +728,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
  * Implements hook_default_salesforce_field_maps
  *
  */
-function sf_node_default_salesforce_field_maps ($drupal = NULL, $sf = NULL) {
+function sf_node_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
   return array('salesforce_api_default_node_page_campaign_field_map' => 
   (object)array(
       'disabled' => FALSE,
