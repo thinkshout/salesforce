@@ -733,7 +733,14 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL, $reset
       }
     }
   }
+  return $objects;
+}
 
+/**
+ * Simple check for Salesforce Toolkit.
+ *
+ * @return TRUE if toolkit is present, FALSE otherwise.
+ */
 function salesforce_api_toolkit_installed() {
   if (file_exists(SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php')) {
     return TRUE;
@@ -741,9 +748,6 @@ function salesforce_api_toolkit_installed() {
   else {
     return FALSE;
   }
-}
-
-  return $objects;
 }
 
 /**
