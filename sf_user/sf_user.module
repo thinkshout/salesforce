@@ -111,7 +111,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         sf_user_export($account->uid, $salesforce->name, $salesforce->sfid);
       }
       catch (Exception $e) {
-        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
       }
       break;
   }
@@ -223,7 +223,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
       return array();
     }
 
-    $sf_data = $sf->retrieve(array($account->salesforce->sfid), $account->salesforce->name);
+    $sf_data = salesforce_api_retrieve(array($account->salesforce->sfid), $account->salesforce->name);
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($account->salesforce->name);
@@ -417,7 +417,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
         }
       }
     }
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
     return FALSE;
   }
   module_invoke_all('salesforce_api_post_export', $object, $map, $uid, $response);
@@ -447,7 +447,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   }
 
   if (is_sfid($sf_data)) {
-    $sf_data = $sf->retrieve(array($sf_data), $name);
+    $sf_data = salesforce_api_retrieve(array($sf_data), $name);
   }
   elseif (is_array($sf_data)) {
     $sf_data = (object) $sf_data;

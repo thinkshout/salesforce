@@ -67,8 +67,6 @@ if (!function_exists('is_sfid')) {
 }
 
 function salesforce_api_init() {
-  module_load_include('inc', 'salesforce', 'salesforce.class');
-
   if (!salesforce_api_toolkit_installed() && user_access('administer salesforce')) {
     drupal_set_message(t('Salesforce API installed, but missing Salesforce PHP Toolkit. Please make sure Salesforce PHP Toolkit is available at ' . SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php'), 'error');
     drupal_set_message(t('This message will appear as long as Salesforce API is enabled and the Salesforce PHP Toolkit is missing. Please refer to README.txt or INSTALL.txt for additional information.'), 'error');
@@ -299,7 +297,7 @@ function _salesforce_fieldmap_access($perm, $op = 'edit', $id = null) {
  *     connected Salesforce object as preceding calls. Setting this variable to
  *     TRUE will cause a new connection to be established instead.
  * @return
- *   The DrupalSalesforce object used to communicate with the Salesforce server
+ *   The Salesforce Client object used to communicate with the Salesforce server
  *     if successful or FALSE if a connection could not be established.
  */
 function salesforce_api_connect($username = FALSE, $password = FALSE, $token = FALSE, $reconnect = FALSE) {
@@ -330,28 +328,20 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
   // Boolean, whether we are connecting with the default website user or not.
   $default_site_user = $username == $default_username;
 
-  // Include the file that defines the class.
   if (!salesforce_api_toolkit_installed()) {
     return FALSE;
   }
 
   // Fail early if we didn't receive an API username, password, or token.
   if (empty($username) || empty($password) || empty($token)) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Connection to Salesforce
       failed because API credentials have not been set.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
-  // Create a new Salesforce object with the API credentials.
-  $sf = new DrupalSalesforce($username, $password, $token);
-  if (!is_object($sf)) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
-      failed. Failed to create DrupalSalesforce wrapper.', WATCHDOG_ERROR);
-    return FALSE;
-  }
-
   // Attempt a login.
-  if ($sf->login()) {
+  $sf = salesforce_api_login($username, $password, $token);
+  if ($sf) {
     // Mimick expired password state to debug.
     // $sf->login->passwordExpired = TRUE;
     if ($sf->login->passwordExpired) {
@@ -362,14 +352,15 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
         drupal_set_message(t('Your Salesforce account password expired.  Please
          <a href="https://login.salesforce.com/">login to Salesforce.com</a> and
          change your password.', 'error'));
-      } else {
-        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+      }
+      else {
+        salesforce_api_log(SALESFORCE_LOG_SOME, 'Connection to Salesforce
           due to expired password for @user.', array('@user' => $username), WATCHDOG_ERROR);
       }
     }
   }
   else {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Connection to Salesforce
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Connection to Salesforce
       failed with response @resp.', array('@resp' => $sf->client->getLastResponse()), WATCHDOG_ERROR);
 
     // Or return FALSE to indicate the failure.
@@ -379,11 +370,101 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
 }
 
 /**
+ * Helper function for salesforce_api_connect(). You should probably not call
+ * this function directly
+ *
+ * @param string $username 
+ * @param string $password 
+ * @param string $token 
+ * @return Salesforce Client object
+ */
+
+function salesforce_api_login($username, $password, $token) {
+  require_once(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
+
+  // Create a new Salesforce object with the API credentials.
+  $sf = (object)array(
+    'username' => $username,
+    'password' => $password,
+    'token' => $token,
+    'client' => new SforceEnterpriseClient(),
+  );
+
+  // Default to the uploaded WSDL, then any wsdl in web path if available.
+  if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
+    $dir = SALESFORCE_DIR_WSDL;
+  }
+  $wsdl = $dir .'/enterprise.wsdl.xml';
+
+  // Otherwise fall back to the one included with the Toolkit.
+  if (!file_exists($wsdl)) {
+    $wsdl = SALESFORCE_DIR_SOAPCLIENT .'/enterprise.wsdl.xml';
+  }
+
+  // Connect to the server and login, logging any failures to the watchdog.
+  try {
+    // Connect to the server.
+    $sf->client->createConnection($wsdl);
+
+    // Attempt a login with the credentials entered by the user.
+    $sf->login = $sf->client->login($username, $password . $token);
+
+    // Log the login occurence.
+    salesforce_api_log(SALESFORCE_LOG_ALL, '@user (@email) logged into Salesforce.', array('@user' => $sf->login->userInfo->userFullName, '@email' => $sf->login->userInfo->userEmail));
+  }
+  catch (Exception $e) {
+    // Log the error message.
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Could not login to Salesforce: %message. <pre>!debug</pre>', array('%message' => $e->faultstring, '!debug' => check_plain($sf->client->getLastRequest())), WATCHDOG_ERROR);
+
+    // Indicate the failed login.
+    return FALSE;
+  }
+
+  // Indicate the successful login.
+  return $sf;
+}
+
+/**
+ * Wraps watchdog(). Logs a message to the watchdog based on the Salesforce log
+ * settings.
+ *
+ * @param $level
+ * @param $message
+ * @param $vars
+ * @param $severity
+ * @param $link
+ */
+function salesforce_api_log($level, $message, $vars = array(), $severity = WATCHDOG_NOTICE, $link = NULL) {
+  // Log nothing for notices if the related log level is not greater than or
+  // equal to the level of this message.
+  switch ($severity) {
+    case WATCHDOG_NOTICE:
+      if (variable_get('salesforce_api_activity_log', SALESFORCE_LOG_SOME)  < $level) {
+        return;
+      }
+      break;
+
+    case WATCHDOG_WARNING:
+    case WATCHDOG_ERROR:
+      if (variable_get('salesforce_api_error_log', SALESFORCE_LOG_ALL)  < $level) {
+        return;
+      }
+      break;
+
+    default:
+      break;
+  }
+
+  // Log the message to the watchdog.
+  watchdog('salesforce', $message, $vars, $severity, $link);
+}
+
+/**
  * Helper function for salesforce_api_connect() to reset an expired password,
  *   for the website's default salesforce user only.
  *
  * @param $sf
- *   The logged in DrupalSalesforce object with an expired password.
+ *   The Salesforce client object with an expired password.
  * @return
  *   void
  */
@@ -406,10 +487,10 @@ function salesforce_api_reset_expired_password($sf) {
     '!uri' => url(SALESFORCE_PATH_ADMIN, array('absolute' => TRUE)),
   );
 
-  DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL, 'The password for the salesforce
+  salesforce_api_log(SALESFORCE_LOG_ALL, 'The password for the salesforce
     account %user expired.  Drupal changed it and saved the new password.
     Salesforce updated the security token and emailed it to %email.', $vars);
-  DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Provide the new security token
+  salesforce_api_log(SALESFORCE_LOG_SOME, 'Provide the new security token
     at <a href="!uri">Drupal\'s Salesforce settings page</a>.  Salesforce
     emailed it to %email.', $vars, WATCHDOG_ALERT);
 
@@ -975,7 +1056,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 
   if (!empty($errors)) {
     foreach ($errors as $error) {
-      DrupalSalesforce::watchdog(
+      salesforce_api_log(
         SALESFORCE_LOG_SOME, $error['message'], $error['vars'], WATCHDOG_ERROR);
     }
   }
@@ -1068,7 +1149,7 @@ function salesforce_api_delete_salesforce_objects($sfids) {
     return $sf->client->delete($real_sfids);
   }
   catch (Exception $e) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Failed to delete Salesforce objects with ids %s : %s.', array(implode(', ', $real_sfids), $e->getMessage()), WATCHDOG_ERROR);
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Failed to delete Salesforce objects with ids %s : %s.', array(implode(', ', $real_sfids), $e->getMessage()), WATCHDOG_ERROR);
     return FALSE;
   }
 }
@@ -1098,6 +1179,39 @@ function salesforce_api_theme($existing, $type, $theme, $path) {
       'arguments' => array('element' => NULL),
     ),
   );
+}
+
+/**
+ * Wraps SforceBaseClient::retrieve. Retrieve an object from Salesforce with
+ * standard fields and any data in fields defined in the name object.
+ *
+ * @param $ids
+ *   An array of Salesforce IDs for the objects to retrieve.
+ * @param $name
+ *   The name of the fieldmap that contains the fields to retrieve.
+ * @return
+ *   The single matching Salesforce objects or an array of all the objects
+ *     if more than one are returned.
+ */
+function salesforce_api_retrieve($ids, $name) {
+  $sf = salesforce_api_connect();
+  if (!$sf) {
+    // Let modules react to a failure to export this node.
+    module_invoke_all('salesforce_api_export_connect_fail', NULL, $name, $ids);
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    }
+    return FALSE;
+  }
+
+  // Load the fieldmap so we can get the object name.
+  $map = salesforce_api_fieldmap_load($name);
+
+  $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
+
+  $fields = array_keys($object['fields']);
+
+  return $sf->client->retrieve(implode(', ', $fields), $map->salesforce, $ids);
 }
 
 /**
@@ -1235,7 +1349,7 @@ function salesforce_api_describeSObjects($types) {
     }
     $objects = $sf->client->describeSObjects(array_values($types));
   } catch (Exception $e) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
   }
   if (empty($objects)) {
     return array();

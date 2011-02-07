@@ -118,7 +118,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       try {
         sf_node_export($node, $salesforce->name, $salesforce->sfid);
       } catch (Exception $e) {
-        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
       }
       break;
   }
@@ -425,7 +425,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
       return array();
     }
 
-    $sf_data = $sf->retrieve(array($node->salesforce->sfid), $node->salesforce->name);
+    $sf_data = salesforce_api_retrieve(array($node->salesforce->sfid), $node->salesforce->name);
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($node->salesforce->name);
@@ -623,7 +623,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
         drupal_set_message(print_r($response, 1), 'error');
       }
     }
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
   }
   module_invoke_all('salesforce_api_post_export', $object, $map, $node->nid, $response);
   return $response->success;
@@ -652,7 +652,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
   }
 
   if (is_sfid($sf_data)) {
-    $sf_data = $sf->retrieve(array($sf_data), $name);
+    $sf_data = salesforce_api_retrieve(array($sf_data), $name);
   }
   elseif (is_array($sf_data)) {
     $sf_data = (object) $sf_data;

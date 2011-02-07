@@ -61,10 +61,10 @@ function sf_notifications_allowed_ips() {
   // Uncomment this if/else block for watchdog debugging messages if you are
   // concerned that your Outbound Messages are getting 404'd
   // if ($access) {
-  //   DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce Notifications: IP address @ip accessed @endpoint successfully.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
+  //   salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce Notifications: IP address @ip accessed @endpoint successfully.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
   // }
   // else {
-  //   DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'Salesforce Notifications: Access denied to IP address @ip in attempt to access @endpoint.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
+  //   salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce Notifications: Access denied to IP address @ip in attempt to access @endpoint.', array('@ip' => $_SERVER['REMOTE_ADDR'], '@endpoint' => SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT));
   // }
 
   return $access;
@@ -120,13 +120,13 @@ function sf_notifications_endpoint() {
 
   $content = file_get_contents('php://input');
   if (empty($content)) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME, 'SalesForce Notifications: Empty request.');
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'SalesForce Notifications: Empty request.');
     exit;
   }
 	$dom = new DOMDocument();
 	$dom->loadXML($content);
 	if (empty($dom) || !$dom->hasChildNodes()) {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_NONE,
+    salesforce_api_log(SALESFORCE_LOG_NONE,
       'SalesForce Notifications: Failed to parse into DOM Document.
       <pre>' . print_r($content) . '</pre>');
 		_sf_notifications_soap_respond('false');
@@ -197,7 +197,7 @@ function _sf_notifications_handle_message($objects) {
   foreach ($new_records as $sfid => $obj) {
     $maps = salesforce_api_salesforce_field_map_load_by(array('salesforce' => $obj->type));
     if (empty($maps)) {
-      DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME,
+      salesforce_api_log(SALESFORCE_LOG_SOME,
             'SalesForce Notifications: No fieldmap found.
             <pre>' . print_r($obj, 1) . '</pre>');
       $success = FALSE;
@@ -241,7 +241,7 @@ function sf_notifications_delete_record($object_record) {
   switch ($object_record['drupal_type']) {
     case 'user':
       user_delete(array(), $object_record['oid']);
-      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+      salesforce_api_log(SALESFORCE_LOG_ALL,
         'SalesForce Notificaitions deleted user '
         . $object_record['oid'] . ' sfid ' . $sfid);
       break;
@@ -259,7 +259,7 @@ function sf_notifications_delete_record($object_record) {
       node_invoke_nodeapi($node, 'delete');
       search_wipe($node->nid, 'node');
 
-      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+      salesforce_api_log(SALESFORCE_LOG_ALL,
         'SalesForce Notificaitions deleted node '
         . $object_record['oid'] . ' sfid ' . $sfid);
       break;
@@ -268,13 +268,13 @@ function sf_notifications_delete_record($object_record) {
       if (function_exists($object_record['drupal_type'] . '_delete')) {
         $function = $object_record['drupal_type'] . '_delete';
         $function($object_record['oid']);
-        DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+        salesforce_api_log(SALESFORCE_LOG_ALL,
           'SalesForce Notificaitions deleted '
           . $object_record['drupal_type'] . ' ' . $object_record['oid']
           . ' sfid ' . $sfid);
       }
       else {
-        DrupalSalesforce::watchdog(SALESFORCE_LOG_SOME,
+        salesforce_api_log(SALESFORCE_LOG_SOME,
           ' SalesForce Notifications: Could not find delete handler for deleted
           SalesForce record <pre>' . print_r($object_record, 1) . '</pre>');
         $success = FALSE;
@@ -309,12 +309,12 @@ function sf_notifications_update_record($object_record) {
   if (function_exists($function)) {
     $drupal_id = $function($object_record['fields'], $object_record['name'], $object_record['oid']);
     if ($drupal_id) {
-      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+      salesforce_api_log(SALESFORCE_LOG_ALL,
         'SalesForce Notificaitions successful ' . $object_record['operation'] .
         ' of ' . $drupal_type . ' ' . $drupal_id);
     }
     else {
-      DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+      salesforce_api_log(SALESFORCE_LOG_ALL,
         'SalesForce Notificaitions failed to update '
         . $object_record['drupal_type'] . ' from record.
         <pre>' . print_r($object_record, 1) . '</pre>');
@@ -322,7 +322,7 @@ function sf_notifications_update_record($object_record) {
     }
   }
   else {
-    DrupalSalesforce::watchdog(SALESFORCE_LOG_ALL,
+    salesforce_api_log(SALESFORCE_LOG_ALL,
         'SalesForce Notifications: Import handler ' . $function . ' undefined.
         Drupal ' . $object_record['drupal_type'] . ' with id '
         . $object_record['oid'] . ' was not updated.');

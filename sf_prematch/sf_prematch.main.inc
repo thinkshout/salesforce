@@ -112,7 +112,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
       $result = $sf->client->query($query);
     }
     catch (Exception $e) {
-      salesforce_api_watchdog(SALESFORCE_LOG_SOME, 'Exception in sf_prematch stage: ' . $e->getMessage(), array(), WATCHDOG_ALERT);
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception in sf_prematch stage: ' . $e->getMessage(), array(), WATCHDOG_ALERT);
       return;
     }
 
