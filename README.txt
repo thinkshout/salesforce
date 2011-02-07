@@ -281,8 +281,9 @@ TROUBLESHOOTING
       $somevariable = salesforce_api_connect();
       dpm($somevariable);
 
-  In the file salesforce.class.inc:
-    * Find the line$this->client->createConnection($wsdl);
+  In the file salesforce.module:
+    * In salesforce_api_login(), find the line
+      $sf->client->createConnection($wsdl)
     * Before that line put dpm($wsdl);
     * Make sure that your WSDL file is named "enterprise.wsdl.xml"
 
