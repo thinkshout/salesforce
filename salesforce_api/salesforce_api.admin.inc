@@ -182,7 +182,7 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
     // If all 3 fields are empty, the user has not tried to change credentials.
     // Unset the form values in order to preserve existing credentials.
     unset($form_state['values']['salesforce_api_username'],
-          $form_state['salesforce_api_password'],
+          $form_state['values']['salesforce_api_password'],
           $form_state['values']['salesforce_api_token']);
     return;
   }
