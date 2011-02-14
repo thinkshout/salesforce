@@ -360,8 +360,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
     }
   }
   else {
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Connection to Salesforce
-      failed with response @resp.', array('@resp' => $sf->client->getLastResponse()), WATCHDOG_ERROR);
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Connection to Salesforce failed.', WATCHDOG_ERROR);
 
     // Or return FALSE to indicate the failure.
     $sf = FALSE;
