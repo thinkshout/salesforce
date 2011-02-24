@@ -104,7 +104,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
 
         // Check if there is more than one fieldmap in the result.
         if (user_access('administer salesforce') and next($maps)) {
-          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map)), 'warning');
+          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map->name)), 'warning');
         }
       }
       try {
