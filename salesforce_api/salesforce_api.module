@@ -351,7 +351,7 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
       elseif (user_access('administer salesforce')) {
         drupal_set_message(t('Your Salesforce account password expired.  Please
          <a href="https://login.salesforce.com/">login to Salesforce.com</a> and
-         change your password.', 'error'));
+         change your password.'), 'error');
       }
       else {
         salesforce_api_log(SALESFORCE_LOG_SOME, 'Connection to Salesforce

@@ -202,7 +202,7 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
      drupal_set_message(t('Connection established. SalesForce credentials updated.'));
   } else {
     drupal_set_message(
-      t('Resetting SalesForce API credentials failed.', 'error'));
+      t('Resetting SalesForce API credentials failed.'), 'error');
     form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
     form_set_error('salesforce_api_password');
     form_set_error('salesforce_api_token');
