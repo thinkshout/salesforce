@@ -293,3 +293,44 @@ function salesforce_api_update_6203() {
   db_query('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE);
   return $ret;
 }
+
+/**
+ * Remove erroneous sf_user_skip_export elements from database.
+ */
+function salesforce_api_update_6204(&$sandbox) {
+  $ret = array();
+  if (empty($sandbox['uids'])) {
+    $where = " data like '%%sf_user_skip_export%%'";
+    $sandbox['n_users'] = 0;
+    $sandbox['uids'] = array();
+    $result = db_query('SELECT uid FROM users WHERE ' . $where);
+    while ($uid = db_result($result)) {
+      $sandbox['uids'][] = $uid;
+      $sandbox['n_users']++;
+    }
+    if (empty($sandbox['n_users'])) {
+      return array(array('success' => TRUE, 'query' => t('No updates to process.')));
+    }
+    $sandbox['position'] = 0;
+  }
+
+  $uid = $sandbox['uids'][$sandbox['position']];
+  $account = user_load($uid);
+  $account->sf_user_skip_export = TRUE;
+  user_save($account, array('sf_user_skip_export' => NULL));
+
+  $sandbox['position']++;
+  $finished = $sandbox['position'] / $sandbox['n_users'];
+  if ($finished >= 1) {
+    return array(array('success' => TRUE, 'query' => t('Fixed !n user accounts.', array('!n' => $sandbox['n_users']))));
+  }
+  else {
+    return array('#finished' => $finished);
+  }
+}
+
+
+
+
+
+

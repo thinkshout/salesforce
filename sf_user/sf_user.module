@@ -49,6 +49,7 @@ function sf_user_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_user().
  */
 function sf_user_user($op, &$edit, &$account, $category = NULL) {
+  static $sf_user_skip_export;
   switch ($op) {
     case 'load':
       $account->salesforce = salesforce_api_id_load('user', $account->uid);
@@ -73,11 +74,27 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       }
       salesforce_api_delete_object_map('user', $account->uid);
       break;
-
+    case 'update': {
+      // Set a static variable during 'update' to prevent extranesous API calls.
+      // In 'after_update', $account has been reloaded from the database, and
+      // sf_user_skip_export will have been unset. Also set the same property in
+      // $edit array to NULL so that it won't get written to the database, and
+      // to remove any "legacy" data.
+      if ($account->sf_user_skip_export) {
+        $sf_user_skip_export = TRUE;
+        $edit['sf_user_skip_export'] = NULL;
+      }
+      break;
+    }
     case 'insert':
     case 'after_update':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
-      if (isset($account->sf_user_skip_export) || isset($edit['sf_user_skip_export'])) {
+      if ($account->sf_user_skip_export || $sf_user_skip_export) {
+        // We don't want this value to get into the $account->data array, so set
+        // it to null in the $edit array to make sure that doesn't happen. This
+        // will also unset any "legacy" data.
+        $edit['sf_user_skip_export'] = NULL;
+        unset($sf_user_skip_export);
         break;
       }
       $salesforce = (object)array('name' => null, 'sfid' => null);
@@ -502,7 +519,6 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   // We don't want to trigger an export while we're running import.
   // sf_user_skip_export is a flag to tell hook_user not to export this object.
   $account->sf_user_skip_export = TRUE;
-  $changes['sf_user_skip_export'] = TRUE;
 
   // If the user exists, update the existing user.
   if ($account->uid) {
