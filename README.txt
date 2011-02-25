@@ -1,4 +1,3 @@
-// $Id$
 Salesforce module
 ***************************************************************************
 Original Creator, Maintainer & Developer: 
