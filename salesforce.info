@@ -1,4 +1,3 @@
-; $Id$
 name = Salesforce
 description = Provides basic Drupal integration with the Salesforce API.
 dependencies = profile contact

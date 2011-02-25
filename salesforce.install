@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 function salesforce_install() {
   if (!module_exists('profile')) {
