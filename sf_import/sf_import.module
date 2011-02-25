@@ -1,5 +1,4 @@
 <?php 
-// $Id$
 
 define('SALESFORCE_PATH_ADMIN_IMPORT', SALESFORCE_PATH_ADMIN . '/import');
 

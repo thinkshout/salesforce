@@ -1,4 +1,3 @@
-; $Id$
 name = Salesforce Notifications - EXPERIMENTAL
 description = Responds to SOAP Outbound Messages from SalesForce.
 dependencies[] = salesforce_api

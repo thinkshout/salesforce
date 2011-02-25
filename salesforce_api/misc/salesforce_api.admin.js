@@ -1,4 +1,3 @@
-// $Id$
 
 Drupal.behaviors.sf_fieldmap_options = function() {
   $.fn.sf_fieldmap_option_change = function() {
