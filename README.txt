@@ -1,4 +1,3 @@
-// $Id$
 Salesforce module
 
 Current Maintainer: 

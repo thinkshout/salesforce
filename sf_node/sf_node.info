@@ -1,4 +1,3 @@
-; $Id$
 name = Salesforce Node
 description = Integrates the core node object and various node related modules with the SalesForce API.
 dependencies[] = salesforce_api
