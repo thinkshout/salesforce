@@ -1,4 +1,3 @@
-// $Id$
 Salesforce module
 
 Complete rewrite for modular functionality and Druapl 6. 
