@@ -1036,7 +1036,7 @@ function salesforce_api_admin_object(&$form_state) {
   }
   $defaults = array_keys(salesforce_api_fieldmap_objects());
 
-  $options = array();
+  $options = $disabled = array();
   foreach($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label .')';
   }
