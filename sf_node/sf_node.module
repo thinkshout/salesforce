@@ -597,12 +597,11 @@ function sf_node_export($node, $name, $sfid = NULL) {
   $object = salesforce_api_fieldmap_export_create($name, $node);
   $object->Id = $sfid;
 
-  $continue = module_invoke_all('salesforce_api_pre_export', $object, $map, $node->nid);
-  if (!empty($continue)) {
-    foreach ($continue as $value) {
-      if ($value === FALSE) {
-        return;
-      }
+  foreach (module_implements('salesforce_api_pre_export') as $module) {
+    $function = $module . '_salesforce_api_pre_export';
+    $continue = $function($object, $name, $node->nid);
+    if ($continue === FALSE) {
+      return;
     }
   }
 
@@ -711,6 +710,15 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
       $node->$drupal_fieldname = $sf_data->$sf_fieldname;
     }
   }
+  
+  foreach (module_implements('salesforce_api_pre_import') as $module) {
+    $function = $module . '_salesforce_api_pre_import';
+    $continue = $function($node, $name, $sf_data);
+    if ($continue === FALSE) {
+      return;
+    }
+  }
+
   $node->sf_node_skip_export = TRUE;
   node_save($node);
   if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
@@ -718,6 +726,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('node', $node->nid, $sfid, $name);
   }
+  module_invoke_all('salesforce_api_post_import', $node, $name, $sf_data, $create);
   unset($node->sf_node_skip_export);
 
   return $node->nid;

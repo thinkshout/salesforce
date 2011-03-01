@@ -176,18 +176,18 @@ function hook_default_salesforce_field_maps($export = array()) {
  * about such a situation, when $sf_object->sfid is empty, this is a Salesforce 
  * "create" operation. Otherwise, this is a Salesforce "update" operation.
  *
- * @param string $sf_object
+ * @param object $sf_object
  *   The object about to be exported to Salesforce
- * @param mixed $map 
- *   The fully loaded fieldmapping object used to create sf_object
+ * @param mixed $name
+ *   The fieldmap name used to create sf_object
  * @param string $drupal_id 
  *   The unique id of the drupal object associated with the sf_object, e.g. nid
  * @return
  *   Implementing modules should return FALSE if the current export should NOT
- *   proceed. Note that this will not prevent further processing of 
- *   implementations of this hook.
+ *   proceed. Note that this will prevent further processing of implementations
+ *   of this hook.
  */
-function hook_salesforce_api_pre_export($sf_object, $map, $drupal_id) {
+function hook_salesforce_api_pre_export(&$sf_object, $name, $drupal_id) {
 
 }
 
@@ -196,7 +196,7 @@ function hook_salesforce_api_pre_export($sf_object, $map, $drupal_id) {
  * @see hook_salesforce_api_pre_export
  *
  * @param string $sf_object
- * @param string $map 
+ * @param string $name
  * @param string $drupal_id 
  * @param object $salesforce_response
  *   The response object from the Salesforce SOAP server. This object has three
@@ -210,7 +210,43 @@ function hook_salesforce_api_pre_export($sf_object, $map, $drupal_id) {
  *   - success: boolean
  * @return void
  */
-function hook_salesforce_api_post_export($sf_object, $map, $drupal_id, $salesforce_response) {
+function hook_salesforce_api_post_export($sf_object, $name, $drupal_id, $salesforce_response) {
+  
+}
+
+/**
+ * Called immediately before creating or updating a Drupal object from
+ * Salesforce data import
+ *
+ * @param object $object - the drupal object (e.g. node, account) about to be
+ *  created or updated
+ * @param string $name - the name of the fieldmap used for import
+ * @param object $sf_data - the data received from Salesforce 
+ * @param array $changes - if this is a user import, the $changes array as it 
+ *  will be passed to user_save(). Otherwise NULL.
+ * @return
+ *   Implementing modules should return FALSE if the current import should NOT
+ *   proceed. Note that this will prevent further processing of implementations
+ *   of this hook.
+ */
+function hook_salesforce_api_pre_import(&$object, $name, $sf_data, &$changes = NULL) {
+  
+}
+
+/**
+ * Called immediately after creating or updating a Drupal object from Salesforce
+ * data import.
+ *
+ * @param object $object - the drupal object (e.g. node, account) just
+ *  created or updated
+ * @param string $name - the name of the fieldmap used for import
+ * @param object $sf_data - the data received from Salesforce
+ * @param string $create
+ * @param array $changes - if this is a user import, the $changes array as it
+ *  was passed to user_save(). Otherwise null.
+ * @return void
+ */
+function hook_salesforce_api_post_import($object, $name, $sf_data, $name, $create, $changes = NULL) {
   
 }
 
@@ -254,7 +290,6 @@ function hook_salesforce_api_delete($sfid, $map, $drupal_id) {
  * @return the value for export to Salesforce
  */
 function _sf_node_export_cck_FIELDTYPE($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  $sf_field_definition) {
   list($fieldname, $column) = explode(':', $fieldname, 2);
   if (empty($column)) {
     $column = 'value';

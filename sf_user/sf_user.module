@@ -408,10 +408,11 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     $object->Id = $sfid;
   }
 
-  $continue = module_invoke_all('salesforce_api_pre_export', $object, $map, $uid);
-  if (!empty($continue)) {
-    foreach ($continue as $value) {
-      if ($value === FALSE) { return; }
+  foreach (module_implements('salesforce_api_pre_export') as $module) {
+    $function = $module . '_salesforce_api_pre_export';
+    $continue = $function($object, $name, $account->uid);
+    if ($continue === FALSE) {
+      return;
     }
   }
 
@@ -436,7 +437,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
     return FALSE;
   }
-  module_invoke_all('salesforce_api_post_export', $object, $map, $uid, $response);
+  module_invoke_all('salesforce_api_post_export', $object, $name, $uid, $response);
   return $response->success;
 }
 
@@ -514,6 +515,14 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
       }
     }
   }
+  
+  foreach (module_implements('salesforce_api_pre_import') as $module) {
+    $function = $module . '_salesforce_api_pre_import';
+    $continue = $function($account, $name, $sf_data, $changes);
+    if ($continue === FALSE) {
+      return;
+    }
+  }
 
   //drupal_set_message('<pre>'. print_r($changes, TRUE) .'</pre>');
   // We don't want to trigger an export while we're running import.
@@ -533,6 +542,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('user', $account->uid, $sfid, $name);
   }
+  module_invoke_all('salesforce_api_post_import', $account, $name, $sf_data, $create, $changes);
   unset($account->sf_user_skip_export);
 
   return $account->uid;
