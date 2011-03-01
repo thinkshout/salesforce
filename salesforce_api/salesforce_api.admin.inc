@@ -173,7 +173,6 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
   // Build an options array out of the Drupal objects.
   $options = array();
   $drupal_objects = salesforce_api_fieldmap_objects_load('drupal');
-  $options = array();
   foreach ($drupal_objects as $entity => $bundles) {
     foreach ($bundles as $bundle_name => $bundle_data) {
       $options[$entity . ':' . $bundle_name] = $bundle_data['label'];
@@ -528,7 +527,7 @@ function salesforce_api_admin_object($form, &$form_state) {
   }
   $defaults = array_keys(salesforce_api_fieldmap_objects());
 
-  $options = array();
+  $options = $disabled = array();
   foreach ($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label . ')';
   }
