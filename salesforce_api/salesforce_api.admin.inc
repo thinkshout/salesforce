@@ -312,20 +312,18 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
   }
 
   $auto = array();
-  switch ($map->automatic) {
-    case SALESFORCE_AUTO_SYNC_CREATE:
-      $auto[] = t('Create');
-      break;
-
-    case SALESFORCE_AUTO_SYNC_UPDATE:
-      $auto[] = t('Update');
-      break;
-
-    case SALESFORCE_AUTO_SYNC_DELETE:
-      $auto[] = t('Delete');
-      break;
-
+  if ($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) {
+    $auto[] = t('Create');
   }
+  
+  if ($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) {
+    $auto[] = t('Update');
+  }
+  
+  if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
+    $auto[] = t('Delete');
+  }
+
   $auto = implode(', ', $auto);
   $row = array(
     salesforce_api_fieldmap_object_label('drupal', $map->drupal),
