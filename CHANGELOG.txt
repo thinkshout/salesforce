@@ -3,3 +3,4 @@
 Salesforce Suite 6.x-1.x-dev, xxxx-xx-xx
 -----------------------------------
 by aaronbauman: Added CHANGELOG.txt.
+
