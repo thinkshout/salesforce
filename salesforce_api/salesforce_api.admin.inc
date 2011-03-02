@@ -532,8 +532,8 @@ function salesforce_api_admin_object($form, &$form_state) {
     drupal_set_message(t('There was an error retrieving the list of SalesForce objects. Please verify that your SalesForce instance is properly configured.'), 'error');
     return;
   }
-  $defaults = array_keys(salesforce_api_fieldmap_objects());
-
+  $defaults = salesforce_api_fieldmap_objects();
+  $defaults = array_keys($defaults['salesforce']);
   $options = $disabled = array();
   foreach ($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label . ')';
@@ -607,32 +607,36 @@ function salesforce_api_admin_object_settings($form, &$form_state, $type) {
  * For locally-cached SF Objects, add a "configure" or "re-map" link next to the checkbox
  */
 function theme_salesforce_api_object_options($element = NULL) {
-  if (empty($element['objects']['#options'])) {
-    return drupal_render($element);
+  // Thank you, Drupal FAPI, for unnecessary indirection.
+  $el = $element['element'];
+  if (empty($el['objects']['#options'])) {
+    return drupal_render($element['element']);
   }
-  $objects = $element['objects'];
+  $objects = $el['objects'];
   $options = $objects['#options'];
   // Disable checkboxes for SF Types which are currently in use.
   foreach ($options as $key => $value) {
     if (empty($objects[$key]['#value'])) {
+      $el['objects'][$key] = array('#markup' =>  drupal_render($el['objects'][$key]));
       continue;
     }
-    if (!empty($element['disabled_types']['#value'][$key])) {
-      $element['objects'][$key]['#attributes']['disabled'] = 'disabled';
-      $element['objects'][$key]['#description'] =
+    if (!empty($el['disabled_types']['#value'][$key])) {
+      $el['objects'][$key]['#attributes']['disabled'] = 'disabled';
+      $el['objects'][$key]['#description'] =
         t('This object is in use by one or more fieldmaps and cannot be disabled.');
     }
     $link = l(t('configure'), SALESFORCE_PATH_OBJECT . '/' . $key);
-    if ($_SESSION['objects_error'][$key]) {
-      $element['objects'][$key]['#prefix'] = '<div class="error">';
-      $element['objects'][$key]['#suffix'] = '</div>';
-      unset($_SESSION['objects_error'][$key]);
+    if (!empty($_SESSION['objects_error'][$key])) {
+      $el['objects'][$key]['#prefix'] = '<div class="error">';
+      $el['objects'][$key]['#suffix'] = '</div>';
       $link = l(t('re-map fields'), SALESFORCE_PATH_OBJECT . '/' . $key);
     }
-    $element['objects'][$key]['#title'] .= ' | ' . $link;
+    $el['objects'][$key]['#title'] .= ' | ' . $link;
+    $el['objects'][$key] = array('#markup' => drupal_render($el['objects'][$key]));
   }
-  unset($_SESSION['objects_error']);
-  return drupal_render($element);
+  $element['element'] = $el;
+  unset($_SESSION['objects_error'], $element['element']['#theme'], $element['element']['disabled_types']);
+  return drupal_render($element['element']);
 }
 
 /**
