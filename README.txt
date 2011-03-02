@@ -68,18 +68,12 @@ INSTALLATION
 
   2) Download the Salesforce PHP Toolkit
 
-     The official Force.com PHP toolkit is available here:
+     The official Force.com PHP toolkit is available from github.
+     The recommended method of installing is using git.
+     $ git clone git://github.com/developerforce/Force.com-Toolkit-for-PHP.git
 
+     Project homepage:
      https://github.com/developerforce/Force.com-Toolkit-for-PHP
-
-     You can get a tarball:
-     https://github.com/developerforce/Force.com-Toolkit-for-PHP/tarball/master
-
-     or a zipfile:
-     https://github.com/developerforce/Force.com-Toolkit-for-PHP/zipball/master
-
-     or a git clone:
-     http://github.com/developerforce/Force.com-Toolkit-for-PHP.git
 
      If "libraries" module is installed, place the "soapclient" directory in
      "salesforce/soapclient" in your libraries path.
@@ -94,8 +88,8 @@ INSTALLATION
      sites/all/modules/salesforce/salesforce_api/toolkit/soapclient
 
   3) Enable the module on admin/build/modules along with at least one of the
-     object modules (sf_node, sf_user, sf_contrib). Node is the usual place to
-     start.
+     object modules (sf_node, sf_user, sf_contrib). sf_node is the usual place
+     to start.
 
   4) Assign a WSDL directory and upload your organization's WSDL file
      (admin/settings/salesforce and admin/settings/salesforce/wsdl).
