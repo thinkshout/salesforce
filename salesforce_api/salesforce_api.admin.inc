@@ -178,6 +178,13 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
       $options[$entity . ':' . $bundle_name] = $bundle_data['label'];
     }
   }
+
+  // If we don't have any Drupal object types, there's nothing else to do.
+  if (empty($options)) {
+    drupal_set_message(t('No Drupal objects found. Please enable a module that exposes Drupal objects to create a fieldmap, e.g. Salesforce Entity.'), 'error');
+    return array();
+  }
+
   asort($options);
   $form['drupal'] = array(
     '#type' => 'select',
