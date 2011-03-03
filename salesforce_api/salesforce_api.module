@@ -995,7 +995,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'datetime':
         $time = strtotime($value);
         if (empty($time)) {
-          $errors[] = array('message' => 'Salesforce cannot accept empty values for @type fields: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value));
+          $errors[] = array('message' => 'Salesforce cannot accept empty values for @type fields on fieldname @fieldname: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
         } else {
           // The export handler should have handled this, but reformat to
           // DATE_ATOM, just in case.
@@ -1007,7 +1007,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         if (salesforce_api_valid_email_address($value)) {
           $object->$sf_fieldname  = $value;
         } else {
-          $errors[] = array('message' => 'Invalid email address provided for Salesforce export: @value', 'vars' => array('@value' => $value));
+          $errors[] = array('message' => 'Invalid email address provided for Salesforce export on fieldname @fieldname: @value', 'vars' => array('@fieldname' => $sf_fieldname, '@value' => $value));
           continue;
         }
         break;
@@ -1019,14 +1019,14 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         if (is_numeric($value)) {
           $object->$sf_fieldname = $value;
         } else {
-          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
+          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
         }
         break;
 
       case 'reference':
       case 'id':
         if (!is_sfid($value)) {
-          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field: "@value".', 'vars' => array('@type' => $type, '@value' => $value));
+          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
         } else {
           $object->$sf_fieldname  = $value;
         }
