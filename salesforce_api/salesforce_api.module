@@ -218,8 +218,8 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
   );
   $items[SALESFORCE_PATH_UPDATE_WSDL] = array(
-    'title' => 'Update WSDL',
-    'description' => 'Upload a new WSDL XML file',
+    'title' => 'WSDL',
+    'description' => 'Upload a new WSDL XML file and set its location',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_api_update_wsdl_form'),
     'access arguments' => array('administer salesforce'),

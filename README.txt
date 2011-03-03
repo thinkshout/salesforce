@@ -185,12 +185,15 @@ SOME NOTES ABOUT SECURITY
 WORKING WITH WSDL FILES
 -----------------------
   If you do not upload a WSDL file, Salesforce module will use a default .wsdl
-  file (salesforce_api/toolkit/soapclient/enterprise.wsdl.xml), which may not be
-  compatible with your organization's Salesforce installation or the current
-  Salesforce API. It is highly recommended that you supply your own enterprise
-  wsdl file via the WSDL administration panes at admin/settings/salesforce and
-  admin/settings/salesforce/wsdl. These panes will walk you through creating a
-  directory outside your webroot and uploading the WSDL file to that directory.
+  file (soapclient/enterprise.wsdl.xml), which may not be compatible with your
+  organization's Salesforce installation or the current Salesforce API. It is
+  highly recommended that you supply your own enterprise wsdl file via WSDL
+  administration at admin/settings/salesforce/wsdl.
+
+  Every time your Salesforce schema changes, you will need to regenreate your
+  WSDL and upload it to your Drupal site if the changes affect mapped Salesforce
+  objects. Changing Salesforce schema may result in breaking your fieldmaps, so
+  please do so with extreme caution.
 
   When switching between wsdl files, keep in mind that PHP's SoapClient is
   caching wsdl information. Though PHP's SOAP WSDL cache should be cleaned when

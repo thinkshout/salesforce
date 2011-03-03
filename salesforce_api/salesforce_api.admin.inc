@@ -131,22 +131,6 @@ function salesforce_api_settings_form($form_state) {
     '#submit' => array('salesforce_api_cache_build'),
   );
 
-  // WSDL file should be outside of webroot. The admin should specify a path
-  // outside the webroot, then upload a WSDL file to it.
-  $wsdl_dir = variable_get('salesforce_api_dir_wsdl', FALSE);
-  $form['wsdl'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('WSDL directory'),
-    '#description' => t('Your organization\'s WSDL file can expose potentially sensitive information. It is highly recommended that your WSDL file be stored outside your webroot. Please enter either a path relative to your webroot (e.g. ../wsdl) or a fully qualified path (e.g. /home/username/wsdl) in which to store your WSDL.'),
-    'salesforce_api_dir_wsdl' => array(
-      '#type' => 'textfield',
-      '#title' => t('WSDL Directory'),
-      '#default_value' => $wsdl_dir,
-      ),
-    '#collapsible' => TRUE,
-    '#collapsed' => $wsdl_dir,
-    );
-
   // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
   $form['#validate'][] = 'salesforce_api_settings_form_validate';
   $form['#submit'][] = 'salesforce_api_settings_form_submit';
@@ -912,6 +896,16 @@ function salesforce_api_update_wsdl_form() {
     '#title' => t('WSDL File'),
     '#description' => t('Upload the new WSDL definition file. The name of the file is irrelevent, but it must end with an XML or WSDL extension.'),
   );
+
+  // WSDL file should be outside of webroot. The admin should specify a path
+  // outside the webroot, then upload a WSDL file to it.
+  $wsdl_dir = variable_get('salesforce_api_dir_wsdl', FALSE);
+  $form['wsdl'] = array(
+    '#type' => 'textfield',
+    '#title' => t('WSDL Directory'),
+    '#description' => t('Your organization\'s WSDL file can expose potentially sensitive information. It is highly recommended that your WSDL file be stored outside your webroot. Please enter either a path relative to your webroot (e.g. ../wsdl) or a fully qualified path (e.g. /home/username/wsdl) in which to store your WSDL.'),
+    '#default_value' => $wsdl_dir,
+    );
 
   $form['submit'] = array(
     '#type' => 'submit',
