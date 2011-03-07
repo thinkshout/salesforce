@@ -627,7 +627,8 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
 
   foreach ($target['fields'] as $key => $value) {
     // Determine to which table this field should belong.
-    if (!($value['type'] & (SALESFORCE_FIELD_NILLABLE |   SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+    if (($value['type'] & SALESFORCE_FIELD_CREATEABLE)
+    && !($value['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
       // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="'. t('This field is required.') .'">*</span>';
@@ -825,7 +826,9 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
   if (empty($object_definition['fields'][$field])) {
     $success = FALSE;
   }
-  elseif (!($object_definition['fields'][$field]['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+  elseif (($object_definition['fields'][$field]['type'] & SALESFORCE_FIELD_CREATEABLE)
+    && !($object_definition['fields'][$field]['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+          
     // Don't allow removing required fields.
     $success = FALSE;
   }

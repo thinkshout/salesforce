@@ -57,10 +57,16 @@
  *  associative array with the following keys (optional unless noted):
  *  - 'label' (required): The translated, user-friendly name of this field
  *  - 'type': Relevant for Salesforce fields only.
- *    Use one of the following constants
- *    - SALESFORCE_FIELD_OPTIONAL (default): An optional field
- *    - SALESFORCE_FIELD_REQUIRED: A required field (e.g. username, LastName)
- *    - SALESFORCE_FIELD_SOURCE_ONLY: An automatically assigned field (e.g. nid, CreatedDate)
+ *    Use any combination of the following bitmasks, |'d (bitwise OR) together
+ *    - SALESFORCE_FIELD_CREATEABLE
+ *    - SALESFORCE_FIELD_DEFAULTEDONCREATE
+ *    - SALESFORCE_FIELD_DEPRECATEDANDHIDDEN
+ *    - SALESFORCE_FIELD_IDLOOKUP
+ *    - SALESFORCE_FIELD_NILLABLE
+ *    - SALESFORCE_FIELD_RESTRICTEDPICKLIST
+ *    - SALESFORCE_FIELD_UNIQUE
+ *    - SALESFORCE_FIELD_UPDATEABLE
+ *    - SALESFORCE_FIELD_SOURCE_ONLY
  *  - 'import': callback function to import this field.
  *  - 'export': callback function to export this field.
  *  - 'multiple': Is this a multiple-valued field in Salesforce? (ie. ;-delimited)
