@@ -107,14 +107,17 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         if (empty($maps)) {
           break;
         }
-        $map = current($maps);
-
-        $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
-        $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
-        if ((!$auto_create && $op == 'insert')
-        || (!$auto_update && $op == 'after_update')) {
-          break;
+        
+        foreach($maps as $map) {
+          $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+          $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+          if ((!$auto_create && $op == 'insert')
+          || (!$auto_update && $op == 'after_update')) {
+            unset($maps[$map->name]);
+          }
         }
+        $map = reset($maps);
+        
         // Use the first fieldmap.
         $salesforce->name = $map->name;
 

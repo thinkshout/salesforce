@@ -96,15 +96,17 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         if (empty($maps)) {
           break;
         }
-        $map = current($maps);
-        
-        $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
-        $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
-        if ((!$auto_create && $op == 'insert')
-        || (!$auto_update && $op == 'update')) {
-          break;
+
+        foreach($maps as $map) {
+          $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+          $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+          if ((!$auto_create && $op == 'insert')
+          || (!$auto_update && $op == 'after_update')) {
+            unset($maps[$map->name]);
+          }
         }
-        $map = current($maps);
+        $map = reset($maps);
+        
         // Use the first fieldmap.
         $salesforce->name = $map->name;
 
