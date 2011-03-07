@@ -102,6 +102,10 @@ function hook_fieldmap_objects_alter(&$objects) {
  * example, an implementation of sf_user_sf_find_match might query Salesforce
  * for Ids matching the user's email address before creating a new Contact.
  *
+ * IMPORTANT: implementations of this function MUST ensure that matches are not
+ * IDs of deleted records in Salesforce. By default SOQL query() filters out
+ * deleted records, so sf_prematch_sf_find_match() fulfils this requirement.
+ *
  * @param $direction
  *  "import" or "export"
  * @param $fieldmap_type
@@ -112,7 +116,7 @@ function hook_fieldmap_objects_alter(&$objects) {
  *  The id of the fieldmap being used to import or export the current object.
  * @return
  *  'import': an array of matching nid's, uid's, etc.
- *  'export': an array of matching Salesforce Id's
+ *  'export': an array of matching Salesforce Id's @see IMPORTANT note above.
  */
 function hook_sf_find_match($direction, $fieldmap_type, $object, $fieldmap_name) {
   if ($direction == 'export' 

@@ -145,8 +145,8 @@ function sf_user_fieldmap_objects($type) {
       'label' => t('User account'),
       'fields' => array(
         'uid' => array('label' => t('User ID'), 'type' => SALESFORCE_FIELD_SOURCE_ONLY),
-        'name' => array('label' => t('Username'), 'type' => SALESFORCE_FIELD_REQUIRED),
-        'mail' => array('label' => t('E-mail address'), 'type' => SALESFORCE_FIELD_REQUIRED),
+        'name' => array('label' => t('Username')),
+        'mail' => array('label' => t('E-mail address')),
         'created' => array('label' => t('Created timestamp')),
         'access' => array('label' => t('Last access timestamp')),
         'login' => array('label' => t('Last login timestamp')),
@@ -188,6 +188,11 @@ function sf_user_salesforce_form(&$form_state, $account) {
     drupal_not_found();
   }
 
+  if(isset($form_state['storage']['confirm'])) {
+    $form['account'] = array('#type' => 'value', '#value' => $account);
+    return confirm_form($form, 'Are you sure you want to unlink this user from Salesforce?', 'user/' . $account->uid . '/salesforce', 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will <strong>not</strong> delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel'); 
+  }
+
   // Set the user page title.
   drupal_set_title(check_plain($account->name));
 
@@ -197,6 +202,20 @@ function sf_user_salesforce_form(&$form_state, $account) {
     '#type' => 'value',
     '#value' => $account->uid,
   );
+
+  if ($account->salesforce->sfid) {
+    // Retrieve the object from Salesforce.
+    $sf_data = salesforce_api_retrieve(array($account->salesforce->sfid), $account->salesforce->name);
+    
+    if (!$sf_data && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
+      // Unlink the object
+      salesforce_api_id_unlink(array('oid' => $account->uid, 'name' => $account->salesforce->name));
+      $account = user_load($account->uid);
+    }
+    elseif (!$sf_data) {
+      drupal_set_message(t('Unable to retrieve Salesforce data for record !sfid.', array('!sfid' => $account->salesforce->sfid)), 'warning');
+    }
+  }
 
   // Display an export button if the user hasn't been exported before.
   if (!$account->salesforce->sfid) {
@@ -216,6 +235,22 @@ function sf_user_salesforce_form(&$form_state, $account) {
       '#options' => $options,
     );
 
+    $form['export']['manual_linking'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#title' => t('Manual linking'),
+    );
+    
+    $form['export']['manual_linking']['sfid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Salesforce ID'),
+      '#description' => t('If this user already has a corresponding object
+      in Salesforce, enter the Salesforce ID to manually link the entities.'),
+      '#size' => 18,
+      '#maxlength' => 18,
+    );
+
     $form['export']['export_user'] = array(
       '#type' => 'submit',
       '#value' => t('Export user'),
@@ -231,15 +266,6 @@ function sf_user_salesforce_form(&$form_state, $account) {
       '#type' => 'value',
       '#value' => $account->salesforce->name,
     );
-
-    // Retrieve the object from Salesforce.
-    $sf = salesforce_api_connect();
-    if (!$sf) {
-      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
-      return array();
-    }
-
-    $sf_data = salesforce_api_retrieve(array($account->salesforce->sfid), $account->salesforce->name);
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($account->salesforce->name);
@@ -274,6 +300,11 @@ function sf_user_salesforce_form(&$form_state, $account) {
     $form['mapped']['import_values'] = array(
       '#type' => 'submit',
       '#value' => t('Import changes from Salesforce'),
+      '#attributes' => array('class' => 'sf-confirm'),
+    );
+    $form['mapped']['unlink'] = array(
+      '#type' => 'submit',
+      '#value' => t('Unlink from Salesforce object...'),
       '#attributes' => array('class' => 'sf-confirm'),
     );
 
@@ -340,7 +371,7 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
     // Export the user to Salesforce.
     case t('Export user'):
     case t('Export changes to Salesforce'):
-      if (sf_user_export($form_state['values']['uid'], $form_state['values']['name'])) {
+      if (sf_user_export($form_state['values']['uid'], $form_state['values']['name'], $form_state['values']['sfid'])) {
         drupal_set_message(t('User successfully exported to Salesforce.'));
       }
       else {
@@ -358,6 +389,20 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
       }
 
       break;
+    case $form_state['values']['unlink']:
+    case t('Unlink'):
+      if(!isset($form_state['storage']['confirm'])) {
+        $form_state['storage']['confirm'] = TRUE; 
+        $form_state['rebuild'] = TRUE;
+      }
+      else {
+        unset($form_state['storage']['confirm']);
+        $account = $form_state['values']['account'];
+        salesforce_api_id_unlink(array('oid' => $account->uid, 'name' => $account->salesforce->name));
+        drupal_set_message(t('The user !uid has been unlinked from Salesforce record !sfid.', array('!uid' => $account->uid, '!sfid' => $account->salesforce->sfid)));
+      }
+      break;
+  
   }
 }
 
@@ -417,6 +462,27 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   }
 
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+
+  // If we got errors, handle them before proceeding
+  if (is_object($response->errors)) {
+    // If we got "Entity is deleted" and we're configured to unlink and upsert,
+    // do it. @see sf_node_export()
+    if ($response->errors->statusCode == 'ENTITY_IS_DELETED' 
+    && ($response->errors->fields == 'Id' || empty($response->errors->fields))
+    && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
+      salesforce_api_id_unlink(array('sfid' => $object->Id));
+      $account->salesforce->sfid = $object->Id = NULL;
+
+      // Look for any matching records which we might want to update instead of creating duplicates.
+      $matches = salesforce_api_search_for_duplicates('export', 'user', $account, $name);
+      if (!empty($matches)) {
+        $object->Id = reset($matches);
+      }
+
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $uid, 'user/' . $uid));
+      $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+    }
+  }
 
   // If the export was successful...
   if ($response->success) {

@@ -50,6 +50,8 @@ define('SALESFORCE_AUTO_SYNC_CREATE', 0x01);
 define('SALESFORCE_AUTO_SYNC_UPDATE', 0x02);
 define('SALESFORCE_AUTO_SYNC_DELETE', 0x04);
 
+define('SALESFORCE_DELETED_POLICY_NOOP', 0);
+define('SALESFORCE_DELETED_POLICY_UPSERT', 1);
 
 if (!function_exists('is_sfid')) {
   // Without a roundtrip to salesforce.com, checking the string length is the
@@ -1120,6 +1122,70 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
   db_query("DELETE FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid);
   db_query("INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name) VALUES ('%s', %d, '%s', '%s')", $drupal_type, $oid, $sfid, $name);
   salesforce_api_log(SALESFORCE_LOG_ALL, 'Successfully exported Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
+}
+
+/**
+ * Removes a link between a Salesforce record and a Drupal object. Arguments 
+ * correspond to the columns in the salesforce_object_map table
+ *
+ * @param array $args
+ *   Associative array of criteria for deletion. These criteria will be AND'ed 
+ *   together to create a sql DELETE query. Keys are:
+ *     - 'oid'
+ *        drupal id of the object (nid, uid, etc).
+ * 
+ *     - 'name'
+ *        machine name of the fieldmap corresponding to this linkage.
+ *        'name' or 'drupal_type' MUST be set.
+ * 
+ *     - 'drupal_type'
+ *        type of drupal object corresponding to this linkage. 
+ *        e.g. "node", "user", etc.
+ *        'name' or 'drupal_type' MUST be set.
+ * 
+ *     - 'sfid'
+ *        the salesforce id of the object
+ * 
+ *  Keys can be supplied in various combinations, but $args must not be empty.
+ *  EITHER "oid" must be set along with "drupal_type" or "name"
+ *  OR
+ *  "sfid" must be set
+ * 
+ *  In other words, minimal valid key combinations are:
+ *    - 'sfid'
+ *    - 'drupal_type', 'oid'
+ *    - 'name', 'oid'
+ */
+function salesforce_api_id_unlink($args) {
+  $valid_args = 
+    !empty($args['sfid'])
+    || (!empty($args['oid']) 
+        && (!empty($args['drupal_type']) || !empty($args['name'])));
+  if (!$valid_args) {
+    return FALSE;
+  }
+  
+  $sql = "DELETE FROM {salesforce_object_map} ";
+  $sql_args = array();
+  $where = array();
+  if (!empty($args['oid'])) {
+    $where[] = ' oid = %d ';
+    $sql_args[] = $args['oid'];
+  }
+  if (!empty($args['sfid'])) {
+    $where[] = ' sfid = "%s" ';
+    $sql_args[] = $args['sfid'];
+  }
+  if (!empty($args['name'])) {
+    $where[] = ' name = "%s" ';
+    $sql_args[] = $args['name'];
+  }
+  if (!empty($args['drupal_type'])) {
+    $where[] = ' drupal_type = "%s" ';
+    $sql_args[] = $args['drupal_type'];
+  }
+  $sql .= ' WHERE ' . implode(' AND ', $where);
+  db_query($sql, $sql_args);
 }
 
 /**

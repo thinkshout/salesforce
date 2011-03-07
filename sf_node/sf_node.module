@@ -157,7 +157,7 @@ function sf_node_fieldmap_objects($type) {
 
       // Add a title field if the node type has one.
       if ($type->has_title) {
-        $objects['node_'. $type->type]['fields']['title'] = array('label' => check_plain($type->title_label), 'type' => SALESFORCE_FIELD_REQUIRED);
+        $objects['node_'. $type->type]['fields']['title'] = array('label' => check_plain($type->title_label));
       }
 
       // Add a body field if the node type has one.
@@ -374,6 +374,12 @@ function sf_node_salesforce_form(&$form_state, $node) {
     drupal_not_found();
   }
 
+  if(isset($form_state['storage']['confirm'])) {
+    // ALSO do $form definition here. Your final submit handler (after user clicks Yes, I Confirm) will only see $form_state info defined here. Form you create here passed as param1 to confirm_form  
+    $form['node'] = array('#type' => 'value', '#value' => $node);
+    return confirm_form($form, 'Are you sure you want to unlink this node from Salesforce?', 'node/' . $node->nid . '/salesforce', 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will not delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel'); //Had better luck leaving off last param 'name'
+  }
+  
   // Set the node page title.
   drupal_set_title(check_plain($node->title));
 
@@ -383,6 +389,22 @@ function sf_node_salesforce_form(&$form_state, $node) {
     '#type' => 'value',
     '#value' => $node->nid,
   );
+
+  if ($node->salesforce->sfid) {
+    // Retrieve the object from Salesforce.
+    $sf_data = salesforce_api_retrieve(array($node->salesforce->sfid), $node->salesforce->name);
+    // If $sf_data is empty, we assume the record is deleted. retrieve() does
+    // not return the ENTITY_IS_DELETED error that upsert() does.
+    if (!$sf_data && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
+      drupal_set_message(t('Unable to retrieve Salesforce data for record !sfid. Drupal and Salesforce records have been unlinked.', array('!sfid' => $node->salesforce->sfid)), 'warning');
+      // Unlink the object
+      salesforce_api_id_unlink(array('oid' => $node->nid, 'name' => $node->salesforce->name));
+      $node = node_load($node->nid, NULL, TRUE);
+    }
+    elseif (!$sf_data) {
+      drupal_set_message(t('Unable to retrieve Salesforce data for record !sfid.', array('!sfid' => $node->salesforce->sfid)), 'warning');
+    }
+  }
 
   // Display an export button if the node hasn't been exported before.
   if (!$node->salesforce->sfid) {
@@ -397,6 +419,22 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#type' => 'select',
       '#title' => t('Export fieldmap'),
       '#options' => salesforce_api_fieldmap_options('node_'. $node->type),
+    );
+    
+    $form['export']['manual_linking'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#title' => t('Manual linking'),
+    );
+    
+    $form['export']['manual_linking']['sfid'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Salesforce ID'),
+      '#description' => t('If this node already has a corresponding object
+      in Salesforce, enter the Salesforce ID to manually link the entities.'),
+      '#size' => 18,
+      '#maxlength' => 18,
     );
 
     $form['export']['export_node'] = array(
@@ -414,17 +452,6 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#type' => 'value',
       '#value' => $node->salesforce->name,
     );
-
-    // Retrieve the object from Salesforce.
-    $sf = salesforce_api_connect();
-    if (!$sf) {
-      if (user_access('administer salesforce')) {
-        drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
-      }
-      return array();
-    }
-
-    $sf_data = salesforce_api_retrieve(array($node->salesforce->sfid), $node->salesforce->name);
 
     // Load the fieldmap data.
     $map = salesforce_api_fieldmap_load($node->salesforce->name);
@@ -459,6 +486,11 @@ function sf_node_salesforce_form(&$form_state, $node) {
     $form['mapped']['import_values'] = array(
       '#type' => 'submit',
       '#value' => t('Import changes from Salesforce'),
+      '#attributes' => array('class' => 'sf-confirm'),
+    );
+    $form['mapped']['unlink'] = array(
+      '#type' => 'submit',
+      '#value' => t('Unlink from Salesforce object...'),
       '#attributes' => array('class' => 'sf-confirm'),
     );
 
@@ -541,7 +573,19 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
       else {
         drupal_set_message(t('An error occurred while importing the changes from Salesforce.  Check the watchdog for more information.'), 'error');
       }
-
+      break;
+    case $form_state['values']['unlink']:
+    case t('Unlink'):
+      if(!isset($form_state['storage']['confirm'])) {
+        $form_state['storage']['confirm'] = TRUE; 
+        $form_state['rebuild'] = TRUE;
+      }
+      else {
+        unset($form_state['storage']['confirm']);
+        $node = $form_state['values']['node'];
+        salesforce_api_id_unlink(array('oid' => $node->nid, 'name' => $node->salesforce->name));
+        drupal_set_message(t('The node !nid has been unlinked from Salesforce !sfid.', array('!nid' => $node->nid, '!sfid' => $node->salesforce->sfid)));
+      }
       break;
   }
 }
@@ -606,6 +650,35 @@ function sf_node_export($node, $name, $sfid = NULL) {
   }
 
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+
+  // If we got errors, handle them before proceeding
+  if (is_object($response->errors)) {
+    // If we got "Entity is deleted" and we're configured to unlink and upsert,
+    // do it.
+    if ($response->errors->statusCode == 'ENTITY_IS_DELETED'
+    // ENTITIY_IS_DELETED error is also returned if any lookup-field values
+    // reference deleted Salesforce Records. If the fields property references
+    // "Id" or if fields is empty, then we know that the the primary record was
+    // deleted. Otherwise we don't have a good way to react.
+    && ($response->errors->fields == 'Id' || empty($response->errors->fields))
+    && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
+      // If the entity is deleted, unlink ALL the linked drupal objects.
+      salesforce_api_id_unlink(array('sfid' => $object->Id));
+      $node->salesforce->sfid = $object->Id = NULL;
+
+      // Look for any matching records which we might want to update instead of
+      // creating duplicates. Assume that salesforce_api_search_for_duplicates()
+      // will never return a deleted record.
+      $matches = salesforce_api_search_for_duplicates('export', 'node', $node, $name);
+      if (!empty($matches)) {
+        $sfid = reset($matches);
+        $node->salesforce->sfid = $sfid;
+      }
+
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+      $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+    }
+  }
 
   // If the export was successful...
   if ($response->success) {

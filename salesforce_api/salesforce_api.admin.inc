@@ -113,19 +113,33 @@ function salesforce_api_settings_form($form_state) {
     '#collapsed' => TRUE,
     '#weight' => -9,
   );
-  $form['objects']['clear_cache'] = array(
+  $form['objects']['salesforce_api_entity_deleted_policy'] = array(
+    '#type' => 'select',
+    '#title' => t('Entity Deleted Policy'),
+    '#description' => t('When a Salesforce object is deleted, Drupal may encounter errors when trying to update any linked objects. This settings indicates how such errors should be handled. "Do Nothing" will cause Drupal to log such errors, but take no further action. "Unlink and Upsert" will cause Drupal to remove any existing link for the current object, and re-attempt the upsert.'),
+    '#options' => array(
+      SALESFORCE_DELETED_POLICY_UPSERT => t('Unlink and Upsert'),
+      SALESFORCE_DELETED_POLICY_NOOP => t('Do Nothing'),
+    ),
+    '#default_value' => variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT),
+  );
+  $form['objects']['cache'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Caching'),
+  );
+  $form['objects']['cache']['clear_cache'] = array(
     '#type'  => 'item',
     '#value' => t('Caching data improves performance, however your Drupal site will be unaware of any alterations made to your Salesforce installation unless the cached data is refreshed. Select the lifetime the object data after which the cache will be automatically refreshed.  To refresh all cached object data on your site, click the button below.'),
   );
   $period = drupal_map_assoc(array(32400, 43200, 86400, 172800, 259200, 604800, 1209600, 2419200, 4838400, 9676800), 'format_interval');
   $period[CACHE_PERMANENT] = t('<none>');
-  $form['objects']['salesforce_api_object_expire'] = array(
+  $form['objects']['cache']['salesforce_api_object_expire'] = array(
     '#type' => 'select',
     '#title' => t('Minimum cache lifetime'),
     '#options' => $period,
     '#default_value' => variable_get('salesforce_api_object_expire', CACHE_PERMANENT),
   );
-  $form['objects']['clear_cache_clear'] = array(
+  $form['objects']['cache']['clear_cache_clear'] = array(
     '#type' => 'submit',
     '#value' => t('Clear cached object data'),
     '#submit' => array('salesforce_api_cache_build'),
