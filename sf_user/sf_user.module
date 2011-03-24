@@ -455,15 +455,15 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   } else {
     $object->Id = $sfid;
   }
-
+  $fieldmap_name = $name;
   foreach (module_implements('salesforce_api_pre_export') as $module) {
     $function = $module . '_salesforce_api_pre_export';
-    $continue = $function($object, $name, $account->uid);
+    $continue = $function($object, $map, $account->uid);
     if ($continue === FALSE) {
       return;
     }
   }
-
+  
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
 
   // If we got errors, handle them before proceeding

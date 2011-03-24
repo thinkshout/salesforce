@@ -645,7 +645,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
 
   foreach (module_implements('salesforce_api_pre_export') as $module) {
     $function = $module . '_salesforce_api_pre_export';
-    $continue = $function($object, $name, $node->nid);
+    $continue = $function($object, $map, $node->nid);
     if ($continue === FALSE) {
       return;
     }
