@@ -573,8 +573,11 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
       $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
       // Get the value for the field from the handler function.
       $change = $drupal_field_import_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
-
-      $changes = array_merge($changes, $change);
+      if (is_array($changes) && is_array($change)) {
+        $changes = array_merge($changes, $change);
+      } else {
+        salesforce_api_log(SALESFORCE_LOG_ALL, t('@import_handler import handler did not return an array!'), array('@import_handler' => $drupal_field_import_handler), WATCHDOG_ERROR);
+      }
     }
     // Otherwise set the field on the export object to the value of the source
     // field if it's present on the source object.
