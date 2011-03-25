@@ -118,6 +118,9 @@ function sf_notifications_endpoint() {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'SalesForce Notifications: Empty request.');
     exit;
   }
+  
+  salesforce_api_log(SALESFORCE_LOG_ALL, 'New outbound message received from Salesforce. Contents: <pre>%content</pre>', array(print_r($content, TRUE)));
+  
 	$dom = new DOMDocument();
 	$dom->loadXML($content);
 	if (empty($dom) || !$dom->hasChildNodes()) {
