@@ -119,7 +119,7 @@ function sf_notifications_endpoint() {
     exit;
   }
   
-  salesforce_api_log(SALESFORCE_LOG_ALL, 'New outbound message received from Salesforce. Contents: <pre>%content</pre>', array(print_r($content, TRUE)));
+  salesforce_api_log(SALESFORCE_LOG_ALL, 'New outbound message received from Salesforce. Contents: <pre>%content</pre>', array('%content' => print_r($content, TRUE)));
   
 	$dom = new DOMDocument();
 	$dom->loadXML($content);
