@@ -91,30 +91,48 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         $salesforce = salesforce_api_id_load('node', $node->nid);
       }
 
-      if (empty($salesforce->name)) {
+      // If we have an existing link, attempt to load the assoc'd map.
+      if (!empty($salesforce->name)) {
+        $map = salesforce_api_fieldmap_load($salesforce->name);
+      }
+
+      // If the sf link wasn't found, or if it was found but assoc'd to a
+      // non-existent map, grab any maps assoc'd with this node type.
+      if (empty($salesforce->name) || empty($map)) {
         $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
         if (empty($maps)) {
           break;
         }
+      }
+      // Otherwise assign the single map as an array so we only have to write
+      // the proceeding logic once.
+      else {
+        $maps = array($map->name => $map);
+      }
 
-        foreach($maps as $map) {
-          $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
-          $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
-          if ((!$auto_create && $op == 'insert')
-          || (!$auto_update && $op == 'update')) {
-            unset($maps[$map->name]);
-          }
-        }
-        $map = reset($maps);
-        
-        // Use the first fieldmap.
-        $salesforce->name = $map->name;
-
-        // Check if there is more than one fieldmap in the result.
-        if (user_access('administer salesforce') and next($maps)) {
-          drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map->name)), 'warning');
+      foreach($maps as $map) {
+        $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+        $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+        if ((!$auto_create && $op == 'insert')
+        || (!$auto_update && $op == 'update')) {
+          unset($maps[$map->name]);
         }
       }
+
+      // If all our maps were unset, abort this procedure.
+      if (empty($maps)) {
+        break;
+      }
+
+      // Otherwise, use the first fieldmap.
+      $map = reset($maps);
+      $salesforce->name = $map->name;
+
+      // Check if there is more than one fieldmap in the result.
+      if (user_access('administer salesforce') and next($maps)) {
+        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map->name)), 'warning');
+      }
+
       // Finally, export the node to Salesforce.
       try {
         sf_node_export($node, $salesforce->name, $salesforce->sfid);
