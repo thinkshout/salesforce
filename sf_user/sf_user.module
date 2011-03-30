@@ -474,15 +474,15 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   } else {
     $object->Id = $sfid;
   }
-
+  $fieldmap_name = $name;
   foreach (module_implements('salesforce_api_pre_export') as $module) {
     $function = $module . '_salesforce_api_pre_export';
-    $continue = $function($object, $name, $account->uid);
+    $continue = $function($object, $map, $account->uid);
     if ($continue === FALSE) {
       return;
     }
   }
-
+  
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
 
   // If we got errors, handle them before proceeding
@@ -592,15 +592,16 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
       $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
       // Get the value for the field from the handler function.
       $change = $drupal_field_import_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
-
-      $changes = array_merge($changes, $change);
+      if (is_array($changes) && is_array($change)) {
+        $changes = array_merge($changes, $change);
+      } else {
+        salesforce_api_log(SALESFORCE_LOG_ALL, t('@import_handler import handler did not return an array!'), array('@import_handler' => $drupal_field_import_handler), WATCHDOG_ERROR);
+      }
     }
     // Otherwise set the field on the export object to the value of the source
     // field if it's present on the source object.
-    elseif (isset($sf_data->$sf_fieldname) && isset($account->$drupal_fieldname)) {
-      if ($account->$drupal_fieldname != $sf_data->$sf_fieldname) {
-        $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
-      }
+    elseif (isset($sf_data->$sf_fieldname) && !empty($drupal_fieldname)) {
+      $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
     }
   }
   

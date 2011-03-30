@@ -192,12 +192,14 @@ function hook_default_salesforce_field_maps($export = array()) {
  *   The fieldmap name used to create sf_object
  * @param string $drupal_id 
  *   The unique id of the drupal object associated with the sf_object, e.g. nid
+ * @param array $map
+ *   The fieldmap array provided by salesforce_api_fieldmap_load().
  * @return
  *   Implementing modules should return FALSE if the current export should NOT
  *   proceed. Note that this will prevent further processing of implementations
  *   of this hook.
  */
-function hook_salesforce_api_pre_export(&$sf_object, $name, $drupal_id) {
+function hook_salesforce_api_pre_export(&$sf_object, $map, $drupal_id) {
 
 }
 
