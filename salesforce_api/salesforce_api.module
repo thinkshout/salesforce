@@ -1488,6 +1488,13 @@ function salesforce_api_id_convert($sfid15) {
 }
 
 /**
+ * Implements hook_views_api
+ */
+function salesforce_api_views_api() {
+  return array('api' => 2);
+}
+
+/**
  * @addtogroup exportables
  * @{
  */
