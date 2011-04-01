@@ -1113,6 +1113,7 @@ function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
  *   The name of the fieldmap used to generate the export.
  * @return
  *   TRUE if was successfull in saving the link, FALSE otherwise.
+ * @todo salesforce_api_id_save_multi()
  */
 function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
   if ($oid) {
@@ -1193,6 +1194,7 @@ function salesforce_api_id_unlink($args) {
   }
   $sql .= ' WHERE ' . implode(' AND ', $where);
   db_query($sql, $sql_args);
+  module_invoke_all('salesforce_api_post_unlink', $args);
 }
 
 /**

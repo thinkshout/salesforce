@@ -581,7 +581,7 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
         drupal_set_message(t('Changes successfully exported to Salesforce.'));
       }
       else {
-        drupal_set_message(t('An error occurred while exporting the changes to Salesforce.  Check the watchdog for more information.'), 'error');
+        drupal_set_message(t('An error occurred while exporting the changes to Salesforce. Check the watchdog for more information.'), 'error');
       }
       break;
 
@@ -591,7 +591,7 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
         drupal_set_message(t('The node has been updated with values from Salesforce.'));
       }
       else {
-        drupal_set_message(t('An error occurred while importing the changes from Salesforce.  Check the watchdog for more information.'), 'error');
+        drupal_set_message(t('An error occurred while importing the changes from Salesforce. Check the watchdog for more information.'), 'error');
       }
       break;
     case $form_state['values']['unlink']:

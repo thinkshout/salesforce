@@ -16,6 +16,13 @@ function sf_queue_uninstall() {
 }
 
 /**
+ * Implementation of hook_disable().
+ */
+function sf_queue_disable() {
+  sf_queue_process_queue_force(FALSE);
+}
+
+/**
  * Implementation of hook_schema
  *
  */
@@ -101,13 +108,30 @@ function sf_queue_schema() {
       'sf_type' => array('sf_type'),
       'sf_op' => array('sf_op'),
       'created' => array('created'),
+      'fieldmap_drupal' => array('fieldmap_name', 'drupal_type'),
     ),
     'unique keys' => array(
       'name' => array('name'),
-      'fieldmap_drupal' => array('fieldmap_name', 'drupal_type'),
       ),
     'primary key' => array('id'),
   );
   return $schema;
 
 }
+
+function sf_queue_update_6201() {
+  $ret = array();
+ 
+  $schema = drupal_get_schema('salesforce_export_queue');
+  
+  if (isset($schema['unique keys']['fieldmap_drupal'])) {
+    db_drop_unique_key($ret, 'salesforce_export_queue', 'fieldmap_drupal');
+  }
+  
+  if (!isset($schema['indexes']['fieldmap_drupal'])) {
+    db_add_index($ret, 'salesforce_export_queue', 'fieldmap_drupal', array('fieldmap_name', 'drupal_type'));
+  }
+  
+  return $ret;
+}
+

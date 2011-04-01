@@ -293,6 +293,16 @@ function hook_salesforce_api_delete($sfid, $map, $drupal_id) {
 }
 
 /**
+ * Called after a link between Drupal and SF objects is removed. $args is the
+ * array of ids which were provided to salesforce_api_id_unlink().
+ * @see salesforce_api_id_unlink() for full explanation of arguments.
+ */
+function hook_salesforce_api_post_unlink($args) {
+  
+}
+
+
+/**
  * Override the default CCK export callback for a cck field type.
  *
  * @param object $node
