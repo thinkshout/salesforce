@@ -483,6 +483,12 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     }
   }
   
+  // If any modules altered the fieldmap, ensure that the new fieldmap name
+  // is used for the rest of the export.
+  if ($map->name != $name) {
+    $name = $map->name;
+  }
+  
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
 
   // If we got errors, handle them before proceeding

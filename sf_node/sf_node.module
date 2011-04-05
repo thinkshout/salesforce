@@ -668,6 +668,12 @@ function sf_node_export($node, $name, $sfid = NULL) {
       return;
     }
   }
+  
+  // If any modules altered the fieldmap, ensure that the new fieldmap name
+  // is used for the rest of the export.
+  if ($map->name != $name) {
+    $name = $map->name;
+  }
 
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
 
