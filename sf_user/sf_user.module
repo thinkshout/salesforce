@@ -529,7 +529,6 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       }
     }
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
-    return FALSE;
   }
   module_invoke_all('salesforce_api_post_export', $object, $name, $uid, $response);
   return $response->success;
