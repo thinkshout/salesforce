@@ -956,14 +956,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     // Ignore null values for non-nillable fields
     if (is_null($value) && !$nillable) {
       continue;
-    } elseif (is_null($value)) {
-      // Enterprise client can only nullify one field per transaction even with
-      // the proper values set in fieldsToNull. This is a bug in a 3rd-party
-      // library, beyond our control. In other words, this should be an array
-      // but in fact must be a string. This is going to get overwritten on
-      // every iteration of this loop, meaning that only one null field gets
-      // nullified per transaction.
-      $fieldsToNull = $sf_fieldname;
+    } elseif (!$value && $nillable) {
+      $fieldsToNull[] = $sf_fieldname;
       continue;
     }
 
