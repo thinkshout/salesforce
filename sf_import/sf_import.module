@@ -125,11 +125,10 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     while($row = db_fetch_array($result)) {
       $context['sandbox']['salesforce']['existing'][$row['sfid']] = $row['oid'];
     }
-    // Id always gets set in the SOQL query.
-    // Unset it here to avoid a SF SOAP fault on "duplicate fields".
-    unset($map->fields['Id']);
-    $soql = 'SELECT Id, ' 
-      . implode(', ', array_keys($map->fields)) 
+
+    $soql = 'SELECT '
+      // "Id" must be included in the SOQL query.
+      . implode(', ', array_keys($map->fields + array('Id' => '')))
       . ' FROM ' . $map->salesforce;
     if(!empty($extra['extra-where'])) {
       $soql .= ' WHERE ' . $extra['extra-where'];

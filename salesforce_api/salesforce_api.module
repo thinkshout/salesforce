@@ -1342,7 +1342,9 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
 function salesforce_api_cron() {
   $cache = cache_get('salesforce_api_sf_objects');
   // if the cache has already been delete or is expired then rebuild
-  if (!$cache || time() > $cache->expire) salesforce_api_cache_build();
+  if (!$cache || time() > $cache->expire) {
+    salesforce_api_cache_build();
+  }
   return;
 }
 
