@@ -173,6 +173,7 @@ function sf_user_fieldmap_objects($type) {
         'access' => array('label' => t('Last access timestamp')),
         'login' => array('label' => t('Last login timestamp')),
         'status' => array('label' => t('Account status')),
+        'picture' => array('label' => t('Picture')),
       ),
     );
 
