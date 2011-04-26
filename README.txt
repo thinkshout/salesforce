@@ -72,6 +72,9 @@ INSTALLATION
      The recommended method of installing is using git.
      $ git clone git://github.com/developerforce/Force.com-Toolkit-for-PHP.git
 
+     You can also use drush make:
+     $ drush make salesforce.make.example
+     
      Project homepage:
      https://github.com/developerforce/Force.com-Toolkit-for-PHP
 
