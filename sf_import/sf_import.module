@@ -94,7 +94,9 @@ function sf_import_create_batchjob($fieldmap, $extra = null) {
 function sf_import_batchjob_finalize($success, $results, $operations) {
   if($success) {
     drupal_set_message('Import complete.');
-    drupal_set_message(theme('item_list', $results));
+    if (count($results) > 0) {
+      drupal_set_message(theme('item_list', $results));
+    }
   } else {
     drupal_set_message('Import failed.');
   }
