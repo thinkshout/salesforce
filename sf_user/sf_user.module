@@ -508,7 +508,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
         $object->Id = reset($matches);
       }
 
-      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $uid, 'user/' . $uid));
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('user ' . $uid, 'user/' . $uid));
       $response = $sf->client->upsert('Id', array($object), $map->salesforce);
     }
   }
@@ -525,11 +525,11 @@ function sf_user_export($uid, $name, $sfid = NULL) {
         dsm($response);
       } else {
         if (user_access('administer salesforce')) {
-          drupal_set_message(print_r($response, 1), 'error');
+          drupal_set_message(t('Salesforce Suite export error: <pre>%response</pre>', array('%response' => print_r($response, 1))), 'error');
         }
       }
     }
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
   }
   module_invoke_all('salesforce_api_post_export', $object, $name, $uid, $response);
   return $response->success;

@@ -701,7 +701,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
         $node->salesforce->sfid = $sfid;
       }
 
-      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
       $response = $sf->client->upsert('Id', array($object), $map->salesforce);
     }
   }
@@ -717,10 +717,10 @@ function sf_node_export($node, $name, $sfid = NULL) {
       if (function_exists('dpm')) {
         dpm($response);
       } else {
-        drupal_set_message(print_r($response, 1), 'error');
+        drupal_set_message(t('Salesforce Suite export error: <pre>%response</pre>', array('%response' => print_r($response, 1))), 'error');
       }
     }
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
   }
   module_invoke_all('salesforce_api_post_export', $object, $map, $node->nid, $response);
   return $response->success;
