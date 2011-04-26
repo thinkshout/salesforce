@@ -201,19 +201,16 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   $function = 'sf_' . $type . '_import';
 
   if (function_exists($function)) {
-    $nid = $function($record, $map->name, $existing[$record['Id']]);
+    $oid = $function($record, $map->name, $existing[$record['Id']]);
   } else {
     $context['finished'] = TRUE;
     $context['success'] = FALSE;
     $context['results'][] = 'Could not find import function ' . $function;
   }
 
-  $context['results'][] = ($created ? 'Created' : 'Updated') . ' ' . l('node ' . $nid, 'node/' . $nid);
-  if($nid) {
+  if($oid) {
+    $context['results'][] = ($created ? 'Created' : 'Updated') . ' ' . l($type . ' ' . $oid, $type . '/' . $oid);
     $context['sandbox']['imported']++;
-    if($map->automatic == TRUE || $extra['extra-linked'] == TRUE) {
-      salesforce_api_id_save('node', $nid, $record['Id'], $map->name);
-    }
   }
 
   $context['sandbox']['progress']++;
