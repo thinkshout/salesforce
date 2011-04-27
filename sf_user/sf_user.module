@@ -567,7 +567,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   if (empty($sf_data)) {
     return FALSE;
   }
-  $sfid = $sf_data->Id;
+
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($name);
 
@@ -634,6 +634,9 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     $account = user_save($account, $changes);
     $create = TRUE;
   }
+
+  $sfid = $sf_data->Id;
+
   if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
   || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
     // Store the Salesforce ID for the node and return TRUE.

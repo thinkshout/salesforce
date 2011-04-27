@@ -758,7 +758,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
   if (empty($sf_data)) {
     return FALSE;
   }
-  $sfid = $sf_data->Id;
+
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($name);
   
@@ -820,6 +820,9 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
 
   $node->sf_node_skip_export = TRUE;
   node_save($node);
+
+  $sfid = $sf_data->Id;
+
   if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
     || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
     // Store the Salesforce ID for the node and return TRUE.
