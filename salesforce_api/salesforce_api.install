@@ -11,6 +11,7 @@
  */
 function salesforce_api_install() {
   drupal_install_schema('salesforce_api');
+  variable_set('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));  
 }
 
 /**
