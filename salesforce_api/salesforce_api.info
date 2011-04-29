@@ -1,3 +1,4 @@
+; $Id$
 name = Salesforce API
 description = Defines an API that enables modules to interact with the Salesforce server.
 dependencies[] = ctools

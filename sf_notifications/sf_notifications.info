@@ -1,4 +1,5 @@
-name = Salesforce Notifications - EXPERIMENTAL
+; $Id$
+name = Salesforce Notifications
 description = Responds to SOAP Outbound Messages from SalesForce.
 dependencies[] = salesforce_api
 package = Salesforce

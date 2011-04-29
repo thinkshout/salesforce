@@ -1,3 +1,4 @@
+; $Id$
 name = Salesforce Contrib
 description = Provides support to import/export data from contrib modules to/from SalesForce
 dependencies[] = salesforce_api
