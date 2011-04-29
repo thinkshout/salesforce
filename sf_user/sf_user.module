@@ -627,11 +627,27 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   // If the user exists, update the existing user.
   if ($account->uid) {
     $account = user_save($account, $changes);
+    if ($account == FALSE) {
+      // User account not saved
+      if (user_access('administer salesforce')) {
+        drupal_set_message("A user account could not be imported for update. A required field for Drupal may be missing. <pre>" . print_r($sf_data, TRUE) . "</pre>", 'error');
+      }
+      salesforce_api_log(SALESFORCE_LOG_ALL, t('A user account could not be imported for update. A required field for Drupal may be missing. <pre>%sf_data</pre>'), array('%sf_data' => print_r($sf_data, TRUE)), WATCHDOG_ERROR);
+      return FALSE;
+    }
     $create = FALSE;
   } else {
     // Pass a dummy account object for inserts.
     $account = (object)array('sf_user_skip_export' => TRUE, 'uid' => FALSE);
     $account = user_save($account, $changes);
+    if ($account == FALSE) {
+      // User account not saved
+      if (user_access('administer salesforce')) {
+        drupal_set_message("A user account could not be imported for creation. A required field for Drupal may be missing. <pre>" . print_r($sf_data, TRUE) . "</pre>", 'error');
+      }
+      salesforce_api_log(SALESFORCE_LOG_ALL, t('A user account could not be imported for creation. A required field for Drupal may be missing. <pre>%sf_data</pre>'), array('%sf_data' => print_r($sf_data, TRUE)), WATCHDOG_ERROR);
+      return FALSE;
+    }
     $create = TRUE;
   }
 
