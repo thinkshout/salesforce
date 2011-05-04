@@ -404,10 +404,16 @@ function sf_queue_handle_responses($responses, $dataset) {
 function sf_queue_handle_exception($e, $dataset) {
   // TODO: Parse the exception and take action on it
   $oids = array();
-  foreach ($dataset as $data) {
-    $oids[] = $data['oid'];  
+  if (is_array($dataset)) {
+    foreach ($dataset as $data) {
+      $oids[] = $data['oid'];  
+    }    
+  } else {
+    $oids[] = $dataset['oid'];
   }
-  db_query('UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($oids) . ')', $oids);
+  if (is_int($oid[0])) {
+    db_query('UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($oids) . ')', $oids);    
+  }
 }
 
 /**
