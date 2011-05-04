@@ -1,4 +1,9 @@
 <?php
+// $Id$
+
+/**
+ * @file
+ */
 
 function sf_queue_admin_form() {
   $sf_queue_count = db_result(db_query("SELECT count(created) FROM {salesforce_export_queue}"));
@@ -17,7 +22,7 @@ function sf_queue_admin_form() {
     }
     $rows[] = array(
       'data' => array(
-        l("View", "admin/reports/sf_queue/view/" . $sf_queue_item->id) . ' ' . l("Delete", "admin/reports/sf_queue/delete/" . $sf_queue_item->id),
+        l(t('View'), "admin/reports/sf_queue/view/" . $sf_queue_item->id) . ' ' . l(t('Delete'), "admin/reports/sf_queue/delete/" . $sf_queue_item->id),
         $sf_queue_item->sf_op,
         $sf_queue_item->id,
         $sf_queue_item->attempts,
@@ -38,12 +43,12 @@ function sf_queue_admin_form() {
     else {
       $output .= "There are " . count($rows) . " items in the export queue.";
     }
-    $output .= "<br>" . l("Process queued items now", "admin/reports/sf_queue/processqueue");
+    $output .= "<br />" . l(t('Process queued items now'), "admin/reports/sf_queue/processqueue");
   }
   else {
     $output .= "There are no items in the export queue.";
   }
-  
+
   return $output;
 }
 
@@ -78,15 +83,15 @@ function  sf_queue_admin_view($qid) {
       );
     }
   }
-  
+
   if (count($rows) == 0) {
     drupal_goto("admin/reports/sf_queue/");
   }
 
   $output  = theme('table', $header, $rows);
-  $output .= l("Delete this queue item", "admin/reports/sf_queue/delete/" . $qid) . "<br>";
-  $output .= l("Return to queue list", "admin/reports/sf_queue"); 
-  
+  $output .= l(t('Delete this queue item'), "admin/reports/sf_queue/delete/" . $qid) . "<br />";
+  $output .= l(t('Return to queue list'), "admin/reports/sf_queue");
+
   return $output;
 }
 
@@ -94,7 +99,7 @@ function  sf_queue_admin_delete_confirm(&$form_state, $qid) {
   if (strlen($qid) == 0 || !is_numeric($qid)) {
     drupal_goto("admin/reports/sf_queue/");
   }
-  
+
   $results = db_fetch_object(db_query("SELECT count(id) count FROM {salesforce_export_queue} WHERE id=" . $qid));
   if ($results->count == 0) {
     drupal_goto("admin/reports/sf_queue/");
@@ -109,12 +114,12 @@ function  sf_queue_admin_delete_confirm(&$form_state, $qid) {
   $question = t('Are you sure you want to delete the queue item number ' . $qid . '?');
 
   return confirm_form($form,
-  	                  $question,
-  	                  "admin/reports/sf_queue",
-  	                  "<em>" . $question . "</em><br>" . t('This action cannot be undone.'),
-  	                  t('Delete'),
-  	                  t('Cancel')
-  	                 );
+                      $question,
+                      "admin/reports/sf_queue",
+                      "<em>" . $question . "</em><br />" . t('This action cannot be undone.'),
+                      t('Delete'),
+                      t('Cancel')
+                     );
 }
 
 function sf_queue_admin_delete_confirm_submit($form, &$form_state) {

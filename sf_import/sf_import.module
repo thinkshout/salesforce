@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 define('SALESFORCE_PATH_ADMIN_IMPORT', SALESFORCE_PATH_ADMIN . '/import');
 
@@ -15,12 +15,12 @@ function sf_import_menu() {
 }
 
 function sf_import_create(&$form_state, $ongoing = 0) {
- 
+
   $form = $options = array();
 
   $fieldmaps = salesforce_api_salesforce_field_map_load_all();
   foreach ($fieldmaps as $map) {
-    $options[$map->name] = 
+    $options[$map->name] =
       salesforce_api_fieldmap_object_label('salesforce', $map->salesforce) . ' => ' .
       salesforce_api_fieldmap_object_label('drupal', $map->drupal);
   }
@@ -30,13 +30,13 @@ function sf_import_create(&$form_state, $ongoing = 0) {
     drupal_set_message(t('You have not yet defined any fieldmaps.'), 'error');
     return;
   }
-  
+
   // Admin should select a mapping to use for the import.
   $form['label'] = array(
       '#type' => 'markup',
-      '#value' => '<h2>'.($ongoing ? t('Create Ongoing Import') : t('Perform One-time Import')).'</h2>',
+      '#value' => '<h2>' . ($ongoing ? t('Create Ongoing Import') : t('Perform One-time Import')) . '</h2>',
   );
-  
+
   $form['fieldmap'] = array(
       '#title' => t('Please choose a fieldmap to use for the import'),
       '#description' => t('Salesforce Object => Drupal Content Type'),
@@ -44,26 +44,26 @@ function sf_import_create(&$form_state, $ongoing = 0) {
       '#required' => TRUE,
       '#options' => $options,
   );
-  
+
   $form['extra-options'] = array(
       '#title' => t('Extra Options'),
       '#type' => 'fieldset',
       '#collasible' => FALSE,
       '#collapsed' => FALSE,
     );
-  
+
   $form['extra-options']['extra-linked'] = array(
       '#title' => t('Link nodes to Salesforce objects on import?'),
       '#description' => t('Links the imported Drupal node to the salesforce object allowing the ability to issue manual syncronization of data to and from Drupal and Salesforce business objects. Linking also enables the ability to use node reference to relate business objects in Drupal (like accounts to contacts).'),
       '#type' => 'checkbox',
   );
-  
+
   $form['extra-options']['extra-where'] = array(
       '#title' => t('Conditions'),
       '#description' => t("<strong>Advanced</strong>: Enter any additional SOQL \"Where\" conditions to use for this import query, e.g.<br /><code>Type != 'One-to-One Individual'</code><br />Learn more here: <a href='http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_soql_select_conditionexpression.htm' target='_blank'>Salesforce.com SOQL Where clause</a>"),
       '#type' => 'textarea',
   );
-  
+
   $form['ongoing'] = array('#type' => 'value', '#value' => $ongoing);
   $form['submit'] = array('#type' => 'submit', '#value' => 'submit');
 
@@ -72,33 +72,34 @@ function sf_import_create(&$form_state, $ongoing = 0) {
 
 function sf_import_create_submit($form, &$form_state, $ongoing = 0) {
   // Create a new batch job to do the import
-  
+
   $extra_options = array();
   $extra_options['extra-linked'] = $form_state['values']['extra-linked'];
   $extra_options['extra-where'] = $form_state['values']['extra-where'];
-  
+
   $batch = sf_import_create_batchjob($form_state['values']['fieldmap'], $extra_options);
   batch_set($batch);
 }
 
-function sf_import_create_batchjob($fieldmap, $extra = null) {
+function sf_import_create_batchjob($fieldmap, $extra = NULL) {
   $params = array('fieldmap_key' => $fieldmap, 'extra' => $extra);
   return array(
     'title' => t('Importing'),
     'operations' => array(
       array('sf_import_batchjob', $params)),
     'finished' => 'sf_import_batchjob_finalize',
-  );  
+  );
 }
 
 function sf_import_batchjob_finalize($success, $results, $operations) {
-  if($success) {
-    drupal_set_message('Import complete.');
+  if ($success) {
+    drupal_set_message(t('Import complete.'));
     if (count($results) > 0) {
       drupal_set_message(theme('item_list', $results));
     }
-  } else {
-    drupal_set_message('Import failed.');
+  }
+  else {
+    drupal_set_message(t('Import failed.'));
   }
 }
 
@@ -109,7 +110,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $context['sandbox'] = array();
     $context['sandbox']['progress'] = 0;
     $map = salesforce_api_fieldmap_load( $fieldmap_key );
-    if(empty($map)) {
+    if (empty($map)) {
       $context['finished'] = 1;
       $context['message'] = t('Invalid fieldmap.');
       return;
@@ -118,13 +119,13 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $context['sandbox']['salesforce']['map'] = $map;
 
     // Load the object definitions.
-    $context['sandbox']['salesforce']['drupal_object'] = 
+    $context['sandbox']['salesforce']['drupal_object'] =
       salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
-    // $context['sandbox']['salesforce']['salesforce_object'] = 
+    // $context['sandbox']['salesforce']['salesforce_object'] =
     //   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
     $sql = 'SELECT oid, sfid FROM {salesforce_object_map} WHERE name = "%s"';
     $result = db_query($sql, $map->name);
-    while($row = db_fetch_array($result)) {
+    while ($row = db_fetch_array($result)) {
       $context['sandbox']['salesforce']['existing'][$row['sfid']] = $row['oid'];
     }
 
@@ -132,7 +133,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
       // "Id" must be included in the SOQL query.
       . implode(', ', array_keys($map->fields + array('Id' => '')))
       . ' FROM ' . $map->salesforce;
-    if(!empty($extra['extra-where'])) {
+    if (!empty($extra['extra-where'])) {
       $soql .= ' WHERE ' . $extra['extra-where'];
     }
     try {
@@ -143,7 +144,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
       $context['message'] = $e->getMessage();
         return;
     }
-    if(empty($query->records)) {
+    if (empty($query->records)) {
         $context['finished'] = 1;
       $context['message'] = 'Empty resultset returned from Salesforce query.';
     }
@@ -151,13 +152,14 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $context['sandbox']['position'] = 0;
     $context['sandbox']['imported'] = 0;
     $context['finished'] = 0;
-  } 
+  }
 
   $map = $context['sandbox']['salesforce']['map'];
   $query = $context['sandbox']['salesforce']['query'];
   if (array_key_exists('existing', $context['sandbox']['salesforce'])) {
       $existing = $context['sandbox']['salesforce']['existing'];
-  } else {
+  }
+  else {
       $existing = '';
   }
   $drupal_object = $context['sandbox']['salesforce']['drupal_object'];
@@ -180,19 +182,19 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
 
   // Do ONE record at a time so we don't go over the max execution limit.
   $record = $query_array['records'][$pos];
-  if($context['sandbox']['progress'] >= $size || empty($record)) {
+  if ($context['sandbox']['progress'] >= $size || empty($record)) {
     $context['finished'] = 1;
     $context['message'] = 'Imported ' . $context['sandbox']['imported'] . ' SalesForce records.';
     return;
   }
   // For some reason, writing the SObject to session data destroys the object.
   // Cast it to an array to recover the corrected object.
-  if(!is_array($record)) {
+  if (!is_array($record)) {
     $record = get_object_vars($record);
   }
   $created = isset($existing[$record['Id']]);
   $type = $map->drupal;
-  // "node" mappings are like "node_contenttype". 
+  // "node" mappings are like "node_contenttype".
   // others are like "user", "uc_order", etc.
   if (strpos($type, 'node_') === 0) {
     $type = 'node';
@@ -202,13 +204,14 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
 
   if (function_exists($function)) {
     $oid = $function($record, $map->name, $existing[$record['Id']]);
-  } else {
+  }
+  else {
     $context['finished'] = TRUE;
     $context['success'] = FALSE;
     $context['results'][] = 'Could not find import function ' . $function;
   }
 
-  if($oid) {
+  if ($oid) {
     $context['results'][] = ($created ? 'Created' : 'Updated') . ' ' . l($type . ' ' . $oid, $type . '/' . $oid);
     $context['sandbox']['imported']++;
   }

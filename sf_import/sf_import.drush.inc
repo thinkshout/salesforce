@@ -1,7 +1,9 @@
 <?php
+// $Id$
+
 /**
  * @file
- * Drush integration for Salesforce Import module. Provides commands to import 
+ * Drush integration for Salesforce Import module. Provides commands to import
  * Salesforce data.
  */
 
@@ -40,7 +42,7 @@ function sf_import_drush_command() {
     'description' => 'Initiate a salesforce import.',
     'arguments' => array(
       'fieldmap' => 'Name of the fieldmap to import',
-    ),    
+    ),
     'options' => array(
       '--where'  => 'Enter any additional SOQL "Where" conditions',
       '--start'  => 'Start importing at given row',
@@ -63,7 +65,7 @@ function _drush_sf_import_show_fieldmaps() {
 
   $table = array(array('Key', 'Import', 'Description'));
   foreach ($fieldmaps as $k => $map) {
-    $name = salesforce_api_fieldmap_object_label('salesforce', $map->salesforce) 
+    $name = salesforce_api_fieldmap_object_label('salesforce', $map->salesforce)
             . ' => '
             . salesforce_api_fieldmap_object_label('drupal', $map->drupal);
 
@@ -111,7 +113,7 @@ function drush_sf_import_sf_fieldmap($fieldmap_key = NULL) {
       $sf = salesforce_api_connect();
       $sql = "
         SELECT COUNT(Id)
-        FROM " .$map->salesforce . "
+        FROM " . $map->salesforce . "
       ";
       $where = drush_get_option('where', FALSE);
       if ($where) {
@@ -120,7 +122,7 @@ function drush_sf_import_sf_fieldmap($fieldmap_key = NULL) {
 
       $query = $sf->client->query($sql);
     } catch (Exception $e) {
-      drush_set_error("Error while querying number of Salesforce entries : " 
+      drush_set_error("Error while querying number of Salesforce entries : "
         . $e->getMessage());
       return;
     }
@@ -178,7 +180,7 @@ function drush_sf_import($fieldmap_key) {
     WHERE  name = '%s'",
     $map->name);
 
-  while($row = db_fetch_array($result)) {
+  while ($row = db_fetch_array($result)) {
     $existing[$row['sfid']] = $row['oid'];
   }
 
@@ -211,11 +213,11 @@ function drush_sf_import($fieldmap_key) {
     drush_die("Could not find import function for type " . $type);
   }
 
-  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map->drupal); 
+  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
   if ($count == -1) {
     $count = count($query->records) - $start;
   }
-  if ($start < 0 
+  if ($start < 0
       || ($start + $count) > count($query->records)) {
     drush_die("Start/count exceed possible rows. Number of rows in Salesfoce : " . count($query->records));
   }
@@ -247,16 +249,16 @@ function drush_sf_import($fieldmap_key) {
         FROM   {node}
         WHERE  nid = %d",
         $existing[$record->Id]
-      )); 
+      ));
       if ($changed >= strtotime($record->LastModifiedDate)) {
         drush_print("Record Id $record->Id has not been modified (date check)");
         $skipped++;
-        continue; 
+        continue;
       }
     }
 
     $oid = FALSE;
-    try {  
+    try {
       $oid = $function($record->Id, $map->name, $existing[$record->Id]);
     } catch (Exception $e) {
       drush_log("Error importing record $record->Id : " . $e->getMessage(), 'error');
@@ -265,18 +267,20 @@ function drush_sf_import($fieldmap_key) {
     if (!$oid) {
       drush_log("Error importing record $record->Id", 'error');
       $failed++;
-    } else {
+    }
+    else {
       if (!$exists) {
         drush_print("Created object $oid");
         $created++;
-      } else {
+      }
+      else {
         drush_print("Updated object $oid");
         $updated++;
       }
 
       $imported++;
     }
-  } 
+  }
 
   // Report
   drush_print("Number of created objects : " . $created);

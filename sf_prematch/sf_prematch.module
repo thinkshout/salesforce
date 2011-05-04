@@ -14,7 +14,7 @@ define('SF_PREMATCH_PRIMARY', 3);
  * Implementation of hook_menu().
  */
 function sf_prematch_menu() {
-  $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));  
+  $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));
   $items[SALESFORCE_PATH_FIELDMAPS . '/prematching'] = array(
     'title' => 'Prematching',
     'description' => 'Create or edit prematching for a fieldmap.',
@@ -55,7 +55,7 @@ function sf_prematch_menu() {
  * prematching overview and fieldmap prematching. The latter only applies when
  * we're looking at a specific fieldmap, so hide the former if this is the case.
  */
-function _sf_prematch_fieldmap_access($perm, $op = 'edit', $id = null) {
+function _sf_prematch_fieldmap_access($perm, $op = 'edit', $id = NULL) {
   if (empty($id) || $id == 'prematching') {
     return user_access('administer salesforce');
   }
@@ -83,7 +83,7 @@ function sf_prematch_form_alter(&$form, $form_state, $form_id) {
   }
   if ($form_id == 'salesforce_api_fieldmap_edit_form') {
     if (!array_search('sf_prematch_fieldmap_edit_form_submit', $form['#submit'])) {
-    	$form['#submit'][] = 'sf_prematch_fieldmap_edit_form_submit';
+      $form['#submit'][] = 'sf_prematch_fieldmap_edit_form_submit';
     }
   }
 }
@@ -96,7 +96,7 @@ function sf_prematch_form_alter(&$form, $form_state, $form_id) {
  */
 function sf_prematch_fieldmap_edit_form_submit($form, &$form_state) {
   $fieldmap = $form_state['values']['fieldmap_index'];
-	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/' . $fieldmap . '/prematching';
+  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/' . $fieldmap . '/prematching';
 }
 
 /**
@@ -113,7 +113,7 @@ function sf_prematch_match_by_load($fieldmap) {
     $result = db_query("SELECT * FROM {salesforce_prematch} WHERE name = '%s'", $fieldmap);
     $match_by = db_fetch_array($result);
     if (count($match_by)) {
-    	$match_bys[$fieldmap] = $match_by;
+      $match_bys[$fieldmap] = $match_by;
     }
     else {
       $match_bys[0] = array(
@@ -154,20 +154,22 @@ function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
     $fieldmap_name = $map;
   }
   $match_by = sf_prematch_match_by_load($fieldmap_name);
-  if ($match_by['primary_field'] == '') { return; }
+  if ($match_by['primary_field'] == '') {
+    return;
+  }
   require_once drupal_get_path('module', 'sf_prematch') . '/sf_prematch.main.inc';
   $map = salesforce_api_fieldmap_load($fieldmap_name);
-	switch ($action) {
-	 	case 'export':
-	 		$result = sf_prematch_export($object_type, $object, $map, $match_by);
-	 	  break;
-	 	case 'import':
-	 		$result = sf_prematch_import($object_type, $object, $map, $match_by);
-	 	  break;
-	 	default:
-	 	  $result = null;
-	 	  break;
-	}
+  switch ($action) {
+    case 'export':
+      $result = sf_prematch_export($object_type, $object, $map, $match_by);
+      break;
+    case 'import':
+      $result = sf_prematch_import($object_type, $object, $map, $match_by);
+      break;
+    default:
+      $result = NULL;
+      break;
+  }
 
-	return $result;
+  return $result;
 }

@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -47,13 +48,13 @@ function salesforce_api_settings_form($form_state) {
   );
 
   if (!empty($username)) {
-    $form['api']['#description'] = 
+    $form['api']['#description'] =
       t('Salesforce.com connection is working properly.<br />Edit the following
         fields only if you wish to change your login credentials.');
     $form['api']['salesforce_api_reset_credentials'] = array(
       '#type' => 'checkbox',
       '#title' => 'Clear SalesForce API credentials',
-      '#description' => 'Erase current API login settings. Clearing SalesForce 
+      '#description' => 'Erase current API login settings. Clearing SalesForce
         API credentials will prevent your website from connecting to Salesforce.com',
       );
   }
@@ -74,7 +75,7 @@ function salesforce_api_settings_form($form_state) {
     );
   }
   else {
-    $form['api']['encryption']['status']['#value'] = 
+    $form['api']['encryption']['status']['#value'] =
       '<span class="error">AES is not installed - encryption is not
       available.</span>';
   }
@@ -163,7 +164,7 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
   && !file_exists($values['salesforce_api_dir_wsdl'])) {
     form_set_error('salesforce_api_dir_wsdl', 'The specified WSDL directory does not exist. Please make sure the directory exists, check your input, and try again.');
   }
-  
+
   // If we are clearing values, no need to continue validation.
   if ($values['salesforce_api_reset_credentials']) {
     return;
@@ -191,13 +192,14 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
     // If we got errors already no need to continue with validation.
     return;
   }
-  
+
   // If we are setting or resetting values, test the connection.
   $connection = salesforce_api_connect($values['salesforce_api_username'],
     $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE);
   if (is_object($connection)) {
-     drupal_set_message(t('Connection established. SalesForce credentials updated.'));
-  } else {
+    drupal_set_message(t('Connection established. SalesForce credentials updated.'));
+  }
+  else {
     drupal_set_message(
       t('Resetting SalesForce API credentials failed.'), 'error');
     form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
@@ -212,38 +214,38 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
 function salesforce_api_settings_form_submit($form, &$form_state) {
   // If the user hit "Save Configuration" and the required field
   // salesforce_api_password is blank, try to get it from variables
-  
+
   $values = $form_state['values'];
-  
-  if (variable_get('salesforce_api_dir_wsdl', FALSE) 
+
+  if (variable_get('salesforce_api_dir_wsdl', FALSE)
     != $values['salesforce_api_dir_wsdl']) {
-    drupal_set_message('Please make sure the WSDL directory is writeable, and upload a valid Salesforce .xml or .wsdl file.');
+    drupal_set_message(t('Please make sure the WSDL directory is writeable, and upload a valid Salesforce .xml or .wsdl file.'));
     $form_state['redirect'] = array(
       SALESFORCE_PATH_UPDATE_WSDL,
       'destination=' . SALESFORCE_PATH_ADMIN);
     ini_set('soap.wsdl_cache_enabled',  '0');
   }
-    
+
   if ($values['salesforce_api_reset_credentials']) {
     unset($form_state['values']['salesforce_api_reset_credentials']);
     foreach (array('username', 'password', 'token', 'encrypt') as $value) {
       variable_del('salesforce_api_' . $value);
       unset($form_state['values']['salesforce_api_' . $value]);
     }
-    
-    drupal_set_message('SalesForce credentials reset.');
+
+    drupal_set_message(t('Salesforce credentials reset.'));
     // If credentials were reset, we don't need to continue to encryption.
     return;
   }
 
-  if ($values['salesforce_api_encrypt'] && 
+  if ($values['salesforce_api_encrypt'] &&
   !empty($values['salesforce_api_username'])) {
     $form_state['values']['salesforce_api_username'] =
-     salesforce_api_encrypt($values['salesforce_api_username']);
-   $form_state['values']['salesforce_api_password'] =
-     salesforce_api_encrypt($values['salesforce_api_password']);
-   $form_state['values']['salesforce_api_token'] =
-     salesforce_api_encrypt($values['salesforce_api_token']);
+      salesforce_api_encrypt($values['salesforce_api_username']);
+    $form_state['values']['salesforce_api_password'] =
+      salesforce_api_encrypt($values['salesforce_api_password']);
+    $form_state['values']['salesforce_api_token'] =
+      salesforce_api_encrypt($values['salesforce_api_token']);
  }
 }
 
@@ -257,7 +259,7 @@ function salesforce_api_fieldmap_admin() {
   $content = '';
 
   $maps = salesforce_api_salesforce_field_map_load_all();
-  foreach($maps as $map) {
+  foreach ($maps as $map) {
     $rows[] = _salesforce_api_field_admin_format_row($map);
   }
 
@@ -280,7 +282,7 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
   // Add the row to the table with the basic operations.
   $base = SALESFORCE_PATH_FIELDMAPS .'/'. $map->name;
 
-  switch($map->type) {
+  switch ($map->type) {
     case 'Normal':
       $operations = array(
         l(t('edit'), $base . '/edit'),
@@ -313,11 +315,11 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
   if ($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) {
     $auto[] = t('Create');
   }
-  
+
   if ($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) {
     $auto[] = t('Update');
   }
-  
+
   if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
     $auto[] = t('Delete');
   }
@@ -586,8 +588,8 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Get a list of Salesforce-side fields which haven't been set yet.
   asort($target['fields']);
   $not_set = array('');
-  foreach($target['fields'] as $key => $field) {
-    if(!isset($map->fields[$key])) {
+  foreach ($target['fields'] as $key => $field) {
+    if (!isset($map->fields[$key])) {
       $not_set[$key] = $field['label'];
     }
   }
@@ -617,7 +619,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   // Adding fixed value option
   $options = salesforce_api_fieldmap_field_options($source);
   $options['Other']['fixed'] = t('Fixed value');
-  if( user_access('use php for salesforce fixed values') ) {
+  if ( user_access('use php for salesforce fixed values') ) {
     $options['Other']['php'] = t('Evaluate PHP');
   }
 
@@ -668,9 +670,10 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     if (is_array($map->fields[$key])) {
       $default_key = $map->fields[$key]['type'];
       $default_value = $map->fields[$key]['value'];
-    } else {
+    }
+    else {
       $default_key = $map->fields[$key];
-      $default_value = null;
+      $default_value = NULL;
     }
 
     // Add the select list for the associated target field.
@@ -695,7 +698,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     if ($type != 'required') {
       $row['remove'][$key] = array(
         '#type' => 'markup',
-        '#value' => l('Remove', SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/remove/' . $key),
+        '#value' => l(t('Remove'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/remove/' . $key),
       );
     }
     else {
@@ -780,7 +783,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
     $map->automatic |= $auto;
   }
 
-  if(!empty($form_state['values']['new_field'])) {
+  if (!empty($form_state['values']['new_field'])) {
     $field = $form_state['values']['new_field'];
     $map->fields[$field] = '';
   }
@@ -796,7 +799,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
       break;
 
     case $form_state['values']['submit']:
-      if(!empty($form_state['values']['new_field'])) {
+      if (!empty($form_state['values']['new_field'])) {
         drupal_set_message(t('Field added.'));
       }
       else {
@@ -805,7 +808,7 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
         $form_state['rebuild'] = FALSE;
       }
       break;
-    
+
   }
 }
 
@@ -828,7 +831,7 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
   }
   elseif (($object_definition['fields'][$field]['type'] & SALESFORCE_FIELD_CREATEABLE)
     && !($object_definition['fields'][$field]['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
-          
+
     // Don't allow removing required fields.
     $success = FALSE;
   }
@@ -955,7 +958,7 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
   $file = $dir . '/enterprise.wsdl.xml';
 
   // Make sure the directory is writeable
-  if( !file_check_directory( $dir ) ) {
+  if ( !file_check_directory( $dir ) ) {
     form_set_error($source, t('Server directory %directory is not writeable. Please check directory permissions or contact a site admin to correct this.', array('%directory' => $dir)));
     return;
   }
@@ -989,8 +992,8 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
   }
 
   // Check the file extension
-  $pathParts = pathinfo($_FILES['files']['name'][$source]);
-  if(!in_array(strtolower($pathParts['extension']), array('xml', 'wsdl'))) {
+  $path_parts = pathinfo($_FILES['files']['name'][$source]);
+  if (!in_array(strtolower($path_parts['extension']), array('xml', 'wsdl'))) {
     form_set_error($source, t('File upload error: invalid file extension. Please upload a file with an XML or WSDL  extension.'));
   }
 
@@ -1016,14 +1019,14 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
   drupal_flush_all_caches();
 
   // Clear WSDL files from tmp directory
-  $tmpDir = file_directory_temp();
+  $tmp_dir = file_directory_temp();
   // Make sure the tmp dir exists and isn't the root, just to be safe
-  if(is_dir($tmpDir) && $tmpDir != '/') {
-    $cmd = 'rm -f ' . $tmpDir . '/*.wsdl.*';
-    $execOutput = exec($cmd);
+  if (is_dir($tmp_dir) && $tmp_dir != '/') {
+    $cmd = 'rm -f ' . $tmp_dir . '/*.wsdl.*';
+    $exec_output = exec($cmd);
   }
 
-  drupal_set_message('Drupal cache emptied and WSDL files removed from temp directory.');
+  drupal_set_message(t('Drupal cache emptied and WSDL files removed from temp directory.'));
 
 }
 
@@ -1046,7 +1049,7 @@ function salesforce_api_admin_object(&$form_state) {
   $defaults = array_keys(salesforce_api_fieldmap_objects());
 
   $options = $disabled = array();
-  foreach($response->types as $obj) {
+  foreach ($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label .')';
   }
 
@@ -1133,12 +1136,12 @@ function theme_salesforce_api_object_options($element = NULL) {
       $element['objects'][$key]['#description'] =
         t('This object is in use by one or more fieldmaps and cannot be disabled.');
     }
-    $link = l('configure', SALESFORCE_PATH_OBJECT .'/'. $key);
+    $link = l(t('configure'), SALESFORCE_PATH_OBJECT .'/'. $key);
     if ($_SESSION['objects_error'][$key]) {
       $element['objects'][$key]['#prefix'] = '<div class="error">';
       $element['objects'][$key]['#suffix'] = '</div>';
       unset($_SESSION['objects_error'][$key]);
-      $link = l('re-map fields', SALESFORCE_PATH_OBJECT .'/'. $key);
+      $link = l(t('re-map fields'), SALESFORCE_PATH_OBJECT .'/'. $key);
     }
     $element['objects'][$key]['#title'] .= ' | '. $link;
   }

@@ -118,29 +118,29 @@ function sf_notifications_endpoint() {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'SalesForce Notifications: Empty request.');
     exit;
   }
-  
+
   salesforce_api_log(SALESFORCE_LOG_ALL, 'New outbound message received from Salesforce. Contents: <pre>%content</pre>', array('%content' => print_r($content, TRUE)));
-  
-	$dom = new DOMDocument();
-	$dom->loadXML($content);
-	if (empty($dom) || !$dom->hasChildNodes()) {
+
+  $dom = new DOMDocument();
+  $dom->loadXML($content);
+  if (empty($dom) || !$dom->hasChildNodes()) {
     salesforce_api_log(SALESFORCE_LOG_NONE,
       'SalesForce Notifications: Failed to parse into DOM Document.
       <pre>' . print_r($content) . '</pre>');
-		_sf_notifications_soap_respond('false');
+    _sf_notifications_soap_respond('false');
     exit;
-	}
-	$resultArray = _sf_notifications_parse_message($dom);
-	$ret = _sf_notifications_handle_message($resultArray);
+  }
+  $resultArray = _sf_notifications_parse_message($dom);
+  $ret = _sf_notifications_handle_message($resultArray);
 
-	// Sends SOAP response to SFDC
-	if ($ret) {
-		_sf_notifications_soap_respond('true');
-	}
-	else {
-		_sf_notifications_soap_respond('false');
-	}
-	exit;
+  // Sends SOAP response to SFDC
+  if ($ret) {
+    _sf_notifications_soap_respond('true');
+  }
+  else {
+    _sf_notifications_soap_respond('false');
+  }
+  exit;
 }
 
 /**
@@ -278,7 +278,7 @@ function sf_notifications_delete_record($object_record) {
         $success = FALSE;
       }
       break;
-    
+
   }
   return $success;
 }
@@ -369,12 +369,12 @@ function _sf_notifications_parse_message($domDoc) {
   $objects = $domDoc->getElementsByTagName('sObject');
   foreach ($objects as $sObjectNode) {
     $sObjType = $sObjectNode->getAttribute('xsi:type');
-    if (substr_count($sObjType,'sf:')) {
-      $sObjType = substr($sObjType,3);
-  	}
+    if (substr_count($sObjType, 'sf:')) {
+      $sObjType = substr($sObjType, 3);
+    }
     $obj = new SObject();
     $obj->type = $sObjType;
-    $elements = $sObjectNode->getElementsByTagNameNS('urn:sobject.enterprise.soap.sforce.com','*');
+    $elements = $sObjectNode->getElementsByTagNameNS('urn:sobject.enterprise.soap.sforce.com', '*');
     $obj->fieldnames = array();
     foreach ($elements as $node) {
       if ($node->localName == 'Id') {
@@ -383,13 +383,13 @@ function _sf_notifications_parse_message($domDoc) {
       }
       $fieldname = $node->localName;
       $obj->fields->$fieldname = $node->nodeValue;
-      array_push($obj->fieldnames,$fieldname);
+      array_push($obj->fieldnames, $fieldname);
     }
-  	$result['salesforce'][$obj->Id] = $obj;
+    $result['salesforce'][$obj->Id] = $obj;
   }
 
-  $dbresult = db_query('SELECT name, oid, sfid, drupal_type FROM salesforce_object_map WHERE sfid IN (' . db_placeholders($sfids, 'varchar') . ')', $sfids);
-  while($row = db_fetch_array($dbresult)) {
+  $dbresult = db_query('SELECT name, oid, sfid, drupal_type FROM {salesforce_object_map} WHERE sfid IN (' . db_placeholders($sfids, 'varchar') . ')', $sfids);
+  while ($row = db_fetch_array($dbresult)) {
     $result['drupal'][] = $row;
   }
 
@@ -401,17 +401,17 @@ function _sf_notifications_parse_message($domDoc) {
  *
  * @param boolean $tf
  * @return void
-**/
+ **/
 function _sf_notifications_soap_respond($tf = 'true') {
 print '<?xml version = "1.0" encoding = "utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-		<soapenv:Body>
-			<notifications xmlns="http://soap.sforce.com/2005/09/outbound">
-				<Ack>'.$tf.'</Ack>
-			</notifications>
-		</soapenv:Body>
+    <soapenv:Body>
+      <notifications xmlns="http://soap.sforce.com/2005/09/outbound">
+        <Ack>' . $tf . '</Ack>
+      </notifications>
+    </soapenv:Body>
 </soapenv:Envelope>
 ';
 }

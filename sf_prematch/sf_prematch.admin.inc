@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -23,12 +24,12 @@ function sf_prematch_list() {
   // Loop through all the indexed field maps.
   while ($map = db_fetch_object($result)) {
     if ($map->rule) {
-    	$op_add_edit =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/' .  $map->name . '/prematching');
-    	$op_del = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching/delete');
+      $op_add_edit =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/' .  $map->name . '/prematching');
+      $op_del = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching/delete');
     }
     else {
-    	$op_add_edit =  l(t('add prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching');
-    	$op_del = '';
+      $op_add_edit =  l(t('add prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching');
+      $op_del = '';
     }
     // Add the row to the table with the basic operations.
     $rows[] = array(
@@ -47,7 +48,7 @@ function sf_prematch_list() {
   }
 
   $output = theme('table', $header, $rows);
-	return $output;
+  return $output;
 }
 
 // Displays the form to add prematching to a fieldmap.
@@ -94,9 +95,9 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
   $form['primary'] = array(
     '#type' => 'select',
     '#title' => t('Primary Field'),
-    '#options' => sf_prematch_get_options($map, true),
+    '#options' => sf_prematch_get_options($map, TRUE),
     '#default_value' => $prematch['primary_field'],
-    '#required' => true,
+    '#required' => TRUE,
   );
 
   $options = sf_prematch_get_options($map);
@@ -106,14 +107,14 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
     '#title' => t('Secondary Field'),
     '#options' => $options,
     '#default_value' => $prematch['secondary_field'],
-    '#required' => false,
+    '#required' => FALSE,
   );
   $form['tertiary'] = array(
     '#type' => 'select',
     '#title' => t('Tertiary Field'),
     '#options' => $options,
     '#default_value' => $prematch['tertiary_field'],
-    '#required' => false,
+    '#required' => FALSE,
   );
 
   // Create options to use in rule select, primary only first
@@ -129,7 +130,7 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
     '#title' => t('Only consider a match if the found object matches'),
     '#options' => $options,
     '#default_value' => $prematch['rule'],
-    '#required' => true,
+    '#required' => TRUE,
   );
 
   $form['submit'] = array(
@@ -153,14 +154,14 @@ function sf_prematch_edit_form_submit($form, &$form_state) {
     db_query("INSERT INTO {salesforce_prematch} (name, primary_field, secondary_field, tertiary_field, rule) VALUES ('%s', '%s', '%s', '%s', %d)", $values['name'], $values['primary'], $values['secondary'], $values['tertiary'], $values['rule']);
   }
   else {
-  	db_query("UPDATE {salesforce_prematch} SET primary_field = '%s', secondary_field = '%s', tertiary_field = '%s', rule = %d WHERE name = '%s'", $values['primary'], $values['secondary'], $values['tertiary'], $values['rule'], $values['name']);
+    db_query("UPDATE {salesforce_prematch} SET primary_field = '%s', secondary_field = '%s', tertiary_field = '%s', rule = %d WHERE name = '%s'", $values['primary'], $values['secondary'], $values['tertiary'], $values['rule'], $values['name']);
   }
 
   // Display a message.
   drupal_set_message(t('The changes have been saved.'));
 
   // Redirect to fieldmap list or prematching page.
-	$form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
+  $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
 
 function sf_prematch_delete_form(&$form_state, $fieldmap) {
@@ -204,20 +205,22 @@ function sf_prematch_delete_form_submit($form, &$form_state) {
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/prematching';
 }
 
-function sf_prematch_get_options($map, $required = false) {
+function sf_prematch_get_options($map, $required = FALSE) {
   // Extract terms from $map.
   if ($map->actions == 'import') {
-  	$terms = array_keys($map->fields);
+    $terms = array_keys($map->fields);
   }
   else {
-  	$terms = array_values($map->fields);
+    $terms = array_values($map->fields);
   }
   sort($terms);
 
   // Build terms into ordered options to use in select.
   $options = array();
   // Start with empty option if select is not required.
-  if (!$required) { $options[] = ''; }
+  if (!$required) {
+    $options[] = '';
+  }
 
   // Add terms to options, making key = value so form value is key not integer.
   foreach ($terms as $term) {
@@ -227,7 +230,7 @@ function sf_prematch_get_options($map, $required = false) {
         $term = substr($term, 0, 50) . ' ...';
       }
     }
-  	$options[$term] = $term;
+    $options[$term] = $term;
   }
 
   return $options;

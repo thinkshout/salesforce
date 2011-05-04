@@ -55,7 +55,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'load':
       $node->salesforce = salesforce_api_id_load('node', $node->nid);
       break;
-      
+
     case 'delete':
       $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
       $map = current($maps);
@@ -73,7 +73,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           salesforce_api_delete_salesforce_objects($node->salesforce->sfid);
         }
       }
-      salesforce_api_delete_object_map('node_'.$node->type, $node->uid);
+      salesforce_api_delete_object_map('node_' . $node->type, $node->uid);
       break;
 
     case 'update':
@@ -83,10 +83,10 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         break;
       }
 
-      // If this is an update, and the node already has a salesforce mapping, 
-      // try to load it. If the load fails, we need to fetch the appropriate 
+      // If this is an update, and the node already has a salesforce mapping,
+      // try to load it. If the load fails, we need to fetch the appropriate
       // fieldmap. Either way, we're upserting the salesforce record.
-      $salesforce = (object)array('name' => null, 'sfid' => null);
+      $salesforce = (object)array('name' => NULL, 'sfid' => NULL);
       if ($node->nid) {
         $salesforce = salesforce_api_id_load('node', $node->nid);
       }
@@ -110,7 +110,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         $maps = array($map->name => $map);
       }
 
-      foreach($maps as $map) {
+      foreach ($maps as $map) {
         $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
         $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
         if ((!$auto_create && $op == 'insert')
@@ -137,20 +137,20 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       try {
         sf_node_export($node, $salesforce->name, $salesforce->sfid);
       } catch (Exception $e) {
-        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
       }
       break;
   }
 }
 
 /**
- * Implementation of hook_content_fieldapi
+ * Implementation of hook_content_fieldapi()
  * Delete a field from a Salesforce fieldmap when the field instance is deleted.
  */
 function sf_node_content_fieldapi($op, $field) {
-  switch($op) {
+  switch ($op) {
     case 'delete instance':
-      salesforce_api_fieldmap_field_delete($field['field_name'], 'node_'.$field['type_name']);
+      salesforce_api_fieldmap_field_delete($field['field_name'], 'node_' . $field['type_name']);
       break;
   }
 }
@@ -234,20 +234,20 @@ function sf_node_fieldmap_objects($type) {
             $import_handler = '_sf_node_import_cck_' . $field['type'];
           }
 
-          if($field['widget']['type'] == 'optionwidgets_onoff') {
-            $export_handler = $export_handler 
-              ? $export_handler 
+          if ($field['widget']['type'] == 'optionwidgets_onoff') {
+            $export_handler = $export_handler
+              ? $export_handler
               : '_sf_node_export_cck_checkbox';
           }
           else {
-            $export_handler = $export_handler 
-              ? $export_handler 
+            $export_handler = $export_handler
+              ? $export_handler
               : '_sf_node_export_cck_default';
           }
           $import_handler = $import_handler
             ? $import_handler
             : '_sf_node_import_cck_default';
-          
+
           foreach ($field['columns'] as $column => $data) {
             $key = $field['field_name'];
             $my_label = check_plain($field['widget']['label']);
@@ -255,7 +255,7 @@ function sf_node_fieldmap_objects($type) {
               $key .= ':' . $column;
               $my_label .= " ($column)";
             }
-            $my_group = t('@group: @label', 
+            $my_group = t('@group: @label',
               array('@group' => $group, '@label' => $field['widget']['label']));
             $objects[$index]['fields'][$key] = array(
               'group' => $my_group,
@@ -317,12 +317,12 @@ function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_de
         }
       }
       else {
-         $data[0][$column] = $sf_data->$sf_fieldname;
+        $data[0][$column] = $sf_data->$sf_fieldname;
       }
     break;
     default:
       // Unless handled above in this switch, we don't yet handle fields with multiple values.
-       $data[0][$column] = $sf_data->$sf_fieldname;
+      $data[0][$column] = $sf_data->$sf_fieldname;
     break;
   }
   $node->$drupal_fieldname = $data;
@@ -331,8 +331,8 @@ function _sf_node_import_cck_default(&$node, $drupal_fieldname, $drupal_field_de
 // Returns the email address of the node's author, given by node->uid
 function _sf_node_export_author_email($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   $uid = $node->uid;
-  if(!is_numeric($uid)) {
-    return null;
+  if (!is_numeric($uid)) {
+    return NULL;
   }
   return db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $uid));
 }
@@ -377,12 +377,13 @@ function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definitio
   $node->teaser = node_teaser($import_data);
 }
 
-// Assume that a on/off checkbox is a SF boolean, which can never be set to null
+// Assume that a on/off checkbox is a SF boolean, which can never be set to NULL
 function _sf_node_export_cck_checkbox($source, $field) {
   $data = $source->$field;
-  if(empty($source->{$field}[0]['value'])) {
+  if (empty($source->{$field}[0]['value'])) {
     return 'false';
-  } else {
+  }
+  else {
     return 1;
   }
 }
@@ -394,12 +395,12 @@ function sf_node_salesforce_form(&$form_state, $node) {
     drupal_not_found();
   }
 
-  if(isset($form_state['storage']['confirm'])) {
-    // ALSO do $form definition here. Your final submit handler (after user clicks Yes, I Confirm) will only see $form_state info defined here. Form you create here passed as param1 to confirm_form  
+  if (isset($form_state['storage']['confirm'])) {
+    // ALSO do $form definition here. Your final submit handler (after user clicks Yes, I Confirm) will only see $form_state info defined here. Form you create here passed as param1 to confirm_form
     $form['node'] = array('#type' => 'value', '#value' => $node);
     return confirm_form($form, 'Are you sure you want to unlink this node from Salesforce?', 'node/' . $node->nid . '/salesforce', 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will not delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel'); //Had better luck leaving off last param 'name'
   }
-  
+
   // Set the node page title.
   drupal_set_title(check_plain($node->title));
 
@@ -440,14 +441,14 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#title' => t('Export fieldmap'),
       '#options' => salesforce_api_fieldmap_options('node_'. $node->type),
     );
-    
+
     $form['export']['manual_linking'] = array(
       '#type' => 'fieldset',
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#title' => t('Manual linking'),
     );
-    
+
     $form['export']['manual_linking']['sfid'] = array(
       '#type' => 'textfield',
       '#title' => t('Salesforce ID'),
@@ -596,8 +597,8 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
       break;
     case $form_state['values']['unlink']:
     case t('Unlink'):
-      if(!isset($form_state['storage']['confirm'])) {
-        $form_state['storage']['confirm'] = TRUE; 
+      if (!isset($form_state['storage']['confirm'])) {
+        $form_state['storage']['confirm'] = TRUE;
         $form_state['rebuild'] = TRUE;
       }
       else {
@@ -653,7 +654,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
       salesforce_api_id_save('node', $node->nid, $sfid, $name);
       $node = node_load($node->nid, NULL, TRUE);
     }
-    if (empty($node)) { 
+    if (empty($node)) {
       $node = (object)array();
     }
   }
@@ -668,7 +669,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
       return;
     }
   }
-  
+
   // If any modules altered the fieldmap, ensure that the new fieldmap name
   // is used for the rest of the export.
   if ($map->name != $name) {
@@ -701,7 +702,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
         $node->salesforce->sfid = $sfid;
       }
 
-      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
       $response = $sf->client->upsert('Id', array($object), $map->salesforce);
     }
   }
@@ -716,11 +717,12 @@ function sf_node_export($node, $name, $sfid = NULL) {
     if (user_access('administer salesforce')) {
       if (function_exists('dpm')) {
         dpm($response);
-      } else {
+      }
+      else {
         drupal_set_message(t('Salesforce Suite export error: <pre>%response</pre>', array('%response' => print_r($response, 1))), 'error');
       }
     }
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/'.$node->nid));
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
   }
   module_invoke_all('salesforce_api_post_export', $object, $map, $node->nid, $response);
   return $response->success;
@@ -761,7 +763,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
 
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($name);
-  
+
   // Load the object definitions.
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
@@ -809,7 +811,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
       $node->$drupal_fieldname = $sf_data->$sf_fieldname;
     }
   }
-  
+
   foreach (module_implements('salesforce_api_pre_import') as $module) {
     $function = $module . '_salesforce_api_pre_import';
     $continue = $function($node, $name, $sf_data);
@@ -839,7 +841,7 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
  *
  */
 function sf_node_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
-  return array('salesforce_api_default_node_page_campaign_field_map' => 
+  return array('salesforce_api_default_node_page_campaign_field_map' =>
   (object)array(
       'disabled' => FALSE,
       'name' => 'salesforce_api_default_node_page_campaign_field_map',
@@ -847,6 +849,6 @@ function sf_node_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
       'drupal' => 'node_page',
       'salesforce' => 'Campaign',
       'fields' => array('Name' => 'title', 'Description' => 'body'),
-      'description' => 'This is a simple example fieldmap to get you started using the Salesforce API.',      
+      'description' => 'This is a simple example fieldmap to get you started using the Salesforce API.',
     ));
 }

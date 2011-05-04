@@ -261,7 +261,7 @@ function salesforce_api_perm() {
  * Access callback
  *
  */
-function _salesforce_fieldmap_access($perm, $op = 'edit', $id = null) {
+function _salesforce_fieldmap_access($perm, $op = 'edit', $id = NULL) {
   if (empty($id)) {
     return FALSE;
   }
@@ -311,12 +311,12 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
   $username = $username ? $username : $default_username;
   $password = $password
     ? $password
-    : ($encrypted 
+    : ($encrypted
         ? salesforce_api_decrypt(variable_get('salesforce_api_password', ''))
         : variable_get('salesforce_api_password', ''));
   $token = $token
     ? $token
-    : ($encrypted 
+    : ($encrypted
         ? salesforce_api_decrypt(variable_get('salesforce_api_token', ''))
         : variable_get('salesforce_api_token', ''));
 
@@ -367,9 +367,9 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
  * Helper function for salesforce_api_connect(). You should probably not call
  * this function directly
  *
- * @param string $username 
- * @param string $password 
- * @param string $token 
+ * @param string $username
+ * @param string $password
+ * @param string $token
  * @return Salesforce Client object
  */
 
@@ -623,7 +623,7 @@ function salesforce_api_fieldmap_load($fieldmap) {
  * @see sf_node/sf_node.module:sf_node_content_fieldapi
  * @todo I'm sure this can be done more elegantly, but I can't spend anymore braincells on it right now.
  */
-function salesforce_api_fieldmap_field_delete($fieldname, $drupal_type = null, $salesforce_type = null) {
+function salesforce_api_fieldmap_field_delete($fieldname, $drupal_type = NULL, $salesforce_type = NULL) {
   if ($drupal_type && $salesforce_type) {
     $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map} WHERE drupal = "%s" AND salesforce = "%s"', $drupal_type, $salesforce_type);
   }
@@ -697,7 +697,8 @@ function salesforce_api_fieldmap_clone($fieldmap) {
 function salesforce_api_fieldmap_delete($fieldmap) {
   if (is_string($fieldmap)) {
     $name = $fieldmap;
-  } else {
+  }
+  else {
     $name = db_result(db_query('SELECT name FROM {salesforce_field_map} WHERE fieldmap = %d', $fieldmap));
   }
   if (empty($name)) {
@@ -739,8 +740,12 @@ function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL) {
   $maps = salesforce_api_salesforce_field_map_load_all();
 
   foreach ($maps as $map) {
-    if ($drupal && $map->drupal != $drupal) { continue; }
-    if ($salesforce && $map->salesforce != $salesforce) { continue; }
+    if ($drupal && $map->drupal != $drupal) {
+      continue;
+    }
+    if ($salesforce && $map->salesforce != $salesforce) {
+      continue;
+    }
     if (is_array($map)) {
       $map = (object)$map;
     }
@@ -929,7 +934,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
           }
           break;
         case 'php':
-          if(isset($map->fields[$sf_fieldname]['value'])) {
+          if (isset($map->fields[$sf_fieldname]['value'])) {
             $value = htmlentities(eval($map->fields[$sf_fieldname]['value']));
           }
           break;
@@ -956,7 +961,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     // Ignore null values for non-nillable fields
     if (is_null($value) && !$nillable) {
       continue;
-    } elseif (!$value && $nillable) {
+    }
+    elseif (!$value && $nillable) {
       $fieldsToNull[] = $sf_fieldname;
       continue;
     }
@@ -975,7 +981,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'boolean':
         if (empty($value)) {
           $object->$sf_fieldname = 0;
-        } else {
+        }
+        else {
           $object->$sf_fieldname = 1;
         }
         break;
@@ -986,7 +993,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         $time = strtotime($value);
         if (empty($time)) {
           $errors[] = array('message' => 'Salesforce cannot accept empty values for @type fields on fieldname @fieldname: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
-        } else {
+        }
+        else {
           // The export handler should have handled this, but reformat to
           // DATE_ATOM, just in case.
           $object->$sf_fieldname  = gmdate(DATE_ATOM, $time);
@@ -996,7 +1004,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'email':
         if (salesforce_api_valid_email_address($value)) {
           $object->$sf_fieldname  = $value;
-        } else {
+        }
+        else {
           $errors[] = array('message' => 'Invalid email address provided for Salesforce export on fieldname @fieldname: @value', 'vars' => array('@fieldname' => $sf_fieldname, '@value' => $value));
           continue;
         }
@@ -1008,7 +1017,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'double':
         if (is_numeric($value)) {
           $object->$sf_fieldname = $value;
-        } else {
+        }
+        else {
           $errors[] = array('message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
         }
         break;
@@ -1017,7 +1027,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'id':
         if (!is_sfid($value)) {
           $errors[] = array('message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
-        } else {
+        }
+        else {
           $object->$sf_fieldname  = $value;
         }
         break;
@@ -1120,53 +1131,54 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
       salesforce_api_log(SALESFORCE_LOG_ALL, 'Successfully linked Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
       return TRUE;
     }
-  } else {
-    salesforce_api_log(SALESFORCE_LOG_ALL, 'Failed to link Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);  
+  }
+  else {
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'Failed to link Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
     return FALSE;
   }
 }
 
 /**
- * Removes a link between a Salesforce record and a Drupal object. Arguments 
+ * Removes a link between a Salesforce record and a Drupal object. Arguments
  * correspond to the columns in the salesforce_object_map table
  *
  * @param array $args
- *   Associative array of criteria for deletion. These criteria will be AND'ed 
+ *   Associative array of criteria for deletion. These criteria will be AND'ed
  *   together to create a sql DELETE query. Keys are:
  *     - 'oid'
  *        drupal id of the object (nid, uid, etc).
- * 
+ *
  *     - 'name'
  *        machine name of the fieldmap corresponding to this linkage.
  *        'name' or 'drupal_type' MUST be set.
- * 
+ *
  *     - 'drupal_type'
- *        type of drupal object corresponding to this linkage. 
+ *        type of drupal object corresponding to this linkage.
  *        e.g. "node", "user", etc.
  *        'name' or 'drupal_type' MUST be set.
- * 
+ *
  *     - 'sfid'
  *        the salesforce id of the object
- * 
+ *
  *  Keys can be supplied in various combinations, but $args must not be empty.
  *  EITHER "oid" must be set along with "drupal_type" or "name"
  *  OR
  *  "sfid" must be set
- * 
+ *
  *  In other words, minimal valid key combinations are:
  *    - 'sfid'
  *    - 'drupal_type', 'oid'
  *    - 'name', 'oid'
  */
 function salesforce_api_id_unlink($args) {
-  $valid_args = 
+  $valid_args =
     !empty($args['sfid'])
-    || (!empty($args['oid']) 
+    || (!empty($args['oid'])
         && (!empty($args['drupal_type']) || !empty($args['name'])));
   if (!$valid_args) {
     return FALSE;
   }
-  
+
   $sql = "DELETE FROM {salesforce_object_map} ";
   $sql_args = array();
   $where = array();
@@ -1352,23 +1364,24 @@ function salesforce_api_cron() {
  * Wrapper for SOAP SforceBaseClient::describeSObject
  * Given an sf object type, return the SF Object definition
  * @param string type : the machine-readable name of the SF object type
-**/
+ **/
 function salesforce_api_describeSObject($type) {
   if (!is_string($type)) {
     if (user_access('administer salesforce')) {
       drupal_set_message(t('DescribeSObject expects a string. ' . gettype($type) . ' received.'), 'error');
     }
-    return false;
+    return FALSE;
   }
 
   $objects = salesforce_api_describeSObjects($type);
-  if(!empty($objects[$type])) {
+  if (!empty($objects[$type])) {
     return $objects[$type];
-  } else {
+  }
+  else {
     if (user_access('administer salesforce')) {
       drupal_set_message(t('DescribeSObject failed to find ' . $type), 'error');
     }
-    return false;
+    return FALSE;
   }
 }
 
@@ -1387,7 +1400,7 @@ function salesforce_api_describeSObjects($types) {
     if (user_access('administer salesforce')) {
       drupal_set_message(t('DescribeSObjects expects an array. ' . gettype($types) . ' received.'), 'error');
     }
-    return false;
+    return FALSE;
   }
   $types = array_filter($types);
 
@@ -1462,7 +1475,7 @@ function salesforce_api_id_compare($a, $b) {
 /**
  * Converts a 15-character Salesforce ID to 18-character ID.
  *
- * @param string $sfid15 
+ * @param string $sfid15
  * @return case-insensitive 18-character Salesforce ID
  */
 function salesforce_api_id_convert($sfid15) {
@@ -1481,7 +1494,7 @@ function salesforce_api_id_convert($sfid15) {
     $map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
     $extra .= substr($map, base_convert(strrev($bits), 2, 10), 1);
   }
-   
+
   return $sfid15 . $extra;
 }
 
@@ -1529,7 +1542,7 @@ function salesforce_api_salesforce_field_map_save(&$map) {
 
 function salesforce_api_export_salesforce_field_map($fieldmap) {
   $map = salesforce_api_salesforce_field_map_load($fieldmap);
-  drupal_set_title('Export Fieldmap');
+  drupal_set_title(t('Export Fieldmap'));
   $code = salesforce_api_salesforce_field_map_export($map);
   return drupal_get_form('ctools_export_form', $code, 'Export Fieldmap');
 }
@@ -1655,7 +1668,7 @@ function salesforce_api_import_salesforce_field_map_submit($form, &$form_state) 
 
 /**
  * Wrappers for encryption lib. Right now only AES encryption is supported.
- * If/when other methods are supported, this abstraction layer will make the 
+ * If/when other methods are supported, this abstraction layer will make the
  * transition easier.
  */
 function salesforce_api_decrypt($value) {

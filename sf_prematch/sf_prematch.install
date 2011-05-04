@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -42,14 +43,14 @@ function sf_prematch_schema() {
         'description' => 'Secondary field or object name for use in prematching.',
         'type' => 'varchar',
         'length' => 128,
-        'not null' => false,
+        'not null' => FALSE,
         'default' => '',
       ),
       'tertiary_field' => array(
         'description' => 'Tertiary field or object name for use in prematching.',
         'type' => 'varchar',
         'length' => 128,
-        'not null' => false,
+        'not null' => FALSE,
         'default' => '',
       ),
       'rule' => array(
@@ -75,11 +76,11 @@ function sf_prematch_update_1() {
   $ret = array();
   if (!db_column_exists('salesforce_field_map', 'name')) {
     $ret[] = array('success' => FALSE, 'query' => 'N/A');
-    drupal_set_message('There are still updates to be run: Update for sf_prematch was not run. Please run update.php again to complete this update.', 'warning');
+    drupal_set_message(t('There are still updates to be run: Update for sf_prematch was not run. Please run update.php again to complete this update.'), 'warning');
   }
   db_add_column($ret, 'salesforce_prematch', 'name', 'varchar(255)');
   $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map}');
-  while($row = db_fetch_array($result)) {
+  while ($row = db_fetch_array($result)) {
     $sql = 'UPDATE {salesforce_prematch} SET name = "%s" WHERE fieldmap = %d';
     $update_result = db_query($sql, $name, $fieldmap);
     $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));

@@ -97,7 +97,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         unset($sf_user_skip_export);
         break;
       }
-      $salesforce = (object)array('name' => null, 'sfid' => null);
+      $salesforce = (object)array('name' => NULL, 'sfid' => NULL);
       if ($account->uid) {
         $salesforce = salesforce_api_id_load('user', $account->uid);
       }
@@ -121,7 +121,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         $maps = array($map->name => $map);
       }
 
-      foreach($maps as $map) {
+      foreach ($maps as $map) {
         $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
         $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
         if ((!$auto_create && $op == 'insert')
@@ -149,7 +149,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         sf_user_export($account->uid, $salesforce->name, $salesforce->sfid);
       }
       catch (Exception $e) {
-        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/' . $account->uid));
       }
       break;
   }
@@ -184,7 +184,7 @@ function sf_user_fieldmap_objects($type) {
 
       // Loop through the fields and add them to the Drupal user object.
       while ($field = db_fetch_array($result)) {
-        if($field['type'] != 'date') {
+        if ($field['type'] != 'date') {
           $objects['user']['fields'][$field['name']] = array(
             'label' => t('@category: @title', array('@category' => $field['category'], '@title' => $field['title'])),
             'group' => t('Profile fields'),
@@ -211,9 +211,9 @@ function sf_user_salesforce_form(&$form_state, $account) {
     drupal_not_found();
   }
 
-  if(isset($form_state['storage']['confirm'])) {
+  if (isset($form_state['storage']['confirm'])) {
     $form['account'] = array('#type' => 'value', '#value' => $account);
-    return confirm_form($form, 'Are you sure you want to unlink this user from Salesforce?', 'user/' . $account->uid . '/salesforce', 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will <strong>not</strong> delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel'); 
+    return confirm_form($form, 'Are you sure you want to unlink this user from Salesforce?', 'user/' . $account->uid . '/salesforce', 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will <strong>not</strong> delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel');
   }
 
   // Set the user page title.
@@ -229,7 +229,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
   if ($account->salesforce->sfid) {
     // Retrieve the object from Salesforce.
     $sf_data = salesforce_api_retrieve(array($account->salesforce->sfid), $account->salesforce->name);
-    
+
     if (!$sf_data && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
       // Unlink the object
       salesforce_api_id_unlink(array('oid' => $account->uid, 'name' => $account->salesforce->name));
@@ -264,7 +264,7 @@ function sf_user_salesforce_form(&$form_state, $account) {
       '#collapsed' => TRUE,
       '#title' => t('Manual linking'),
     );
-    
+
     $form['export']['manual_linking']['sfid'] = array(
       '#type' => 'textfield',
       '#title' => t('Salesforce ID'),
@@ -414,8 +414,8 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
       break;
     case $form_state['values']['unlink']:
     case t('Unlink'):
-      if(!isset($form_state['storage']['confirm'])) {
-        $form_state['storage']['confirm'] = TRUE; 
+      if (!isset($form_state['storage']['confirm'])) {
+        $form_state['storage']['confirm'] = TRUE;
         $form_state['rebuild'] = TRUE;
       }
       else {
@@ -425,7 +425,7 @@ function sf_user_salesforce_form_submit($form, &$form_state) {
         drupal_set_message(t('The user !uid has been unlinked from Salesforce record !sfid.', array('!uid' => $account->uid, '!sfid' => $account->salesforce->sfid)));
       }
       break;
-  
+
   }
 }
 
@@ -472,7 +472,8 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       $account->salesforce = array('sfid' => $sfid, 'name' => $name);
       salesforce_api_id_save('user', $account->uid, $sfid, $name);
     }
-  } else {
+  }
+  else {
     $object->Id = $sfid;
   }
   $fieldmap_name = $name;
@@ -483,20 +484,20 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       return;
     }
   }
-  
+
   // If any modules altered the fieldmap, ensure that the new fieldmap name
   // is used for the rest of the export.
   if ($map->name != $name) {
     $name = $map->name;
   }
-  
+
   $response = $sf->client->upsert('Id', array($object), $map->salesforce);
 
   // If we got errors, handle them before proceeding
   if (is_object($response->errors)) {
     // If we got "Entity is deleted" and we're configured to unlink and upsert,
     // do it. @see sf_node_export()
-    if ($response->errors->statusCode == 'ENTITY_IS_DELETED' 
+    if ($response->errors->statusCode == 'ENTITY_IS_DELETED'
     && ($response->errors->fields == 'Id' || empty($response->errors->fields))
     && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
       salesforce_api_id_unlink(array('sfid' => $object->Id));
@@ -523,13 +524,14 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     if (user_access('administer salesforce')) {
       if (function_exists('dsm')) {
         dsm($response);
-      } else {
+      }
+      else {
         if (user_access('administer salesforce')) {
           drupal_set_message(t('Salesforce Suite export error: <pre>%response</pre>', array('%response' => print_r($response, 1))), 'error');
         }
       }
     }
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/'.$account->uid));
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/' . $account->uid));
   }
   module_invoke_all('salesforce_api_post_export', $object, $name, $uid, $response);
   return $response->success;
@@ -600,7 +602,8 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
       $change = $drupal_field_import_handler($account, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition);
       if (is_array($changes) && is_array($change)) {
         $changes = array_merge($changes, $change);
-      } else {
+      }
+      else {
         salesforce_api_log(SALESFORCE_LOG_ALL, t('@import_handler import handler did not return an array!'), array('@import_handler' => $drupal_field_import_handler), WATCHDOG_ERROR);
       }
     }
@@ -610,7 +613,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
       $changes[$drupal_fieldname] = $sf_data->$sf_fieldname;
     }
   }
-  
+
   foreach (module_implements('salesforce_api_pre_import') as $module) {
     $function = $module . '_salesforce_api_pre_import';
     $continue = $function($account, $name, $sf_data, $changes);
@@ -630,20 +633,21 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     if ($account == FALSE) {
       // User account not saved
       if (user_access('administer salesforce')) {
-        drupal_set_message("A user account could not be imported for update. A required field for Drupal may be missing. <pre>" . print_r($sf_data, TRUE) . "</pre>", 'error');
+        drupal_set_message(t('A user account could not be imported for update. A required field for Drupal may be missing. <pre>%sf_data</pre>', array('%sf_data' => print_r($sf_data, TRUE))), 'error');
       }
-      salesforce_api_log(SALESFORCE_LOG_ALL, t('A user account could not be imported for update. A required field for Drupal may be missing. <pre>%sf_data</pre>'), array('%sf_data' => print_r($sf_data, TRUE)), WATCHDOG_ERROR);
+      salesforce_api_log(SALESFORCE_LOG_ALL, t('A user account could not be imported for update. A required field for Drupal may be missing. <pre>%sf_data</pre>', array('%sf_data' => print_r($sf_data, TRUE))), WATCHDOG_ERROR);
       return FALSE;
     }
     $create = FALSE;
-  } else {
+  }
+  else {
     // Pass a dummy account object for inserts.
     $account = (object)array('sf_user_skip_export' => TRUE, 'uid' => FALSE);
     $account = user_save($account, $changes);
     if ($account == FALSE) {
       // User account not saved
       if (user_access('administer salesforce')) {
-        drupal_set_message("A user account could not be imported for creation. A required field for Drupal may be missing. <pre>" . print_r($sf_data, TRUE) . "</pre>", 'error');
+        drupal_set_message(t('A user account could not be imported for creation. A required field for Drupal may be missing. <pre>%sf_data</pre>', array('%sf_data' => print_r($sf_data))), 'error');
       }
       salesforce_api_log(SALESFORCE_LOG_ALL, t('A user account could not be imported for creation. A required field for Drupal may be missing. <pre>%sf_data</pre>'), array('%sf_data' => print_r($sf_data, TRUE)), WATCHDOG_ERROR);
       return FALSE;
@@ -688,8 +692,8 @@ function sf_user_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
  *   The user object.
  * @param string $fieldname
  *   The name of the field being exported.
- * @param array $drupal_field_definition 
- * @param array $sf_field_definition 
+ * @param array $drupal_field_definition
+ * @param array $sf_field_definition
  * @return
  *   An Atom-formatted date for Salesforce export,
  *   or NULL if no valid date.
@@ -697,10 +701,11 @@ function sf_user_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
 function _sf_user_export_profile_date($user, $fieldname, $drupal_field_definition, $sf_field_definition) {
   $date = $user->$fieldname;
   // checks to see if the date is in valid format for profile.module
-  if(isset($date) && _sf_user_profile_date_valid($date)) { $timestamp = mktime(0, 0, 0, $date['month'], $date['day'], $date['year']);
+  if (isset($date) && _sf_user_profile_date_valid($date)) {
+    $timestamp = mktime(0, 0, 0, $date['month'], $date['day'], $date['year']);
     return gmdate(DATE_ATOM, $timestamp);
   }
-  // otherwise, returns null
+  // otherwise, returns NULL
   else {
     return NULL;
   }

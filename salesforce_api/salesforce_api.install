@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -11,7 +12,7 @@
  */
 function salesforce_api_install() {
   drupal_install_schema('salesforce_api');
-  variable_set('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));  
+  variable_set('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
 }
 
 /**
@@ -199,22 +200,22 @@ function salesforce_api_requirements($phase) {
  *
  */
 function salesforce_api_update_6201() {
-  
+
   module_enable(array('ctools'));
-  
+
   if (!module_exists('ctools')) {
     drupal_set_message(t('This version of SalesForce module depends on <a href="@ctools">Chaos Tool Suite</a>, which is not available. Please install Chaos Tool Suite, then run update again.', array('@ctools' => url('http://drupal.org/project/ctools'))), 'error');
     return array(array('success' => FALSE, 'query' => 'Chaos Tool Suite not found.'));
   }
 
   $ret[] = array('success' => TRUE, 'query' => 'Chaos Tool Suite enabled.');
-  
+
   db_add_column($ret, 'salesforce_field_map', 'description', 'varchar(255)');
   db_add_column($ret, 'salesforce_field_map', 'name', 'varchar(255)');
   db_add_column($ret, 'salesforce_object_map', 'name', 'varchar(255)');
-  
+
   $result = db_query('SELECT fieldmap FROM {salesforce_field_map}');
-  
+
   while ($fieldmap = db_result($result)) {
     $name = md5($fieldmap);
     $sql = 'UPDATE {salesforce_object_map} SET name = "%s" WHERE fieldmap = %d';
@@ -227,14 +228,14 @@ function salesforce_api_update_6201() {
   db_add_index($ret, 'salesforce_object_map', 'name', array('name'));
   db_add_unique_key($ret, 'salesforce_field_map', 'name', array('name'));
   $ret[] = update_sql('ALTER TABLE {salesforce_object_map} DROP COLUMN fieldmap');
-  
+
   // Set the WSDL directory
   if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
     $dir = SALESFORCE_DIR_WSDL;
     $wsdl = $dir .'/enterprise.wsdl';
     if (file_exists($wsdl)) {
       variable_set('salesforce_api_dir_wsdl', $dir);
-    } 
+    }
     else {
       variable_set('salesforce_api_dir_wsdl', SALESFORCE_DIR_SOAPCLIENT);
     }
@@ -291,7 +292,7 @@ function salesforce_api_update_6202() {
 function salesforce_api_update_6203() {
   $ret = array();
   db_change_field($ret, 'salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
-  db_query('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE);
+  update_sql(sprintf('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE));
   return $ret;
 }
 
@@ -304,7 +305,7 @@ function salesforce_api_update_6204(&$sandbox) {
     $where = " data like '%%sf_user_skip_export%%'";
     $sandbox['n_users'] = 0;
     $sandbox['uids'] = array();
-    $result = db_query('SELECT uid FROM users WHERE ' . $where);
+    $result = db_query('SELECT uid FROM {users} WHERE ' . $where);
     while ($uid = db_result($result)) {
       $sandbox['uids'][] = $uid;
       $sandbox['n_users']++;

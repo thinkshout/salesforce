@@ -1,4 +1,9 @@
-<?php 
+<?php
+// $Id$
+
+/**
+ * @file
+ */
 
 // @todo add tracking and reporting of messages received from SalesForce
 
@@ -18,10 +23,10 @@ function sf_notifications_settings_form(&$form_state) {
     )));
   $maps = salesforce_api_salesforce_field_map_load_all();
   foreach ($maps as $id => $map) {
-    $edit = l('edit', SALESFORCE_PATH_FIELDMAPS . '/' . $id . '/edit', array('query' => array('destination' => drupal_get_destination())));
+    $edit = l(t('edit'), SALESFORCE_PATH_FIELDMAPS . '/' . $id . '/edit', array('query' => array('destination' => drupal_get_destination())));
     $form['sf_notifications']['sf_notifications_active_maps']['#options'][$id] = t('@drupal => @salesforce - %description (!edit)', array('@drupal' => $map->drupal, '@salesforce' => $map->salesforce, '%description' => $map->description, '!edit' => $edit));
   }
-  
+
   // IP Whitelist form
   $form['sf_notifications_ip_whitelist'] = array(
     '#type' => 'fieldset',
@@ -31,7 +36,7 @@ function sf_notifications_settings_form(&$form_state) {
     '#collapsed' => FALSE,
     '#access' => user_access('administer salesforce'),
   );
-  
+
   $form['sf_notifications_ip_whitelist']['sf_notifications_allowed_ips'] = array(
     '#type' => 'textarea',
     '#title' => t('Allowed IPs'),
@@ -40,7 +45,7 @@ function sf_notifications_settings_form(&$form_state) {
     '#rows' => 5,
     '#default_value' => variable_get('sf_notifications_allowed_ips', implode("\n", sf_notifications_default_allowed_ips())),
   );
-  
+
   return system_settings_form($form);
 }
 

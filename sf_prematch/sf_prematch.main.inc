@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * @file
@@ -28,8 +29,8 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   $fields_list = "";
   $safe_fields = array();
   foreach ($map->fields as $key => $value) {
-    if (is_array($value)) { 
-      continue; 
+    if (is_array($value)) {
+      continue;
     }
     $safe_fields[$key] = $value;
   }
@@ -94,12 +95,12 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
         break;
       default:
         // single quotes around SOQL field expressions for all others
-        $values[$key]['drupal_value'] = 
+        $values[$key]['drupal_value'] =
           "'" . $values[$key]['drupal_value'] . "'";
         break;
     }
   }
-  
+
   // Use match by rule to build out where clause.
   switch ($match_by['rule']) {
     case SF_PREMATCH_PRIMARY_SECONDARY_AND_TERTIARY:
@@ -115,9 +116,9 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
       // no prematch is set
       return;
   }
-  
+
   $query = $select_clause . ' ' . $fields_list . $from_where_clause . ' ORDER BY CreatedDate ASC';
-  
+
   // Run the SOQL query against the Salesforce API
   if ($sf = salesforce_api_connect()) {
     try {
@@ -308,7 +309,7 @@ function sf_prematch_import($object_type, $object, $map, $match_by) {
       $found[] = $f;
     }
   }
-  
+
   if (count($found) > 0) {
     // Return only the first match. Someday we may want to handle multiple matches.
     return reset($found);
@@ -329,7 +330,7 @@ function _sf_prematch_get_user_schema() {
     $results = db_query("SELECT name, fid FROM {profile_fields}");
     while ($result = db_fetch_array($results)) {
       $schema['fields'][$result['name']] = $result['fid'];
-    }    
+    }
   }
 
   return $schema;

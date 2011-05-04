@@ -7,7 +7,7 @@
 
 /**
  * Implementation of hook_fieldmap_objects().
-**/
+ **/
 function sf_contrib_fieldmap_objects_alter(&$objects) {
   _sf_contrib_add_location($objects);
   _sf_contrib_add_fields($objects);
@@ -110,27 +110,27 @@ function _sf_contrib_add_fields(&$objects) {
         case 'location':
           unset($objects['drupal'][$index]['fields'][$field['field_name']]);
           $proceed = FALSE;
-          if(!module_exists('location')) {
+          if (!module_exists('location')) {
             break;
           }
           static $location_field_definitions;
-          if(empty($location_field_definitions)) {
-            $dummy = null;
+          if (empty($location_field_definitions)) {
+            $dummy = NULL;
             $location_field_definitions = location_locationapi($dummy, 'fields');
           }
           // Location is special: add each of its fields individually
           //  and use a special import/export handler
-          if(empty($field['location_settings']['form']['fields'])
+          if (empty($field['location_settings']['form']['fields'])
           || !is_array($field['location_settings']['form']['fields'])) {
             break;
           }
-          foreach($field['location_settings']['form']['fields'] as $key => $loc_setting) {
-            if($key == 'additional') {
+          foreach ($field['location_settings']['form']['fields'] as $key => $loc_setting) {
+            if ($key == 'additional') {
               // Salesforce street address is a textarea.
               // Append "additional" to "address1" instead of using a separate field
               continue;
             }
-            $objects['drupal'][$index]['fields'][$field['field_name'].':'.$key] = array(
+            $objects['drupal'][$index]['fields'][$field['field_name'] . ':' . $key] = array(
               'group' => t('@group: @label', array('@group' => $group, '@label' => $field['widget']['label'])),
               'label' => isset($location_field_definitions[$key])
                 ? check_plain($location_field_definitions[$key])
@@ -257,7 +257,7 @@ function _sf_node_import_cck_userreference(&$node, $drupal_fieldname, $drupal_fi
   }
   list($drupal_fieldname, $dummy) = explode(':', $drupal_fieldname, 2);
   $node->{$drupal_fieldname}[0]['uid'] =
-   salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname}, $type = 'user');
+  salesforce_api_get_id_with_sfid($sf_data->{$sf_fieldname}, $type = 'user');
 }
 
 // Export an element of a CCK location field
@@ -266,14 +266,14 @@ function _sf_node_export_cck_location($source, $field, $drupal_field_definition,
   list($field, $type) = explode(':', $field, 2);
   $data = $source->{$field};
   $lid = $data[0]['lid'];
-  if(empty($locations[$lid])) {
+  if (empty($locations[$lid])) {
     $locations[$lid] = location_load_location($lid);
   }
 
-  if($type == 'street'
+  if ($type == 'street'
   && !empty($locations[$lid]['street'])
   && !empty($locations[$lid]['additional'])) {
-    $locations[$lid]['street'] .= "\n".$locations[$lid]['additional'];
+    $locations[$lid]['street'] .= "\n" . $locations[$lid]['additional'];
   }
 
   return $locations[$lid][$type];
@@ -287,10 +287,10 @@ function _sf_node_import_cck_location(&$node, $drupal_fieldname, $drupal_field_d
   static $locations;
   list($local_field, $type) = explode(':', $drupal_fieldname, 2);
   $data = $sf_data->{$sf_fieldname};
-  if(!isset($node->{$local_field})) {
+  if (!isset($node->{$local_field})) {
     $node->{$local_field} = array();
   }
-  if(!isset($node->{$local_field}[0])) {
+  if (!isset($node->{$local_field}[0])) {
     $node->{$local_field}[0] = array();
   }
   $node->{$local_field}[0][$type] = $data;
@@ -367,11 +367,12 @@ function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drup
   }
   $info = _content_type_info();
   $info = $info['content types'][$object->type]['fields'][$drupal_fieldname];
-  if(strpos($sf_data->{$sf_fieldname}, ';') === FALSE) {
+  if (strpos($sf_data->{$sf_fieldname}, ';') === FALSE) {
     $tid = db_result(db_query('SELECT tid FROM {term_data} WHERE name = "%s" AND vid = %d',
       $sf_data->{$sf_fieldname}, $info['vid']));
     $object->{$drupal_fieldname} = array(array('value' => $tid));
-  } else {
+  }
+  else {
     $terms = str_replace(array('"'), array('\"'), $sf_data->{$sf_fieldname});
     $terms = explode(';', $terms);
     $ph = db_placeholders($terms, 'text');
@@ -379,24 +380,24 @@ function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drup
       WHERE vid = ' . $info['vid'] . ' AND name in ("' . implode('", "', $terms)  . '")';
     $result = db_query($sql);
     $object->{$drupal_fieldname} = array();
-    while($row = db_fetch_array($result)) {
+    while ($row = db_fetch_array($result)) {
       $object->{$drupal_fieldname}[] = array('value' => $row['tid']);
     }
   }
 }
 
 function _sf_node_export_cck_content_taxonomy($source, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  if(empty($source->{$fieldname})) {
+  if (empty($source->{$fieldname})) {
     return;
   }
   $data = $source->{$fieldname};
-  $terms = null;
+  $terms = NULL;
   if (!empty($data) && is_array($data)) {
-    foreach($data as $value) {
+    foreach ($data as $value) {
       $tid = $value['value'];
       $term = taxonomy_get_term($tid);
-      if(!empty($term->name)) {
-        if(!empty($terms)) {
+      if (!empty($term->name)) {
+        if (!empty($terms)) {
           $terms .= ';';
         }
         $terms .= $term->name;
