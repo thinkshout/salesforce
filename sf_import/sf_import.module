@@ -20,9 +20,10 @@ function sf_import_create(&$form_state, $ongoing = 0) {
 
   $fieldmaps = salesforce_api_salesforce_field_map_load_all();
   foreach ($fieldmaps as $map) {
+    $edit = l('edit', SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit', array('query' => array('destination' => drupal_get_destination())));
     $options[$map->name] =
       salesforce_api_fieldmap_object_label('salesforce', $map->salesforce) . ' => ' .
-      salesforce_api_fieldmap_object_label('drupal', $map->drupal);
+      salesforce_api_fieldmap_object_label('drupal', $map->drupal) . ' - <em>' . $map->description . '</em>' . ' (' . $edit . ')';
   }
 
   // Add a message if no objects have been mapped.
