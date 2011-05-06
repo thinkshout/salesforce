@@ -790,8 +790,10 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
     }
   }
 
+  $changed_fields = 0;
   // Loop through the fields on the fieldmap.
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
+    $previous_value = $node->$drupal_fieldname;
     // If a handler is specified for importing a value from Salesforce....
     if (is_array($drupal_fieldname)) {
       // There is no logical way to import Salesforce values into Drupal fixed
@@ -810,7 +812,21 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
       // field if it's present on the source object.
       $node->$drupal_fieldname = $sf_data->$sf_fieldname;
     }
-  }
+    if (isset($previous_value[0]['date_type'])) {
+      $new_value = $node->$drupal_fieldname;
+      $new_value = $new_value[0]['value']; // This looks wrong but I need to convert an object element which is an array to a string
+      if (strncmp($previous_value[0]['value'], $new_value, strlen($new_value)) != 0) {
+        $changed_fields++;
+      }
+    }
+    else {
+      if ($node->$drupal_fieldname != $previous_value) {
+        $changed_fields++;
+      }
+    }
+  } // end of loop through fields
+
+  $comparison_node = drupal_clone($node);
 
   foreach (module_implements('salesforce_api_pre_import') as $module) {
     $function = $module . '_salesforce_api_pre_import';
@@ -818,6 +834,12 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
     if ($continue === FALSE) {
       return;
     }
+  }
+  
+  if ($changed_fields == 0 && $comparison_node == $node) {
+    // No fields changed, so don't save anything.
+    // Return the node ID to signal a "successful" save
+    return $node->nid;
   }
 
   $node->sf_node_skip_export = TRUE;

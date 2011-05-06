@@ -592,6 +592,7 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
 
   // Loop through the fields on the fieldmap.
   $changes = array();
+
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
     // If a handler is specified for importing a value from Salesforce.
     if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
@@ -620,6 +621,21 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
     if ($continue === FALSE) {
       return;
     }
+  }
+  
+  // Check for changes made to the account
+  $num_changes = 0;
+  foreach ($changes as $key => $value) {
+    if (!empty($value) && ($account->$key <> $value)) {
+      $num_changes++;
+    }
+  }
+  
+  // If no changes have been made, there is no need to save
+  if ($num_changes == 0) {
+    // Nothing changed, so do not do the save
+    // Return the user ID to signal a "successful" save
+    return $account->uid;
   }
 
   //drupal_set_message('<pre>'. print_r($changes, TRUE) .'</pre>');
