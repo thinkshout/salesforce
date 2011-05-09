@@ -491,7 +491,12 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     $name = $map->name;
   }
 
-  $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+  try {
+    $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+  }
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: %msg <pre>%e</pre>', array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/' . $account->uid));
+  }
 
   // If we got errors, handle them before proceeding
   if (is_object($response->errors)) {
@@ -510,7 +515,12 @@ function sf_user_export($uid, $name, $sfid = NULL) {
       }
 
       salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce entity deleted. Attempting to unlink and upsert. <pre>%response</pre>', array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('user ' . $uid, 'user/' . $uid));
-      $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+      try {
+        $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+      }
+      catch (Exception $e) {
+        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: %msg <pre>%e</pre>', array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/' . $account->uid));
+      }
     }
   }
 
