@@ -229,7 +229,11 @@ function sf_user_salesforce_form(&$form_state, $account) {
   if ($account->salesforce->sfid) {
     // Retrieve the object from Salesforce.
     $sf_data = salesforce_api_retrieve(array($account->salesforce->sfid), $account->salesforce->name);
-
+    
+    // Check to see if salesforce_api_retrieve returned an array of objects
+    if (is_array($sf_data) && count($sf_data) > 0) {
+      $sf_data = $sf_data[0];
+    }
     if (!$sf_data && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
       // Unlink the object
       salesforce_api_id_unlink(array('oid' => $account->uid, 'name' => $account->salesforce->name));
@@ -498,6 +502,11 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export user: %msg <pre>%e</pre>', array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('user ' . $account->uid, 'user/' . $account->uid));
   }
 
+  // Check to see if response is an array of objects
+  if (is_array($response) && count($response) > 0) {
+    $response = $response[0];
+  }
+  
   // If we got errors, handle them before proceeding
   if (is_object($response->errors)) {
     // If we got "Entity is deleted" and we're configured to unlink and upsert,
@@ -571,6 +580,10 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
 
   if (is_sfid($sf_data)) {
     $sf_data = salesforce_api_retrieve(array($sf_data), $name);
+    // Check to see if sf_data is an array of objects
+    if (is_array($sf_data) && count($sf_data) > 0) {
+      $sf_data = $sf_data[0];
+    }
   }
   elseif (is_array($sf_data)) {
     $sf_data = (object) $sf_data;
