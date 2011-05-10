@@ -962,7 +962,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
     if (is_null($value) && !$nillable) {
       continue;
     }
-    elseif (!$value && $nillable) {
+    elseif (!$value && $nillable && !empty($map->fields[$sf_fieldname])) {
       $fieldsToNull[] = $sf_fieldname;
       continue;
     }
