@@ -129,8 +129,11 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $salesforce->name = $map->name;
 
       // Check if there is more than one fieldmap in the result.
-      if (user_access('administer salesforce') and next($maps)) {
-        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap @map.', array('@map' => $map->name)), 'warning');
+      if (user_access('administer salesforce') AND next($maps)) {
+        if (!empty($map->description)) {
+          $description = '(' . $map->description . ')';
+        }
+        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap !map_name @map_description.', array('!map_name' => l($map->name, SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit'), '@map_description' => $description)), 'warning');
       }
 
       // Finally, export the node to Salesforce.
