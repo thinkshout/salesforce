@@ -181,7 +181,7 @@ function sf_queue_process_queue_force($redir=TRUE) {
   variable_set('sf_queue_state', $state);
   sf_queue_process_queue($settings, $state);
   if (user_access('administer salesforce')) {
-    drupal_set_message(t('Salesforce export queue processed.');
+    drupal_set_message(t('Salesforce export queue processed.'));
   }
   if ($redir == TRUE) {
     drupal_goto("admin/reports/sf_queue/");
