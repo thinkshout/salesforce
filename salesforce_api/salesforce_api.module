@@ -1313,7 +1313,7 @@ function salesforce_api_get_updated($type, $start, $end) {
   }
   $sf = salesforce_api_connect();
   if ($sf) {
-    $response = $sf->client->getUpdated($type, $start, $end);
+    $response = $sf->client->getUpdated($type, (int)$start, (int)$end);
     if ($response->ids) {
       return $response;
     } else {
