@@ -193,7 +193,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   if (!is_array($record)) {
     $record = get_object_vars($record);
   }
-  $created = isset($existing[$record['Id']]);
+  $created = !isset($existing[$record['Id']]);
   $type = $map->drupal;
   // "node" mappings are like "node_contenttype".
   // others are like "user", "uc_order", etc.
