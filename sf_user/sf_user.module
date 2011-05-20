@@ -343,9 +343,9 @@ function sf_user_salesforce_form(&$form_state, $account) {
     $rows = array();
 
     foreach ((array) $sf_data as $key => $value) {
-      if (!isset($map->fields[$key]) && isset($sf_field_definition['fields'][$key])) {
+      if (!isset($map->fields[$key]) && isset($sf_object_definition['fields'][$key])) {
         $rows[] = array(
-          $sf_field_definition['fields'][$key]['label'],
+          $sf_object_definition['fields'][$key]['label'],
           $value,
         );
       }
@@ -356,6 +356,8 @@ function sf_user_salesforce_form(&$form_state, $account) {
         '#type' => 'fieldset',
         '#title' => t('Unmapped fields'),
         '#description' => t('These fields are available on Salesforce but are not currently mapped through the fieldmap used for this user. Some of these values may only be available when importing from Salesforce.'),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
       );
       $form['unmapped']['unmmaped_fields'] = array(
         '#value' => theme('table', $header, $rows),
