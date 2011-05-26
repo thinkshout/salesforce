@@ -573,7 +573,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
  * @return
  *   The uid of the imported user or FALSE on failure.
  */
-function sf_user_import($sf_data, $name, $uid = NULL) {
+function sf_user_import($sf_data, $name, $uid = NULL, $options = array()) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
@@ -702,7 +702,8 @@ function sf_user_import($sf_data, $name, $uid = NULL) {
   $sfid = $sf_data->Id;
 
   if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
-  || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
+    || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
+    || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('user', $account->uid, $sfid, $name);
   }

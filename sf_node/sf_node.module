@@ -764,7 +764,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
  * @return
  *   The nid of the imported node or FALSE on failure.
  */
-function sf_node_import($sf_data, $name, $nid = NULL) {
+function sf_node_import($sf_data, $name, $nid = NULL, $options = array()) {
   // Retrieve the object from Salesforce.
   $sf = salesforce_api_connect();
   if (!$sf) {
@@ -876,7 +876,8 @@ function sf_node_import($sf_data, $name, $nid = NULL) {
   $sfid = $sf_data->Id;
 
   if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
-    || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)) {
+    || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
+    || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('node', $node->nid, $sfid, $name);
   }

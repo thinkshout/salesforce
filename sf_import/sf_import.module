@@ -204,7 +204,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   $function = 'sf_' . $type . '_import';
 
   if (function_exists($function)) {
-    $oid = $function($record, $map->name, $existing[$record['Id']]);
+    $oid = $function($record, $map->name, $existing[$record['Id']], $extra);
   }
   else {
     $context['finished'] = TRUE;
