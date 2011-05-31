@@ -930,12 +930,12 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       switch ($map->fields[$sf_fieldname]['type']) {
         case 'fixed':
           if (isset($map->fields[$sf_fieldname]['value'])) {
-            $value = htmlentities($map->fields[$sf_fieldname]['value']);
+            $value = $map->fields[$sf_fieldname]['value'];
           }
           break;
         case 'php':
           if (isset($map->fields[$sf_fieldname]['value'])) {
-            $value = htmlentities(eval($map->fields[$sf_fieldname]['value']));
+            $value = eval($map->fields[$sf_fieldname]['value']);
           }
           break;
       }
@@ -949,13 +949,13 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 
       // Get the value for the field from the handler function.
       $value =
-        htmlentities($drupal_field_export_handler($drupal_data,
-          $drupal_fieldname, $drupal_field_definition, $sf_field_definition));
+        $drupal_field_export_handler($drupal_data,
+          $drupal_fieldname, $drupal_field_definition, $sf_field_definition);
     }
     // Otherwise set the field on the export object to the value of the Drupal
     // field if it's present on the source object.
     elseif (isset($drupal_data->$drupal_fieldname)) {
-      $value = htmlentities($drupal_data->$drupal_fieldname);
+      $value = $drupal_data->$drupal_fieldname;
     }
 
     // Ignore null values for non-nillable fields
