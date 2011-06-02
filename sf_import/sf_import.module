@@ -2,18 +2,195 @@
 
 define('SALESFORCE_PATH_ADMIN_IMPORT', SALESFORCE_PATH_ADMIN . '/import');
 
+/**
+ * Implementation of hook_menu().
+ */
 function sf_import_menu() {
-  return array(
-    SALESFORCE_PATH_ADMIN_IMPORT => array(
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('sf_import_create'),
-      'type' => MENU_LOCAL_TASK,
-      'access arguments' => array('administer salesforce'),
-      'title' => 'Import',
-    ),
+
+  $items[SALESFORCE_PATH_ADMIN_IMPORT] = array(
+    'title' => 'Import',
+    'description' => 'Configure settings for regular imports of data.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sf_import_settings_form'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
   );
+
+  $items[SALESFORCE_PATH_ADMIN_IMPORT . '/create'] = array(
+    'title' => 'Batch Import',
+    'description' => 'Create a one-time batch import of Salesforce data',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sf_import_create'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  $items[SALESFORCE_PATH_ADMIN_IMPORT . '/overview'] = array(
+    'title' => 'Import Settings',
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  return $items;
 }
 
+/**
+ * Implements hook_help().
+ */
+function sf_import_help($path, $arg) {
+  switch ($path) {
+    case 'admin/settings/salesforce/import':
+      return '<p>'. t('Select the Fieldmaps you would like to use for regular 
+      imports of data from Salesforce to Drupal. <strong>This feature requires 
+      a properly configured cron job.</strong> Once fieldmaps have been selected,
+       additional information regarding pending imports is available, along with
+       the ability to manually trigger imports. <br />You can also run a one-time
+        batch import of data from Salesforce to Drupal by visiting the "Batch Import" page.') .'</p>';
+  }
+}
+
+/**
+ * Import Settings form.
+ */
+function sf_import_settings_form($form_state) {
+  $form = array();
+
+  $form['overview'] = array(
+    '#value' => 'Ongoing imports from Salesforce are possible by configuring the fieldmap(s) defined below. On each cron run, Salesforce Import will check for updated records and import them into Drupal.',
+    '#prefix' => '<p>',
+    '#suffix' => '</p>',
+  );
+
+  // Show the time of last import
+  $last_import = variable_get('sf_import_queue_last_import', NULL);
+  if ($last_import) {
+    $date = date('M j Y H:i:s', $last_import);
+    $form['last_import'] = array(
+      '#value' => '<strong>Last import: </strong>' . $date . ' <br /><strong>Number of items imported:</strong> ' 
+        . variable_get('sf_import_queue_import_count', 0) . '<br /><strong>Number of items processed:</strong> ' . variable_get('sf_import_queue_processed_count', 0),
+      '#prefix' => '<p>',
+      '#suffix' => '</p>',
+    );
+  }
+
+  // Load the fieldmaps
+  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $maps = array();
+  foreach ($fieldmaps as $map) {
+    $maps[$map->name] = $map->name;
+    if ($map->description) {
+      $maps[$map->name] .= '<em> (' . $map->description . ')</em>';
+    }
+  }
+
+  $form['sf_import_fieldmaps'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Fieldmaps'),
+    '#description' => t('Select which fieldmaps should be used for ongoing imports from Salesforce to Drupal.'),
+    '#options' => $maps,
+    '#default_value' => variable_get('sf_import_fieldmaps', array()),
+  );
+
+  // For fieldmaps that have import enabled, show some information about them
+
+  $import_maps = variable_get('sf_import_fieldmaps', array());
+  $active_import_maps = array();
+  if ($import_maps) {
+    foreach ($import_maps as $import_map_key => $import_map_value) {
+      if ($import_map_value !== 0) {
+        $map = salesforce_api_salesforce_field_map_load($import_map_key);
+        $start = variable_get('sf_import_queue_last_import', time());
+        $end = time();
+        // salesforce_api_get_updated requires the query window to be at least 1 minute
+        if ($end - $start < 60) {
+          $start = $end - 61;
+        }
+        $sf_updated = salesforce_api_get_updated($map->salesforce, $start, $end);
+
+        $form[$import_map_key . '_information'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('Information for fieldmap <em>' . check_plain($import_map_key) . '</em>'),
+          '#description' => t('Number of updated records and timestamp of last update, if information is available.'),
+          '#collapsible' => TRUE,
+          '#collapsed' => $sf_updated ? FALSE : TRUE,
+        );
+        if ($sf_updated) {
+          $form[$import_map_key . '_information']['pending'] = array(
+            '#value' => '<em>' . count($sf_updated->ids) . '</em> updated record(s) in Salesforce pending import.<br />Newest object in Salesforce dated <em>' . $sf_updated->latestDateCovered . '.</em>',
+            '#prefix' => '<div>',
+            '#suffix' => '</div>',
+          );
+          $active_import_maps[$import_map_key] = $import_map_value;
+          // Show table of SFIDs pending import
+          $rows = array();
+          $header = array('Salesforce ID');
+          $sf_data = $sf_updated->ids;
+
+          foreach ($sf_data as $key => $sfid) {
+            $rows[] = array($sfid);
+          }
+
+          $form[$import_map_key . '_information']['pending']['data'] = array(
+            '#value' => theme_table($header, $rows),
+            '#prefix' => '<div>',
+            '#suffix' => '</div>',
+          );
+        }
+        else {
+          $form[$import_map_key . '_information']['nodata'] = array(
+            '#value' => 'There are no pending updates for this fieldmap.',
+            '#prefix' => '<div>',
+            '#suffix' => '</div>',
+          );
+        }
+      }
+    }
+
+    // Allow the user to import records for fieldmaps that have updates
+    if ($active_import_maps) {
+      $form['process_updates'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Process updates for all fieldmaps'),
+        '#description' => t('Query Salesforce for updates for all fieldmaps and import updated data.'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+      );
+
+      $form['process_updates']['get_updates'] = array(
+        '#type' => 'submit',
+        '#value' => t('Import updates'),
+      );
+      $form['#submit'][] = 'sf_import_settings_form_submit';
+    }
+  }
+  return system_settings_form($form);
+}
+
+/**
+ * Submit handler for the settings page.
+ */
+function sf_import_settings_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] == 'Import updates') {
+    if (variable_get('sf_import_fieldmaps', array())) {
+      $updates = _sf_import_get_updated_records();
+      $processed = _sf_import_process_records();
+      if (user_access('administer salesforce')) {
+        if ($updates) {
+          drupal_set_message(t('@updates record(s) imported from Salesforce.'), array('@updates' => count($updates)));
+        }
+        if ($processed) {
+          drupal_set_message(t('@processed imported record(s) processed.'), array('@processed' => count($processed)));
+        }
+        drupal_set_message(t('Please allow one minute to refresh this page for accurate information about newly updated records in Salesforce.'));
+      }
+    }
+  }
+}
+
+/**
+ * Page callback for admin/settings/salesforce/import/create
+ */
 function sf_import_create(&$form_state, $ongoing = 0) {
 
   $form = $options = array();
@@ -66,7 +243,7 @@ function sf_import_create(&$form_state, $ongoing = 0) {
   );
 
   $form['ongoing'] = array('#type' => 'value', '#value' => $ongoing);
-  $form['submit'] = array('#type' => 'submit', '#value' => 'submit');
+  $form['submit'] = array('#type' => 'submit', '#value' => 'Submit');
 
   return $form;
 }
@@ -220,4 +397,114 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   $context['sandbox']['progress']++;
   $context['sandbox']['position']++;
   $context['finished'] = $context['sandbox']['progress'] / $size;
+}
+
+/**
+ * Implements hook_cron().
+ */
+function sf_import_cron() {
+  // Get new records from Salesforce since last time cron was run
+  _sf_import_get_updated_records();
+  // Process the records (insert/update records)
+  _sf_import_process_records();
+}
+
+/**
+ * Loops through fieldmaps with automatic create/update settings and imports
+ * new records since the last time the import process was run.
+ */
+function _sf_import_get_updated_records() {
+  $fieldmaps = variable_get('sf_import_fieldmaps', salesforce_api_salesforce_field_map_load_all());
+  $active_fieldmaps = array();
+  foreach ($fieldmaps as $map_key => $map_value) {
+    if ($map_value !== 0) {
+      $active_fieldmaps[$map_key] = $map_value;
+    }
+  }
+
+  if (!$active_fieldmaps) {
+    return FALSE;
+  }
+
+  $records = array();
+  // Get updated and/or deleted items for each fieldmap and store in sf_import_queue
+  // Start date is newest date of SFID stored in sf_import_queue, end date is time()
+  foreach ($active_fieldmaps as $map) {
+    $map = salesforce_api_salesforce_field_map_load($map);
+    $sql = "SELECT time FROM {sf_import_queue} ORDER BY time DESC LIMIT 1";
+    $start = db_result(db_query($sql));
+    if (!$start) {
+      // If $start isn't set, then set the start to an hour back from the current time
+      $start = variable_get('sf_import_queue_last_import', time() - 3600);
+    }
+
+    $end = time();
+
+    // If the last time we checked for updated records was within the last
+    // hour, then push the $start value back an hour.
+    // This helps enusre that we don't skip over any updated records
+    if ($end - $start < 3600) {
+      $start = $start - 3600;
+    }
+
+    // Set the time that the last import took place
+    variable_set('sf_import_queue_last_import', time());
+    if ($updates = salesforce_api_get_updated($map->salesforce, $start, $end)) {
+      $update_sfids = $updates->ids;
+      foreach ($update_sfids as $sfid) {
+        $sql = "SELECT sfid FROM {sf_import_queue} WHERE sfid = '%s'";
+        $exists = db_result(db_query($sql, $sfid));
+        if (!$exists) {
+          $object->time = time();
+          $object->sfid = $sfid;
+          $object->fieldmap = $map->name;
+          $ret = drupal_write_record('sf_import_queue', $object);
+        }
+        $records[] = array($sfid, $map->name, time());
+      }
+    }
+  }
+  if (count($records) > 0) {
+    variable_set('sf_import_queue_import_count', count($records));
+    return $records;
+  }
+  else {
+    variable_set('sf_import_queue_import_count', 0);
+    return FALSE;
+  }
+}
+
+/**
+ * Processes items in the sf_import_queue table.
+ */
+function _sf_import_process_records() {
+  // Process sf_import_queue items
+  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $records = array();
+  $sql = "SELECT sfid, fieldmap FROM {sf_import_queue}";
+  while ($sfids = db_fetch_object(db_query($sql))) {
+    $fieldmap = $sfids->fieldmap;
+    $type = $fieldmaps[$fieldmap]->drupal;
+    // "node" mappings are like "node_contenttype".
+    // others are like "user", "uc_order", etc.
+    if (strpos($type, 'node_') === 0) {
+      $type = 'node';
+    }
+
+    $function = 'sf_' . $type . '_import';
+    $drupal_id = salesforce_api_get_id_with_sfid($sfids->sfid, $type);
+    if (function_exists($function)) {
+      $oid = $function($sfids->sfid, $sfids->fieldmap, $drupal_id);
+      $records[] = array($sfids->sfid, $oid, $sfids->fieldmap);
+    }
+    db_query("DELETE FROM {sf_import_queue} WHERE sfid = '%s'", $sfids->sfid);
+  }
+  if (count($records) > 0) {
+    variable_set('sf_import_queue_processed_count', count($records));
+    return $records;
+  }
+  else {
+    variable_set('sf_import_queue_processed_count', 0);
+    return FALSE;
+  }
 }

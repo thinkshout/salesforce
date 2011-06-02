@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -20,6 +19,8 @@ function sf_import_drush_help($section) {
       $output = dt("Initiate a salesforce import.") . "\n\n";
       $output .= dt("Argument: Key of salesforce fieldmap");
       return $output;
+    case 'drush:sf-get-updated':
+      $output = dt("Get updated Salesforce records.") . "\n\n";
   }
 }
 
@@ -54,7 +55,49 @@ function sf_import_drush_command() {
     ),
   );
 
+  $items['sf-get-updated'] = array(
+    'description' => 'Get updated Salesforce records',
+    'options' => array(
+      '--no-process' => 'Save the updated SFIDs to sf_import_queue table, but do not process',
+    )
+  );
+
   return $items;
+}
+
+/**
+ * Calls SF Import Get Updated
+ */
+function drush_sf_import_sf_get_updated() {
+
+  if (function_exists('_sf_import_get_updated_records')) {
+    drush_print('Checking for updated records...');
+    $records = _sf_import_get_updated_records();
+    if (is_array($records) && count($records) > 0) {
+      drush_print("Returned " . count($records) . " record(s)");
+      $table = array(array('SFID', 'Fieldmap', 'Time Imported'));
+      $results = array_merge($table, $records);
+      drush_print_table($results);
+      $no_process = drush_get_option('no-process', FALSE);
+      if ($no_process) {
+        return;
+      }
+      drush_print("Processing records...");
+      $process = _sf_import_process_records();
+      if (is_array($process) && count($process) > 0) {
+        drush_print("Processed " . count($process) . " record(s)");
+        $table = array(array('SFID', 'OID', 'Fieldmap'));
+        $results = array_merge($table, $process);
+        drush_print_table($results);
+      }
+      else {
+        drush_print('Did not process any records.');
+      }
+    }
+    else {
+      drush_print('No new records.');
+    }
+  }
 }
 
 /**
