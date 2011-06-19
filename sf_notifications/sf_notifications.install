@@ -5,6 +5,10 @@
  * @file
  */
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_notifications_enable() {
   global $base_url;
   $sfuser = variable_get('salesforce_api_username', 'user@example.com');
@@ -23,6 +27,10 @@ function sf_notifications_enable() {
     SFDC API user. Use the following formula if you are unsure: !formula.', $args), 'warning');
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_notifications_disable() {
   drupal_set_message(t('You have successfully disabled SalesForce Notifications. You may
     want to <a href="!workflow">deactivate any workflow rules</a> associated

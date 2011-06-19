@@ -3,4 +3,9 @@ name = Salesforce Match
 description = Extends Salesforce API module so it checks for an existing sf object to match a drupal object before creating a new one in sf.
 dependencies[] = salesforce_api
 package = Salesforce
-core = 6.x
+core = 7.x
+
+files[] = sf_prematch.admin.inc
+files[] = sf_prematch.install
+files[] = sf_prematch.main.inc
+files[] = sf_prematch.module

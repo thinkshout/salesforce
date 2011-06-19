@@ -6,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_fieldmap_objects().
+ * Implements hook_fieldmap_objects().
  **/
 function sf_contrib_fieldmap_objects_alter(&$objects) {
   _sf_contrib_add_location($objects);
@@ -86,7 +86,7 @@ function _sf_contrib_add_location(&$objects) {
     ),
   ));
 
-  $node_types = node_get_types();
+  $node_types = node_type_get_types();
   foreach ($extra_fields as $obj_key => $obj_def) {
     $objects['drupal']['user']['fields'][$obj_key] = $obj_def;
     foreach ($node_types as $type) {
@@ -119,9 +119,9 @@ function _sf_contrib_add_fields(&$objects) {
             $location_field_definitions = location_locationapi($dummy, 'fields');
           }
           // Location is special: add each of its fields individually
-//  and use a special import/export handler
+          //  and use a special import/export handler
           if (empty($field['location_settings']['form']['fields'])
-           || !is_array($field['location_settings']['form']['fields'])) {
+            || !is_array($field['location_settings']['form']['fields'])) {
             break;
           }
           foreach ($field['location_settings']['form']['fields'] as $key => $loc_setting) {
@@ -271,8 +271,8 @@ function _sf_node_export_cck_location($source, $field, $drupal_field_definition,
   }
 
   if ($type == 'street'
-   && !empty($locations[$lid]['street'])
-   && !empty($locations[$lid]['additional'])) {
+    && !empty($locations[$lid]['street'])
+    && !empty($locations[$lid]['additional'])) {
     $locations[$lid]['street'] .= "\n" . $locations[$lid]['additional'];
   }
 
@@ -368,16 +368,16 @@ function _sf_node_import_cck_content_taxonomy(&$object, $drupal_fieldname, $drup
   $info = _content_type_info();
   $info = $info['content types'][$object->type]['fields'][$drupal_fieldname];
   if (strpos($sf_data->{$sf_fieldname}, ';') === FALSE) {
-    $tid = db_result(db_query('SELECT tid FROM {term_data} WHERE name = "%s" AND vid = %d',
-      $sf_data->{$sf_fieldname}, $info['vid']));
+    $tid = db_query('SELECT tid FROM {taxonomy_term_data} WHERE name = :name AND vid = :vid', array(':name' => $sf_data->{$sf_fieldname}, ':vid' => $info['vid']))->fetchField();
     $object->{$drupal_fieldname} = array(array('value' => $tid));
   }
   else {
     $terms = str_replace(array('"'), array('\"'), $sf_data->{$sf_fieldname});
     $terms = explode(';', $terms);
     $ph = db_placeholders($terms, 'text');
-    $sql = 'SELECT tid FROM {term_data}
+    $sql = 'SELECT tid FROM {taxonomy_term_data}
       WHERE vid = ' . $info['vid'] . ' AND name in ("' . implode('", "', $terms)  . '")';
+    // TODO Please convert this statement to the D7 database API syntax.
     $result = db_query($sql);
     $object->{$drupal_fieldname} = array();
     while ($row = db_fetch_array($result)) {
@@ -395,7 +395,7 @@ function _sf_node_export_cck_content_taxonomy($source, $fieldname, $drupal_field
   if (!empty($data) && is_array($data)) {
     foreach ($data as $value) {
       $tid = $value['value'];
-      $term = taxonomy_get_term($tid);
+      $term = taxonomy_term_load($tid);
       if (!empty($term->name)) {
         if (!empty($terms)) {
           $terms .= ';';

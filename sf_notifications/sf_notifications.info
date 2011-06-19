@@ -3,4 +3,8 @@ name = Salesforce Notifications
 description = Responds to SOAP Outbound Messages from SalesForce.
 dependencies[] = salesforce_api
 package = Salesforce
-core = 6.x
+core = 7.x
+
+files[] = sf_notifications.admin.inc
+files[] = sf_notifications.install
+files[] = sf_notifications.module

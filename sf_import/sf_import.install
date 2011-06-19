@@ -9,22 +9,22 @@
  */
 function sf_import_schema() {
   $schema['sf_import_queue'] = array(
-    'description' => t('Contains data for importing Salesforce records'),
+    'description' => 'Contains data for importing Salesforce records',
     'fields' => array(
       'sfid' => array(
-        'description' => t('The Salesforce ID of an updated object'),
+        'description' => 'The Salesforce ID of an updated object',
         'type' => 'varchar',
         'length' => '32',
         'not null' => TRUE,
       ),
       'time' => array(
-        'description' => t('The timestamp that this object was imported'),
+        'description' => 'The timestamp that this object was imported',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'fieldmap' => array(
-        'description' => t('The fieldmap to use for importing'),
+        'description' => 'The fieldmap to use for importing',
         'type' => 'varchar',
         'length' => '64',
         'not null' => TRUE,
@@ -44,7 +44,8 @@ function sf_import_schema() {
  * Implements hook_install().
  */
 function sf_import_install() {
-  drupal_install_schema('sf_import');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('sf_import')
   variable_set('sf_import_fieldmaps', salesforce_api_salesforce_field_map_load_all());
   variable_set('sf_import_queue_processed_count', 0);
   variable_set('sf_import_queue_import_count', 0);
@@ -54,6 +55,11 @@ function sf_import_install() {
  * Implements hook_uninstall().
  */
 function sf_import_uninstall() {
-  drupal_uninstall_schema('sf_import');
-  db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_import%'");
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('sf_import')
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_import%'") */
+  db_delete('variable')
+  ->condition('{name}', 'sf_import%', 'LIKE')
+  ->execute();
 }

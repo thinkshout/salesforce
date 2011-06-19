@@ -5,8 +5,12 @@
  * @file
  */
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_queue_admin_form() {
-  $sf_queue_count = db_result(db_query("SELECT count(created) FROM {salesforce_export_queue}"));
+  $sf_queue_count = db_query("SELECT count(created) FROM {salesforce_export_queue}")->fetchField();
   $mapinfo = _sf_queue_admin_mapinfo();
   $header = array(t('Manage'), t('Operation'), t('Queue ID'), t('#Attempts'), t('Created'), t('Drupal Type'), t('SF Type'), t('Fieldmap'));
   $rows = array();
@@ -34,7 +38,7 @@ function sf_queue_admin_form() {
     );
   }
 
-  $output = theme('table', $header, $rows);
+  $output = theme('table', array('header' => $header, 'rows' => $rows));
 
   if ($sf_queue_count > 0) {
     if ($sf_queue_count == 1) {
@@ -52,11 +56,16 @@ function sf_queue_admin_form() {
   return $output;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_queue_admin_view($qid) {
   if (strlen($qid) == 0 || !is_numeric($qid)) {
     drupal_goto("admin/reports/sf_queue/");
   }
 
+  // TODO Please convert this statement to the D7 database API syntax.
   $sf_queue_item = db_fetch_object(db_query("SELECT * FROM {salesforce_export_queue} WHERE id=" . $qid));
 
   $header = array(t('Field name'), t('Value'));
@@ -88,18 +97,23 @@ function sf_queue_admin_view($qid) {
     drupal_goto("admin/reports/sf_queue/");
   }
 
-  $output  = theme('table', $header, $rows);
+  $output  = theme('table', array('header' => $header, 'rows' => $rows));
   $output .= l(t('Delete this queue item'), "admin/reports/sf_queue/delete/" . $qid) . "<br />";
   $output .= l(t('Return to queue list'), "admin/reports/sf_queue");
 
   return $output;
 }
 
-function sf_queue_admin_delete_confirm(&$form_state, $qid) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function sf_queue_admin_delete_confirm($form, &$form_state, $qid) {
   if (strlen($qid) == 0 || !is_numeric($qid)) {
     drupal_goto("admin/reports/sf_queue/");
   }
 
+  // TODO Please convert this statement to the D7 database API syntax.
   $results = db_fetch_object(db_query("SELECT count(id) count FROM {salesforce_export_queue} WHERE id=" . $qid));
   if ($results->count == 0) {
     drupal_goto("admin/reports/sf_queue/");
@@ -122,9 +136,15 @@ function sf_queue_admin_delete_confirm(&$form_state, $qid) {
                      );
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_queue_admin_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    db_query("DELETE from {salesforce_export_queue} WHERE id = '%s'", $form['_qid']['#value']);
+    // TODO Please convert this statement to the D7 database API syntax.
+    /* db_query("DELETE from {salesforce_export_queue} WHERE id = '%s'", $form['_qid']['#value']) */
+    NULL;
     drupal_set_message(t('Queue item [' . $form['_qid']['#value'] . '] has been deleted successfully.'));
   }
   else {

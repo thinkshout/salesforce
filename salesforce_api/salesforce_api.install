@@ -8,24 +8,34 @@
 
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  */
 function salesforce_api_install() {
-  drupal_install_schema('salesforce_api');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('salesforce_api')
   variable_set('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function salesforce_api_uninstall() {
-  drupal_uninstall_schema('salesforce_api');
-  db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'");
-  db_query("DELETE FROM {cache} WHERE {cid} = 'salesforce_api_sf_objects'");
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('salesforce_api')
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'") */
+  db_delete('variable')
+  ->condition('{name}', 'salesforce%', 'LIKE')
+  ->execute();
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {cache} WHERE {cid} = 'salesforce_api_sf_objects'") */
+  db_delete('cache')
+  ->condition('{cid}', 'salesforce_api_sf_objects')
+  ->execute();
 }
 
 /**
- * Implementation of hook_enable().
+ * Implements hook_enable().
  */
 function salesforce_api_enable() {
   drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
@@ -33,12 +43,12 @@ function salesforce_api_enable() {
 }
 
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function salesforce_api_schema() {
-  require_once drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
+  require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
   $schema['salesforce_object_map'] = array(
-    'description' => t('Drupal to Salesforce object mapping table'),
+    'description' => 'Drupal to Salesforce object mapping table',
     'fields' => array(
       'name' => array(
         'description' => 'Foreign key for salesforce_field_map - the fieldmap that corresponds to this record.',
@@ -74,7 +84,7 @@ function salesforce_api_schema() {
     'primary key' => array('drupal_type', 'oid'),
   );
   $schema['salesforce_field_map'] = array(
-    'description' => t('Drupal to Salesforce field mappings'),
+    'description' => 'Drupal to Salesforce field mappings',
     'export' => array(
       'key' => 'name',
       'identifier' => 'salesforce_field_map',
@@ -142,13 +152,13 @@ function salesforce_api_schema() {
 }
 
 /**
- * Implementation of hook_requirements().
+ * Implements hook_requirements().
  *
  * Check the Salesforce API configuration to see if we have valid credentials.
  */
 function salesforce_api_requirements($phase) {
   $req = array();
-  require_once(drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module');
+  require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
   if ($phase == 'runtime') {
     $username = variable_get('salesforce_api_username', FALSE);
     if (!salesforce_api_toolkit_installed()) {
@@ -219,24 +229,39 @@ function salesforce_api_update_6201() {
 
   $result = db_query('SELECT fieldmap FROM {salesforce_field_map}');
 
-  while ($fieldmap = db_result($result)) {
+  while ($fieldmap = $result->fetchField()) {
     $name = md5($fieldmap);
     $sql = 'UPDATE {salesforce_object_map} SET name = "%s" WHERE fieldmap = %d';
-    $update_result = db_query($sql, $name, $fieldmap);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query($sql, $name, $fieldmap) */
+    $update_result = db_update('salesforce_object_map')
+  ->fields(array(
+      'name' => $name,
+    ))
+  ->condition('fieldmap', $fieldmap)
+  ->execute();
     $ret[] = array(
       'success' => $update_result !== FALSE,
       'query' => check_plain($sql),
     );
     $sql = 'UPDATE {salesforce_field_map} SET name = "%s" WHERE fieldmap = %d';
-    $update_result = db_query($sql, $name, $fieldmap);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query($sql, $name, $fieldmap) */
+    $update_result = db_update('salesforce_field_map')
+  ->fields(array(
+      'name' => $name,
+    ))
+  ->condition('fieldmap', $fieldmap)
+  ->execute();
     $ret[] = array(
       'success' => $update_result !== FALSE,
       'query' => check_plain($sql),
     );
   }
-  db_add_index($ret, 'salesforce_object_map', 'name', array('name'));
-  db_add_unique_key($ret, 'salesforce_field_map', 'name', array('name'));
-  $ret[] = update_sql('ALTER TABLE {salesforce_object_map} DROP COLUMN fieldmap');
+  db_add_index('salesforce_object_map', 'name', array('name'));
+  db_add_unique_key('salesforce_field_map', 'name', array('name'));
+  // TODO update_sql has been removed. Use the database API for any schema or data changes.
+  $ret[] = array() /* update_sql('ALTER TABLE {salesforce_object_map} DROP COLUMN fieldmap') */;
 
   // Set the WSDL directory
   if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
@@ -250,7 +275,10 @@ function salesforce_api_update_6201() {
     }
   }
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
 /**
@@ -301,14 +329,25 @@ function salesforce_api_update_6202() {
       );
     }
   }
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function salesforce_api_update_6203() {
   $ret = array();
-  db_change_field($ret, 'salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
-  update_sql(sprintf('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE));
-  return $ret;
+  db_change_field('salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
+  // TODO update_sql has been removed. Use the database API for any schema or data changes.
+  array() /* update_sql(sprintf('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE)) */;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 
 /**
@@ -320,8 +359,9 @@ function salesforce_api_update_6204(&$sandbox) {
     $where = " data like '%%sf_user_skip_export%%'";
     $sandbox['n_users'] = 0;
     $sandbox['uids'] = array();
+    // TODO Please convert this statement to the D7 database API syntax.
     $result = db_query('SELECT uid FROM {users} WHERE ' . $where);
-    while ($uid = db_result($result)) {
+    while ($uid = $result->fetchField()) {
       $sandbox['uids'][] = $uid;
       $sandbox['n_users']++;
     }
@@ -342,7 +382,10 @@ function salesforce_api_update_6204(&$sandbox) {
     return array(array('success' => TRUE, 'query' => t('Fixed !n user accounts.', array('!n' => $sandbox['n_users']))));
   }
   else {
-    return array('#finished' => $finished);
+    // hook_update_N() no longer returns a $ret array. Instead, return
+    // nothing or a translated string indicating the update ran successfully.
+    // See http://drupal.org/node/224333#update_sql.
+    return t('TODO Add a descriptive string here to show in the UI.') /* array('#finished' => $finished) */;
   }
 }
 

@@ -95,6 +95,10 @@ function sf_notifications_default_allowed_ips() {
   return array('204.14.232.0/23', '204.14.237.0/24', '96.43.144.0/22', '96.43.148.0/22', '204.14.234.0/23', '204.14.238.0/23', '202.129.242.0/25');
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
   $active = variable_get('sf_notifications_active_maps', array());
   if (!empty($active[$fieldmap_id])) {
@@ -111,7 +115,7 @@ function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
 function sf_notifications_endpoint() {
   // Needed for the reference to SObject in parse_message, otherwise it just
   // seems to die when it tries to call new SObject()
-  require_once(SALESFORCE_DIR_SOAPCLIENT . '/SforcePartnerClient.php');
+  require_once DRUPAL_ROOT . '/' . SALESFORCE_DIR_SOAPCLIENT . '/SforcePartnerClient.php';
 
   $content = file_get_contents('php://input');
   if (empty($content)) {
@@ -238,7 +242,7 @@ function sf_notifications_delete_record($object_record) {
   $success = TRUE;
   switch ($object_record['drupal_type']) {
     case 'user':
-      user_delete(array(), $object_record['oid']);
+      user_cancel(array(), $object_record['oid'], $method = 'user_cancel_block' /* TODO Set this variable */);
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'SalesForce Notificaitions deleted user '
         . $object_record['oid'] . ' sfid ' . $sfid);
@@ -249,12 +253,20 @@ function sf_notifications_delete_record($object_record) {
       // probably anonymous. The following is adapted from node_delete().
       $node = node_load($nid, NULL, TRUE);
 
-      db_query('DELETE FROM {node} WHERE nid = %d', $node->nid);
-      db_query('DELETE FROM {node_revisions} WHERE nid = %d', $node->nid);
+      // TODO Please review the conversion of this statement to the D7 database API syntax.
+      /* db_query('DELETE FROM {node} WHERE nid = %d', $node->nid) */
+      db_delete('node')
+  ->condition('nid', $node->nid)
+  ->execute();
+      // TODO Please review the conversion of this statement to the D7 database API syntax.
+      /* db_query('DELETE FROM {node_revisions} WHERE nid = %d', $node->nid) */
+      db_delete('node_revisions')
+  ->condition('nid', $node->nid)
+  ->execute();
 
       // Call the node-specific callback (if any):
       node_invoke($node, 'delete');
-      node_invoke_nodeapi($node, 'delete');
+      module_invoke_all('node_delete', $node);
       search_wipe($node->nid, 'node');
 
       salesforce_api_log(SALESFORCE_LOG_ALL,
@@ -391,6 +403,7 @@ function _sf_notifications_parse_message($domDoc) {
     $result['salesforce'][$obj->Id] = $obj;
   }
 
+  // TODO Please convert this statement to the D7 database API syntax.
   $dbresult = db_query('SELECT name, oid, sfid, drupal_type FROM {salesforce_object_map} WHERE sfid IN (' . db_placeholders($sfids, 'varchar') . ')', $sfids);
   while ($row = db_fetch_array($dbresult)) {
     $result['drupal'][] = $row;

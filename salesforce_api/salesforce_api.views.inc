@@ -7,7 +7,7 @@
  */
 
 /**
- * Implements hook_views_data
+ * Implements hook_views_data().
  */
 function salesforce_api_views_data() {
   $data['salesforce_object_map'] = array(

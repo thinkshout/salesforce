@@ -3,4 +3,6 @@ name = Salesforce Node
 description = Integrates the core node object and various node related modules with the Salesforce API.
 dependencies[] = salesforce_api
 package = Salesforce
-core = 6.x
+core = 7.x
+
+files[] = sf_node.module

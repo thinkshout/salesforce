@@ -3,4 +3,6 @@ name = Salesforce Contrib
 description = Provides support to import/export data from contrib modules to/from SalesForce
 dependencies[] = salesforce_api
 package = Salesforce
-core = 6.x
+core = 7.x
+
+files[] = sf_contrib.module

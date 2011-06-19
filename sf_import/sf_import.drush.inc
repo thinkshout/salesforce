@@ -7,7 +7,7 @@
  */
 
 /**
- * Implementation of hook_drush_help().
+ * Implements hook_drush_help().
  */
 function sf_import_drush_help($section) {
   switch ($section) {
@@ -25,7 +25,7 @@ function sf_import_drush_help($section) {
 }
 
 /**
- * Implementation of hook_drush_command().
+ * Implements hook_drush_command().
  */
 function sf_import_drush_command() {
   $items['sf-fieldmap'] = array(
@@ -140,11 +140,10 @@ function drush_sf_import_sf_fieldmap($fieldmap_key = NULL) {
   $out[] = array('Salesforce type', $map->salesforce);
 
   // Read the number of existing linked entries
-  $existing = db_result(db_query("
+  $existing = db_query("
     SELECT COUNT(oid)
     FROM   {salesforce_object_map}
-    WHERE  name = '%s'",
-    $map->name));
+    WHERE  name = '%s'", $map->name)->fetchField();
 
 
   $out[] = array('Existing linked Drupal objects', $existing);
@@ -221,8 +220,7 @@ function drush_sf_import($fieldmap_key) {
   $result = db_query("
     SELECT oid, sfid
     FROM   {salesforce_object_map}
-    WHERE  name = '%s'",
-    $map->name);
+    WHERE  name = '%s'", $map->name);
 
   while ($row = db_fetch_array($result)) {
     $existing[$row['sfid']] = $row['oid'];
@@ -263,7 +261,7 @@ function drush_sf_import($fieldmap_key) {
     $count = count($query->records) - $start;
   }
   if ($start < 0
-       || ($start + $count) > count($query->records)) {
+        || ($start + $count) > count($query->records)) {
     drush_die("Start/count exceed possible rows. Number of rows in Salesfoce : " . count($query->records));
   }
 
@@ -289,12 +287,10 @@ function drush_sf_import($fieldmap_key) {
       continue;
     }
     if ($type == 'node' && $exists && $check_date) {
-      $changed = db_result(db_query("
+      $changed = db_query("
         SELECT changed
         FROM   {node}
-        WHERE  nid = %d",
-        $existing[$record->Id]
-      ));
+        WHERE  nid = %d", $existing[$record->Id])->fetchField();
       if ($changed >= strtotime($record->LastModifiedDate)) {
         drush_print("Record Id $record->Id has not been modified (date check)");
         $skipped++;

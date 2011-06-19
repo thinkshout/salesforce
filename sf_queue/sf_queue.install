@@ -7,34 +7,40 @@
 
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  */
 function sf_queue_install() {
-  drupal_install_schema('sf_queue');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('sf_queue')
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function sf_queue_uninstall() {
-  drupal_uninstall_schema('sf_queue');
-  db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_queue_%'");
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('sf_queue')
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_queue_%'") */
+  db_delete('variable')
+  ->condition('{name}', 'sf_queue_%', 'LIKE')
+  ->execute();
 }
 
 /**
- * Implementation of hook_disable().
+ * Implements hook_disable().
  */
 function sf_queue_disable() {
   sf_queue_process_queue_force(FALSE);
 }
 
 /**
- * Implementation of hook_schema()
+ * Implements hook_schema().
  *
  */
 function sf_queue_schema() {
   $schema['salesforce_export_queue'] = array(
-    'description' => t('Salesforce objects queued for export'),
+    'description' => 'Salesforce objects queued for export',
     'fields' => array(
       'sf_op' => array(
         'description' => 'The SalesForce export operation: "create", "update", or "delete"',
@@ -125,19 +131,26 @@ function sf_queue_schema() {
 
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_queue_update_6201() {
   $ret = array();
 
   $schema = drupal_get_schema('salesforce_export_queue');
 
   if (isset($schema['unique keys']['fieldmap_drupal'])) {
-    db_drop_unique_key($ret, 'salesforce_export_queue', 'fieldmap_drupal');
+    db_drop_unique_key('salesforce_export_queue', 'fieldmap_drupal');
   }
 
   if (!isset($schema['indexes']['fieldmap_drupal'])) {
-    db_add_index($ret, 'salesforce_export_queue', 'fieldmap_drupal', array('fieldmap_name', 'drupal_type'));
+    db_add_index('salesforce_export_queue', 'fieldmap_drupal', array('fieldmap_name', 'drupal_type'));
   }
 
-  return $ret;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
 

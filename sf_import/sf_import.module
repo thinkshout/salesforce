@@ -3,7 +3,7 @@
 define('SALESFORCE_PATH_ADMIN_IMPORT', SALESFORCE_PATH_ADMIN . '/import');
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function sf_import_menu() {
 
@@ -40,7 +40,7 @@ function sf_import_menu() {
  */
 function sf_import_help($path, $arg) {
   switch ($path) {
-    case 'admin/settings/salesforce/import':
+    case 'admin/config/salesforce/import':
       return '<p>' . t('Select the Fieldmaps you would like to use for regular
       imports of data from Salesforce to Drupal. <strong>This feature requires
       a properly configured cron job.</strong> Once fieldmaps have been selected,
@@ -53,7 +53,7 @@ function sf_import_help($path, $arg) {
 /**
  * Import Settings form.
  */
-function sf_import_settings_form($form_state) {
+function sf_import_settings_form($form, $form_state) {
   $form = array();
 
   $form['overview'] = array(
@@ -100,8 +100,8 @@ function sf_import_settings_form($form_state) {
     foreach ($import_maps as $import_map_key => $import_map_value) {
       if ($import_map_value !== 0) {
         $map = salesforce_api_salesforce_field_map_load($import_map_key);
-        $start = variable_get('sf_import_queue_last_import', time());
-        $end = time();
+        $start = variable_get('sf_import_queue_last_import', REQUEST_TIME);
+        $end = REQUEST_TIME;
         // salesforce_api_get_updated requires the query window to be at least 1 minute
         if ($end - $start < 60) {
           $start = $end - 61;
@@ -191,7 +191,7 @@ function sf_import_settings_form_submit($form, &$form_state) {
 /**
  * Page callback for admin/settings/salesforce/import/create
  */
-function sf_import_create(&$form_state, $ongoing = 0) {
+function sf_import_create($form, &$form_state, $ongoing = 0) {
 
   $form = $options = array();
 
@@ -254,6 +254,10 @@ function sf_import_create(&$form_state, $ongoing = 0) {
   return $form;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_import_create_submit($form, &$form_state, $ongoing = 0) {
   // Create a new batch job to do the import
 
@@ -265,6 +269,10 @@ function sf_import_create_submit($form, &$form_state, $ongoing = 0) {
   batch_set($batch);
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_import_create_batchjob($fieldmap, $extra = NULL) {
   $params = array(
     'fieldmap_key' => $fieldmap,
@@ -279,11 +287,15 @@ function sf_import_create_batchjob($fieldmap, $extra = NULL) {
   );
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_import_batchjob_finalize($success, $results, $operations) {
   if ($success) {
     drupal_set_message(t('Import complete.'));
     if (count($results) > 0) {
-      drupal_set_message(theme('item_list', $results));
+      drupal_set_message(theme('item_list', array('items' => $results)));
     }
   }
   else {
@@ -291,6 +303,10 @@ function sf_import_batchjob_finalize($success, $results, $operations) {
   }
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   // Always log in to salesforce.
   if (empty($context['sandbox'])) {
@@ -310,9 +326,9 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $context['sandbox']['salesforce']['drupal_object'] =
       salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
     // $context['sandbox']['salesforce']['salesforce_object'] =
-//   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+    //   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
     $sql = 'SELECT oid, sfid FROM {salesforce_object_map} WHERE name = "%s"';
-    $result = db_query($sql, $map->name);
+    $result = db_query('SELECT oid, sfid FROM {salesforce_object_map} WHERE name = :name', array(':name' => $map->name));
     while ($row = db_fetch_array($result)) {
       $context['sandbox']['salesforce']['existing'][$row['sfid']] = $row['oid'];
     }
@@ -444,13 +460,13 @@ function _sf_import_get_updated_records() {
   foreach ($active_fieldmaps as $map) {
     $map = salesforce_api_salesforce_field_map_load($map);
     $sql = "SELECT time FROM {sf_import_queue} ORDER BY time DESC LIMIT 1";
-    $start = db_result(db_query($sql));
+    $start = db_query($sql)->fetchField();
     if (!$start) {
       // If $start isn't set, then set the start to an hour back from the current time
-      $start = variable_get('sf_import_queue_last_import', time() - 3600);
+      $start = variable_get('sf_import_queue_last_import', REQUEST_TIME - 3600);
     }
 
-    $end = time();
+    $end = REQUEST_TIME;
 
     // If the last time we checked for updated records was within the last
     // hour, then push the $start value back an hour.
@@ -460,19 +476,19 @@ function _sf_import_get_updated_records() {
     }
 
     // Set the time that the last import took place
-    variable_set('sf_import_queue_last_import', time());
+    variable_set('sf_import_queue_last_import', REQUEST_TIME);
     if ($updates = salesforce_api_get_updated($map->salesforce, $start, $end)) {
       $update_sfids = $updates->ids;
       foreach ($update_sfids as $sfid) {
         $sql = "SELECT sfid FROM {sf_import_queue} WHERE sfid = '%s'";
-        $exists = db_result(db_query($sql, $sfid));
+        $exists = db_query("SELECT sfid FROM {sf_import_queue} WHERE sfid = :sfid", array(':sfid' => $sfid))->fetchField();
         if (!$exists) {
-          $object->time = time();
+          $object->time = REQUEST_TIME;
           $object->sfid = $sfid;
           $object->fieldmap = $map->name;
           $ret = drupal_write_record('sf_import_queue', $object);
         }
-        $records[] = array($sfid, $map->name, time());
+        $records[] = array($sfid, $map->name, REQUEST_TIME);
       }
     }
   }
@@ -509,7 +525,11 @@ function _sf_import_process_records() {
       $oid = $function($sfids->sfid, $sfids->fieldmap, $drupal_id);
       $records[] = array($sfids->sfid, $oid, $sfids->fieldmap);
     }
-    db_query("DELETE FROM {sf_import_queue} WHERE sfid = '%s'", $sfids->sfid);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("DELETE FROM {sf_import_queue} WHERE sfid = '%s'", $sfids->sfid) */
+    db_delete('sf_import_queue')
+  ->condition('sfid', $sfids->sfid)
+  ->execute();
   }
   if (count($records) > 0) {
     variable_set('sf_import_queue_processed_count', count($records));

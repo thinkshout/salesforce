@@ -7,25 +7,27 @@
  */
 
 /**
- * Implementation of hook_install().
+ * Implements hook_install().
  */
 function sf_prematch_install() {
-  drupal_install_schema('sf_prematch');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_install_schema('sf_prematch')
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function sf_prematch_uninstall() {
-  drupal_uninstall_schema('sf_prematch');
+  // TODO The drupal_(un)install_schema functions are called automatically in D7.
+  // drupal_uninstall_schema('sf_prematch')
 }
 
 /**
- * Implementation of hook_schema().
+ * Implements hook_schema().
  */
 function sf_prematch_schema() {
   $schema['salesforce_prematch'] = array(
-    'description' => t('Drupal to Salesforce object mapping table for pre-creation '),
+    'description' => 'Drupal to Salesforce object mapping table for pre-creation ',
     'fields' => array(
       'name' => array(
         'description' => 'Foreign key for salesforce_field_map name',
@@ -74,7 +76,7 @@ function sf_prematch_schema() {
  */
 function sf_prematch_update_1() {
   $ret = array();
-  if (!db_column_exists('salesforce_field_map', 'name')) {
+  if (!db_field_exists('salesforce_field_map', 'name')) {
     $ret[] = array(
       'success' => FALSE,
       'query' => 'N/A',
@@ -85,13 +87,24 @@ function sf_prematch_update_1() {
   $result = db_query('SELECT fieldmap, name FROM {salesforce_field_map}');
   while ($row = db_fetch_array($result)) {
     $sql = 'UPDATE {salesforce_prematch} SET name = "%s" WHERE fieldmap = %d';
-    $update_result = db_query($sql, $name, $fieldmap);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query($sql, $name, $fieldmap) */
+    $update_result = db_update('salesforce_prematch')
+  ->fields(array(
+    'name' => $name,
+  ))
+  ->condition('fieldmap', $fieldmap)
+  ->execute();
     $ret[] = array(
       'success' => $update_result !== FALSE,
       'query' => check_plain($sql),
     );
   }
-  db_add_primary_key($ret, 'salesforce_prematch', 'name', array('name'));
-  $ret[] = update_sql('ALTER TABLE {salesforce_prematch} DROP COLUMN fieldmap');
-  return $ret;
+  db_add_primary_key('salesforce_prematch', 'name', array('name'));
+  // TODO update_sql has been removed. Use the database API for any schema or data changes.
+  $ret[] = array() /* update_sql('ALTER TABLE {salesforce_prematch} DROP COLUMN fieldmap') */;
+  // hook_update_N() no longer returns a $ret array. Instead, return
+  // nothing or a translated string indicating the update ran successfully.
+  // See http://drupal.org/node/224333#update_sql.
+  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }

@@ -8,7 +8,7 @@
 
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function sf_node_menu() {
   $items['node/%node/salesforce'] = array(
@@ -24,12 +24,16 @@ function sf_node_menu() {
 }
 
 // Access callback for the node/%node/salesforce menu item.
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_node_salesforce_form_access($node) {
   return user_access('administer salesforce') and salesforce_api_fieldmap_options('node_' . $node->type);
 }
 
 /**
- * Implementation of hook_form_alter().
+ * Implements hook_form_alter().
  */
 function sf_node_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'salesforce_api_settings_form') {
@@ -48,110 +52,190 @@ function sf_node_form_alter(&$form, $form_state, $form_id) {
 }
 
 /**
- * Implementation of hook_nodeapi().
+ * Implements hook_node_load().
  */
-function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  switch ($op) {
-    case 'load':
-      $node->salesforce = salesforce_api_id_load('node', $node->nid);
-      break;
+function sf_node_node_load($node, $types) {
+  $node->salesforce = salesforce_api_id_load('node', $node->nid);
+}
 
-    case 'delete':
-      $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
-      $map = current($maps);
-      if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
-        $continue = TRUE;
-        $continues = module_invoke_all('salesforce_api_delete', $node->salesforce->sfid, $map, $node->nid);
-        if (!empty($continues)) {
-          foreach ($continues as $continue) {
-            if ($continue === FALSE) {
-              break;
-            }
-          }
-        }
-        if ($continue) {
-          salesforce_api_delete_salesforce_objects($node->salesforce->sfid);
-        }
-      }
-      salesforce_api_delete_object_map('node_' . $node->type, $node->uid);
-      break;
-
-    case 'update':
-    case 'insert':
-      // When importing *from* Salesforce, don't export *back* to Salesforce.
-      if (isset($node->sf_node_skip_export)) {
-        break;
-      }
-
-      // If this is an update, and the node already has a salesforce mapping,
-      // try to load it. If the load fails, we need to fetch the appropriate
-      // fieldmap. Either way, we're upserting the salesforce record.
-      $salesforce = (object) array(
-        'name' => NULL,
-        'sfid' => NULL,
-      );
-      if ($node->nid) {
-        $salesforce = salesforce_api_id_load('node', $node->nid);
-      }
-
-      // If we have an existing link, attempt to load the assoc'd map.
-      if (!empty($salesforce->name)) {
-        $map = salesforce_api_fieldmap_load($salesforce->name);
-      }
-
-      // If the sf link wasn't found, or if it was found but assoc'd to a
-      // non-existent map, grab any maps assoc'd with this node type.
-      if (empty($salesforce->name) || empty($map)) {
-        $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
-        if (empty($maps)) {
+/**
+ * Implements hook_node_delete().
+ */
+function sf_node_node_delete($node) {
+  $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
+  $map = current($maps);
+  if ($map->automatic & SALESFORCE_AUTO_SYNC_DELETE) {
+    $continue = TRUE;
+    $continues = module_invoke_all('salesforce_api_delete', $node->salesforce->sfid, $map, $node->nid);
+    if (!empty($continues)) {
+      foreach ($continues as $continue) {
+        if ($continue === FALSE) {
           break;
         }
       }
-      // Otherwise assign the single map as an array so we only have to write
-      // the proceeding logic once.
-      else {
-        $maps = array($map->name => $map);
-      }
+    }
+    if ($continue) {
+      salesforce_api_delete_salesforce_objects($node->salesforce->sfid);
+    }
+  }
+  salesforce_api_delete_object_map('node_' . $node->type, $node->uid);
+}
 
-      foreach ($maps as $map) {
-        $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
-        $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
-        if ((!$auto_create && $op == 'insert')
-         || (!$auto_update && $op == 'update')) {
-          unset($maps[$map->name]);
-        }
-      }
+/**
+ * Implements hook_node_update().
+ */
+function sf_node_node_update($node) {
+  // When importing *from* Salesforce, don't export *back* to Salesforce.
+  if (isset($node->sf_node_skip_export)) {
+    break;
+  }
 
-      // If all our maps were unset, abort this procedure.
-      if (empty($maps)) {
-        break;
-      }
+  // If this is an update, and the node already has a salesforce mapping,
+  // try to load it. If the load fails, we need to fetch the appropriate
+  // fieldmap. Either way, we're upserting the salesforce record.
+  $salesforce = (object) array(
+    'name' => NULL,
+    'sfid' => NULL,
+  );
+  if ($node->nid) {
+    $salesforce = salesforce_api_id_load('node', $node->nid);
+  }
 
-      // Otherwise, use the first fieldmap.
-      $map = reset($maps);
-      $salesforce->name = $map->name;
+  // If we have an existing link, attempt to load the assoc'd map.
+  if (!empty($salesforce->name)) {
+    $map = salesforce_api_fieldmap_load($salesforce->name);
+  }
 
-      // Check if there is more than one fieldmap in the result.
-      if (user_access('administer salesforce') AND next($maps)) {
-        if (!empty($map->description)) {
-          $description = '(' . $map->description . ')';
-        }
-        drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap !map_name @map_description.', array('!map_name' => l($map->name, SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit'), '@map_description' => $description)), 'warning');
-      }
-
-      // Finally, export the node to Salesforce.
-      try {
-        sf_node_export($node, $salesforce->name, $salesforce->sfid);
-      }
-      catch (Exception $e) {
-        salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
-      }
+  // If the sf link wasn't found, or if it was found but assoc'd to a
+  // non-existent map, grab any maps assoc'd with this node type.
+  if (empty($salesforce->name) || empty($map)) {
+    $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
+    if (empty($maps)) {
       break;
+    }
+  }
+  // Otherwise assign the single map as an array so we only have to write
+  // the proceeding logic once.
+  else {
+    $maps = array($map->name => $map);
+  }
+
+  foreach ($maps as $map) {
+    $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+    $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+    if ((!$auto_create && $op == 'insert')
+          || (!$auto_update && $op == 'update')) {
+      unset($maps[$map->name]);
+    }
+  }
+
+  // If all our maps were unset, abort this procedure.
+  if (empty($maps)) {
+    break;
+  }
+
+  // Otherwise, use the first fieldmap.
+  $map = reset($maps);
+  $salesforce->name = $map->name;
+
+  // Check if there is more than one fieldmap in the result.
+  if (user_access('administer salesforce') AND next($maps)) {
+    if (!empty($map->description)) {
+      $description = '(' . $map->description . ')';
+    }
+    drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap !map_name @map_description.', array('!map_name' => l($map->name, SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit'), '@map_description' => $description)), 'warning');
+  }
+
+  // Finally, export the node to Salesforce.
+  try {
+    sf_node_export($node, $salesforce->name, $salesforce->sfid);
+  }
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
   }
 }
 
 /**
- * Implementation of hook_content_fieldapi()
+ * Implements hook_node_insert().
+ */
+function sf_node_node_insert($node) {
+  // When importing *from* Salesforce, don't export *back* to Salesforce.
+  if (isset($node->sf_node_skip_export)) {
+    break;
+  }
+
+  // If this is an update, and the node already has a salesforce mapping,
+  // try to load it. If the load fails, we need to fetch the appropriate
+  // fieldmap. Either way, we're upserting the salesforce record.
+  $salesforce = (object) array(
+    'name' => NULL,
+    'sfid' => NULL,
+  );
+  if ($node->nid) {
+    $salesforce = salesforce_api_id_load('node', $node->nid);
+  }
+
+  // If we have an existing link, attempt to load the assoc'd map.
+  if (!empty($salesforce->name)) {
+    $map = salesforce_api_fieldmap_load($salesforce->name);
+  }
+
+  // If the sf link wasn't found, or if it was found but assoc'd to a
+  // non-existent map, grab any maps assoc'd with this node type.
+  if (empty($salesforce->name) || empty($map)) {
+    $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
+    if (empty($maps)) {
+      break;
+    }
+  }
+  // Otherwise assign the single map as an array so we only have to write
+  // the proceeding logic once.
+  else {
+    $maps = array($map->name => $map);
+  }
+
+  foreach ($maps as $map) {
+    $auto_create = $map->automatic & SALESFORCE_AUTO_SYNC_CREATE;
+    $auto_update = $map->automatic & SALESFORCE_AUTO_SYNC_UPDATE;
+    if ((!$auto_create && $op == 'insert')
+          || (!$auto_update && $op == 'update')) {
+      unset($maps[$map->name]);
+    }
+  }
+
+  // If all our maps were unset, abort this procedure.
+  if (empty($maps)) {
+    break;
+  }
+
+  // Otherwise, use the first fieldmap.
+  $map = reset($maps);
+  $salesforce->name = $map->name;
+
+  // Check if there is more than one fieldmap in the result.
+  if (user_access('administer salesforce') AND next($maps)) {
+    if (!empty($map->description)) {
+      $description = '(' . $map->description . ')';
+    }
+    drupal_set_message(t('Warning: more than one "automatic" salesforce mapping detected. Used fieldmap !map_name @map_description.', array('!map_name' => l($map->name, SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit'), '@map_description' => $description)), 'warning');
+  }
+
+  // Finally, export the node to Salesforce.
+  try {
+    sf_node_export($node, $salesforce->name, $salesforce->sfid);
+  }
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
+  }
+}
+
+/**
+ * Implements hook_nodeapi().
+ */
+function sf_node_nodeapi_OLD(&$node, $op, $a3 = NULL, $a4 = NULL) { }
+
+/**
+ * Implements hook_content_fieldapi().
  * Delete a field from a Salesforce fieldmap when the field instance is deleted.
  */
 function sf_node_content_fieldapi($op, $field) {
@@ -165,7 +249,7 @@ function sf_node_content_fieldapi($op, $field) {
 
 
 /**
- * Implementation of hook_fieldmap_objects_alter().
+ * Implements hook_fieldmap_objects_alter().
  */
 function sf_node_fieldmap_objects($type) {
   $objects = array();
@@ -173,7 +257,7 @@ function sf_node_fieldmap_objects($type) {
   // Define the data fields available for Drupal objects.
   if ($type == 'drupal') {
     // Add a definition for each node type.
-    foreach (node_get_types() as $type) {
+    foreach (node_type_get_types() as $type) {
       // Define the node type object with the node ID field.
       $objects['node_' . $type->type] = array(
         'label' => t('@name node', array('@name' => $type->name)),
@@ -350,7 +434,7 @@ function _sf_node_export_author_email($node, $fieldname, $drupal_field_definitio
   if (!is_numeric($uid)) {
     return NULL;
   }
-  return db_result(db_query('SELECT mail FROM {users} WHERE uid = %d', $uid));
+  return db_query('SELECT mail FROM {users} WHERE uid = :uid', array(':uid' => $uid))->fetchField();
 }
 
 // Export a timestamp in a format Salesforce comprehends.
@@ -405,7 +489,11 @@ function _sf_node_export_cck_checkbox($source, $field) {
 }
 
 // Displays the Salesforce synchronization form.
-function sf_node_salesforce_form(&$form_state, $node) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function sf_node_salesforce_form($form, &$form_state, $node) {
   // Fail out if the node didn't exist!
   if (!$node->nid) {
     drupal_not_found();
@@ -421,7 +509,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
   }
 
   // Set the node page title.
-  drupal_set_title(check_plain($node->title));
+  drupal_set_title($node->title);
 
   $form = array();
 
@@ -519,7 +607,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#description' => t('<a href="!url">Edit this fieldmap</a>.', array('!url' => url(SALESFORCE_PATH_FIELDMAPS . '/' . $node->salesforce->name . '/edit'))),
     );
     $form['mapped']['fieldmap_values'] = array(
-      '#value' => theme('table', $header, $rows),
+      '#value' => theme('table', array('header' => $header, 'rows' => $rows)),
     );
 
     $form['mapped']['export_values'] = array(
@@ -560,7 +648,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
         '#collapsed' => TRUE,
       );
       $form['unmapped']['unmmaped_fields'] = array(
-        '#value' => theme('table', $header, $rows),
+        '#value' => theme('table', array('header' => $header, 'rows' => $rows)),
       );
     }
 
@@ -581,7 +669,7 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#collapsed' => TRUE,
     );
     $form['system']['system_fields'] = array(
-      '#value' => theme('table', $header, $rows),
+      '#value' => theme('table', array('header' => $header, 'rows' => $rows)),
     );
 
     $form['raw'] = array(
@@ -598,6 +686,10 @@ function sf_node_salesforce_form(&$form_state, $node) {
   return $form;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_node_salesforce_form_submit($form, &$form_state) {
   switch ($form_state['values']['op']) {
     // Export the node to Salesforce.
@@ -725,8 +817,8 @@ function sf_node_export($node, $name, $sfid = NULL) {
     // reference deleted Salesforce Records. If the fields property references
     // "Id" or if fields is empty, then we know that the the primary record was
     // deleted. Otherwise we don't have a good way to react.
-     && ($response->errors->fields == 'Id' || empty($response->errors->fields))
-     && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
+      && ($response->errors->fields == 'Id' || empty($response->errors->fields))
+      && SALESFORCE_DELETED_POLICY_UPSERT == variable_get('salesforce_api_entity_deleted_policy', SALESFORCE_DELETED_POLICY_UPSERT)) {
       // If the entity is deleted, unlink ALL the linked drupal objects.
       salesforce_api_id_unlink(array('sfid' => $object->Id));
       $node->salesforce->sfid = $object->Id = NULL;
@@ -873,7 +965,7 @@ function sf_node_import($sf_data, $name, $nid = NULL, $options = array()) {
     }
   } // end of loop through fields
 
-  $comparison_node = drupal_clone($node);
+  $comparison_node = clone $node;
 
   foreach (module_implements('salesforce_api_pre_import') as $module) {
     $function = $module . '_salesforce_api_pre_import';
@@ -895,8 +987,8 @@ function sf_node_import($sf_data, $name, $nid = NULL, $options = array()) {
   $sfid = $sf_data->Id;
 
   if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
-     || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
-     || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
+      || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
+      || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save('node', $node->nid, $sfid, $name);
   }
@@ -907,7 +999,7 @@ function sf_node_import($sf_data, $name, $nid = NULL, $options = array()) {
 }
 
 /**
- * Implements hook_default_salesforce_field_maps
+ * Implements hook_default_salesforce_field_maps().
  *
  */
 function sf_node_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {

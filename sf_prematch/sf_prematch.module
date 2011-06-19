@@ -11,7 +11,7 @@ define('SF_PREMATCH_PRIMARY_AND_SECONDARY', 2);
 define('SF_PREMATCH_PRIMARY', 3);
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function sf_prematch_menu() {
   $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));
@@ -65,7 +65,7 @@ function _sf_prematch_fieldmap_access($perm, $op = 'edit', $id = NULL) {
 }
 
 /**
- * Implementation of hook_form_alter().
+ * Implements hook_form_alter().
  */
 function sf_prematch_form_alter(&$form, $form_state, $form_id) {
   if ($form_id == 'salesforce_api_settings_form') {
@@ -110,7 +110,7 @@ function sf_prematch_fieldmap_edit_form_submit($form, &$form_state) {
 function sf_prematch_match_by_load($fieldmap) {
   static $match_bys;
   if (!isset($match_bys[$fieldmap]) && $fieldmap != '') {
-    $result = db_query("SELECT * FROM {salesforce_prematch} WHERE name = '%s'", $fieldmap);
+    $result = db_query("SELECT * FROM {salesforce_prematch} WHERE name = :name", array(':name' => $fieldmap));
     $match_by = db_fetch_array($result);
     if (count($match_by)) {
       $match_bys[$fieldmap] = $match_by;
@@ -136,11 +136,15 @@ function sf_prematch_match_by_load($fieldmap) {
  * @param $fieldmap
  */
 function sf_prematch_match_by_delete($name) {
-  db_query("DELETE FROM {salesforce_prematch} WHERE name = '%s'", $name);
+  // TODO Please review the conversion of this statement to the D7 database API syntax.
+  /* db_query("DELETE FROM {salesforce_prematch} WHERE name = '%s'", $name) */
+  db_delete('salesforce_prematch')
+  ->condition('name', $name)
+  ->execute();
 }
 
 /**
- * Implement hook_sf_find_match
+ * Implements hook_sf_find_match().
  *
  * @param string $action
  * @param stdClass $object
@@ -157,7 +161,7 @@ function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
   if ($match_by['primary_field'] == '') {
     return;
   }
-  require_once drupal_get_path('module', 'sf_prematch') . '/sf_prematch.main.inc';
+  require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'sf_prematch') . '/sf_prematch.main.inc';
   $map = salesforce_api_fieldmap_load($fieldmap_name);
   switch ($action) {
     case 'export':

@@ -6,6 +6,10 @@
  * Admin functions for sf_prematch module.
  */
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_prematch_list() {
   // Define the header for the admin table.
   $header = array(
@@ -18,6 +22,7 @@ function sf_prematch_list() {
   );
 
   //$maps = salesforce_api_salesforce_field_map_load_all();
+  // TODO Please convert this statement to the D7 database API syntax.
   $result = db_query("SELECT fm.*, pm.rule " .
     "FROM {salesforce_field_map} fm LEFT JOIN {salesforce_prematch} pm " .
     "ON fm.name = pm.name"
@@ -53,12 +58,16 @@ function sf_prematch_list() {
     );
   }
 
-  $output = theme('table', $header, $rows);
+  $output = theme('table', array('header' => $header, 'rows' => $rows));
   return $output;
 }
 
 // Displays the form to add prematching to a fieldmap.
-function sf_prematch_edit_form(&$form_state, $fieldmap) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function sf_prematch_edit_form($form, &$form_state, $fieldmap) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
 
@@ -148,19 +157,47 @@ function sf_prematch_edit_form(&$form_state, $fieldmap) {
   return $form;
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_prematch_edit_form_validate($form, &$form_state) {
 
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_prematch_edit_form_submit($form, &$form_state) {
   $values = $form_state['values'];
 
   // Store data in the database.
   if ($values['new_prematch']) {
-    db_query("INSERT INTO {salesforce_prematch} (name, primary_field, secondary_field, tertiary_field, rule) VALUES ('%s', '%s', '%s', '%s', %d)", $values['name'], $values['primary'], $values['secondary'], $values['tertiary'], $values['rule']);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("INSERT INTO {salesforce_prematch} (name, primary_field, secondary_field, tertiary_field, rule) VALUES ('%s', '%s', '%s', '%s', %d)", $values['name'], $values['primary'], $values['secondary'], $values['tertiary'], $values['rule']) */
+    $id = db_insert('salesforce_prematch')
+  ->fields(array(
+    'name' => $values['name'],
+    'primary_field' => $values['primary'],
+    'secondary_field' => $values['secondary'],
+    'tertiary_field' => $values['tertiary'],
+    'rule' => $values['rule'],
+  ))
+  ->execute();
   }
   else {
-    db_query("UPDATE {salesforce_prematch} SET primary_field = '%s', secondary_field = '%s', tertiary_field = '%s', rule = %d WHERE name = '%s'", $values['primary'], $values['secondary'], $values['tertiary'], $values['rule'], $values['name']);
+    // TODO Please review the conversion of this statement to the D7 database API syntax.
+    /* db_query("UPDATE {salesforce_prematch} SET primary_field = '%s', secondary_field = '%s', tertiary_field = '%s', rule = %d WHERE name = '%s'", $values['primary'], $values['secondary'], $values['tertiary'], $values['rule'], $values['name']) */
+    db_update('salesforce_prematch')
+  ->fields(array(
+    'primary_field' => $values['primary'],
+    'secondary_field' => $values['secondary'],
+    'tertiary_field' => $values['tertiary'],
+    'rule' => $values['rule'],
+  ))
+  ->condition('name', $values['name'])
+  ->execute();
   }
 
   // Display a message.
@@ -170,7 +207,11 @@ function sf_prematch_edit_form_submit($form, &$form_state) {
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS;
 }
 
-function sf_prematch_delete_form(&$form_state, $fieldmap) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function sf_prematch_delete_form($form, &$form_state, $fieldmap) {
   // Load the fieldmap and prematch from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
   $match_by = sf_prematch_match_by_load($fieldmap);
@@ -201,6 +242,10 @@ function sf_prematch_delete_form(&$form_state, $fieldmap) {
   return confirm_form($form, t('Are you sure you want to delete this prematch?'), SALESFORCE_PATH_FIELDMAPS . '/prematching', $desc, t('Delete'));
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_prematch_delete_form_submit($form, &$form_state) {
   // Delete the specified prematch.
   sf_prematch_match_by_delete($form_state['values']['name']);
@@ -211,6 +256,10 @@ function sf_prematch_delete_form_submit($form, &$form_state) {
   $form_state['redirect'] = SALESFORCE_PATH_FIELDMAPS . '/prematching';
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_prematch_get_options($map, $required = FALSE) {
   // Extract terms from $map.
   if ($map->actions == 'import') {

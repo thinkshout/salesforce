@@ -12,7 +12,7 @@
  *
  * @todo Response handling: under what conditions should we return a successful response? Note if we do not return a successful response, Salesforce will re-send the outbound message indefinitely.
  */
-function sf_notifications_settings_form(&$form_state) {
+function sf_notifications_settings_form($form, &$form_state) {
   $form = array('sf_notifications' => array(
       '#type' => 'fieldset',
       '#title' => 'Active Notification Fieldmaps',
@@ -50,7 +50,11 @@ function sf_notifications_settings_form(&$form_state) {
   return system_settings_form($form);
 }
 
-function sf_notifications_fieldmap_settings(&$form_state, $fieldmap_id) {
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function sf_notifications_fieldmap_settings($form, &$form_state, $fieldmap_id) {
   $map = salesforce_api_fieldmap_load($fieldmap_id);
   $active = variable_get('sf_notifications_active_maps', array());
   $active = $active[$fieldmap_id];

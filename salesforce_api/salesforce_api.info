@@ -3,4 +3,11 @@ name = Salesforce API
 description = Defines an API that enables modules to interact with the Salesforce server.
 dependencies[] = ctools
 package = Salesforce
-core = 6.x
+core = 7.x
+
+files[] = salesforce_api.admin.inc
+files[] = salesforce_api.drush.inc
+files[] = salesforce_api.features.inc
+files[] = salesforce_api.install
+files[] = salesforce_api.module
+files[] = salesforce_api.views.inc

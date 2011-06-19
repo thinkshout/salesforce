@@ -10,7 +10,7 @@
 /**
  * The settings form at admin/settings/salesforce.
  */
-function salesforce_api_settings_form($form_state) {
+function salesforce_api_settings_form($form, $form_state) {
   $form = array();
 
   // Use the username field to collapse the API settings fieldset.
@@ -164,7 +164,7 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
   $values = $form_state['values'];
 
   if (isset($values['salesforce_api_dir_wsdl'])
-   && !file_exists($values['salesforce_api_dir_wsdl'])) {
+    && !file_exists($values['salesforce_api_dir_wsdl'])) {
     form_set_error('salesforce_api_dir_wsdl', 'The specified WSDL directory does not exist. Please make sure the directory exists, check your input, and try again.');
   }
 
@@ -227,7 +227,7 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
       SALESFORCE_PATH_UPDATE_WSDL,
       'destination=' . SALESFORCE_PATH_ADMIN,
     );
-    ini_set('soap.wsdl_cache_enabled',   '0');
+    ini_set('soap.wsdl_cache_enabled',    '0');
   }
 
   if ($values['salesforce_api_reset_credentials']) {
@@ -280,7 +280,7 @@ function salesforce_api_fieldmap_admin() {
     );
   }
 
-  return theme('table', $header, $rows);
+  return theme('table', array('header' => $header, 'rows' => $rows));
 }
 
 /**
@@ -354,7 +354,7 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
 /**
  * Displays the form to add a fieldmap.
  */
-function salesforce_api_fieldmap_add_form(&$form_state) {
+function salesforce_api_fieldmap_add_form($form, &$form_state) {
   $form = array();
 
   // Build an options array out of the Drupal objects.
@@ -436,7 +436,7 @@ function salesforce_api_fieldmap_create($values) {
  * Displays the form for cloning a fieldmap
  *
  */
-function salesforce_api_fieldmap_clone_form(&$form_state, $fieldmap) {
+function salesforce_api_fieldmap_clone_form($form, &$form_state, $fieldmap) {
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
   // Return to the admin page if the fieldmap did not exist.
@@ -459,6 +459,10 @@ function salesforce_api_fieldmap_clone_form(&$form_state, $fieldmap) {
 
 }
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
   // Clone the specified fieldmap.
   $map = salesforce_api_fieldmap_clone($form_state['values']['fieldmap_index']);
@@ -477,7 +481,7 @@ function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
 /**
  * Displays the confirm form for deleting a fieldmap.
  */
-function salesforce_api_fieldmap_delete_form(&$form_state, $fieldmap) {
+function salesforce_api_fieldmap_delete_form($form, &$form_state, $fieldmap) {
   $args = arg();
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap);
@@ -523,7 +527,7 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
 /**
  * Displays the edit form for adding field associations to a fieldmap.
  */
-function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
+function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
 
   // Include the CSS and JS for the form.
   $path = drupal_get_path("module", "salesforce_api");
@@ -649,7 +653,7 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
   foreach ($target['fields'] as $key => $value) {
     // Determine to which table this field should belong.
     if (($value['type'] & SALESFORCE_FIELD_CREATEABLE)
-     && !($value['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
+      && !($value['type'] & SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE)) {
       // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="' . t('This field is required.') . '">*</span>';
@@ -660,18 +664,18 @@ function salesforce_api_fieldmap_edit_form(&$form_state, $fieldmap) {
     }
 
     if ($value['type'] & SALESFORCE_FIELD_CREATEABLE
-     && !($value['type'] & SALESFORCE_FIELD_UPDATEABLE)) {
+      && !($value['type'] & SALESFORCE_FIELD_UPDATEABLE)) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field will only be set for new records.') . '">' . t('Create-only') . '</span>';
     }
     elseif (!($value['type'] & SALESFORCE_FIELD_CREATEABLE)
-     && $value['type'] & SALESFORCE_FIELD_UPDATEABLE) {
+      && $value['type'] & SALESFORCE_FIELD_UPDATEABLE) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field can only be set for existing records.') . '">' . t('Update-only') . '</span>';
     }
-    elseif (!($value['type'] & (SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE))) {
+    elseif (!($value['type'] & SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE)) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field will be available for imports only.') . '">' . t('Read-only') . '</span>';
@@ -754,12 +758,12 @@ function salesforce_api_fieldmap_edit_form_validate($form, &$form_state) {
   drupal_add_js($path . '/misc/salesforce_api.admin.js');
 
   if ($form_state['values']['add_button'] == $form_state['values']['op']
-   && empty($form_state['values']['new_field'])) {
+    && empty($form_state['values']['new_field'])) {
     form_set_error('new_field', t('Please select a target field.'));
   }
   elseif ($form_state['values']['submit'] == $form_state['values']['op']
-   && !empty($form_state['values']['fake_required'])
-   && empty($form_state['values']['new_field'])) {
+    && !empty($form_state['values']['fake_required'])
+    && empty($form_state['values']['new_field'])) {
     $rows = $form_state['values']['rows'];
     foreach ($form_state['values']['fake_required'] as $name) {
       if (empty($form_state['values']['rows'][$name]['source'][$name])) {
@@ -852,8 +856,7 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
     $success = FALSE;
   }
   elseif (($object_definition['fields'][$field]['type'] & SALESFORCE_FIELD_CREATEABLE)
-     && !($object_definition['fields'][$field]['type'] & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
-
+      && !($object_definition['fields'][$field]['type'] & SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE)) {
     // Don't allow removing required fields.
     $success = FALSE;
   }
@@ -872,20 +875,22 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
 /**
  * Theme callback for synch option radios
  */
-function theme_salesforce_api_drupal_sfapi_automatic($element) {
+function theme_salesforce_api_drupal_sfapi_automatic($variables) {
+  $element = $variables['element'];
   $element[SALESFORCE_AUTO_SYNC_CREATE]['#description'] =
     t('Create and link Salesforce records automatically when Drupal records are created.');
   $element[SALESFORCE_AUTO_SYNC_UPDATE]['#description'] =
     t('Update Salesforce records if a link already exists.');
   $element[SALESFORCE_AUTO_SYNC_DELETE]['#description'] =
     t('Delete linked Salesforce records when a Drupal record is deleted.');
-  return drupal_render($element);
+  return drupal_render_children($element);
 }
 
 /**
  * Themes the field associations on a fieldmap edit form into a table.
  */
-function theme_salesforce_api_fieldmap_edit_form_table($form) {
+function theme_salesforce_api_fieldmap_edit_form_table($variables) {
+  $form = $variables['form'];
   // Build the header array.
   $header = array();
 
@@ -926,17 +931,17 @@ function theme_salesforce_api_fieldmap_edit_form_table($form) {
   $caption = NULL;
 
   if (isset($form['caption'] )) {
-    $caption = drupal_render($form['caption']);
+    $caption = drupal_render_children($form['caption']);
   }
 
-  return theme('table', $header, $rows, $attributes, $caption);
+  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes, 'caption' => $caption));
 }
 
 
 /**
  * Show form for admin to upload a new WSDL file
  */
-function salesforce_api_update_wsdl_form() {
+function salesforce_api_update_wsdl_form($form, &$form_state) {
   $form = array();
 
   // Need to set the form type so file upload will work
@@ -989,13 +994,13 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
   $file = $dir . '/enterprise.wsdl.xml';
 
   // Make sure the directory is writeable
-  if ( !file_check_directory( $dir ) ) {
+  if ( !file_prepare_directory( $dir ) ) {
     form_set_error($source, t('Server directory %directory is not writeable. Please check directory permissions or contact a site admin to correct this.', array('%directory' => $dir)));
     return;
   }
 
   if (!isset($_FILES['files']) && $_FILES['files']['name'][$source]
-   || !is_uploaded_file($_FILES['files']['tmp_name'][$source])) {
+    || !is_uploaded_file($_FILES['files']['tmp_name'][$source])) {
     form_set_error($source, t('Error uploading file. Please try again.'));
     return;
   }
@@ -1044,7 +1049,7 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
 
   // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
   // cache permanently, but should force PHP to reload it.
-  ini_set('soap.wsdl_cache_enabled',   '0');
+  ini_set('soap.wsdl_cache_enabled',    '0');
 
   // Clear the cache
   drupal_flush_all_caches();
@@ -1071,7 +1076,7 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
  * @return void
  * @author aaron
  */
-function salesforce_api_admin_object(&$form_state) {
+function salesforce_api_admin_object($form, &$form_state) {
   $response = salesforce_api_describeGlobal();
   if (empty($response->types)) {
     drupal_set_message(t('There was an error retrieving the list of Salesforce objects. Please verify that your Salesforce instance is properly configured.'), 'error');
@@ -1137,7 +1142,7 @@ function salesforce_api_admin_object_submit($form, &$form_state) {
 /**
  * Placeholder for per-object configuration settings. Any ideas?
  */
-function salesforce_api_admin_object_settings($form_state, $type) {
+function salesforce_api_admin_object_settings($form, $form_state, $type) {
   return array('settings' => array(
       '#type' => 'markup',
       '#value' => 'Placeholder for per-object configuration settings.',
@@ -1155,7 +1160,8 @@ function salesforce_api_admin_object_settings($form_state, $type) {
  * Theming function for salesforce_api_admin_setup
  * For locally-cached SF Objects, add a "configure" or "re-map" link next to the checkbox
  */
-function theme_salesforce_api_object_options($element = NULL) {
+function theme_salesforce_api_object_options($variables) {
+  $element = $variables['element'];
   if (empty($element['objects']['#options'])) {
     return drupal_render($element);
   }
@@ -1181,7 +1187,7 @@ function theme_salesforce_api_object_options($element = NULL) {
     $element['objects'][$key]['#title'] .= ' | ' . $link;
   }
   unset($_SESSION['objects_error']);
-  return drupal_render($element);
+  return drupal_render_children($element);
 }
 
 /**
@@ -1232,7 +1238,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
           foreach ($response->types as $type) {
             $items[] = l($type->label, SALESFORCE_PATH_DEMO . '/data-structure/' . $type->name);
           }
-          $output .= theme('item_list', $items, t('Global Data Structure'));
+          $output .= theme('item_list', array('items' => $items, 'title' => t('Global Data Structure')));
         }
       }
 
@@ -1245,11 +1251,12 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
   if (module_exists('sf_user')) {
     $items[] = l(t('Export your user account as a contact'), 'user/' . $user->uid . '/salesforce');
   }
-  if (module_exists('sf_node') && $node = node_load(array('type' => 'page'))) {
+  // TODO node_load_multiple returns an array of nodes, rather than a single node
+  if (module_exists('sf_node') && $node = node_load_multiple(array('type' => 'page'))) {
     $items[] = l(t('Export node @nid as a Campaign', array('@nid' => $node->nid)), 'node/' . $node->nid . '/salesforce');
   }
 
-  $output .= '<p>' . t('<b>Choose from the following demonstrations:</b>') . theme('item_list', $items) . '</p>';
+  $output .= '<p>' . t('<b>Choose from the following demonstrations:</b>') . theme('item_list', array('items' => $items)) . '</p>';
 
   return $output;
 }

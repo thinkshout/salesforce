@@ -151,6 +151,10 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
  * @return string uid or nid
  */
 
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
 function sf_prematch_import($object_type, $object, $map, $match_by) {
 
   // This is a generic solution only for object types of "user" or "node".
@@ -304,8 +308,9 @@ function sf_prematch_import($object_type, $object, $map, $match_by) {
   // Now that we have constructed the query string, execute it and store the results.
   $found = array();
   if (strlen($query_str) > 0) {
+    // TODO Please convert this statement to the D7 database API syntax.
     $results = db_query($query_str);
-    while ($f = db_result($results)) {
+    while ($f = $results->fetchField()) {
       $found[] = $f;
     }
   }
