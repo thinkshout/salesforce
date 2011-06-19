@@ -14,13 +14,14 @@
  */
 function sf_notifications_settings_form(&$form_state) {
   $form = array('sf_notifications' => array(
-    '#type' => 'fieldset',
-    '#title' => 'Active Notification Fieldmaps',
-    '#description' => 'Please check the box for each fieldmap you would like to respond to Salesforce Outbound Message events.',
-    'sf_notifications_active_maps' => array(
-      '#type' => 'checkboxes',
-      '#default_value' => variable_get('sf_notifications_active_maps', array()),
-    )));
+      '#type' => 'fieldset',
+      '#title' => 'Active Notification Fieldmaps',
+      '#description' => 'Please check the box for each fieldmap you would like to respond to Salesforce Outbound Message events.',
+      'sf_notifications_active_maps' => array(
+        '#type' => 'checkboxes',
+        '#default_value' => variable_get('sf_notifications_active_maps', array()),
+      ),
+    ));
   $maps = salesforce_api_salesforce_field_map_load_all();
   foreach ($maps as $id => $map) {
     $edit = l(t('edit'), SALESFORCE_PATH_FIELDMAPS . '/' . $id . '/edit', array('query' => array('destination' => drupal_get_destination())));
@@ -68,7 +69,10 @@ function sf_notifications_fieldmap_settings(&$form_state, $fieldmap_id) {
   $settings = variable_get('sf_notifications_settings', array('condition' => array()));
 
   foreach ($settings as $id => $setting) {
-    $form['sf_notifications_settings'][$id] = array('#type' => 'value', '#value' => $setting);
+    $form['sf_notifications_settings'][$id] = array(
+      '#type' => 'value',
+      '#value' => $setting,
+    );
   }
   $form['sf_notifications_settings'][$fieldmap_id] = array(
     '#tree' => TRUE,

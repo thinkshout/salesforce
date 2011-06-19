@@ -49,13 +49,13 @@ function sf_queue_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
         'no export' => TRUE,
-        ),
+      ),
       'oid' => array(
         'description' => 'Specific Drupal object identifier (e.g. node id or user id)',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => 0
+        'default' => 0,
       ),
       'attempts' => array(
         'description' => 'How many export attempts have been made for this record.',
@@ -83,7 +83,7 @@ function sf_queue_schema() {
         'length' => 64,
         'not null' => TRUE,
         'default' => '',
-        ),
+      ),
       'sf_type' => array(
         'description' => 'SalesForce object type (e.g. "node", "comment")',
         'type' => 'varchar',
@@ -118,7 +118,7 @@ function sf_queue_schema() {
     ),
     'unique keys' => array(
       'name' => array('name'),
-      ),
+    ),
     'primary key' => array('id'),
   );
   return $schema;

@@ -121,7 +121,7 @@ function sf_prematch_match_by_load($fieldmap) {
         'primary_field' => '',
         'secondary_field' => '',
         'tertiary_field' => '',
-        'rule' => 1
+        'rule' => 1,
       );
       $fieldmap = 0;
     }

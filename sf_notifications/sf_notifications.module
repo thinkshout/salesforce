@@ -16,14 +16,14 @@ function sf_notifications_menu() {
       'access arguments' => array('administer salesforce'),
       'type' => MENU_LOCAL_TASK,
       'file' => 'sf_notifications.admin.inc',
-      ),
+    ),
     SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT => array(
       'title' => FALSE,
       'page callback' => 'sf_notifications_endpoint',
       'access arguments' => array('access content'),
       'access callback' => 'sf_notifications_allowed_ips',
       'type' => MENU_CALLBACK,
-      ),
+    ),
     SALESFORCE_PATH_FIELDMAPS . '/%/notifications' => array(
       'title' => 'Notifications',
       'page callback' => 'drupal_get_form',
@@ -33,8 +33,8 @@ function sf_notifications_menu() {
       'file' => 'sf_notifications.admin.inc',
       'type' => MENU_LOCAL_TASK,
       'weight' => 15,
-     ),
-    );
+    ),
+  );
 }
 
 /**
@@ -74,7 +74,7 @@ function sf_notifications_allowed_ips() {
  * Adapted from http://stackoverflow.com/questions/594112
  */
 function _sf_notifications_cidr_match($ip, $range) {
-  list ($subnet, $bits) = split('/', $range);
+  list($subnet, $bits) = split('/', $range);
   $ip = ip2long($ip);
   $subnet = ip2long($subnet);
   // Sanity check: ip2long() returns FALSE for an invalid IP address.
@@ -363,7 +363,10 @@ function sf_notifications_check_condition($operation, $notification_data, $map) 
  *    An indexed array mapping sfids to SObject records from SalesForce.
  */
 function _sf_notifications_parse_message($domDoc) {
-  $result = array('salesforce' => array(), 'drupal' => array());
+  $result = array(
+    'salesforce' => array(),
+    'drupal' => array(),
+  );
   $sfids = array();
   // Create sObject array and fill fields provided in notification
   $objects = $domDoc->getElementsByTagName('sObject');
@@ -403,7 +406,7 @@ function _sf_notifications_parse_message($domDoc) {
  * @return void
  **/
 function _sf_notifications_soap_respond($tf = 'true') {
-print '<?xml version = "1.0" encoding = "utf-8"?>
+  print '<?xml version = "1.0" encoding = "utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">

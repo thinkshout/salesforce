@@ -52,7 +52,7 @@ function sf_queue_admin_form() {
   return $output;
 }
 
-function  sf_queue_admin_view($qid) {
+function sf_queue_admin_view($qid) {
   if (strlen($qid) == 0 || !is_numeric($qid)) {
     drupal_goto("admin/reports/sf_queue/");
   }
@@ -68,8 +68,8 @@ function  sf_queue_admin_view($qid) {
       foreach ($sf_data as $key_sf => $value_sf) {
         $rows[] = array(
           'data' => array(
-          "sf_data - " . $key_sf,
-          $value_sf,
+            "sf_data - " . $key_sf,
+            $value_sf,
           ),
         );
       }
@@ -95,7 +95,7 @@ function  sf_queue_admin_view($qid) {
   return $output;
 }
 
-function  sf_queue_admin_delete_confirm(&$form_state, $qid) {
+function sf_queue_admin_delete_confirm(&$form_state, $qid) {
   if (strlen($qid) == 0 || !is_numeric($qid)) {
     drupal_goto("admin/reports/sf_queue/");
   }
@@ -135,7 +135,7 @@ function sf_queue_admin_delete_confirm_submit($form, &$form_state) {
 }
 
 
-function  _sf_queue_admin_mapinfo() {
+function _sf_queue_admin_mapinfo() {
   $sf_maps_items = db_query("SELECT name,description FROM {salesforce_field_map}");
   while ($sf_map = db_fetch_object($sf_maps_items)) {
     $name = $sf_map->name;

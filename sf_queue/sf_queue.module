@@ -13,7 +13,7 @@ function sf_queue_menu() {
       'page callback' => 'sf_queue_admin_form',
       'access arguments' => array('administer salesforce'),
       'file' => 'sf_queue.admin.inc',
-      ),
+    ),
     'admin/reports/sf_queue/view' => array(
       'title' => 'Salesforce export queue - View item',
       'description' => 'Displays the content of a Salesforce Suite Export queue item.',
@@ -21,7 +21,7 @@ function sf_queue_menu() {
       'page callback' => 'sf_queue_admin_view',
       'access arguments' => array('administer salesforce'),
       'file' => 'sf_queue.admin.inc',
-      ),
+    ),
     'admin/reports/sf_queue/delete' => array(
       'title' => 'Salesforce export queue - Delete item',
       'description' => 'Deletes a Salesforce Suite Export queue item.',
@@ -30,14 +30,14 @@ function sf_queue_menu() {
       'page arguments' => array('sf_queue_admin_delete_confirm', 4),
       'access arguments' => array('administer salesforce'),
       'file' => 'sf_queue.admin.inc',
-      ),
+    ),
     'admin/reports/sf_queue/processqueue' => array(
       'title' => 'Salesforce export queue - Process queue now',
       'description' => 'Processes the Salesforce Suite Export queue now.',
       'type' => MENU_CALLBACK,
       'page callback' => 'sf_queue_process_queue_force',
       'access arguments' => array('administer salesforce'),
-      ),
+    ),
   );
 
 }
@@ -107,14 +107,14 @@ function sf_queue_salesforce_api_delete($sfid, $map, $oid) {
   if (!in_array('delete', $settings['cron_operations'])) {
     return TRUE;
   }
-  return sf_queue_enqueue('delete', (object)array('Id' => $sfid), $map, $oid);
+  return sf_queue_enqueue('delete', (object) array('Id' => $sfid), $map, $oid);
 }
 
 /**
  * Helper function to add / update a queue item.
  */
 function sf_queue_enqueue($op, $sf_object, $map, $oid) {
-  $object = (object)array(
+  $object = (object) array(
     'sf_op' => $op,
     'oid' => $oid,
     'attempts' => 0,
@@ -125,7 +125,7 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
     'name' => md5(microtime()),
     'fieldmap_name' => $map->name,
     'sf_data' => $sf_object,
-    );
+  );
   $update = array();
   $sql =
     'SELECT oid
@@ -170,7 +170,7 @@ function sf_queue_cron() {
   }
 }
 
-function sf_queue_process_queue_force($redir=TRUE) {
+function sf_queue_process_queue_force($redir = TRUE) {
   if (!variable_get('sf_queue_enabled', FALSE)) {
     return FALSE;
   }
@@ -206,7 +206,7 @@ function sf_queue_process_queue($settings, $state) {
   }
 
   if (in_array('create', $settings['cron_operations'])
-  || in_array('update', $settings['cron_operations'])) {
+   || in_array('update', $settings['cron_operations'])) {
     sf_queue_handle_upserts($settings);
   }
 }
@@ -236,8 +236,8 @@ function sf_queue_handle_deletes($settings) {
     return;
   }
   if ($settings['cron_min_threshold']
-    && count($deletes) < $settings['cron_min_threshold']) {
-      return;
+     && count($deletes) < $settings['cron_min_threshold']) {
+    return;
   }
 
   try {
@@ -286,7 +286,7 @@ function sf_queue_handle_upserts($settings) {
     $count_having = ' HAVING total >= %d';
   }
   $count_sql .= " GROUP BY sf_type " . $count_having . " ORDER BY total DESC";
-error_log(print_r($count_sql, 1));
+  error_log(print_r($count_sql, 1));
 
   $count_result = db_query($count_sql, $count_args);
   $sql .= ' ORDER BY created LIMIT ' . $settings['cron_num_objects'];
@@ -455,7 +455,7 @@ function sf_queue_form_salesforce_api_settings_form_alter(&$form, $form_state) {
   foreach ($fieldmaps as $map) {
     $objects[$map->salesforce] = $map->salesforce;
   }
-  $num_objects = drupal_map_assoc(array(5, 10, 15, 30, 50, 75, 100, 125, 150, 175, 200));;
+  $num_objects = drupal_map_assoc(array(5, 10, 15, 30, 50, 75, 100, 125, 150, 175, 200));
 
   $threshold = drupal_map_assoc(array(0, 5, 10, 15, 30, 50, 75, 100, 125, 150, 175, 200));
   $threshold[0] = t('No minimum');
@@ -481,46 +481,50 @@ function sf_queue_form_salesforce_api_settings_form_alter(&$form, $form_state) {
     'cron_operations' => array(
       '#title' => 'Queued Operations',
       '#type' => 'checkboxes',
-      '#options' => array('create' => t('Create'), 'update' => t('Update'), 'delete' => t('Delete')),
+      '#options' => array(
+        'create' => t('Create'),
+        'update' => t('Update'),
+        'delete' => t('Delete'),
+      ),
       '#default_value' => $sf_queue_settings['cron_operations'],
       '#description' => t('Which operations should be queued? Check each operation that should cause an API transaction to be queued. Unchecked operations will trigger an API transaction immediately. <strong>Check more of these options if you are running out of API calls.</strong>'),
-      ),
+    ),
     'cron_frequency' => array(
       '#title' => 'Frequency',
       '#type' => 'select',
       '#options' => $frequency,
       '#default_value' => $sf_queue_settings['cron_frequency'],
       '#description' => t('How often should exports be attempted? Note: exports will only be attempted when cron is run. If your site-wide cron runs less frequently than this setting, the exports will be attempted on every cron run. <strong>If cron is timing out, you should lower this setting so that the queue is processed more frequently.</strong>'),
-      ),
+    ),
     'cron_period' => array(
       '#title' => 'Time',
       '#type' => 'select',
       '#options' => $period,
       '#default_value' => $sf_queue_settings['cron_period'],
       '#description' => t('Amount of time as a percentage of allotted cron run time that should be devoted to the export queue.'),
-      ),
+    ),
     'cron_num_objects' => array(
       '#title' => 'Number of Object Types',
       '#type' => 'select',
       '#options' => $num_objects,
       '#default_value' => $sf_queue_settings['cron_num_objects'],
       '#description' => t('How many object types should be processed per cron run? SalesForce allows up to 200 objects of the same type to be created, updated, or deleted in a single API transaction. The export queue will group objects of the same type to maximize efficient use of API transactions. This setting determines how many such object groups should be processed per cron run. <strong>If cron is timing out, you should lower this setting so that fewer API transactions are attempted per cron run.</strong>'),
-      ),
+    ),
     'cron_min_threshold' => array(
       '#title' => 'Minimum Number of Objects to Trigger Export',
       '#type' => 'select',
       '#options' => $threshold,
       '#default_value' => $sf_queue_settings['cron_min_threshold'],
-      '#description' => t('How many objects of should be required to trigger an export? The settings "No minimum" means that the export queue will be processed as fully as possible on each cron run, even if only one object is to be created, updated, or deleted. Setting this value too high may delay processing of queued data. <strong>If you are running out of API calls, try raising this setting so that more objects are queued before an API call is made. If your cron runs are timing out, try lowering this setting so that the queue load is smaller on each cron run.</strong>')
-      ),
+      '#description' => t('How many objects of should be required to trigger an export? The settings "No minimum" means that the export queue will be processed as fully as possible on each cron run, even if only one object is to be created, updated, or deleted. Setting this value too high may delay processing of queued data. <strong>If you are running out of API calls, try raising this setting so that more objects are queued before an API call is made. If your cron runs are timing out, try lowering this setting so that the queue load is smaller on each cron run.</strong>'),
+    ),
     'retry_num_attempts' => array(
       '#title' => 'Number of Retry Attempts',
       '#type' => 'select',
       '#options' => $attempts,
       '#default_value' => $sf_queue_settings['retry_num_attempts'],
       '#description' => t('How many times should an API transacrion be retried after a failed attempt? "No limit" means that failed attempts will be retried either until they succeed or are manually removed from the queue. <strong>If you are running out of API calls, try lowering this setting. If your cron runs are timing out, try lowering this setting.</strong>'),
-      ),
-    );
+    ),
+  );
   $form['sf_queue']['sf_queue_settings'] = $settings;
 }
 
@@ -547,6 +551,6 @@ function _sf_queue_default_settings() {
 function _sf_queue_default_state() {
   return array(
     'last_attempt' => NULL,
-    );
+  );
 }
 

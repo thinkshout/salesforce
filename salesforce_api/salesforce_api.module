@@ -11,28 +11,28 @@ define('SALESFORCE_API_CURRENT_VERSION', 1);
 
 // Define default directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
-define('SALESFORCE_DIR_TOOLKIT', function_exists('libraries_get_path') ? libraries_get_path('salesforce') : SALESFORCE_DIR .'/toolkit');
-define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT .'/soapclient');
-define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR .'/wsdl');
+define('SALESFORCE_DIR_TOOLKIT', function_exists('libraries_get_path') ? libraries_get_path('salesforce') : SALESFORCE_DIR . '/toolkit');
+define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT . '/soapclient');
+define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR . '/wsdl');
 
 
 // Define Drupal paths for various parts of the Salesforce UI.
 define('SALESFORCE_PATH_ADMIN', 'admin/settings/salesforce');
-define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN .'/fieldmap');
-define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN .'/demo');
-define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN .'/object');
+define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN . '/fieldmap');
+define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN . '/demo');
+define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN . '/object');
 define('SALESFORCE_PATH_UPDATE_WSDL', SALESFORCE_PATH_ADMIN . '/wsdl');
 
 // Salesforce schema properties. Not all these are in use yet.
-define('SALESFORCE_FIELD_CREATEABLE',          0x01);
-define('SALESFORCE_FIELD_DEFAULTEDONCREATE',   0x02);
+define('SALESFORCE_FIELD_CREATEABLE',           0x01);
+define('SALESFORCE_FIELD_DEFAULTEDONCREATE',    0x02);
 define('SALESFORCE_FIELD_DEPRECATEDANDHIDDEN', 0x04);
-define('SALESFORCE_FIELD_IDLOOKUP',            0x08);
-define('SALESFORCE_FIELD_NILLABLE',            0x10);
-define('SALESFORCE_FIELD_RESTRICTEDPICKLIST',  0x20);
-define('SALESFORCE_FIELD_UNIQUE',              0x40);
-define('SALESFORCE_FIELD_UPDATEABLE',          0x80);
-define('SALESFORCE_FIELD_SOURCE_ONLY',         ~SALESFORCE_FIELD_CREATEABLE);
+define('SALESFORCE_FIELD_IDLOOKUP',             0x08);
+define('SALESFORCE_FIELD_NILLABLE',             0x10);
+define('SALESFORCE_FIELD_RESTRICTEDPICKLIST',   0x20);
+define('SALESFORCE_FIELD_UNIQUE',               0x40);
+define('SALESFORCE_FIELD_UPDATEABLE',           0x80);
+define('SALESFORCE_FIELD_SOURCE_ONLY',          ~SALESFORCE_FIELD_CREATEABLE);
 
 // Define reporting levels for watchdog messages.
 define('SALESFORCE_LOG_NONE', 0);
@@ -80,7 +80,7 @@ function salesforce_api_help($section) {
   }
 }
 
- /**
+/**
  * Implementation of hook_features_api().
  */
 function salesforce_api_features_api() {
@@ -90,7 +90,7 @@ function salesforce_api_features_api() {
       'feature_source' => TRUE,
       'default_hook' => 'default_salesforce_field_maps',
       'default_file' => FEATURES_DEFAULTS_INCLUDED,
-      'file' => drupal_get_path('module', 'salesforce_api') .'/salesforce_api.features.inc',
+      'file' => drupal_get_path('module', 'salesforce_api') . '/salesforce_api.features.inc',
     ),
   );
 }
@@ -110,7 +110,7 @@ function salesforce_api_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_ADMIN .'/settings'] = array(
+  $items[SALESFORCE_PATH_ADMIN . '/settings'] = array(
     'title' => 'Settings',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
@@ -130,13 +130,13 @@ function salesforce_api_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/list'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/list'] = array(
     'title' => 'List',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'access arguments' => array('administer salesforce'),
     'weight' => 0,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/add'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/add'] = array(
     'title' => 'Add',
     'description' => 'Create a new fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -146,7 +146,7 @@ function salesforce_api_menu() {
     'weight' => 5,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/edit'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/edit'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -157,7 +157,7 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 10,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/remove/%'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/remove/%'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing fieldmap.',
     'page callback' => 'salesforce_api_fieldmap_remove_field',
@@ -167,7 +167,7 @@ function salesforce_api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/clone'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/clone'] = array(
     'title' => 'Clone',
     'description' => 'Clone an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -178,7 +178,7 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 15,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/delete'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/delete'] = array(
     'title' => 'Delete',
     'description' => 'Delete an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -189,11 +189,11 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 20,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/revert'] =
-    $items[SALESFORCE_PATH_FIELDMAPS .'/%/delete'];
-  $items[SALESFORCE_PATH_FIELDMAPS .'/%/revert']['title'] = 'Revert';
-  unset($items[SALESFORCE_PATH_FIELDMAPS .'/%/revert']['type'],
-        $items[SALESFORCE_PATH_FIELDMAPS .'/%/revert']['weight']);
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/revert'] =
+    $items[SALESFORCE_PATH_FIELDMAPS . '/%/delete'];
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%/revert']['title'] = 'Revert';
+  unset($items[SALESFORCE_PATH_FIELDMAPS . '/%/revert']['type'],
+        $items[SALESFORCE_PATH_FIELDMAPS . '/%/revert']['weight']);
 
 
   $items[SALESFORCE_PATH_OBJECT] = array(
@@ -205,7 +205,7 @@ function salesforce_api_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_OBJECT .'/%'] = array(
+  $items[SALESFORCE_PATH_OBJECT . '/%'] = array(
     'title' => 'Object setup',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_api_admin_object_settings', count(explode('/', SALESFORCE_PATH_OBJECT))),
@@ -224,7 +224,7 @@ function salesforce_api_menu() {
   );
 
   if (module_exists('ctools')) {
-    $items[SALESFORCE_PATH_FIELDMAPS .'/%/export'] = array(
+    $items[SALESFORCE_PATH_FIELDMAPS . '/%/export'] = array(
       'title' => 'Export',
       'description' => 'Export a fieldmap.',
       'page callback' => 'salesforce_api_export_salesforce_field_map',
@@ -235,7 +235,7 @@ function salesforce_api_menu() {
       // 'file' => 'salesforce_api.admin.inc',
       'weight' => 25,
     );
-    $items[SALESFORCE_PATH_FIELDMAPS .'/import'] = array(
+    $items[SALESFORCE_PATH_FIELDMAPS . '/import'] = array(
       'title' => 'Import',
       'description' => 'Import a fieldmap.',
       'page callback' => 'drupal_get_form',
@@ -374,10 +374,10 @@ function salesforce_api_connect($username = FALSE, $password = FALSE, $token = F
  */
 
 function salesforce_api_login($username, $password, $token) {
-  require_once(SALESFORCE_DIR_SOAPCLIENT .'/SforceEnterpriseClient.php');
+  require_once(SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php');
 
   // Create a new Salesforce object with the API credentials.
-  $sf = (object)array(
+  $sf = (object) array(
     'username' => $username,
     'password' => $password,
     'token' => $token,
@@ -388,11 +388,11 @@ function salesforce_api_login($username, $password, $token) {
   if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
     $dir = SALESFORCE_DIR_WSDL;
   }
-  $wsdl = $dir .'/enterprise.wsdl.xml';
+  $wsdl = $dir . '/enterprise.wsdl.xml';
 
   // Otherwise fall back to the one included with the Toolkit.
   if (!file_exists($wsdl)) {
-    $wsdl = SALESFORCE_DIR_SOAPCLIENT .'/enterprise.wsdl.xml';
+    $wsdl = SALESFORCE_DIR_SOAPCLIENT . '/enterprise.wsdl.xml';
   }
 
   // Connect to the server and login, logging any failures to the watchdog.
@@ -465,7 +465,7 @@ function salesforce_api_log($level, $message, $vars = array(), $severity = WATCH
 function salesforce_api_reset_expired_password($sf) {
   // Append one letter and one digit to the password to make sure we meet
   // salesforce's password validation requirements.
-  $new_password = user_password() .'z9';
+  $new_password = user_password() . 'z9';
   // setPassword() may throw InvalidIdFault or UnexpectedErrorFault exceptions.
   $sf->client->setPassword($sf->login->userId, $new_password);
   variable_set('salesforce_api_password', $new_password);
@@ -747,7 +747,7 @@ function salesforce_api_fieldmap_options($drupal = NULL, $salesforce = NULL) {
       continue;
     }
     if (is_array($map)) {
-      $map = (object)$map;
+      $map = (object) $map;
     }
     // Setup some replacement args for the label.
     $args = array(
@@ -785,7 +785,7 @@ function salesforce_api_fieldmap_objects_load($type = NULL, $name = NULL, $reset
 
     // Allow other modules to modify the object definitions.
     foreach (module_implements('fieldmap_objects_alter') as $module) {
-      $function = $module .'_fieldmap_objects_alter';
+      $function = $module . '_fieldmap_objects_alter';
       $function($objects);
     }
   }
@@ -921,12 +921,12 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 
     // Don't try to update or create fields to which those actions do not apply.
     if ((!$updateable && !$createable)
-    || (empty($drupal_data->salesforce->sfid) && !$createable)
-    || (!empty($drupal_data->salesforce->sfid) && !$updateable)) {
+     || (empty($drupal_data->salesforce->sfid) && !$createable)
+     || (!empty($drupal_data->salesforce->sfid) && !$updateable)) {
       continue;
     }
     // See if it's a special field
-    if (is_array($map->fields[$sf_fieldname]))  {
+    if (is_array($map->fields[$sf_fieldname])) {
       switch ($map->fields[$sf_fieldname]['type']) {
         case 'fixed':
           if (isset($map->fields[$sf_fieldname]['value'])) {
@@ -992,21 +992,34 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'datetime':
         $time = strtotime($value);
         if (empty($time)) {
-          $errors[] = array('message' => 'Salesforce cannot accept empty values for @type fields on fieldname @fieldname: "@value" value provided.', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
+          $errors[] = array(
+            'message' => 'Salesforce cannot accept empty values for @type fields on fieldname @fieldname: "@value" value provided.',
+            'vars' => array(
+              '@type' => $type,
+              '@value' => $value,
+              '@fieldname' => $sf_fieldname,
+            ),
+          );
         }
         else {
           // The export handler should have handled this, but reformat to
           // DATE_ATOM, just in case.
-          $object->$sf_fieldname  = gmdate(DATE_ATOM, $time);
+          $object->$sf_fieldname   = gmdate(DATE_ATOM, $time);
         }
         break;
 
       case 'email':
         if (salesforce_api_valid_email_address($value)) {
-          $object->$sf_fieldname  = $value;
+          $object->$sf_fieldname   = $value;
         }
         else {
-          $errors[] = array('message' => 'Invalid email address provided for Salesforce export on fieldname @fieldname: @value', 'vars' => array('@fieldname' => $sf_fieldname, '@value' => $value));
+          $errors[] = array(
+            'message' => 'Invalid email address provided for Salesforce export on fieldname @fieldname: @value',
+            'vars' => array(
+              '@fieldname' => $sf_fieldname,
+              '@value' => $value,
+            ),
+          );
           continue;
         }
         break;
@@ -1019,17 +1032,31 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
           $object->$sf_fieldname = $value;
         }
         else {
-          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
+          $errors[] = array(
+            'message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".',
+            'vars' => array(
+              '@type' => $type,
+              '@value' => $value,
+              '@fieldname' => $sf_fieldname,
+            ),
+          );
         }
         break;
 
       case 'reference':
       case 'id':
         if (!is_sfid($value)) {
-          $errors[] = array('message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".', 'vars' => array('@type' => $type, '@value' => $value, '@fieldname' => $sf_fieldname));
+          $errors[] = array(
+            'message' => 'Invalid value provided for Salesforce @type field on fieldname @fieldname: "@value".',
+            'vars' => array(
+              '@type' => $type,
+              '@value' => $value,
+              '@fieldname' => $sf_fieldname,
+            ),
+          );
         }
         else {
-          $object->$sf_fieldname  = $value;
+          $object->$sf_fieldname   = $value;
         }
         break;
 
@@ -1043,7 +1070,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       case 'url':
       case 'encryptedstring':
       default:
-        $object->$sf_fieldname  = $value;
+        $object->$sf_fieldname   = $value;
         break;
 
     }
@@ -1082,7 +1109,7 @@ function salesforce_api_id_load($type, $id) {
 
   // Return an empty array if no data was found.
   if (!$data = db_fetch_object($result)) {
-    return (object)array('sfid' => NULL, 'name' => NULL);
+    return (object) array('sfid' => NULL, 'name' => NULL);
   }
   else {
     // Otherwise return the Salesforce object type and ID.
@@ -1122,7 +1149,7 @@ function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
  */
 function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
   if ($oid) {
-    $oid = (int)$oid;
+    $oid = (int) $oid;
   }
   if ($drupal_type && $oid && $sfid && $name) {
     db_query("DELETE FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid);
@@ -1253,7 +1280,7 @@ function salesforce_api_theme($existing, $type, $theme, $path) {
       'arguments' => array('form' => NULL),
     ),
     'salesforce_api_object_options' => array(
-      'arguments' => array('element' => NULL)
+      'arguments' => array('element' => NULL),
     ),
     'salesforce_api_drupal_sfapi_automatic' => array(
       'arguments' => array('element' => NULL),
@@ -1313,10 +1340,11 @@ function salesforce_api_get_updated($type, $start, $end) {
   }
   $sf = salesforce_api_connect();
   if ($sf) {
-    $response = $sf->client->getUpdated($type, (int)$start, (int)$end);
+    $response = $sf->client->getUpdated($type, (int) $start, (int) $end);
     if ($response->ids) {
       return $response;
-    } else {
+    }
+    else {
       return FALSE;
     }
   }
@@ -1345,7 +1373,8 @@ function salesforce_api_get_deleted($type, $start, $end) {
     $response = $sf->client->getDeleted($type, $start, $end);
     if ($response->deletedRecords) {
       return $response;
-    } else {
+    }
+    else {
       return FALSE;
     }
   }
@@ -1379,27 +1408,35 @@ function salesforce_api_describeGlobal() {
 /**
  * Convert Salesforce object fields to fieldmap array for saving
  */
-function salesforce_api_object_to_fieldmap_fields($object)  {
+function salesforce_api_object_to_fieldmap_fields($object) {
   $fieldmap_object = array(
     'label' => t($object->label),
-    'fields' => array()
+    'fields' => array(),
   );
   if (!empty($object->fields) && is_array($object->fields)) {
     foreach ($object->fields as $field) {
       $properties = array('name', 'label', 'type', 'length', 'soapType');
-      $booleans = array('createable', 'defaultedOnCreate', 'deprecatedAndHidden',
-        'idLookup', 'nillable', 'restrictedPicklist', 'unique', 'updateable');
+      $booleans = array(
+        'createable',
+        'defaultedOnCreate',
+        'deprecatedAndHidden',
+        'idLookup',
+        'nillable',
+        'restrictedPicklist',
+        'unique',
+        'updateable',
+      );
       $source = get_object_vars($field);
       $sf_definition = array_intersect_key($source, array_flip($properties));
       foreach ($booleans as $bool) {
-        $sf_definition['sf_type'] |= (int)$source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
+        $sf_definition['sf_type'] |= (int) $source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
       }
       $fieldmap_object['fields'][$field->name] = array(
         'name' => $sf_definition['name'],
         'label' => $sf_definition['label'],
         'type' => $sf_definition['sf_type'],
         'salesforce' => $sf_definition,
-        );
+      );
     }
   }
   return $fieldmap_object;
@@ -1488,7 +1525,8 @@ function salesforce_api_describeSObjects($types) {
       return;
     }
     $objects = $sf->client->describeSObjects(array_values($types));
-  } catch (Exception $e) {
+  }
+  catch (Exception $e) {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Unable to establish Salesforce connection while issuing describeSObjects API call.', array(), WATCHDOG_ERROR);
   }
   if (empty($objects)) {
@@ -1622,7 +1660,10 @@ function salesforce_api_import_salesforce_field_map(&$form_state) {
     '#title' => t('Paste exported code here'),
     '#rows' => 15,
   );
-  $form['submit'] = array('#type' => 'submit', '#value' => t('Import'));
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+  );
   return $form;
 }
 
@@ -1651,7 +1692,7 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
   }
 
   if (empty($salesforce_field_map->drupal)
-  || empty($salesforce_field_map->salesforce)) {
+   || empty($salesforce_field_map->salesforce)) {
     form_error($form['object'], t('This fieldmap cannot be imported; the object definition is invalid.'));
     return;
   }
@@ -1743,7 +1784,7 @@ function salesforce_api_encryption_available($options = array()) {
     'display_warnings' => FALSE,
     'display_all' => FALSE,
     'fail_threshold' => 'warnings',
-    );
+  );
   $options = array_merge($defaults, $options);
   extract($options);
   $errors = array();
@@ -1754,7 +1795,7 @@ function salesforce_api_encryption_available($options = array()) {
   }
   elseif ($check_config) {
     if (!variable_get('aes_key_path', FALSE)
-    || variable_get('aes_key_storage_method', FALSE) != 'File') {
+     || variable_get('aes_key_storage_method', FALSE) != 'File') {
       $warnings[] = 'AES Encryption is installed but not configured securely.
         Please go <a href="/admin/settings/aes">configure AES Encryption to use
         file storage</a> to enable encryption for SalesForce credentials.';
@@ -1774,20 +1815,13 @@ function salesforce_api_encryption_available($options = array()) {
   }
 
   switch ($fail_threshold) {
-    case 'errors': {
+    case 'errors':
       if (empty($errors)) {
         return TRUE;
       }
-    }
-    case 'warnings': {
-      if (empty($errors) && empty($warnings)) {
-        return TRUE;
-      }
-    }
   }
-  return FALSE;
+  case 'warnings':
+    if (empty($errors) && empty($warnings)) {
+      return TRUE;
+    }
 }
-
-/**
- * @} End of "addtogroup encryption".
- */

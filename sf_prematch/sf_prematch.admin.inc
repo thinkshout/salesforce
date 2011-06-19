@@ -11,7 +11,10 @@ function sf_prematch_list() {
   $header = array(
     t('Drupal object'),
     t('Salesforce object'),
-    array('data' => t('Operations'), 'colspan' => 3),
+    array(
+      'data' => t('Operations'),
+      'colspan' => 3,
+    ),
   );
 
   //$maps = salesforce_api_salesforce_field_map_load_all();
@@ -43,7 +46,10 @@ function sf_prematch_list() {
   // Add a message if no objects have been mapped.
   if (empty($rows)) {
     $rows[] = array(
-      array('data' => t('You have not yet assigned prematching to any fieldmaps.'), 'colspan' => 7),
+      array(
+        'data' => t('You have not yet assigned prematching to any fieldmaps.'),
+        'colspan' => 7,
+      ),
     );
   }
 

@@ -13,7 +13,8 @@ function sf_notifications_enable() {
     '!messages' => 'https://na1.salesforce.com/04k',
     '!workflow' => 'https://na1.salesforce.com/01Q',
     '!base_url' => $base_url,
-    '!formula' => $formula);
+    '!formula' => $formula,
+  );
   drupal_set_message(t('You have successfully enabled SalesForce Notifications. To make use
     of this module, you will probably want to head over to salesforce.com and
     <a href="!message">set up some outbound messages</a> and <a href="!workflow">

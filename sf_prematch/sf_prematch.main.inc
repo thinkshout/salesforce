@@ -131,7 +131,7 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
 
     switch ($result->size) {
       case 0:
-      return;
+        return;
       case 1:
       default:
         return $result->records[0]->Id;

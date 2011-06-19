@@ -15,13 +15,13 @@ function salesforce_api_drush_help($section) {
     case 'drush:soql-show-tables':
       return dt("List tables in salesforce.");
     case 'drush:soql-describe':
-      $output =  dt("Examine table metadata in salesforce.") ."\n\n";
-      $output .= dt("Arguments:\n  Salesforce Object    The path of the salesforce object to examine.") ."\n\n";
+      $output =  dt("Examine table metadata in salesforce.") . "\n\n";
+      $output .= dt("Arguments:\n  Salesforce Object    The path of the salesforce object to examine.") . "\n\n";
       $output .= dt("Examples:\n  drush soql describe Contact.fields    Display the fields on the Contact table.");
       return $output;
     case 'drush:soql':
-      $output = dt("Execute a SOQL query. Note that you may need to escape quotes in your query: SELECT Email FROM Contact WHERE Email != \\'\\'") ."\n\n";
-      $output .= dt("Arguments:\n  SOQL Query    A salesforce soql query to execute against salesforce.") ."\n\n";
+      $output = dt("Execute a SOQL query. Note that you may need to escape quotes in your query: SELECT Email FROM Contact WHERE Email != \\'\\'") . "\n\n";
+      $output .= dt("Arguments:\n  SOQL Query    A salesforce soql query to execute against salesforce.") . "\n\n";
       $output .= dt("Examples:\n  drush soql select Id, Name from Contact    Query the Contact table.");
       return $output;
   }
@@ -65,7 +65,7 @@ function drush_salesforce_api_soql_show_tables() {
       $rows[] = array($type->label, $type->name);
     }
     drush_print_table($rows, TRUE);
-    drush_print("\n" . dt('!count rows in set.', array('!count' => (count($rows)-1))));
+    drush_print("\n" . dt('!count rows in set.', array('!count' => (count($rows) -1))));
   }
   else {
     drush_print('Could not connect to salesforce.');
@@ -147,7 +147,7 @@ function _salesforce_api_drush_get_info($response, &$rows) {
       else {
         $label = '';
       }
-      $rows[] = array($k ." [+]", $label);
+      $rows[] = array($k . " [+]", $label);
     }
   }
 }
@@ -163,7 +163,7 @@ function _salesforce_api_drush_get_fields($response, &$rows) {
     if (is_array($item)) {
       if (!empty($item['type'])) {
         $row = array();
-        $row[] = $key ." [+]";
+        $row[] = $key . " [+]";
         $row[] = $item['type'];
         $row[] = $item['name'];
         $row[] = $item['label'];
@@ -205,7 +205,7 @@ function drush_salesforce_api_soql() {
       }
       drush_print_table($rows, TRUE);
       drush_print("\n" . dt('!count rows in set (!time sec)',
-        array('!count' => $result->size, '!time' => number_format($timer['time']/1000, 2))));
+        array('!count' => $result->size, '!time' => number_format($timer['time'] / 1000, 2))));
     }
     catch (Exception $e) {
       drush_print($e->faultstring);

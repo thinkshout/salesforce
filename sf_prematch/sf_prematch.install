@@ -58,7 +58,7 @@ function sf_prematch_schema() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => 0
+        'default' => 0,
       ),
     ),
     'primary key' => array('name'),
@@ -75,7 +75,10 @@ function sf_prematch_schema() {
 function sf_prematch_update_1() {
   $ret = array();
   if (!db_column_exists('salesforce_field_map', 'name')) {
-    $ret[] = array('success' => FALSE, 'query' => 'N/A');
+    $ret[] = array(
+      'success' => FALSE,
+      'query' => 'N/A',
+    );
     drupal_set_message(t('There are still updates to be run: Update for sf_prematch was not run. Please run update.php again to complete this update.'), 'warning');
   }
   db_add_column($ret, 'salesforce_prematch', 'name', 'varchar(255)');
@@ -83,7 +86,10 @@ function sf_prematch_update_1() {
   while ($row = db_fetch_array($result)) {
     $sql = 'UPDATE {salesforce_prematch} SET name = "%s" WHERE fieldmap = %d';
     $update_result = db_query($sql, $name, $fieldmap);
-    $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));
+    $ret[] = array(
+      'success' => $update_result !== FALSE,
+      'query' => check_plain($sql),
+    );
   }
   db_add_primary_key($ret, 'salesforce_prematch', 'name', array('name'));
   $ret[] = update_sql('ALTER TABLE {salesforce_prematch} DROP COLUMN fieldmap');

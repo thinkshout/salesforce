@@ -24,19 +24,19 @@ function _sf_contrib_add_location(&$objects) {
         'label' => t('First Name'),
         'group' => t('Location fields'),
         'export' => '_sf_contrib_export_location',
-        'import' => '_sf_contrib_import_location'
+        'import' => '_sf_contrib_import_location',
       ),
       'last_name' => array(
         'label' => t('Last Name'),
         'group' => t('Location fields'),
         'export' => '_sf_contrib_export_location',
-        'import' => '_sf_contrib_import_location'
+        'import' => '_sf_contrib_import_location',
       ),
       'organization' => array(
         'label' => t('Organization'),
         'group' => t('Location fields'),
         'export' => '_sf_contrib_export_location',
-        'import' => '_sf_contrib_import_location'
+        'import' => '_sf_contrib_import_location',
       ),
     ));
   }
@@ -46,43 +46,43 @@ function _sf_contrib_add_location(&$objects) {
       'label' => t('Street'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
     'additional' => array(
       'label' => t('Additional'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
     'city' => array(
       'label' => t('City'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
     'province_name' => array(
       'label' => t('Province'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
     'postal_code' => array(
       'label' => t('Postal code'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
     'country_name' => array(
       'label' => t('Country'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
     'phone' => array(
       'label' => t('Phone'),
       'group' => t('Location fields'),
       'export' => '_sf_contrib_export_location',
-      'import' => '_sf_contrib_import_location'
+      'import' => '_sf_contrib_import_location',
     ),
   ));
 
@@ -119,9 +119,9 @@ function _sf_contrib_add_fields(&$objects) {
             $location_field_definitions = location_locationapi($dummy, 'fields');
           }
           // Location is special: add each of its fields individually
-          //  and use a special import/export handler
+//  and use a special import/export handler
           if (empty($field['location_settings']['form']['fields'])
-          || !is_array($field['location_settings']['form']['fields'])) {
+           || !is_array($field['location_settings']['form']['fields'])) {
             break;
           }
           foreach ($field['location_settings']['form']['fields'] as $key => $loc_setting) {
@@ -136,8 +136,8 @@ function _sf_contrib_add_fields(&$objects) {
                 ? check_plain($location_field_definitions[$key])
                 : $key,
               'export' => '_sf_node_export_cck_location',
-              'import' => '_sf_node_import_cck_location'
-             );
+              'import' => '_sf_node_import_cck_location',
+            );
           }
           break;
 
@@ -271,8 +271,8 @@ function _sf_node_export_cck_location($source, $field, $drupal_field_definition,
   }
 
   if ($type == 'street'
-  && !empty($locations[$lid]['street'])
-  && !empty($locations[$lid]['additional'])) {
+   && !empty($locations[$lid]['street'])
+   && !empty($locations[$lid]['additional'])) {
     $locations[$lid]['street'] .= "\n" . $locations[$lid]['additional'];
   }
 

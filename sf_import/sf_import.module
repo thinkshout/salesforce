@@ -41,12 +41,12 @@ function sf_import_menu() {
 function sf_import_help($path, $arg) {
   switch ($path) {
     case 'admin/settings/salesforce/import':
-      return '<p>'. t('Select the Fieldmaps you would like to use for regular 
-      imports of data from Salesforce to Drupal. <strong>This feature requires 
+      return '<p>' . t('Select the Fieldmaps you would like to use for regular
+      imports of data from Salesforce to Drupal. <strong>This feature requires
       a properly configured cron job.</strong> Once fieldmaps have been selected,
        additional information regarding pending imports is available, along with
        the ability to manually trigger imports. <br />You can also run a one-time
-        batch import of data from Salesforce to Drupal by visiting the "Batch Import" page.') .'</p>';
+        batch import of data from Salesforce to Drupal by visiting the "Batch Import" page.') . '</p>';
   }
 }
 
@@ -67,7 +67,7 @@ function sf_import_settings_form($form_state) {
   if ($last_import) {
     $date = date('M j Y H:i:s', $last_import);
     $form['last_import'] = array(
-      '#value' => '<strong>Last import: </strong>' . $date . ' <br /><strong>Number of items imported:</strong> ' 
+      '#value' => '<strong>Last import: </strong>' . $date . ' <br /><strong>Number of items imported:</strong> '
         . variable_get('sf_import_queue_import_count', 0) . '<br /><strong>Number of items processed:</strong> ' . variable_get('sf_import_queue_processed_count', 0),
       '#prefix' => '<p>',
       '#suffix' => '</p>',
@@ -211,39 +211,45 @@ function sf_import_create(&$form_state, $ongoing = 0) {
 
   // Admin should select a mapping to use for the import.
   $form['label'] = array(
-      '#type' => 'markup',
-      '#value' => '<h2>' . ($ongoing ? t('Create Ongoing Import') : t('Perform One-time Import')) . '</h2>',
+    '#type' => 'markup',
+    '#value' => '<h2>' . ($ongoing ? t('Create Ongoing Import') : t('Perform One-time Import')) . '</h2>',
   );
 
   $form['fieldmap'] = array(
-      '#title' => t('Please choose a fieldmap to use for the import'),
-      '#description' => t('Salesforce Object => Drupal Content Type'),
-      '#type' => 'radios',
-      '#required' => TRUE,
-      '#options' => $options,
+    '#title' => t('Please choose a fieldmap to use for the import'),
+    '#description' => t('Salesforce Object => Drupal Content Type'),
+    '#type' => 'radios',
+    '#required' => TRUE,
+    '#options' => $options,
   );
 
   $form['extra-options'] = array(
-      '#title' => t('Extra Options'),
-      '#type' => 'fieldset',
-      '#collasible' => FALSE,
-      '#collapsed' => FALSE,
-    );
+    '#title' => t('Extra Options'),
+    '#type' => 'fieldset',
+    '#collasible' => FALSE,
+    '#collapsed' => FALSE,
+  );
 
   $form['extra-options']['extra-linked'] = array(
-      '#title' => t('Link nodes to Salesforce objects on import?'),
-      '#description' => t('Links the imported Drupal node to the salesforce object allowing the ability to issue manual syncronization of data to and from Drupal and Salesforce business objects. Linking also enables the ability to use node reference to relate business objects in Drupal (like accounts to contacts).'),
-      '#type' => 'checkbox',
+    '#title' => t('Link nodes to Salesforce objects on import?'),
+    '#description' => t('Links the imported Drupal node to the salesforce object allowing the ability to issue manual syncronization of data to and from Drupal and Salesforce business objects. Linking also enables the ability to use node reference to relate business objects in Drupal (like accounts to contacts).'),
+    '#type' => 'checkbox',
   );
 
   $form['extra-options']['extra-where'] = array(
-      '#title' => t('Conditions'),
-      '#description' => t("<strong>Advanced</strong>: Enter any additional SOQL \"Where\" conditions to use for this import query, e.g.<br /><code>Type != 'One-to-One Individual'</code><br />Learn more here: <a href='http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_soql_select_conditionexpression.htm' target='_blank'>Salesforce.com SOQL Where clause</a>"),
-      '#type' => 'textarea',
+    '#title' => t('Conditions'),
+    '#description' => t("<strong>Advanced</strong>: Enter any additional SOQL \"Where\" conditions to use for this import query, e.g.<br /><code>Type != 'One-to-One Individual'</code><br />Learn more here: <a href='http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_soql_select_conditionexpression.htm' target='_blank'>Salesforce.com SOQL Where clause</a>"),
+    '#type' => 'textarea',
   );
 
-  $form['ongoing'] = array('#type' => 'value', '#value' => $ongoing);
-  $form['submit'] = array('#type' => 'submit', '#value' => 'Submit');
+  $form['ongoing'] = array(
+    '#type' => 'value',
+    '#value' => $ongoing,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Submit',
+  );
 
   return $form;
 }
@@ -260,11 +266,15 @@ function sf_import_create_submit($form, &$form_state, $ongoing = 0) {
 }
 
 function sf_import_create_batchjob($fieldmap, $extra = NULL) {
-  $params = array('fieldmap_key' => $fieldmap, 'extra' => $extra);
+  $params = array(
+    'fieldmap_key' => $fieldmap,
+    'extra' => $extra,
+  );
   return array(
     'title' => t('Importing'),
     'operations' => array(
-      array('sf_import_batchjob', $params)),
+      array('sf_import_batchjob', $params),
+    ),
     'finished' => 'sf_import_batchjob_finalize',
   );
 }
@@ -300,7 +310,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $context['sandbox']['salesforce']['drupal_object'] =
       salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
     // $context['sandbox']['salesforce']['salesforce_object'] =
-    //   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
+//   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
     $sql = 'SELECT oid, sfid FROM {salesforce_object_map} WHERE name = "%s"';
     $result = db_query($sql, $map->name);
     while ($row = db_fetch_array($result)) {
@@ -316,14 +326,15 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     }
     try {
       $sf = salesforce_api_connect();
-        $context['sandbox']['salesforce']['query'] = $query = $sf->client->query($soql);
-      } catch (Exception $e) {
+      $context['sandbox']['salesforce']['query'] = $query = $sf->client->query($soql);
+    }
+    catch (Exception $e) {
       $context['finished'] = 1;
       $context['message'] = $e->getMessage();
-        return;
+      return;
     }
     if (empty($query->records)) {
-        $context['finished'] = 1;
+      $context['finished'] = 1;
       $context['message'] = 'Empty resultset returned from Salesforce query.';
     }
     $context['sandbox']['progress'] = 0;
@@ -335,10 +346,10 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   $map = $context['sandbox']['salesforce']['map'];
   $query = $context['sandbox']['salesforce']['query'];
   if (array_key_exists('existing', $context['sandbox']['salesforce'])) {
-      $existing = $context['sandbox']['salesforce']['existing'];
+    $existing = $context['sandbox']['salesforce']['existing'];
   }
   else {
-      $existing = '';
+    $existing = '';
   }
   $drupal_object = $context['sandbox']['salesforce']['drupal_object'];
   $pos = $context['sandbox']['position'];
@@ -347,11 +358,12 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
 
   if (!$query_array['done'] && !empty($query_array['queryLocator']) && !isset($query_array['records'][$pos])) {
     try {
-        $sf = salesforce_api_connect();
-        $context['sandbox']['salesforce']['query'] = $query = $sf->client->queryMore($query_array['queryLocator']);
-        $query_array = get_object_vars($query);
-        $context['sandbox']['position'] = $pos = key($query_array['records']);
-    } catch (Exception $e) {
+      $sf = salesforce_api_connect();
+      $context['sandbox']['salesforce']['query'] = $query = $sf->client->queryMore($query_array['queryLocator']);
+      $query_array = get_object_vars($query);
+      $context['sandbox']['position'] = $pos = key($query_array['records']);
+    }
+    catch (Exception $e) {
       $context['finished'] = 1;
       $context['message'] = $e->getMessage();
       return;

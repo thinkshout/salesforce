@@ -29,7 +29,7 @@ function salesforce_api_uninstall() {
  */
 function salesforce_api_enable() {
   drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
-drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
+  drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
 }
 
 /**
@@ -50,7 +50,7 @@ function salesforce_api_schema() {
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => 0
+        'default' => 0,
       ),
       'sfid' => array(
         'description' => 'Salesforce object identifier (e.g. 000000000000000000)',
@@ -97,14 +97,14 @@ function salesforce_api_schema() {
         'description' => 'Unique ID for this object. Used to identify it programatically (initially implemented for ctools support only).',
         'type' => 'varchar',
         'length' => 64,
-        ),
+      ),
       'automatic' => array(
         'description' => 'Indicates whether this action/map is automatic or triggered.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => SALESFORCE_AUTO_SYNC_OFF,
-        'size' => 'small'
+        'size' => 'small',
       ),
       'drupal' => array(
         'description' => 'The kind of Drupal object this map is for.',
@@ -125,7 +125,7 @@ function salesforce_api_schema() {
         'type' => 'varchar',
         'length' => 255,
         'not null' => FALSE,
-        'default' => ''
+        'default' => '',
       ),
       'fields' => array(
         'description' => 'Serialized fieldmap',
@@ -182,7 +182,7 @@ function salesforce_api_requirements($phase) {
       'title' => t('Salesforce Configuration'),
       'value' => l('Salesforce Admin', SALESFORCE_PATH_ADMIN),
       'description' => $description,
-      'severity' => $severity
+      'severity' => $severity,
     );
     return $req;
   }
@@ -208,7 +208,10 @@ function salesforce_api_update_6201() {
     return array(array('success' => FALSE, 'query' => 'Chaos Tool Suite not found.'));
   }
 
-  $ret[] = array('success' => TRUE, 'query' => 'Chaos Tool Suite enabled.');
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'Chaos Tool Suite enabled.',
+  );
 
   db_add_column($ret, 'salesforce_field_map', 'description', 'varchar(255)');
   db_add_column($ret, 'salesforce_field_map', 'name', 'varchar(255)');
@@ -220,10 +223,16 @@ function salesforce_api_update_6201() {
     $name = md5($fieldmap);
     $sql = 'UPDATE {salesforce_object_map} SET name = "%s" WHERE fieldmap = %d';
     $update_result = db_query($sql, $name, $fieldmap);
-    $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));
+    $ret[] = array(
+      'success' => $update_result !== FALSE,
+      'query' => check_plain($sql),
+    );
     $sql = 'UPDATE {salesforce_field_map} SET name = "%s" WHERE fieldmap = %d';
     $update_result = db_query($sql, $name, $fieldmap);
-    $ret[] = array('success' => $update_result !== FALSE, 'query' => check_plain($sql));
+    $ret[] = array(
+      'success' => $update_result !== FALSE,
+      'query' => check_plain($sql),
+    );
   }
   db_add_index($ret, 'salesforce_object_map', 'name', array('name'));
   db_add_unique_key($ret, 'salesforce_field_map', 'name', array('name'));
@@ -232,7 +241,7 @@ function salesforce_api_update_6201() {
   // Set the WSDL directory
   if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
     $dir = SALESFORCE_DIR_WSDL;
-    $wsdl = $dir .'/enterprise.wsdl';
+    $wsdl = $dir . '/enterprise.wsdl';
     if (file_exists($wsdl)) {
       variable_set('salesforce_api_dir_wsdl', $dir);
     }
@@ -252,7 +261,10 @@ function salesforce_api_update_6202() {
   $ret = array();
   $changes = array();
   module_enable(array('sf_contrib'));
-  $ret[] = array('success' => TRUE, 'query' => t('Enabled SF Contrib module', array('@map' => $new_map->name)));
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => t('Enabled SF Contrib module', array('@map' => $new_map->name)),
+  );
 
   foreach (content_types() as $type) {
     // Add each of the fields to the node object definition.
@@ -260,14 +272,14 @@ function salesforce_api_update_6202() {
       if (empty($field['columns']['value'])) {
         $changes[$field['field_name']] = array(
           'old' => $field['field_name'],
-          'new' => $field['field_name'] . ':' . key($field['columns'])
+          'new' => $field['field_name'] . ':' . key($field['columns']),
         );
       }
       if ($field['type'] == 'date' && !empty($field['todate'])) {
         $changes[$field['field_name'] . '_todate'] = array(
           'old' => $field['field_name'] . '_todate',
-          'new' => $field['field_name'] . ':value2'
-          );
+          'new' => $field['field_name'] . ':value2',
+        );
       }
     }
   }
@@ -283,7 +295,10 @@ function salesforce_api_update_6202() {
     }
     if ($updates) {
       salesforce_api_fieldmap_save($new_map);
-      $ret[] = array('success' => TRUE, 'query' => t('Updated fieldmap @map', array('@map' => $new_map->name)));
+      $ret[] = array(
+        'success' => TRUE,
+        'query' => t('Updated fieldmap @map', array('@map' => $new_map->name)),
+      );
     }
   }
   return $ret;
