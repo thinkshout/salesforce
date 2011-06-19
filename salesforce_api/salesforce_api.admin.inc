@@ -675,7 +675,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       $required = ' <span class="form-required" title="' .
         t('This field can only be set for existing records.') . '">' . t('Update-only') . '</span>';
     }
-    elseif (!($value['type'] & SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE)) {
+    elseif (!($value['type'] & (SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE))) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field will be available for imports only.') . '">' . t('Read-only') . '</span>';
