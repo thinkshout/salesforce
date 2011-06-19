@@ -54,7 +54,6 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
     case 'load':
       $account->salesforce = salesforce_api_id_load('user', $account->uid);
       break;
-
     case 'delete':
       $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'user'));
       $map = current($maps);
@@ -74,7 +73,7 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
       }
       salesforce_api_delete_object_map('user', $account->uid);
       break;
-    case 'update': {
+    case 'update':
       // Set a static variable during 'update' to prevent extranesous API calls.
       // In 'after_update', $account has been reloaded from the database, and
       // sf_user_skip_export will have been unset. Also set the same property in
@@ -85,7 +84,6 @@ function sf_user_user($op, &$edit, &$account, $category = NULL) {
         $edit['sf_user_skip_export'] = NULL;
       }
       break;
-    }
     case 'insert':
     case 'after_update':
       // When importing *from* Salesforce, don't export *back* to Salesforce.
