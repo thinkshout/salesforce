@@ -528,11 +528,10 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
  * Displays the edit form for adding field associations to a fieldmap.
  */
 function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
-
   // Include the CSS and JS for the form.
-  $path = drupal_get_path("module", "salesforce_api");
+  $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
-  drupal_add_js($path . "/misc/salesforce_api.admin.js");
+  drupal_add_js($path . '/misc/salesforce_api.admin.js');
 
   // Load the fieldmap from the database.
   $map = salesforce_api_fieldmap_load($fieldmap, TRUE);
@@ -542,11 +541,6 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
     drupal_set_message(t('That fieldmap does not exist.'), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
-
-  // Include the CSS file for the form.
-  $path = drupal_get_path('module', 'salesforce_api');
-  drupal_add_css($path . '/misc/salesforce_api.admin.css');
-  drupal_add_js($path . '/misc/salesforce_api.admin.js');
 
   $form = array();
 
@@ -706,7 +700,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       '#options' => $options,
       '#default_value' => $default_key,
       '#attributes' => array(
-        'class' => 'sf_fieldmap_options',
+        'class' => array('sf_fieldmap_options'),
         'id' => 'sf-fieldmap-option-' . $key,
       ),
     );
@@ -903,7 +897,7 @@ function theme_salesforce_api_fieldmap_edit_form_table($variables) {
   foreach (element_children($form['rows']) as $element) {
     $rows[] = array(
       array(
-        'data' => drupal_render($form['rows'][$element]['target']),
+        'data' => $form['rows'][$element]['target']['#value'],
         'class' => 'target-cell',
       ),
       array(
@@ -933,7 +927,6 @@ function theme_salesforce_api_fieldmap_edit_form_table($variables) {
   if (isset($form['caption'] )) {
     $caption = drupal_render_children($form['caption']);
   }
-
   return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes, 'caption' => $caption));
 }
 
