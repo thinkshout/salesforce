@@ -275,14 +275,15 @@ function sf_node_fieldmap_objects($type) {
       }
 
       // Add a body field if the node type has one.
-      if ($type->has_body) {
+      // @todo: on sf_entity will need to check Field API for this
+      /* if ($type->has_body) {
         // Body is actually body+teaser
         $objects['node_' . $type->type]['fields']['body'] = array(
           'label' => check_plain($type->body_label),
           'export' => '_sf_node_export_body',
           'import' => '_sf_node_import_body',
         );
-      }
+      } */
 
       // Add the rest of the core fields.
       $objects['node_' . $type->type]['fields'] += array(
@@ -613,17 +614,17 @@ function sf_node_salesforce_form($form, &$form_state, $node) {
     $form['mapped']['export_values'] = array(
       '#type' => 'submit',
       '#value' => t('Export changes to Salesforce'),
-      '#attributes' => array('class' => 'sf-confirm'),
+      '#attributes' => array('class' => array('sf-confirm')),
     );
     $form['mapped']['import_values'] = array(
       '#type' => 'submit',
       '#value' => t('Import changes from Salesforce'),
-      '#attributes' => array('class' => 'sf-confirm'),
+      '#attributes' => array('class' => array('sf-confirm')),
     );
     $form['mapped']['unlink'] = array(
       '#type' => 'submit',
       '#value' => t('Unlink from Salesforce object...'),
-      '#attributes' => array('class' => 'sf-confirm'),
+      '#attributes' => array('class' => array('sf-confirm')),
     );
 
     // Create a table for the unmapped fields.
