@@ -1143,9 +1143,9 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 function salesforce_api_id_load($type, $id) {
   // Query the main ID table for the associated data.
   $result = db_query("SELECT sfid, name FROM {salesforce_object_map} WHERE drupal_type = :drupal_type AND oid = :oid", array(':drupal_type' => $type, ':oid' => $id));
-
+  $data = $result->fetchObject();
   // Return an empty array if no data was found.
-  if (!$data = db_fetch_object($result)) {
+  if (!$data) {
     return (object) array('sfid' => NULL, 'name' => NULL);
   }
   else {
