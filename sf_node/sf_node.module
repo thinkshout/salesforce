@@ -54,8 +54,10 @@ function sf_node_form_alter(&$form, $form_state, $form_id) {
 /**
  * Implements hook_node_load().
  */
-function sf_node_node_load($node, $types) {
-  $node->salesforce = salesforce_api_id_load('node', $node->nid);
+function sf_node_node_load($nodes, $types) {
+  foreach($nodes as $node) {
+    $node->salesforce = salesforce_api_id_load('node', $node->nid);
+  }
 }
 
 /**
@@ -459,7 +461,10 @@ function _sf_node_export_body($node, $fieldname, $drupal_field_definition, $sf_f
   if (!empty($node->teaser) AND strpos($node->body, '<!--break-->') === 0) {
     return $node->teaser . $node->body;
   }
-  return $node->body;
+  // return $node->body;
+  // @todo: make this more robust (handling the field value in light of translation)
+  // @todo: determine whether it is necessary to use 'safe_value'
+  return $node->body[$node->language][0]['value'];
 }
 
 function _sf_node_import_body(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {

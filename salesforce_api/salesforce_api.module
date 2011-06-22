@@ -608,12 +608,12 @@ function salesforce_api_valid_email_address($mail) {
  */
 function salesforce_api_fieldmap_save(&$map) {
   if (!empty($map->fieldmap)) {
-    $primary_key = 'name';
+    $primary_keys = array('name');
   }
   if (empty($map->name)) {
     $map->name = md5(microtime());
   }
-  drupal_write_record('salesforce_field_map', $map, $primary_key);
+  drupal_write_record('salesforce_field_map', $map, $primary_keys);
 }
 
 /**
