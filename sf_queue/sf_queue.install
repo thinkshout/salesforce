@@ -43,7 +43,7 @@ function sf_queue_schema() {
     'description' => 'Salesforce objects queued for export',
     'fields' => array(
       'sf_op' => array(
-        'description' => 'The SalesForce export operation: "create", "update", or "delete"',
+        'description' => 'The Salesforce export operation: "create", "update", or "delete"',
         'type' => 'varchar',
         'length' => 8,
         'not null' => TRUE,
@@ -91,7 +91,7 @@ function sf_queue_schema() {
         'default' => '',
       ),
       'sf_type' => array(
-        'description' => 'SalesForce object type (e.g. "node", "comment")',
+        'description' => 'Salesforce object type (e.g. "node", "comment")',
         'type' => 'varchar',
         'length' => 64,
         'not null' => TRUE,
@@ -109,7 +109,7 @@ function sf_queue_schema() {
         'length' => 64,
       ),
       'sf_data' => array(
-        'description' => 'Serialized SalesForce object data',
+        'description' => 'Serialized Salesforce object data',
         'type' => 'text',
         'not null' => TRUE,
         'serialize' => TRUE,

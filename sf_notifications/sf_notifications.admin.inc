@@ -5,7 +5,7 @@
  * @file
  */
 
-// @todo add tracking and reporting of messages received from SalesForce
+// @todo add tracking and reporting of messages received from Salesforce
 
 /**
  * SF Notifications settings

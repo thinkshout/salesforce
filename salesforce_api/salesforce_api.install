@@ -178,7 +178,7 @@ function salesforce_api_requirements($phase) {
       $severity = REQUIREMENT_WARNING;
     }
     elseif (!salesforce_api_encryption_available(array('check_config' => TRUE))) {
-      $description = t('SalesForce encryption is enabled but not configured securely.');
+      $description = t('Salesforce encryption is enabled but not configured securely.');
       $severity = REQUIREMENT_WARNING;
     }
     else {
@@ -214,7 +214,7 @@ function salesforce_api_update_6201() {
   module_enable(array('ctools'));
 
   if (!module_exists('ctools')) {
-    drupal_set_message(t('This version of SalesForce module depends on <a href="@ctools">Chaos Tool Suite</a>, which is not available. Please install Chaos Tool Suite, then run update again.', array('@ctools' => url('http://drupal.org/project/ctools'))), 'error');
+    drupal_set_message(t('This version of Salesforce module depends on <a href="@ctools">Chaos Tool Suite</a>, which is not available. Please install Chaos Tool Suite, then run update again.', array('@ctools' => url('http://drupal.org/project/ctools'))), 'error');
     return array(array('success' => FALSE, 'query' => 'Chaos Tool Suite not found.'));
   }
 

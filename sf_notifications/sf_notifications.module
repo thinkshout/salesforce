@@ -10,7 +10,7 @@ function sf_notifications_menu() {
   return array(
     SALESFORCE_PATH_NOTIFICATIONS_ADMIN => array(
       'title' => 'Notifications',
-      'description' => 'Placeholder for more SalesForce Notifications settings',
+      'description' => 'Placeholder for more Salesforce Notifications settings',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sf_notifications_settings_form'),
       'access arguments' => array('administer salesforce'),
@@ -108,7 +108,7 @@ function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
 }
 
 /**
- * Menu callback for SalesForce notifications endpoint
+ * Menu callback for Salesforce notifications endpoint
  * @todo Add authentication. see "Downloading the Salesforce.com Client Certificate" at
  * http://www.salesforce.com/us/developer/docs/ajax/Content/sforce_api_ajax_queryresultiterator.htm
  */
@@ -119,7 +119,7 @@ function sf_notifications_endpoint() {
 
   $content = file_get_contents('php://input');
   if (empty($content)) {
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'SalesForce Notifications: Empty request.');
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce Notifications: Empty request.');
     exit;
   }
 
@@ -129,7 +129,7 @@ function sf_notifications_endpoint() {
   $dom->loadXML($content);
   if (empty($dom) || !$dom->hasChildNodes()) {
     salesforce_api_log(SALESFORCE_LOG_NONE,
-      'SalesForce Notifications: Failed to parse into DOM Document.
+      'Salesforce Notifications: Failed to parse into DOM Document.
       <pre>' . print_r($content) . '</pre>');
     _sf_notifications_soap_respond('false');
     exit;
@@ -148,7 +148,7 @@ function sf_notifications_endpoint() {
 }
 
 /**
- * Loop through an array of SObjects from SalesForce and save them according to
+ * Loop through an array of SObjects from Salesforce and save them according to
  * any existing sf fieldmaps, notification settings, and data.
  *
  * @param array $objects
@@ -200,7 +200,7 @@ function _sf_notifications_handle_message($objects) {
     $maps = salesforce_api_salesforce_field_map_load_by(array('salesforce' => $obj->type));
     if (empty($maps)) {
       salesforce_api_log(SALESFORCE_LOG_SOME,
-            'SalesForce Notifications: No fieldmap found.
+            'Salesforce Notifications: No fieldmap found.
             <pre>' . print_r($obj, 1) . '</pre>');
       $success = FALSE;
       continue;
@@ -244,7 +244,7 @@ function sf_notifications_delete_record($object_record) {
     case 'user':
       user_cancel(array(), $object_record['oid'], $method = 'user_cancel_block' /* TODO Set this variable */);
       salesforce_api_log(SALESFORCE_LOG_ALL,
-        'SalesForce Notificaitions deleted user '
+        'Salesforce Notifications deleted user '
         . $object_record['oid'] . ' sfid ' . $sfid);
       break;
 
@@ -270,7 +270,7 @@ function sf_notifications_delete_record($object_record) {
       search_wipe($node->nid, 'node');
 
       salesforce_api_log(SALESFORCE_LOG_ALL,
-        'SalesForce Notificaitions deleted node '
+        'Salesforce Notifications deleted node '
         . $object_record['oid'] . ' sfid ' . $sfid);
       break;
 
@@ -279,14 +279,14 @@ function sf_notifications_delete_record($object_record) {
         $function = $object_record['drupal_type'] . '_delete';
         $function($object_record['oid']);
         salesforce_api_log(SALESFORCE_LOG_ALL,
-          'SalesForce Notificaitions deleted '
+          'Salesforce Notifications deleted '
           . $object_record['drupal_type'] . ' ' . $object_record['oid']
           . ' sfid ' . $sfid);
       }
       else {
         salesforce_api_log(SALESFORCE_LOG_SOME,
-          ' SalesForce Notifications: Could not find delete handler for deleted
-          SalesForce record <pre>' . print_r($object_record, 1) . '</pre>');
+          ' Salesforce Notifications: Could not find delete handler for deleted
+          Salesforce record <pre>' . print_r($object_record, 1) . '</pre>');
         $success = FALSE;
       }
       break;
@@ -320,12 +320,12 @@ function sf_notifications_update_record($object_record) {
     $drupal_id = $function($object_record['fields'], $object_record['name'], $object_record['oid']);
     if ($drupal_id) {
       salesforce_api_log(SALESFORCE_LOG_ALL,
-        'SalesForce Notificaitions successful ' . $object_record['operation'] .
+        'Salesforce Notifications successful ' . $object_record['operation'] .
         ' of ' . $drupal_type . ' ' . $drupal_id);
     }
     else {
       salesforce_api_log(SALESFORCE_LOG_ALL,
-        'SalesForce Notificaitions failed to update '
+        'Salesforce Notifications failed to update '
         . $object_record['drupal_type'] . ' from record.
         <pre>' . print_r($object_record, 1) . '</pre>');
       $success = FALSE;
@@ -333,7 +333,7 @@ function sf_notifications_update_record($object_record) {
   }
   else {
     salesforce_api_log(SALESFORCE_LOG_ALL,
-        'SalesForce Notifications: Import handler ' . $function . ' undefined.
+        'Salesforce Notifications: Import handler ' . $function . ' undefined.
         Drupal ' . $object_record['drupal_type'] . ' with id '
         . $object_record['oid'] . ' was not updated.');
     $success = FALSE;
@@ -365,14 +365,14 @@ function sf_notifications_check_condition($operation, $notification_data, $map) 
  * Parse SOAP message into its component args.
  *
  * @param (object) $domDoc
- *  A DOMDocument representation of the outbound SOAP message from SalesForce.
+ *  A DOMDocument representation of the outbound SOAP message from Salesforce.
  * @return (array) $result
  *  An array with two sub-arrays, keyed as:
  *  'drupal':
  *    A sequential array containing relevant salesforce_ids records.
  *    We don't index on drupal_id because there could be overlap.
  *  'salesforce':
- *    An indexed array mapping sfids to SObject records from SalesForce.
+ *    An indexed array mapping sfids to SObject records from Salesforce.
  */
 function _sf_notifications_parse_message($domDoc) {
   $result = array(

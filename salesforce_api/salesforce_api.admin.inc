@@ -53,15 +53,15 @@ function salesforce_api_settings_form($form, &$form_state) {
         fields only if you wish to change your login credentials.');
     $form['api']['salesforce_api_reset_credentials'] = array(
       '#type' => 'checkbox',
-      '#title' => 'Clear SalesForce API credentials',
-      '#description' => 'Erase current API login settings. Clearing SalesForce
+      '#title' => 'Clear Salesforce API credentials',
+      '#description' => 'Erase current API login settings. Clearing Salesforce
         API credentials will prevent your website from connecting to Salesforce.com',
     );
   }
   $form['api']['encryption'] = array(
     '#type' => 'item',
     '#title' => 'Encryption',
-    '#value' => t('It is highly recommended that you use encryption to protect your SalesForce.com credentials. Encryption is supported via <a href="http://drupal.org/project/aes">AES module</a>.'),
+    '#value' => t('It is highly recommended that you use encryption to protect your Salesforce.com credentials. Encryption is supported via <a href="http://drupal.org/project/aes">AES module</a>.'),
     'status' => array(
       '#type' => 'item',
       '#title' => FALSE,
@@ -188,7 +188,7 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
     return;
   }
   elseif (!empty($errors)) {
-    drupal_set_message(t('Unable to reset SalesForce API credentials.'), 'error');
+    drupal_set_message(t('Unable to reset Salesforce API credentials.'), 'error');
     foreach ($errors as $field => $error) {
       form_set_error($field, $error);
     }
@@ -200,11 +200,11 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
   $connection = salesforce_api_connect($values['salesforce_api_username'],
     $values['salesforce_api_password'], $values['salesforce_api_token'], TRUE);
   if (is_object($connection)) {
-    drupal_set_message(t('Connection established. SalesForce credentials updated.'));
+    drupal_set_message(t('Connection established. Salesforce credentials updated.'));
   }
   else {
     drupal_set_message(
-      t('Resetting SalesForce API credentials failed.'), 'error');
+      t('Resetting Salesforce API credentials failed.'), 'error');
     form_set_error('salesforce_api_username', t('Unable to connect to Salesforce. Please check your credentials.'));
     form_set_error('salesforce_api_password');
     form_set_error('salesforce_api_token');

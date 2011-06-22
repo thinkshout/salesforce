@@ -390,7 +390,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   $record = $query_array['records'][$pos];
   if ($context['sandbox']['progress'] >= $size || empty($record)) {
     $context['finished'] = 1;
-    $context['message'] = 'Imported ' . $context['sandbox']['imported'] . ' SalesForce records.';
+    $context['message'] = 'Imported ' . $context['sandbox']['imported'] . ' Salesforce records.';
     return;
   }
   // For some reason, writing the SObject to session data destroys the object.

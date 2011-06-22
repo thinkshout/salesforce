@@ -1,6 +1,6 @@
 ; $Id$
 name = Salesforce Contrib
-description = Provides support to import/export data from contrib modules to/from SalesForce
+description = Provides support to import/export data from contrib modules to/from Salesforce
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

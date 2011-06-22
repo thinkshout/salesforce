@@ -19,7 +19,7 @@ function sf_notifications_enable() {
     '!base_url' => $base_url,
     '!formula' => $formula,
   );
-  drupal_set_message(t('You have successfully enabled SalesForce Notifications. To make use
+  drupal_set_message(t('You have successfully enabled Salesforce Notifications. To make use
     of this module, you will probably want to head over to salesforce.com and
     <a href="!message">set up some outbound messages</a> and <a href="!workflow">
     associate them with workflow rules</a>. Point the outbound message(s) to
@@ -32,7 +32,7 @@ function sf_notifications_enable() {
  * @see http://drupal.org/node/1354
  */
 function sf_notifications_disable() {
-  drupal_set_message(t('You have successfully disabled SalesForce Notifications. You may
+  drupal_set_message(t('You have successfully disabled Salesforce Notifications. You may
     want to <a href="!workflow">deactivate any workflow rules</a> associated
     with this site.', array('!workflow' => 'https://na1.salesforce.com/01Q')));
 }

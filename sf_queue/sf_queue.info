@@ -1,6 +1,6 @@
 ; $Id$
 name = Salesforce Export Queue
-description = Implements an export queue for SalesForce API
+description = Implements an export queue for Salesforce API
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

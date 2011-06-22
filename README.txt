@@ -173,14 +173,14 @@ EXPORT QUEUE
 
 SOME NOTES ABOUT SECURITY
 --------------------------
-  By default all SalesForce credentials are stored in the variables table,
+  By default all Salesforce credentials are stored in the variables table,
   unencrypted. If this is a problem for you, this module supports encryption via
   aes module http://drupal.org/project/aes. You will need to create a directory
   outside your webroot (you can use the same one you used for your WSDL) wherein
   your encryption key will be stored. Your credentials will thus forth be
   encrypted as securely as AES allows. PLEASE NOTE: your data is still only as
   secure as your network. It may be possible for a savvy attacker to access your
-  data at any of various points between your Drupal site and SalesForce.com. As
+  data at any of various points between your Drupal site and Salesforce.com. As
   this always, you should educate yourself about the risks involved before storing
   and transferring sensitive data across the internet.
 

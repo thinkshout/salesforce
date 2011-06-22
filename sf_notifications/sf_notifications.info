@@ -1,6 +1,6 @@
 ; $Id$
 name = Salesforce Notifications
-description = Responds to SOAP Outbound Messages from SalesForce.
+description = Responds to SOAP Outbound Messages from Salesforce.
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

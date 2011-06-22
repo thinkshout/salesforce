@@ -2,7 +2,7 @@
 
 /**
  * @file sf_queue.module
- * Implements export queue and administrativa for SalesForce API
+ * Implements export queue and administrativa for Salesforce API
  */
 function sf_queue_menu() {
   return array(
@@ -146,12 +146,12 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
   // error but don't prevent the export.
   if (drupal_write_record('salesforce_export_queue', $object, $update)) {
     if (user_access('administer salesforce')) {
-      drupal_set_message(t('Drupal !type queued for SalesForce export.', array('!type' => $map->drupal)));
+      drupal_set_message(t('Drupal !type queued for Salesforce export.', array('!type' => $map->drupal)));
     }
     return FALSE;
   }
   else {
-    watchdog('sf_queue', 'Failed to queue SalesForce object. <pre>' . print_r($object, 1) . print_r($sf_object, 1) . '</pre>');
+    watchdog('sf_queue', 'Failed to queue Salesforce object. <pre>' . print_r($object, 1) . print_r($sf_object, 1) . '</pre>');
     return TRUE;
   }
 }
@@ -405,7 +405,7 @@ function sf_queue_handle_responses($responses, $dataset) {
       $wins[$response->id] = $item['oid'];
     }
     else {
-      $error_str = t("Error from SalesForce:<br>Message - !message<br>Fields - !fields<br>Status code - !code", array('!message' => $response->errors->message, '!fields' => $response->errors->fields, '!code' => $response->errors->statusCode));
+      $error_str = t("Error from Salesforce:<br>Message - !message<br>Fields - !fields<br>Status code - !code", array('!message' => $response->errors->message, '!fields' => $response->errors->fields, '!code' => $response->errors->statusCode));
       $fails[$response->id] = $item['oid'];
     }
   }
@@ -461,11 +461,11 @@ function sf_queue_form_salesforce_api_settings_form_alter(&$form, $form_state) {
     $description = l('View the export queue', 'admin/reports/sf_queue');
   }
   else {
-    $description = t('SalesForce Export Queue will attempt to optimize your SalesForce API usage by scheduling transactions for delayed processing, combining multiple object insert/updates, and backlogging failed transactions for re-processing. Enable the Export Queue to configure settings for these features.');
+    $description = t('Salesforce Export Queue will attempt to optimize your Salesforce API usage by scheduling transactions for delayed processing, combining multiple object insert/updates, and backlogging failed transactions for re-processing. Enable the Export Queue to configure settings for these features.');
   }
   $form['sf_queue']['sf_queue_enabled'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enable SalesForce Export Queue'),
+    '#title' => t('Enable Salesforce Export Queue'),
     '#description' => $description,
     '#default_value' => $enabled,
   );
@@ -535,7 +535,7 @@ function sf_queue_form_salesforce_api_settings_form_alter(&$form, $form_state) {
       '#type' => 'select',
       '#options' => $num_objects,
       '#default_value' => $sf_queue_settings['cron_num_objects'],
-      '#description' => t('How many object types should be processed per cron run? SalesForce allows up to 200 objects of the same type to be created, updated, or deleted in a single API transaction. The export queue will group objects of the same type to maximize efficient use of API transactions. This setting determines how many such object groups should be processed per cron run. <strong>If cron is timing out, you should lower this setting so that fewer API transactions are attempted per cron run.</strong>'),
+      '#description' => t('How many object types should be processed per cron run? Salesforce allows up to 200 objects of the same type to be created, updated, or deleted in a single API transaction. The export queue will group objects of the same type to maximize efficient use of API transactions. This setting determines how many such object groups should be processed per cron run. <strong>If cron is timing out, you should lower this setting so that fewer API transactions are attempted per cron run.</strong>'),
     ),
     'cron_min_threshold' => array(
       '#title' => 'Minimum Number of Objects to Trigger Export',
