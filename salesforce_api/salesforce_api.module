@@ -1800,7 +1800,7 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
  * @return boolean
  */
 function salesforce_api_fieldmap_source_enabled($map) {
-  $source = salesforce_api_fieldmap_objects_load('drupal', $salesforce_field_map->drupal);
+  $source = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
   return !empty($source);
 }
 
