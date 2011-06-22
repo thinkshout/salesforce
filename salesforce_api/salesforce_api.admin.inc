@@ -984,9 +984,14 @@ function salesforce_api_update_wsdl_form($form, &$form_state) {
  */
 function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
   $source = 'salesforce_api_wsdl_file';
-  // Find the dir the file should go into
+  // Find the directory into which the WSDL file should go
   if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
-    $dir = drupal_get_path('module', 'salesforce_api') . '/wsdl';
+    if(!empty($form_state['values']['wsdl'])) {
+      $dir = $form_state['values']['wsdl'];
+    }
+    else {
+      $dir = drupal_get_path('module', 'salesforce_api') . '/wsdl';
+    }
   }
   $dir = rtrim($dir, '/');
 
