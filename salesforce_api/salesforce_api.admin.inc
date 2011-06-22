@@ -10,7 +10,7 @@
 /**
  * The settings form at admin/settings/salesforce.
  */
-function salesforce_api_settings_form($form, $form_state) {
+function salesforce_api_settings_form($form, &$form_state) {
   $form = array();
 
   // Use the username field to collapse the API settings fieldset.
@@ -28,14 +28,14 @@ function salesforce_api_settings_form($form, $form_state) {
     '#type' => 'password',
     '#title' => t('Username'),
     '#description' => t('Should be in the form of an e-mail address.'),
-    '#default_value' => $form_state['values']['salesforce_api_username'],
+    '#default_value' => !empty($form_state['values']['salesforce_api_username']) ? $form_state['values']['salesforce_api_username'] : '',
     '#required' => !variable_get('salesforce_api_username', FALSE),
   );
   $form['api']['salesforce_api_password'] = array(
     '#type' => 'password',
     '#title' => t('Password'),
     '#description' => t('Enter the password used when logging into Salesforce.'),
-    '#default_value' => $form_state['values']['salesforce_api_password'],
+    '#default_value' => !empty($form_state['values']['salesforce_api_password']) ? $form_state['values']['salesforce_api_password'] : '',
     '#required' => !variable_get('salesforce_api_password', FALSE),
   );
   $form['api']['salesforce_api_token'] = array(
@@ -43,7 +43,7 @@ function salesforce_api_settings_form($form, $form_state) {
     '#title' => t('Security token'),
     '#description' => t('Set your security token by logging into Salesforce and
       navigating to Setup > My Personal Information > Reset My Security Token.'),
-    '#default_value' => $form_state['values']['salesforce_api_token'],
+    '#default_value' => !empty($form_state['values']['salesforce_api_token']) ? $form_state['values']['salesforce_api_token'] : '',
     '#required' => !variable_get('salesforce_api_token', FALSE),
   );
 
@@ -72,7 +72,7 @@ function salesforce_api_settings_form($form, $form_state) {
       'Encryption is available and configured properly.';
     $form['api']['encryption']['salesforce_api_encrypt'] = array(
       '#type' => 'checkbox',
-      '#title' => 'Encrypt SalesForce credentials (HIGHLY RECOMMENDED)',
+      '#title' => 'Encrypt Salesforce credentials (HIGHLY RECOMMENDED)',
       '#description' => 'Note: enabling this setting will not encrypt existing credentials.',
       '#default_value' => TRUE,
     );
