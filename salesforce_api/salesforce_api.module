@@ -105,7 +105,7 @@ function salesforce_api_features_api() {
  */
 function salesforce_api_menu() {
   // @todo: fix the undefined offset: 4 in _menu_translate() - cf. http://drupal.org/node/676010
-  // problem with the $map_id_arg variable?
+  // need to figure out how to implement DamZ's suggestion in comment #31, reply to #29
   $map_id_arg = count(explode('/', SALESFORCE_PATH_FIELDMAPS));
 
   $items[SALESFORCE_PATH_ADMIN] = array(

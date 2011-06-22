@@ -220,12 +220,12 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
 
   $values = $form_state['values'];
 
-  if (variable_get('salesforce_api_dir_wsdl', FALSE)
-    != $values['salesforce_api_dir_wsdl']) {
+  $dir = variable_get('salesforce_api_dir_wsdl', FALSE);
+  if (empty($dir)) {
     drupal_set_message(t('Please make sure the WSDL directory is writeable, and upload a valid Salesforce .xml or .wsdl file.'));
     $form_state['redirect'] = array(
       SALESFORCE_PATH_UPDATE_WSDL,
-      'destination=' . SALESFORCE_PATH_ADMIN,
+      array('query' => 'destination=' . SALESFORCE_PATH_ADMIN),
     );
     ini_set('soap.wsdl_cache_enabled',    '0');
   }
@@ -1050,6 +1050,7 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
  * Clean up after ourselves and display the appropriate confirmation messages.
  */
 function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
+  variable_set('salesforce_api_dir_wsdl', $form_state['values']['wsdl']);
   drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory.'));
 
   // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
