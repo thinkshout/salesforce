@@ -89,7 +89,7 @@ function sf_import_settings_form($form, $form_state) {
     '#title' => t('Fieldmaps'),
     '#description' => t('Select which fieldmaps should be used for ongoing imports from Salesforce to Drupal.'),
     '#options' => $maps,
-    '#default_value' => variable_get('sf_import_fieldmaps', array()),
+    '#default_value' => variable_get('sf_import_fieldmaps', array(NULL)),
   );
 
   // For fieldmaps that have import enabled, show some information about them
@@ -329,7 +329,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     //   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
     $sql = 'SELECT oid, sfid FROM {salesforce_object_map} WHERE name = "%s"';
     $result = db_query('SELECT oid, sfid FROM {salesforce_object_map} WHERE name = :name', array(':name' => $map->name));
-    while ($row = db_fetch_array($result)) {
+    while ($row = $result->fetchAssoc()) {
       $context['sandbox']['salesforce']['existing'][$row['sfid']] = $row['oid'];
     }
 
@@ -480,7 +480,6 @@ function _sf_import_get_updated_records() {
     if ($updates = salesforce_api_get_updated($map->salesforce, $start, $end)) {
       $update_sfids = $updates->ids;
       foreach ($update_sfids as $sfid) {
-        $sql = "SELECT sfid FROM {sf_import_queue} WHERE sfid = '%s'";
         $exists = db_query("SELECT sfid FROM {sf_import_queue} WHERE sfid = :sfid", array(':sfid' => $sfid))->fetchField();
         if (!$exists) {
           $object->time = REQUEST_TIME;
@@ -509,8 +508,8 @@ function _sf_import_process_records() {
   // Process sf_import_queue items
   $fieldmaps = salesforce_api_salesforce_field_map_load_all();
   $records = array();
-  $sql = "SELECT sfid, fieldmap FROM {sf_import_queue}";
-  while ($sfids = db_fetch_object(db_query($sql))) {
+  $result = db_query("SELECT sfid, fieldmap FROM {sf_import_queue}");
+  foreach ($result as $sfids) {
     $fieldmap = $sfids->fieldmap;
     $type = $fieldmaps[$fieldmap]->drupal;
     // "node" mappings are like "node_contenttype".
@@ -528,8 +527,8 @@ function _sf_import_process_records() {
     // TODO Please review the conversion of this statement to the D7 database API syntax.
     /* db_query("DELETE FROM {sf_import_queue} WHERE sfid = '%s'", $sfids->sfid) */
     db_delete('sf_import_queue')
-  ->condition('sfid', $sfids->sfid)
-  ->execute();
+      ->condition('sfid', $sfids->sfid)
+      ->execute();
   }
   if (count($records) > 0) {
     variable_set('sf_import_queue_processed_count', count($records));
