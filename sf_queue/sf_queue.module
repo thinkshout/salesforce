@@ -211,7 +211,7 @@ function sf_queue_process_queue($settings, $state) {
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query('DELETE FROM {salesforce_export_queue} WHERE sf_op IN ("delete", "update") AND (sfid IS NULL OR sfid = NULL OR sfid = "")') */
   db_delete('salesforce_export_queue')
-    ->where('sf_op IN ("delete", "update") AND (sfid IS NULL OR sfid = NULL OR sfid = "")',  )
+    ->where('sf_op IN ("delete", "update") AND (sfid IS NULL OR sfid = NULL OR sfid = "")')
   ->execute();
 
   $settings = array_merge($settings, array('start_time' => $start_time, 'limit' => $limit));

@@ -17,7 +17,7 @@ function sf_queue_admin_form() {
 
   $sf_queue_items = db_query("SELECT * FROM {salesforce_export_queue} ORDER BY created");
 
-  while ($sf_queue_item = db_fetch_object($sf_queue_items)) {
+  foreach($sf_queue_items as $sf_queue_item) {
     if (isset($mapinfo[$sf_queue_item->fieldmap_name])) {
       $fieldmap = $mapinfo[$sf_queue_item->fieldmap_name];
     }
@@ -66,7 +66,7 @@ function sf_queue_admin_view($qid) {
   }
 
   // TODO Please convert this statement to the D7 database API syntax.
-  $sf_queue_item = db_fetch_object(db_query("SELECT * FROM {salesforce_export_queue} WHERE id=" . $qid));
+  $sf_queue_item = db_query("SELECT * FROM {salesforce_export_queue} WHERE id=" . $qid)->fetchObject();
 
   $header = array(t('Field name'), t('Value'));
   $rows = array();
@@ -114,7 +114,7 @@ function sf_queue_admin_delete_confirm($form, &$form_state, $qid) {
   }
 
   // TODO Please convert this statement to the D7 database API syntax.
-  $results = db_fetch_object(db_query("SELECT count(id) count FROM {salesforce_export_queue} WHERE id=" . $qid));
+  $results = db_query("SELECT count(id) count FROM {salesforce_export_queue} WHERE id=" . $qid)->fetchObject();
   if ($results->count == 0) {
     drupal_goto("admin/reports/sf_queue/");
   }
@@ -157,7 +157,7 @@ function sf_queue_admin_delete_confirm_submit($form, &$form_state) {
 
 function _sf_queue_admin_mapinfo() {
   $sf_maps_items = db_query("SELECT name,description FROM {salesforce_field_map}");
-  while ($sf_map = db_fetch_object($sf_maps_items)) {
+  foreach($sf_maps_items as $sf_map) {
     $name = $sf_map->name;
     $description = $sf_map->description;
     $sf_mapinfo[$name] = $description;
