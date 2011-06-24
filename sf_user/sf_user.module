@@ -52,8 +52,10 @@ function sf_user_form_alter(&$form, $form_state, $form_id) {
 /**
  * Implements hook_user_load().
  */
-function sf_user_user_load($users) {
-  $account->salesforce = salesforce_api_id_load('user', $account->uid);
+function sf_user_user_load($accounts) {
+  foreach($accounts as $account) {
+    $account->salesforce = salesforce_api_id_load('user', $account->uid);
+  }
 }
 
 /**
@@ -429,17 +431,17 @@ function sf_user_salesforce_form($form, &$form_state, $account) {
     $form['mapped']['export_values'] = array(
       '#type' => 'submit',
       '#value' => t('Export changes to Salesforce'),
-      '#attributes' => array('class' => 'sf-confirm'),
+      '#attributes' => array('class' => array('sf-confirm')),
     );
     $form['mapped']['import_values'] = array(
       '#type' => 'submit',
       '#value' => t('Import changes from Salesforce'),
-      '#attributes' => array('class' => 'sf-confirm'),
+      '#attributes' => array('class' => array('sf-confirm')),
     );
     $form['mapped']['unlink'] = array(
       '#type' => 'submit',
       '#value' => t('Unlink from Salesforce object...'),
-      '#attributes' => array('class' => 'sf-confirm'),
+      '#attributes' => array('class' => array('sf-confirm')),
     );
 
     // Create a table for the unmapped fields.
@@ -624,7 +626,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   }
 
   // If we got errors, handle them before proceeding
-  if (is_object($response->errors)) {
+  if (isset($response->errors) && is_object($response->errors)) {
     // If we got "Entity is deleted" and we're configured to unlink and upsert,
     // do it. @see sf_node_export()
     if ($response->errors->statusCode == 'ENTITY_IS_DELETED'
