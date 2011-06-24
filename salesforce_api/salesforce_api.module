@@ -1397,7 +1397,7 @@ function salesforce_api_get_updated($type, $start, $end) {
   $sf = salesforce_api_connect();
   if ($sf) {
     $response = $sf->client->getUpdated($type, (int) $start, (int) $end);
-    if ($response->ids) {
+    if (isset($response->ids)) {
       return $response;
     }
     else {
@@ -1484,6 +1484,7 @@ function salesforce_api_object_to_fieldmap_fields($object) {
       );
       $source = get_object_vars($field);
       $sf_definition = array_intersect_key($source, array_flip($properties));
+      // @todo: Determine why the line below referencing 'sf_type' throws a notice.
       foreach ($booleans as $bool) {
         $sf_definition['sf_type'] |= (int) $source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
       }
