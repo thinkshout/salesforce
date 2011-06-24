@@ -30,7 +30,7 @@ function sf_prematch_list() {
   $rows = array();
 
   // Loop through all the indexed field maps.
-  while ($map = db_fetch_object($result)) {
+  foreach($result as $map) {
     if ($map->rule) {
       $op_add_edit =  l(t('edit prematch'), SALESFORCE_PATH_FIELDMAPS . '/' .  $map->name . '/prematching');
       $op_del = l(t('delete prematch'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/prematching/delete');
@@ -262,7 +262,7 @@ function sf_prematch_delete_form_submit($form, &$form_state) {
  */
 function sf_prematch_get_options($map, $required = FALSE) {
   // Extract terms from $map.
-  if ($map->actions == 'import') {
+  if (isset($map->actions) && $map->actions == 'import') {
     $terms = array_keys($map->fields);
   }
   else {

@@ -111,7 +111,7 @@ function sf_prematch_match_by_load($fieldmap) {
   static $match_bys;
   if (!isset($match_bys[$fieldmap]) && $fieldmap != '') {
     $result = db_query("SELECT * FROM {salesforce_prematch} WHERE name = :name", array(':name' => $fieldmap));
-    $match_by = db_fetch_array($result);
+    $match_by = $result->fetchAssoc('name');
     if (count($match_by)) {
       $match_bys[$fieldmap] = $match_by;
     }
