@@ -10,7 +10,9 @@
 /**
  * SF Notifications settings
  *
- * @todo Response handling: under what conditions should we return a successful response? Note if we do not return a successful response, Salesforce will re-send the outbound message indefinitely.
+ * @todo Response handling: under what conditions should we return a successful response? 
+ *       Note if we do not return a successful response, Salesforce will re-send the outbound
+ *       message indefinitely.
  */
 function sf_notifications_settings_form($form, &$form_state) {
   $form = array('sf_notifications' => array(
@@ -58,6 +60,7 @@ function sf_notifications_fieldmap_settings($form, &$form_state, $fieldmap_id) {
   $map = salesforce_api_fieldmap_load($fieldmap_id);
   $active = variable_get('sf_notifications_active_maps', array());
   $active = $active[$fieldmap_id];
+  // @todo: Determine why this is not saving. Problem with this being a system_settings_form()?
   $form = array(
     'active' => array(
       '#type' => 'checkbox',

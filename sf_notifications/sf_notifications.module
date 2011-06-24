@@ -256,13 +256,13 @@ function sf_notifications_delete_record($object_record) {
       // TODO Please review the conversion of this statement to the D7 database API syntax.
       /* db_query('DELETE FROM {node} WHERE nid = %d', $node->nid) */
       db_delete('node')
-  ->condition('nid', $node->nid)
-  ->execute();
+        ->condition('nid', $node->nid)
+        ->execute();
       // TODO Please review the conversion of this statement to the D7 database API syntax.
       /* db_query('DELETE FROM {node_revisions} WHERE nid = %d', $node->nid) */
       db_delete('node_revisions')
-  ->condition('nid', $node->nid)
-  ->execute();
+        ->condition('nid', $node->nid)
+        ->execute();
 
       // Call the node-specific callback (if any):
       node_invoke($node, 'delete');
@@ -404,8 +404,8 @@ function _sf_notifications_parse_message($domDoc) {
   }
 
   // TODO Please convert this statement to the D7 database API syntax.
-  $dbresult = db_query('SELECT name, oid, sfid, drupal_type FROM {salesforce_object_map} WHERE sfid IN (' . db_placeholders($sfids, 'varchar') . ')', $sfids);
-  while ($row = db_fetch_array($dbresult)) {
+  $result = db_query('SELECT name, oid, sfid, drupal_type FROM {salesforce_object_map} WHERE sfid IN :sfids', $sfids);
+  while($row = $result->fetchAssoc()) {
     $result['drupal'][] = $row;
   }
 
