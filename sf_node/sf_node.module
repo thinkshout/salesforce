@@ -86,10 +86,12 @@ function sf_node_node_delete($node) {
 /**
  * Implements hook_node_update().
  */
+ // @todo: Make a helper function so that hook_node_update() and hook_node_insert() 
+ // can share logic.
 function sf_node_node_update($node) {
   // When importing *from* Salesforce, don't export *back* to Salesforce.
   if (isset($node->sf_node_skip_export)) {
-    break;
+    return;
   }
 
   // If this is an update, and the node already has a salesforce mapping,
@@ -113,7 +115,7 @@ function sf_node_node_update($node) {
   if (empty($salesforce->name) || empty($map)) {
     $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
     if (empty($maps)) {
-      break;
+      return;
     }
   }
   // Otherwise assign the single map as an array so we only have to write
@@ -133,7 +135,7 @@ function sf_node_node_update($node) {
 
   // If all our maps were unset, abort this procedure.
   if (empty($maps)) {
-    break;
+    return;
   }
 
   // Otherwise, use the first fieldmap.
@@ -163,7 +165,7 @@ function sf_node_node_update($node) {
 function sf_node_node_insert($node) {
   // When importing *from* Salesforce, don't export *back* to Salesforce.
   if (isset($node->sf_node_skip_export)) {
-    break;
+    return;
   }
 
   // If this is an update, and the node already has a salesforce mapping,
@@ -187,7 +189,7 @@ function sf_node_node_insert($node) {
   if (empty($salesforce->name) || empty($map)) {
     $maps = salesforce_api_salesforce_field_map_load_by(array('drupal' => 'node_' . $node->type));
     if (empty($maps)) {
-      break;
+      return;
     }
   }
   // Otherwise assign the single map as an array so we only have to write
@@ -207,7 +209,7 @@ function sf_node_node_insert($node) {
 
   // If all our maps were unset, abort this procedure.
   if (empty($maps)) {
-    break;
+    return;
   }
 
   // Otherwise, use the first fieldmap.
@@ -230,11 +232,6 @@ function sf_node_node_insert($node) {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export node: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('node ' . $node->nid, 'node/' . $node->nid));
   }
 }
-
-/**
- * Implements hook_nodeapi().
- */
-function sf_node_nodeapi_OLD(&$node, $op, $a3 = NULL, $a4 = NULL) { }
 
 /**
  * Implements hook_content_fieldapi().
