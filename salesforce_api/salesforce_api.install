@@ -11,8 +11,6 @@
  * Implements hook_install().
  */
 function salesforce_api_install() {
-  // TODO The drupal_(un)install_schema functions are called automatically in D7.
-  // drupal_install_schema('salesforce_api')
   variable_set('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
 }
 
@@ -20,15 +18,9 @@ function salesforce_api_install() {
  * Implements hook_uninstall().
  */
 function salesforce_api_uninstall() {
-  // TODO The drupal_(un)install_schema functions are called automatically in D7.
-  // drupal_uninstall_schema('salesforce_api')
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'") */
   db_delete('variable')
   ->condition('{name}', 'salesforce%', 'LIKE')
   ->execute();
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {cache} WHERE {cid} = 'salesforce_api_sf_objects'") */
   db_delete('cache')
   ->condition('{cid}', 'salesforce_api_sf_objects')
   ->execute();
@@ -70,9 +62,9 @@ function salesforce_api_schema() {
         'default' => '',
       ),
       'drupal_type' => array(
-        'description' => 'Drupal object type (e.g. "node", "comment")',
+        'description' => 'The kind of Drupal object this map is for (usually an entity).',
         'type' => 'varchar',
-        'length' => 128,
+        'length' => 40,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -81,7 +73,9 @@ function salesforce_api_schema() {
       'sfid' => array('sfid'),
       'name' => array('name'),
     ),
-    'primary key' => array('drupal_type', 'oid'),
+    // Primary key has been changed to the fieldmap:
+    // one fieldmapping for each Drupal object - cf. [#1018690-8]
+    'primary key' => array('name', 'oid'),
   );
   $schema['salesforce_field_map'] = array(
     'description' => 'Drupal to Salesforce field mappings',
@@ -92,10 +86,8 @@ function salesforce_api_schema() {
       'export callback' => 'salesforce_api_salesforce_field_map_export',
     ),
     'fields' => array(
-      // "name" field is only in schema for ctools exportable support and not in
-      // use via any UI at the moment. Implementing modules can assign
-      // meaningful names if they wish to do so, but it is not required for our
-      // purposes.
+      // @todo: Assign meaningful names to fieldmaps as per [#1145908]
+      // Currently they are just a hash.
       'fieldmap' => array(
         'description' => 'The primary identifier for a fieldmap.',
         'type' => 'serial',
@@ -117,7 +109,7 @@ function salesforce_api_schema() {
         'size' => 'small',
       ),
       'drupal' => array(
-        'description' => 'The kind of Drupal object this map is for.',
+        'description' => 'The kind of Drupal object this map is for (usually an entity).',
         'type' => 'varchar',
         'length' => 40,
         'not null' => TRUE,

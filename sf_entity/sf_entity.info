@@ -1,0 +1,7 @@
+name = Salesforce Entity
+core = 7.x
+package = Salesforce
+description = Implements Salesforce API to expose Drupal entities.
+
+dependencies[] = salesforce_api
+dependencies[] = field

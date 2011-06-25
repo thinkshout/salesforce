@@ -724,16 +724,12 @@ function salesforce_api_fieldmap_delete($fieldmap) {
   if (empty($name)) {
     return;
   }
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query('DELETE FROM {salesforce_field_map} WHERE name = "%s"', $name) */
   db_delete('salesforce_field_map')
-  ->condition('name', $name)
-  ->execute();
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query('DELETE FROM {salesforce_object_map} WHERE name = "%s"', $name) */
+    ->condition('name', $name)
+    ->execute();
   db_delete('salesforce_object_map')
-  ->condition('name', $name)
-  ->execute();
+    ->condition('name', $name)
+    ->execute();
   if (function_exists('sf_prematch_match_by_delete')) {
     sf_prematch_match_by_delete($name);
   }
@@ -746,12 +742,10 @@ function salesforce_api_fieldmap_delete($fieldmap) {
  * @param string $oid
  */
 function salesforce_api_delete_object_map($drupal_type, $oid) {
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query('DELETE FROM {salesforce_object_map} WHERE drupal_type = "%s" AND oid = %d', $drupal_type, $oid) */
   db_delete('salesforce_object_map')
-  ->condition('drupal_type', $drupal_type)
-  ->condition('oid', $oid)
-  ->execute();
+    ->condition('drupal_type', $drupal_type)
+    ->condition('oid', $oid)
+    ->execute();
 }
 
 /**
@@ -1140,6 +1134,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
  *   An array containing the associated Salesforce object type and ID or an
  *     empty array if no data was found.
  */
+ // @todo: What to do if this returns multiple results?
 function salesforce_api_id_load($type, $id) {
   // Query the main ID table for the associated data.
   $result = db_query("SELECT sfid, name FROM {salesforce_object_map} WHERE drupal_type = :drupal_type AND oid = :oid", array(':drupal_type' => $type, ':oid' => $id));
@@ -1155,56 +1150,53 @@ function salesforce_api_id_load($type, $id) {
 }
 
 /**
- * Get an object id using the salesforce id
+ * Get an object id using the Salesforce id
  *
  * @param $sfid
  *   A saleforce id
- * @param $type
- *   The type of the Drupal object you are requesting data for; node or user.
+ * @param $name
+ *   The name of the fieldmap for which data is being requested.
  * @return
  *   The associated unique ID used to identify the object in Drupal or FALSE.
  */
-function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
-  $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = :sfid AND drupal_type = :drupal_type", array(':sfid' => $sfid, ':drupal_type' => $type));
+function salesforce_api_get_id_with_sfid($sfid, $name) {
+  $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = :sfid AND name = :name", array(':sfid' => $sfid, ':name' => $name));
   return $result->fetchField();
 }
 
 /**
  * Saves the Salesforce ID and fieldmap index of a Drupal object.
  *
- * @param $drupal_type
- *   The type of the Drupal object you are requesting data for; node or user.
  * @param $oid
  *   The associated unique ID used to identify the object in Drupal.
  * @param $sfid
  *   The Salesforce ID of the associated object in the Salesforce database.
  * @param $name
  *   The name of the fieldmap used to generate the export.
+ * @param $drupal_type
+ *   The type of Drupal object (usually an entity) being saved.
  * @return
  *   TRUE if was successfull in saving the link, FALSE otherwise.
  * @todo salesforce_api_id_save_multi()
  */
-function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
+function salesforce_api_id_save($oid, $sfid, $name, $drupal_type) {
   if ($oid) {
     $oid = (int) $oid;
   }
-  if ($drupal_type && $oid && $sfid && $name) {
-    // TODO Please review the conversion of this statement to the D7 database API syntax.
-    /* db_query("DELETE FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid) */
+  if ($drupal_type && $oid && $sfid && $name && $drupal_type) {
     db_delete('salesforce_object_map')
-  ->condition('drupal_type', $drupal_type)
-  ->condition('oid', $oid)
-  ->execute();
-    // TODO Please review the conversion of this statement to the D7 database API syntax.
-    /* db_query("INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name) VALUES ('%s', %d, '%s', '%s')", $drupal_type, $oid, $sfid, $name) */
+      ->condition('name', $name)
+      ->condition('oid', $oid)
+      ->condition('drupal_type', $oid)
+      ->execute();
     $insert = $id = db_insert('salesforce_object_map')
-  ->fields(array(
-      'drupal_type' => $drupal_type,
-      'oid' => $oid,
-      'sfid' => $sfid,
-      'name' => $name,
-    ))
-  ->execute();
+      ->fields(array(
+        'oid' => $oid,
+        'sfid' => $sfid,
+        'name' => $name,
+        'drupal_type' => $drupal_type,
+      ))
+      ->execute();
     if ($insert) {
       salesforce_api_log(SALESFORCE_LOG_ALL, 'Successfully linked Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
       return TRUE;
@@ -1216,9 +1208,10 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
   }
 }
 
+// @todo: Convert this to DBTNG syntax. (Query builder.)
 /**
  * Removes a link between a Salesforce record and a Drupal object. Arguments
- * correspond to the columns in the salesforce_object_map table
+ * correspond to the columns in the salesforce_object_map table.
  *
  * @param array $args
  *   Associative array of criteria for deletion. These criteria will be AND'ed
@@ -1228,25 +1221,22 @@ function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
  *
  *     - 'name'
  *        machine name of the fieldmap corresponding to this linkage.
- *        'name' or 'drupal_type' MUST be set.
  *
  *     - 'drupal_type'
- *        type of drupal object corresponding to this linkage.
- *        e.g. "node", "user", etc.
- *        'name' or 'drupal_type' MUST be set.
+ *        The type of Drupal object being exported (usually an entity).
  *
  *     - 'sfid'
  *        the salesforce id of the object
  *
  *  Keys can be supplied in various combinations, but $args must not be empty.
- *  EITHER "oid" must be set along with "drupal_type" or "name"
+ *  EITHER "oid" must be set along with "name" or "drupal_type"
  *  OR
  *  "sfid" must be set
  *
  *  In other words, minimal valid key combinations are:
  *    - 'sfid'
- *    - 'drupal_type', 'oid'
  *    - 'name', 'oid'
+ *    - 'drupal_type', 'oid'
  */
 function salesforce_api_id_unlink($args) {
   $valid_args =
@@ -1261,20 +1251,20 @@ function salesforce_api_id_unlink($args) {
   $sql_args = array();
   $where = array();
   if (!empty($args['oid'])) {
-    $where[] = ' oid = %d ';
+    $where[] = ' oid = :oid ';
     $sql_args[] = $args['oid'];
   }
   if (!empty($args['sfid'])) {
-    $where[] = ' sfid = "%s" ';
+    $where[] = ' sfid = ":sfid" ';
     $sql_args[] = $args['sfid'];
   }
-  if (!empty($args['name'])) {
-    $where[] = ' name = "%s" ';
+  if (!empty($args['drupal_type'])) {
+    $where[] = ' name = ":drupal_type" ';
     $sql_args[] = $args['name'];
   }
-  if (!empty($args['drupal_type'])) {
-    $where[] = ' drupal_type = "%s" ';
-    $sql_args[] = $args['drupal_type'];
+  if (!empty($args['name'])) {
+    $where[] = ' name = ":name" ';
+    $sql_args[] = $args['name'];
   }
   $sql .= ' WHERE ' . implode(' AND ', $where);
   // TODO Please convert this statement to the D7 database API syntax.
