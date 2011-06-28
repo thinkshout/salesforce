@@ -474,7 +474,9 @@ function sf_entity_salesforce_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $info = $values['entity info'];
   $keys = $values['entity keys'];
-  $entities = entity_load($values['entity type'], $keys);
+  // the entity id is stored in the first key
+  // entity_load actually accepts an array of entities
+  $entities = entity_load($values['entity type'], array($keys[0]));
   $entity = current($entities);
   switch ($values['op']) {
     // Export the node to Salesforce.
@@ -538,7 +540,7 @@ function sf_entity_export($entity, $fieldmap, $sfid = NULL) {
 
   // Look for any matching records which we might want to update instead of creating duplicates.
   if (empty($sfid)) {
-    $matches = salesforce_api_search_for_duplicates('export', $entity, $fieldmap);
+    $matches = salesforce_api_search_for_duplicates('export', $mapped_entity, $entity, $fieldmap);
     if (!empty($matches)) {
       $sfid = reset($matches);
     }
@@ -548,13 +550,23 @@ function sf_entity_export($entity, $fieldmap, $sfid = NULL) {
   $object = salesforce_api_fieldmap_export_create($fieldmap, $entity);
   $object->Id = $sfid;
 
-  $response = $sf->client->upsert('Id', array($object));
+  try {
+    $response = $sf->client->upsert('Id', array($object), $map->salesforce);
+  }
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to upsert entity: %msg <pre>%e</pre>', array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR);
+  }
+
+  // Check to see if response is an array of objects
+  if (is_array($response) && count($response) > 0) {
+    $response = $response[0];
+  }
 
   // If the export was successful...
   if ($response->success) {
     if (empty($entity->salesforce->sfid)) {
       // Store the Salesforce ID for the node and return TRUE.
-      salesforce_api_id_save($id, $sfid, $fieldmap, $map['drupal']);
+      salesforce_api_id_save($id, $sfid, $fieldmap, $map->drupal);
     }
     return TRUE;
   }
