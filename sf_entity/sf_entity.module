@@ -368,7 +368,7 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
         drupal_set_message(t('Unable to retrieve Salesforce data for record !sfid. Drupal and Salesforce records have been unlinked.', array('!sfid' => $entity->salesforce->sfid)), 'warning');
         // Unlink the object and reload the entity, resetting the cache
         salesforce_api_id_unlink(array('oid' => $oid, 'name' => $entity->salesforce->name));
-        $entity = entity_load($entity_type, array($oid), TRUE);
+        $entity = entity_load($entity_type, array($oid), array(), TRUE);
       }
       elseif (!$sf_data) {
         drupal_set_message(t('Unable to retrieve Salesforce data for record !sfid.', array('!sfid' => $entity->salesforce->sfid)), 'warning');
@@ -478,7 +478,7 @@ function sf_entity_salesforce_form_submit($form, &$form_state) {
   $info = $values['entity info'];
   $keys = $values['entity keys'];
   // the entity id is stored in the first key
-  // entity_load actually accepts an array of entities
+  // entity_load actually accepts an array of entity ids
   $entities = entity_load($values['entity type'], array($keys[0]));
   $entity = current($entities);
   switch ($values['op']) {
@@ -497,7 +497,7 @@ function sf_entity_salesforce_form_submit($form, &$form_state) {
 
     // Import changes from Salesforce.
     case t('Import'): {
-      if (sf_entity_import($form_state['values']['sfid'], $form_state['values']['fieldmap'], $entity)) {
+      if (sf_entity_import($form_state['values']['sfid'], $form_state['values']['fieldmap'], $keys[0])) {
         drupal_set_message(t('The %entity has been updated with values from Salesforce.', array('%entity' => $values['entity type'])));
       }
       else {
@@ -607,9 +607,12 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
     drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
     return FALSE;
   }
-
   if (is_sfid($sf_data)) {
-    $sf_data = $sf->retrieve(array($sf_data), $fieldmap);
+    $sf_data = salesforce_api_retrieve(array($sf_data), $fieldmap);
+    // Check to see if sf_data is an array of objects
+    if (is_array($sf_data) && count($sf_data) > 0) {
+      $sf_data = $sf_data[0];
+    }
   }
   elseif (is_array($sf_data)) {
     $sf_data = (object) $sf_data;
@@ -618,7 +621,7 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
   if (empty($sf_data)) {
     return FALSE;
   }
-  $sfid = $sf_data->Id;
+
   // Load the fieldmap data.
   $map = salesforce_api_fieldmap_load($fieldmap);
   $parts = explode('_', $map->drupal);
@@ -629,8 +632,7 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
-  // If the node exists, simply update the existing node.
-  $entities = entity_load($mapped_entity, $id);
+  $entities = entity_load($mapped_entity, array($id));
   if (is_array($entities)) {
     $entity = current($entities);
   }
@@ -639,11 +641,11 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
   }
   if (empty($id) || empty($entity)) {
     // Look for any matching records which we might want to update instead of creating duplicates.
-    $matches = salesforce_api_search_for_duplicates('import', $sf_data, $fieldmap);
+    $matches = salesforce_api_search_for_duplicates('import', $mapped_entity, $sf_data, $fieldmap);
     if (!empty($matches)) {
       $id = reset($matches);
       if (!empty($id)) {
-        $entities = entity_load($mapped_entity, $id);
+        $entities = entity_load($mapped_entity, array($id));
         if (is_array($entities)) {
           $entity = current($entities);
         }
@@ -658,11 +660,11 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
       $entity->is_new = TRUE;
     }
   }
-  list($id, $vid, $bundle) = entity_extract_ids($type, $entity);
+  list($id, $vid, $bundle) = entity_extract_ids($mapped_entity, $entity);
 
 
   // Loop through the fields on the fieldmap.
-  foreach ($map['fields'] as $sf_fieldname => $drupal_fieldname) {
+  foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
     // If a handler is specified for importing a value from Salesforce....
     if (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
       $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
@@ -674,7 +676,9 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
     elseif (isset($sf_data->$sf_fieldname)) {
       // Otherwise set the field on the export object to the value of the source
       // field if it's present on the source object.
-      $entity->$drupal_fieldname = $sf_data->$sf_fieldname;
+      if(isset($entity->$drupal_fieldname)) {
+        $entity->$drupal_fieldname = $sf_data->$sf_fieldname;
+      }
     }
   }
 
@@ -695,9 +699,9 @@ function sf_entity_import($sf_data, $fieldmap, $id = NULL) {
       entity_invoke('update', $mapped_entity, $entity);
     }
   }
-  list($id, $vid, $bundle) = entity_extract_ids($type, $entity);
+  list($id, $vid, $bundle) = entity_extract_ids($mapped_entity, $entity);
 
-  if ($map['automatic'] && !empty($id)) {
+  if ($map->automatic && !empty($id)) {
     // Store the Salesforce ID for the node and return TRUE.
     salesforce_api_id_save($id, $sfid, $fieldmap, $map->drupal);
   }

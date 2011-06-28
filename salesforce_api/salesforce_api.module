@@ -622,7 +622,7 @@ function salesforce_api_fieldmap_save(&$map) {
  * @param $fieldmap
  *   The index or name of the fieldmap to load.
  * @return
- *   An array containing the fieldmap data.
+ *   An object containing the fieldmap data.
  */
 function salesforce_api_fieldmap_load($fieldmap) {
   return salesforce_api_salesforce_field_map_load($fieldmap);
