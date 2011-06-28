@@ -630,17 +630,17 @@ function salesforce_api_fieldmap_load($fieldmap) {
 
 /**
  * Remove a field from all fieldmaps. This is particularly useful for implementations
- * of hook_content_fieldapi('delete instance'). May be use to delete an occurence
+ * of hook_field_delete_instance. May be use to delete an occurence
  * in a single fieldmap (by supplying drupal_type and/or salesforce_type), or every
  * occurence in all fieldmaps (by supplying only fieldname).
  *
  * @param $fieldname
- *  The name of the field to be deleted. Either a CCK field, or a Salesforce field
+ *  The name of the field to be deleted. Either a Field API field, or a Salesforce field
  * @param $drupal_type (optional)
  *  If given, limit deleting of the field to this Drupal content type
  * @param $salesforce_type (optional)
  *  If given, limit
- * @see sf_node/sf_node.module:sf_node_content_fieldapi
+ * @see sf_entity/sf_entity.module:sf_entity_field_delete_instance
  * @todo I'm sure this can be done more elegantly, but I can't spend anymore braincells on it right now.
  */
 function salesforce_api_fieldmap_field_delete($fieldname, $drupal_type = NULL, $salesforce_type = NULL) {
@@ -1176,14 +1176,14 @@ function salesforce_api_get_id_with_sfid($sfid, $name) {
  * @param $drupal_type
  *   The type of Drupal object (usually an entity) being saved.
  * @return
- *   TRUE if was successfull in saving the link, FALSE otherwise.
+ *   TRUE if was successful in saving the link, FALSE otherwise.
  * @todo salesforce_api_id_save_multi()
  */
 function salesforce_api_id_save($oid, $sfid, $name, $drupal_type) {
   if ($oid) {
     $oid = (int) $oid;
   }
-  if ($drupal_type && $oid && $sfid && $name && $drupal_type) {
+  if ($oid && $sfid && $name && $drupal_type) {
     db_delete('salesforce_object_map')
       ->condition('name', $name)
       ->condition('oid', $oid)
@@ -1247,28 +1247,20 @@ function salesforce_api_id_unlink($args) {
     return FALSE;
   }
 
-  $sql = "DELETE FROM {salesforce_object_map} ";
-  $sql_args = array();
-  $where = array();
-  if (!empty($args['oid'])) {
-    $where[] = ' oid = :oid ';
-    $sql_args[] = $args['oid'];
+  $num_deleted = db_delete('salesforce_object_map');
+  if(!empty($args['oid'])) {
+    $num_deleted->condition('oid', $args['oid']);
   }
-  if (!empty($args['sfid'])) {
-    $where[] = ' sfid = ":sfid" ';
-    $sql_args[] = $args['sfid'];
+  if(!empty($args['sfid'])) {
+    $num_deleted->condition('sfid', $args['sfid']);
   }
-  if (!empty($args['drupal_type'])) {
-    $where[] = ' name = ":drupal_type" ';
-    $sql_args[] = $args['name'];
+  if(!empty($args['drupal_type'])) {
+    $num_deleted->condition('drupal_type', $args['drupal_type']);
   }
-  if (!empty($args['name'])) {
-    $where[] = ' name = ":name" ';
-    $sql_args[] = $args['name'];
+  if(!empty($args['name'])) {
+    $num_deleted->condition('name', $args['name']);
   }
-  $sql .= ' WHERE ' . implode(' AND ', $where);
-  // TODO Please convert this statement to the D7 database API syntax.
-  db_query($sql, $sql_args);
+  $num_deleted->execute();
   module_invoke_all('salesforce_api_post_unlink', $args);
 }
 
