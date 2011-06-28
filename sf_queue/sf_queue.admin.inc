@@ -1,8 +1,8 @@
 <?php
-// $Id$
-
 /**
  * @file
+ *
+ * Admin interface for the Salesforce Export Queue module.
  */
 
 /**

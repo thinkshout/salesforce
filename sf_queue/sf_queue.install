@@ -1,10 +1,10 @@
 <?php
-// $Id$
 
 /**
  * @file
+ *
+ * Install file for the Salesforce Export Queue module.
  */
-
 
 /**
  * Implements hook_install().
@@ -153,4 +153,3 @@ function sf_queue_update_6201() {
   // See http://drupal.org/node/224333#update_sql.
   return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
 }
-
