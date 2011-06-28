@@ -285,7 +285,7 @@ function _salesforce_fieldmap_access($perm, $op = 'edit', $id = NULL) {
     $maps = salesforce_api_salesforce_field_map_load_all();
     foreach ($maps as $map) {
       if ($id == $map->name) {
-        return TRUE;
+        return user_access($perm);
       }
     }
   }
