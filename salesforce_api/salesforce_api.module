@@ -1633,6 +1633,18 @@ function salesforce_api_id_convert($sfid15) {
 }
 
 /**
+ * Wrapper for Devel's dpm() function. Called in other Salesforce API modules.
+ */
+function sf_dpm($var, $show_msg = TRUE, $msg_level = 'error') {
+  if (function_exists('dpm')) {
+    dpm($var);
+  }
+  elseif ($show_msg) {
+   drupal_set_message(check_plain(print_r($var, TRUE)), $msg_level);
+  }
+}
+
+/**
  * Implements hook_views_api().
  */
 function salesforce_api_views_api() {
