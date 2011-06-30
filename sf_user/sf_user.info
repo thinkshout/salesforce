@@ -1,6 +1,6 @@
 ; $Id$
 name = Salesforce User
-description = Integrates the core user object and profile module with the Salesforce API.
+description = DEPRECATED: Integrates the core user object and profile module with the Salesforce API.
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

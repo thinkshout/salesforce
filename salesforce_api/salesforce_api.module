@@ -596,22 +596,32 @@ function salesforce_api_valid_email_address($mail) {
 /**
  * Saves a fieldmap to the database.
  *
- * @param $map;
+ * @param $map
  *   An array containing the fieldmap data using the following keys and values:
- *   - fieldmap: the numeric index of the fieldmap.
+ *   - fieldmap: the numeric index of the fieldmap. (Will not be present on creation.)
+ *   - fieldmap_name: the machine-readable name of the fieldmap. (Only set on creation.)
  *   - drupal: the name of a Drupal object.
  *   - salesforce: the name of a Salesforce object.
  *   - automatic: whether or not the sync should be automatic
  *   - description: a short title or description of the fieldmap
  *   - fields: an array that maps source fields (as keys) to their corresponding
  *       target fields (as values).
+ *  @param $name
+ *    The machine name of the fieldmap (only specified on creation).
  */
 function salesforce_api_fieldmap_save(&$map) {
   if (!empty($map->fieldmap)) {
     $primary_keys = array('name');
   }
   if (empty($map->name)) {
-    $map->name = md5(microtime());
+    if(!empty($map->fieldmap_name)) {
+      $map->name = $map->fieldmap_name;
+      unset($map->fieldmap_name);
+    }
+    else {
+      $map->name = md5(microtime());
+    }
+    $primary_keys = array();
   }
   drupal_write_record('salesforce_field_map', $map, $primary_keys);
 }
@@ -898,8 +908,9 @@ function salesforce_api_fieldmap_description($map) {
  *     target field.
  */
 function salesforce_api_fieldmap_field_options($object, $type = NULL, $name = NULL, $field = NULL) {
-  // Define the options array with a blank value.
-  $options = array('' => '');
+  // Define the options array.
+  // (Don't add a blank value - we don't want that to be selectable in the fieldmapping UI.)
+  $options = array();
 
   // TODO: Consider filtering these based on the object definition.  For now
   // this function simply uses any field defined for the source object.
