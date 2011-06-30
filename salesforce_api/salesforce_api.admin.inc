@@ -188,7 +188,7 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
           $form_state['values']['salesforce_api_token']);
     return;
   }
-  elseif (!empty($errors)) {
+  elseif (count($errors)) {
     drupal_set_message(t('Unable to reset Salesforce API credentials.'), 'error');
     foreach ($errors as $field => $error) {
       form_set_error($field, $error);
