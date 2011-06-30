@@ -169,10 +169,11 @@ function salesforce_api_settings_form_validate($form, &$form_state) {
   }
 
   // If we are clearing values, no need to continue validation.
-  if ($values['salesforce_api_reset_credentials']) {
+  if (isset($values['salesforce_api_reset_credentials']) && $values['salesforce_api_reset_credentials']) {
     return;
   }
 
+  $errors = array();
   foreach (array('salesforce_api_username', 'salesforce_api_password', 'salesforce_api_token') as $value) {
     if (empty($values[$value])) {
       $errors[$value] = ucwords(str_replace('salesforce_api_', ' ', $value)) . ' is required';
