@@ -360,8 +360,9 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
   // Build an options array out of the Drupal objects.
   $options = array();
 
+  // @todo: Find out why a bare 'node' would get loaded (no bundle)
   foreach (salesforce_api_fieldmap_objects_load('drupal') as $key => $value) {
-    $options[$key] = $value['label'];
+    if(!empty($value)) { $options[$key] = $value['label']; }
   }
   asort($options);
   $form['drupal'] = array(
@@ -376,7 +377,7 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
   $options = array();
 
   foreach (salesforce_api_fieldmap_objects_load('salesforce') as $key => $value) {
-    $options[$key] = $value['label'];
+    if(!empty($value)) { $options[$key] = $value['label']; }
   }
   asort($options);
   $form['salesforce'] = array(
@@ -387,15 +388,23 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
     '#required' => TRUE,
   );
 
+  $form['fieldmap_name'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Machine-readable name for fieldmap (Recommended)'),
+    '#description' => t('Enter a machine-readable name for the fieldmap,
+      using only letters, numbers, and underscores. If you do not select one, one will be generated.'),
+  );
+
+  $form['description'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title or short description (Optional)'),
+    '#description' => t('Enter a brief description of this fieldmap to distinguish it from potentially similar fieldmaps'),
+  );
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Map object fields'),
     '#suffix' => l(t('Cancel'), SALESFORCE_PATH_FIELDMAPS),
-  );
-  $form['description'] = array(
-    '#type' => 'textfield',
-    '#title' => 'Title or short description',
-    '#description' => t('Enter a brief description of this fielmap to distinguish it from potentially similar fieldmaps'),
   );
 
   return $form;
@@ -423,7 +432,7 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
  *   The numeric index of the new fieldmap.
  */
 function salesforce_api_fieldmap_create($values) {
-  // Create the fieldmap array.
+  // Create the fieldmap object.
   $map = (object) ($values + array('fields' => array()));
 
   // Save the new fieldmap.
@@ -527,6 +536,8 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
 /**
  * Displays the edit form for adding field associations to a fieldmap.
  */
+// @todo: 1) Two-way sync rules on the field level.
+//        2) Determine why required fields for a particular type are not getting added.
 function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   // Include the CSS and JS for the form.
   $path = drupal_get_path('module', 'salesforce_api');
@@ -596,22 +607,19 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
     '#description' => t('Please indicate how Salesforce records should be handled when Drupal records are created or updated.'),
   );
 
-  // Get a list of Salesforce-side fields which haven't been set yet.
-  asort($target['fields']);
-  $not_set = array('');
-  foreach ($target['fields'] as $key => $field) {
-    if (!isset($map->fields[$key])) {
-      $not_set[$key] = $field['label'];
-    }
-  }
+  // Determine what fields have not yet been mapped, so they can be selected for mapping.
+  $unmapped_fields = _sf_fieldmap_edit_get_unmapped_fields($target['fields'], $map);
 
-  // Provide a control for setting a new field
+  // Provide a control for adding a new field.
   $form['add_field'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Add a field'),
+    '#title' => t('Map a Salesforce field'),
     'new_field' => array(
       '#type' => 'select',
-      '#options' => $not_set,
+      '#options' => $unmapped_fields,
+      '#multiple' => FALSE,
+      // Make this a list box to save on scrolling.
+      '#attributes' => array('size' => 10),
     ),
     'add_button' => array(
       '#type' => 'submit',
@@ -623,8 +631,8 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   $form['fields'] = array('#theme' => 'salesforce_api_fieldmap_edit_form_table');
 
   $form['fields']['header'] = array(
-    array('#value' => t('Target: @label', array('@label' => $target['label']))),
-    array('#value' => t('Source: @label', array('@label' => $source['label']))),
+    array('#markup' => t('Target: @label', array('@label' => $target['label']))),
+    array('#markup' => t('Source: @label', array('@label' => $source['label']))),
   );
 
   // Adding fixed value option
@@ -681,7 +689,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
 
     // Create a row for this field.
     $row = array(
-      'target' => array('#value' => $value['label'] . $required),
+      'target' => array('#markup' => $value['label'] . $required),
     );
 
     if (is_array($map->fields[$key])) {
@@ -699,9 +707,11 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       '#title' => $value['label'],
       '#options' => $options,
       '#default_value' => $default_key,
+      '#multiple' => FALSE,
       '#attributes' => array(
         'class' => array('sf_fieldmap_options'),
         'id' => 'sf-fieldmap-option-' . $key,
+        'size' => 5,
       ),
     );
     $row['source'][$key . "_extra"] = array(
@@ -715,10 +725,11 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       '#description' => 'Omit &lt;?php ?&gt; tags. Return the value to set. Standard caveats apply.',
     );
 
+    // If this field is not a required part of the fieldmap, add a remove link.
+    // @todo: Make this an AJAX callback.
     if ($type != 'required') {
       $row['remove'][$key] = array(
-        '#type' => 'markup',
-        '#value' => l(t('Remove'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/remove/' . $key),
+        '#markup' => l(t('Remove'), SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/remove/' . $key),
       );
     }
     else {
@@ -739,6 +750,64 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   );
 
   return $form;
+}
+
+/**
+ * Helper function for populating the unmapped fields dropdown box.
+*/
+function _sf_fieldmap_edit_get_unmapped_fields($fields, $map) {
+// Iterate over the Salesforce-side fields to sort them.
+  $default_fields = array();
+  $custom_fields = array();
+  foreach($fields as $field_name => $data) {
+    if(strpos($field_name, '__c') !== FALSE) {
+      $custom_fields[$field_name] = $data;
+    }
+    else {
+      $default_fields[$field_name] = $data;
+    }
+  }
+  $custom_fields = _sf_subval_sort($custom_fields, 'label');
+
+  // Determine which fields haven't been set yet.
+  $unmapped_fields_default = array();
+  foreach ($default_fields as $key => $field) {
+    if (!isset($map->fields[$key])) {
+      $unmapped_fields_default[$key] = $field['label'];
+    }
+  }
+  if(count($custom_fields)) {
+    $unmapped_fields_custom = array();
+    foreach ($custom_fields as $key => $field) {
+      if (!isset($map->fields[$key])) {
+        $unmapped_fields_custom[$key] = $field['label'];
+      }
+    }
+  }
+  if(isset($unmapped_fields_custom)) {
+    $unmapped_fields = array('Default Fields' => $unmapped_fields_default, 'Custom Fields' => $unmapped_fields_custom);
+  }
+  else {
+    $unmapped_fields = array('Default Fields' => $unmapped_fields_default);
+  }
+  return $unmapped_fields;
+}
+
+/**
+ * Helper function for sorting the multi-dimensional array of Salesforce fields.
+ * From http://www.firsttube.com/read/sorting-a-multi-dimensional-array-with-php/.
+*/
+function _sf_subval_sort($a, $subkey) {
+  $b = array();
+  $c = array();
+  foreach($a as $k=>$v) {
+    $b[$k] = strtolower($v[$subkey]);
+    asort($b);
+  }
+  foreach($b as $key=>$val) {
+    $c[$key] = $a[$key];
+  }
+  return $c;
 }
 
 /**
@@ -867,7 +936,7 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
 }
 
 /**
- * Theme callback for synch option radios
+ * Theme callback for sync option radios
  */
 function theme_salesforce_api_drupal_sfapi_automatic($variables) {
   $element = $variables['element'];
@@ -897,14 +966,16 @@ function theme_salesforce_api_fieldmap_edit_form_table($variables) {
   foreach (element_children($form['rows']) as $element) {
     $rows[] = array(
       array(
-        'data' => $form['rows'][$element]['target']['#value'],
+        'data' => drupal_render($form['rows'][$element]['target']),
         'class' => 'target-cell',
       ),
       array(
         'data' => drupal_render($form['rows'][$element]['source']),
         'class' => 'source-cell',
       ),
-      drupal_render($form['rows'][$element]['remove']),
+      array(
+       'data' => drupal_render($form['rows'][$element]['remove']),
+      )
     );
   }
 
@@ -1197,13 +1268,11 @@ function theme_salesforce_api_object_options($variables) {
  *   The name of the demonstration to perform.
  * @return
  *   A string containing the page output.
- * @todo
- *  2/3 of the demo functionality is currently broken. see #692378
- * @see http://drupal.org/node/692378
+ * @todo Rewrite the demos to make them more useful, cf. [#692378]
  */
 function salesforce_api_demo($demo = NULL, $arg = NULL) {
-  // Attempt to connect to Salesforce.
   global $user;
+  // Attempt to connect to Salesforce.
   $sf = salesforce_api_connect();
 
   // Display an error message if the connection failed.
@@ -1214,7 +1283,7 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
   // Display the server timestamp first.
   $response = $sf->client->getServerTimestamp();
 
-  $output = '<p>' . t('<b>Salesforce server timestamp:</b> @timestamp', array('@timestamp' => $response->timestamp)) . '</p>';
+  $output = '<p><strong>' . t('Salesforce server timestamp') . ': </strong>' .  $response->timestamp . '</p>';
 
   // Add a specific demo's output.
   switch ($demo) {
@@ -1247,15 +1316,16 @@ function salesforce_api_demo($demo = NULL, $arg = NULL) {
   $items = array(
     l(t('Examine Data Structure'), SALESFORCE_PATH_DEMO . '/data-structure'),
   );
-  if (module_exists('sf_user')) {
+  if (module_exists('sf_entity')) {
     $items[] = l(t('Export your user account as a contact'), 'user/' . $user->uid . '/salesforce');
-  }
-  // TODO node_load_multiple returns an array of nodes, rather than a single node
-  if (module_exists('sf_node') && $node = node_load_multiple(array('type' => 'page'))) {
-    $items[] = l(t('Export node @nid as a Campaign', array('@nid' => $node->nid)), 'node/' . $node->nid . '/salesforce');
+    $nodes = node_load_multiple(array(), array('type' => 'page'));
+    if(count($nodes)) {
+      $node = array_shift($nodes);
+      $items[] = l(t('Export node @nid as a Campaign', array('@nid' => $node->nid)), 'node/' . $node->nid . '/salesforce');
+    }
   }
 
-  $output .= '<p>' . t('<b>Choose from the following demonstrations:</b>') . theme('item_list', array('items' => $items)) . '</p>';
+  $output .= '<p><strong>' . t('Choose from the following demonstrations:') . '</strong>' . theme('item_list', array('items' => $items)) . '</p>';
 
   return $output;
 }

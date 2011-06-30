@@ -1,6 +1,6 @@
 ; $Id$
 name = Salesforce Node
-description = Integrates the core node object and various node related modules with the Salesforce API.
+description = DEPRECATED: Integrates the core node object and various node related modules with the Salesforce API.
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x
