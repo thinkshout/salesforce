@@ -19,10 +19,10 @@ function salesforce_api_install() {
  */
 function salesforce_api_uninstall() {
   db_delete('variable')
-  ->condition('{name}', 'salesforce%', 'LIKE')
+  ->condition('name', 'salesforce%', 'LIKE')
   ->execute();
   db_delete('cache')
-  ->condition('{cid}', 'salesforce_api_sf_objects')
+  ->condition('cid', 'salesforce_api_sf_objects')
   ->execute();
 }
 
