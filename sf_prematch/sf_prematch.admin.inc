@@ -21,10 +21,10 @@ function sf_prematch_list() {
     ),
   );
 
-  //$maps = salesforce_api_salesforce_field_map_load_all();
+  //$maps = salesforce_api_salesforce_fieldmap_load_all();
   // TODO Please convert this statement to the D7 database API syntax.
   $result = db_query("SELECT fm.*, pm.rule " .
-    "FROM {salesforce_field_map} fm LEFT JOIN {salesforce_prematch} pm " .
+    "FROM {salesforce_fieldmap} fm LEFT JOIN {salesforce_prematch} pm " .
     "ON fm.name = pm.name"
   );
   $rows = array();
@@ -41,8 +41,8 @@ function sf_prematch_list() {
     }
     // Add the row to the table with the basic operations.
     $rows[] = array(
-      salesforce_api_fieldmap_object_label('drupal', $map->drupal),
-      salesforce_api_fieldmap_object_label('salesforce', $map->salesforce),
+      salesforce_api_fieldmap_object_label('drupal', $map->drupal_entity, $map->drupal_bundle),
+      salesforce_api_fieldmap_object_label('salesforce', 'salesforce', $map->salesforce),
       $op_add_edit,
       $op_del,
     );
@@ -69,7 +69,7 @@ function sf_prematch_list() {
  */
 function sf_prematch_edit_form($form, &$form_state, $fieldmap) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -213,7 +213,7 @@ function sf_prematch_edit_form_submit($form, &$form_state) {
  */
 function sf_prematch_delete_form($form, &$form_state, $fieldmap) {
   // Load the fieldmap and prematch from the database.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
   $match_by = sf_prematch_match_by_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
@@ -233,10 +233,10 @@ function sf_prematch_delete_form($form, &$form_state, $fieldmap) {
   // Build the description text for this prematch.
   $desc = t('You are about to delete the prematch for fieldmap ');
   if ($map->action == 'import') {
-    $desc .= t('Maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('%drupal' => $map->drupal, '%salesforce' => $map->salesforce));
+    $desc .= t('Maps Salesforce %salesforce objects to Drupal %drupal objects for import.', array('%drupal' => salesforce_api_fieldmap_object_label('drupal', $map->drupal_entity, $map->drupal_bundle), '%salesforce' => $map->salesforce));
   }
   else {
-    $desc .= t('That fieldmap maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('%drupal' => $map->drupal, '%salesforce' => $map->salesforce));
+    $desc .= t('That fieldmap maps Drupal %drupal objects to Salesforce %salesforce objects for export.', array('%drupal' => salesforce_api_fieldmap_object_label('drupal', $map->drupal_entity, $map->drupal_bundle), '%salesforce' => $map->salesforce));
   }
 
   return confirm_form($form, t('Are you sure you want to delete this prematch?'), SALESFORCE_PATH_FIELDMAPS . '/prematching', $desc, t('Delete'));

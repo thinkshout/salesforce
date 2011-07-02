@@ -4,7 +4,7 @@ define('SALESFORCE_PATH_NOTIFICATIONS_ADMIN', SALESFORCE_PATH_ADMIN . '/notifica
 define('SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT', 'sf_notifications/endpoint');
 
 /**
- * hook_menu implementation
+ * Implements hook_menu.
  */
 function sf_notifications_menu() {
   return array(
@@ -96,8 +96,7 @@ function sf_notifications_default_allowed_ips() {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Access callback for the notifications per-fieldmap settings.
  */
 function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
   $active = variable_get('sf_notifications_active_maps', array());
@@ -173,7 +172,7 @@ function _sf_notifications_handle_message($objects) {
     unset($new_records[$sfid]);
 
     // Break on fieldmap-specific conditions
-    $map = salesforce_api_fieldmap_load($object_record['name']);
+    $map = salesforce_api_salesforce_fieldmap_load($object_record['name']);
     if (empty($active[$map->name])) {
       continue;
     }
@@ -197,7 +196,7 @@ function _sf_notifications_handle_message($objects) {
   }
 
   foreach ($new_records as $sfid => $obj) {
-    $maps = salesforce_api_salesforce_field_map_load_by(array('salesforce' => $obj->type));
+    $maps = salesforce_api_salesforce_fieldmap_load_by(array('salesforce' => $obj->type));
     if (empty($maps)) {
       salesforce_api_log(SALESFORCE_LOG_SOME,
             'Salesforce Notifications: No fieldmap found.
@@ -253,13 +252,9 @@ function sf_notifications_delete_record($object_record) {
       // probably anonymous. The following is adapted from node_delete().
       $node = node_load($nid, NULL, TRUE);
 
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('DELETE FROM {node} WHERE nid = %d', $node->nid) */
       db_delete('node')
         ->condition('nid', $node->nid)
         ->execute();
-      // TODO Please review the conversion of this statement to the D7 database API syntax.
-      /* db_query('DELETE FROM {node_revisions} WHERE nid = %d', $node->nid) */
       db_delete('node_revisions')
         ->condition('nid', $node->nid)
         ->execute();
@@ -275,8 +270,8 @@ function sf_notifications_delete_record($object_record) {
       break;
 
     default:
-      if (function_exists($object_record['drupal_type'] . '_delete')) {
-        $function = $object_record['drupal_type'] . '_delete';
+      if (function_exists($object_record['drupal_entity'] . '_delete')) {
+        $function = $object_record['drupal_entity'] . '_delete';
         $function($object_record['oid']);
         salesforce_api_log(SALESFORCE_LOG_ALL,
           'Salesforce Notifications deleted '
@@ -302,20 +297,25 @@ function sf_notifications_delete_record($object_record) {
  */
 function sf_notifications_update_record($object_record) {
   $success = TRUE;
-  $drupal_type = $object_record['drupal_type'];
-  if (empty($drupal_type)) {
-    $map = salesforce_api_fieldmap_load($object_record['name']);
+  $drupal_entity = $object_record['drupal_entity'];
+  if (empty($drupal_entity)) {
+    $map = salesforce_api_salesforce_fieldmap_load($object_record['name']);
     if (empty($map)) {
       $success = FALSE;
     }
     else {
-      $drupal_type = $map->drupal;
+      $drupal_entity = $map->drupal_entity;
     }
   }
-  if (strpos($drupal_type, 'node_') === 0) {
-    $drupal_type = 'node';
+  // Check to see if the drupal_entity is one handled by sf_entity.
+  $entities = field_info_bundles();
+  $entity_names = array_keys($entities);
+  if(in_array($drupal_entity, $entity_names)) {
+    $function = 'sf_entity_import';
   }
-  $function = 'sf_' . $drupal_type . '_import';
+  else {
+    $function = 'sf_' . $drupal_entity . '_import';
+  }
   if (function_exists($function)) {
     $drupal_id = $function($object_record['fields'], $object_record['name'], $object_record['oid']);
     if ($drupal_id) {
@@ -403,7 +403,7 @@ function _sf_notifications_parse_message($domDoc) {
     $result['salesforce'][$obj->Id] = $obj;
   }
 
-  // TODO Please convert this statement to the D7 database API syntax.
+  // @todo: Please convert this statement to the D7 database API syntax.
   $result = db_query('SELECT name, oid, sfid, drupal_type FROM {salesforce_object_map} WHERE sfid IN :sfids', $sfids);
   while($row = $result->fetchAssoc()) {
     $result['drupal'][] = $row;

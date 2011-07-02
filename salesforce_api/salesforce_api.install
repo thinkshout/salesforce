@@ -30,8 +30,8 @@ function salesforce_api_uninstall() {
  * Implements hook_enable().
  */
 function salesforce_api_enable() {
-  drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url">enter your Salesforce API credentials</a>', array('!url' => url(SALESFORCE_PATH_ADMIN))), 'warning');
-  drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled, to export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
+  drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url_wsdl">upload your WSDL</a> and <a href="!url_cred">enter your Salesforce API credentials</a>.', array('!url_wsdl' => url(SALESFORCE_PATH_UPDATE_WSDL), '!url_cred' => url(SALESFORCE_PATH_ADMIN))), 'warning');
+  drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled. To export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
 }
 
 /**
@@ -61,10 +61,17 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'drupal_type' => array(
-        'description' => 'The kind of Drupal object this map is for (usually an entity).',
+      'drupal_entity' => array(
+        'description' => 'Drupal entity name (e.g. "node", "user")',
         'type' => 'varchar',
-        'length' => 40,
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'drupal_bundle' => array(
+        'description' => 'Drupal bundle name (e.g. "page", or vocabulary name)',
+        'type' => 'varchar',
+        'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -77,48 +84,53 @@ function salesforce_api_schema() {
     // one fieldmapping for each Drupal object - cf. [#1018690-8]
     'primary key' => array('name', 'oid'),
   );
-  $schema['salesforce_field_map'] = array(
+  $schema['salesforce_fieldmap'] = array(
     'description' => 'Drupal to Salesforce field mappings',
     'export' => array(
       'key' => 'name',
-      'identifier' => 'salesforce_field_map',
-      'default hook' => 'default_salesforce_field_maps',
-      'export callback' => 'salesforce_api_salesforce_field_map_export',
+      'identifier' => 'salesforce_fieldmap',
+      'default hook' => 'default_salesforce_fieldmaps',
+      'export callback' => 'salesforce_api_salesforce_fieldmap_export',
     ),
     'fields' => array(
-      // @todo: Assign meaningful names to fieldmaps as per [#1145908]
-      // Currently they are just a hash.
       'fieldmap' => array(
-        'description' => 'The primary identifier for a fieldmap.',
+        'description' => 'Numeric ID of the fieldmap. Exists for backwards compatibility only.',
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'no export' => TRUE,
       ),
       'name' => array(
-        'description' => 'Unique ID for this object. Used to identify it programatically (initially implemented for ctools support only).',
+        'description' => 'Unique ID for this object. Used to identify it programmatically, and make it exportable via CTools.',
         'type' => 'varchar',
         'length' => 64,
       ),
       'automatic' => array(
-        'description' => 'Indicates whether this action/map is automatic or triggered.',
+        'description' => 'Indicates whether this fieldmap automatically exports to Salesforce.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => SALESFORCE_AUTO_SYNC_OFF,
         'size' => 'small',
       ),
-      'drupal' => array(
-        'description' => 'The kind of Drupal object this map is for (usually an entity).',
+      'salesforce' => array(
+        'description' => 'The Salesforce object type for this fieldmap.',
         'type' => 'varchar',
-        'length' => 40,
+        'length' => 32,
         'not null' => TRUE,
         'default' => '',
       ),
-      'salesforce' => array(
-        'description' => 'The kind of Salesforce object this map is for.',
+      'drupal_entity' => array(
+        'description' => 'The Drupal entity for this fieldmap (e.g. "node", "user").',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'drupal_bundle' => array(
+        'description' => 'The Drupal bundle for this fieldmap (e.g. "page", or vocabulary name)',
+        'type' => 'varchar',
+        'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ),

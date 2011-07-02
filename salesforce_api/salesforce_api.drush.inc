@@ -36,7 +36,7 @@ function salesforce_api_drush_command() {
     'aliases' => array('sf-show'),
   );
   $items['soql-describe'] = array(
-    'description' => 'Describe an individual table in salesforce.',
+    'description' => 'Describe an individual table in Salesforce.',
     'aliases' => array('sf-desc'),
   );
   $items['soql'] = array(
@@ -119,7 +119,7 @@ function drush_salesforce_api_soql_describe() {
     }
   }
   else {
-    drush_print('Could not connect to salesforce.');
+    drush_print('Could not connect to Salesforce.');
   }
 }
 
@@ -212,7 +212,7 @@ function drush_salesforce_api_soql() {
     }
   }
   else {
-    drush_print('Could not connect to salesforce.');
+    drush_print('Could not connect to Salesforce.');
   }
 }
 

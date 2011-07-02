@@ -266,7 +266,7 @@ function salesforce_api_fieldmap_admin() {
   $rows = $default_maps = $new_default_maps = array();
   $content = '';
 
-  $maps = salesforce_api_salesforce_field_map_load_all();
+  $maps = salesforce_api_salesforce_fieldmap_load_all();
   foreach ($maps as $map) {
     $rows[] = _salesforce_api_field_admin_format_row($map);
   }
@@ -340,8 +340,8 @@ function _salesforce_api_field_admin_format_row($map, $options = array()) {
 
   $auto = implode(', ', $auto);
   $row = array(
-    salesforce_api_fieldmap_object_label('drupal', $map->drupal),
-    salesforce_api_fieldmap_object_label('salesforce', $map->salesforce),
+    salesforce_api_fieldmap_object_label('drupal', $map->drupal_entity, $map->drupal_bundle),
+    salesforce_api_fieldmap_object_label('salesforce', 'salesforce', $map->salesforce),
     $auto,
     array(
       'data' => check_plain($map->description),
@@ -362,9 +362,19 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
   $options = array();
 
   // @todo: Find out why a bare 'node' would get loaded (no bundle)
-  foreach (salesforce_api_fieldmap_objects_load('drupal') as $key => $value) {
-    if(!empty($value)) { $options[$key] = $value['label']; }
+  $drupal_objects = salesforce_api_fieldmap_objects_load('drupal');
+  foreach ($drupal_objects as $entity_name => $bundles) {
+    foreach ($bundles as $bundle_name => $bundle_data) {
+      $options[$entity_name . ':' . $bundle_name] = $bundle_data['label'];
+    }
   }
+
+  // If we don't have any Drupal object types, there's nothing else to do.
+  if (empty($options)) {
+    drupal_set_message(t('No Drupal objects found. Please enable a module that exposes Drupal objects to create a fieldmap, such as Salesforce Entity.'), 'error');
+    return array();
+  }
+
   asort($options);
   $form['drupal'] = array(
     '#type' => 'select',
@@ -376,8 +386,9 @@ function salesforce_api_fieldmap_add_form($form, &$form_state) {
 
   // Build an options array out of the Salesforce objects.
   $options = array();
-
-  foreach (salesforce_api_fieldmap_objects_load('salesforce') as $key => $value) {
+  $sf_objects = salesforce_api_fieldmap_objects_load('salesforce');
+  $sf_objects = $sf_objects['salesforce'];
+  foreach ($sf_objects as $key => $value) {
     if(!empty($value)) { $options[$key] = $value['label']; }
   }
   asort($options);
@@ -423,7 +434,7 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
 }
 
 /**
- * Creates a new fieldmap in the database and returns its index.
+ * Creates a new fieldmap in the database and returns the fieldmap object.
  *
  * @param $drupal
  *   The name of a Drupal object.
@@ -433,6 +444,10 @@ function salesforce_api_fieldmap_add_form_submit($form, &$form_state) {
  *   The numeric index of the new fieldmap.
  */
 function salesforce_api_fieldmap_create($values) {
+  // Break out the Drupal entity and bundle from the selected option.
+  list($values['drupal_entity'], $values['drupal_bundle']) =
+    explode(':', $values['drupal'], 2);
+  unset($values['drupal']);
   // Create the fieldmap object.
   $map = (object) ($values + array('fields' => array()));
 
@@ -448,7 +463,7 @@ function salesforce_api_fieldmap_create($values) {
  */
 function salesforce_api_fieldmap_clone_form($form, &$form_state, $fieldmap) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
     drupal_set_message(t('That fieldmap does not exist.'), 'error');
@@ -470,8 +485,8 @@ function salesforce_api_fieldmap_clone_form($form, &$form_state, $fieldmap) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Submit handler for the fieldmap clone form.
+ *
  */
 function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
   // Clone the specified fieldmap.
@@ -489,12 +504,12 @@ function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
 }
 
 /**
- * Displays the confirm form for deleting a fieldmap.
+ * Displays the confirmation form for deleting a fieldmap.
  */
 function salesforce_api_fieldmap_delete_form($form, &$form_state, $fieldmap) {
   $args = arg();
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($fieldmap);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -546,7 +561,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   drupal_add_js($path . '/misc/salesforce_api.admin.js');
 
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($fieldmap, TRUE);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -570,14 +585,18 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   $form['description'] = array(
     '#type' => 'textfield',
     '#title' => 'Title or short description',
-    '#description' => t('Enter a brief description of this fielmap to distinguish it from potentially similar fieldmaps'),
+    '#description' => t('Enter a brief description of this fieldmap to distinguish it from potentially similar fieldmaps'),
     '#default_value' => $map->description,
   );
 
   // Fail with an error message if either the source or target object
   // definitions were not found.
-  if (!salesforce_api_fieldmap_source_enabled($map)) {
-    drupal_set_message(t('This fieldmap cannot be edited because the module which supports the Drupal entity "%entity" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%entity' => $map->drupal)), 'error');
+  if (!salesforce_api_fieldmap_source_entity_enabled($map)) {
+    drupal_set_message(t('This fieldmap cannot be imported, because the module which supports the Drupal entity "%entity" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%entity' => $map->drupal_entity)), 'error');
+    drupal_goto(SALESFORCE_PATH_FIELDMAPS);
+  }
+  if (!salesforce_api_fieldmap_source_bundle_enabled($map)) {
+    drupal_set_message(t('This fieldmap cannot be imported, because the module which supports the Drupal entity type "%bundle" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%bundle' => $map->drupal_bundle)), 'error');
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
   if (!salesforce_api_fieldmap_target_enabled($map)) {
@@ -585,8 +604,8 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
     drupal_goto(SALESFORCE_PATH_FIELDMAPS);
   }
 
-  $source = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
-  $target = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
+  $source = salesforce_api_fieldmap_objects_load('drupal', $map->drupal_entity, $map->drupal_bundle);
+  $target = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map->salesforce);
 
   $automatic = array(
     SALESFORCE_AUTO_SYNC_CREATE => $map->automatic & SALESFORCE_AUTO_SYNC_CREATE,
@@ -636,7 +655,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
     array('#markup' => t('Source: @label', array('@label' => $source['label']))),
   );
 
-  // Adding fixed value option
+  // Adding fixed value and evaluate PHP options
   $options = salesforce_api_fieldmap_field_options($source);
   $options['Other']['fixed'] = t('Fixed value');
   if ( user_access('use php for salesforce fixed values') ) {
@@ -654,9 +673,10 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   );
 
   foreach ($target['fields'] as $key => $value) {
+    $sf_field_type = $value['type'];
     // Determine to which table this field should belong.
-    if (($value['type'] & SALESFORCE_FIELD_CREATEABLE)
-      && !($value['type'] & SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE)) {
+    if (($sf_field_type & SALESFORCE_FIELD_CREATEABLE)
+      && !($sf_field_type & SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE)) {
       // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="' . t('This field is required.') . '">*</span>';
@@ -666,19 +686,19 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       $required = '';
     }
 
-    if ($value['type'] & SALESFORCE_FIELD_CREATEABLE
-      && !($value['type'] & SALESFORCE_FIELD_UPDATEABLE)) {
+    if ($sf_field_type & SALESFORCE_FIELD_CREATEABLE
+      && !($sf_field_type & SALESFORCE_FIELD_UPDATEABLE)) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field will only be set for new records.') . '">' . t('Create-only') . '</span>';
     }
-    elseif (!($value['type'] & SALESFORCE_FIELD_CREATEABLE)
-      && $value['type'] & SALESFORCE_FIELD_UPDATEABLE) {
+    elseif (!($sf_field_type & SALESFORCE_FIELD_CREATEABLE)
+      && $sf_field_type & SALESFORCE_FIELD_UPDATEABLE) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field can only be set for existing records.') . '">' . t('Update-only') . '</span>';
     }
-    elseif (!($value['type'] & (SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE))) {
+    elseif (!($sf_field_type & (SALESFORCE_FIELD_CREATEABLE | SALESFORCE_FIELD_UPDATEABLE))) {
       $type = 'optional';
       $required = ' <span class="form-required" title="' .
         t('This field will be available for imports only.') . '">' . t('Read-only') . '</span>';
@@ -712,7 +732,6 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       '#attributes' => array(
         'class' => array('sf_fieldmap_options'),
         'id' => 'sf-fieldmap-option-' . $key,
-        'size' => 5,
       ),
     );
     $row['source'][$key . "_extra"] = array(
@@ -838,32 +857,36 @@ function salesforce_api_fieldmap_edit_form_validate($form, &$form_state) {
 }
 
 /**
- * FAPI submit handler for fieldmap editor
+ * FAPI submit handler for fieldmap editor.
  */
 function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
   // Load the fieldmap from the database.
-  $map = salesforce_api_fieldmap_load($form_state['values']['fieldmap_index']);
+  $map = salesforce_api_salesforce_fieldmap_load($form_state['values']['fieldmap_index']);
 
   $map->description = $form_state['values']['description'];
   $map->fields = array();
 
   // Get the object definition for the target object.
-  $object = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
-  $rows = $form_state['values']['rows'];
+  $object = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map->salesforce);
+  if(isset($form_state['values']['rows'])) {
+    $rows = $form_state['values']['rows'];
+  }
 
   // Loop through all the select inputs.
-  foreach ($rows as $row) {
-    $source = key($row['source']);
-    $target = current($row['source']);
-    if (!empty($row['source'][$source . '_extra'])) {
-      $map->fields[$source] = array(
-        'type' => $target,
-        'value' => $row['source'][$source . '_extra'],
-      );
-    }
-    else {
-      // Add the association to the fieldmap's fields array.
-      $map->fields[$source] = $target;
+  if(isset($rows)) {
+    foreach ($rows as $row) {
+      $source = key($row['source']);
+      $target = current($row['source']);
+      if (!empty($row['source'][$source . '_extra'])) {
+        $map->fields[$source] = array(
+          'type' => $target,
+          'value' => $row['source'][$source . '_extra'],
+        );
+      }
+      else {
+        // Add the association to the fieldmap's fields array.
+        $map->fields[$source] = $target;
+      }
     }
   }
 
@@ -907,13 +930,13 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
  * Redirect to the fieldmap edit page unless specified.
  * @param string or object $fieldmap - the name of the fieldmap, or the fieldmap itself
  * @param string $field - the name of the field to be removed
- * @param bool $redirect (optional) - default true. Whether to redirect to the fieldmap edit form
+ * @param bool $redirect (optional) - default true. Whether to redirect to the fieldmap edit form.
  */
 function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRUE) {
   if (is_string($fieldmap)) {
-    $fieldmap = salesforce_api_fieldmap_load($fieldmap);
+    $fieldmap = salesforce_api_salesforce_fieldmap_load($fieldmap);
   }
-  $object_definition = salesforce_api_fieldmap_objects_load('salesforce', $fieldmap->salesforce);
+  $object_definition = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $fieldmap->salesforce);
   $success = TRUE;
 
   if (empty($object_definition['fields'][$field])) {
@@ -961,6 +984,8 @@ function theme_salesforce_api_fieldmap_edit_form_table($variables) {
   foreach (element_children($form['header']) as $element) {
     $header[] = drupal_render($form['header'][$element]);
   }
+  // Add the operations column. (Currently "Remove" is the only operation.
+  $header[] = 'Operations';
 
   // Build the rows array.
   $rows = array();
@@ -985,7 +1010,7 @@ function theme_salesforce_api_fieldmap_edit_form_table($variables) {
     $rows[] = array(
       array(
         'data' => t('No fields set.'),
-        'colspan' => 2,
+        'colspan' => 3,
       ),
     );
   }
@@ -1116,7 +1141,7 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
  */
 function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
   variable_set('salesforce_api_dir_wsdl', $form_state['values']['wsdl']);
-  drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory.'));
+  drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the WSDL directory.'));
 
   // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
   // cache permanently, but should force PHP to reload it.
@@ -1138,14 +1163,13 @@ function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
 }
 
 /**
- * Ask salesforce for a list of objects and display a checklist for the user.
+ * Ask Salesforce for a list of objects and display a checklist for the user.
  * Based on user selection, set up or tear down cached/synched Salesforce data.
- * @TODO make this more user friendly. At the moment it's possible for an admin user to blow away
+ * @todo make this more user-friendly. At the moment it's possible for an admin user to blow away
  * their entire local Salesforce cache with a few clicks. This is not necessarily desirable.
  *
  * @param string $form_state
  * @return void
- * @author aaron
  */
 function salesforce_api_admin_object($form, &$form_state) {
   $response = salesforce_api_describeGlobal();
@@ -1153,16 +1177,16 @@ function salesforce_api_admin_object($form, &$form_state) {
     drupal_set_message(t('There was an error retrieving the list of Salesforce objects. Please verify that your Salesforce instance is properly configured.'), 'error');
     return;
   }
-  $defaults = array_keys(salesforce_api_fieldmap_objects());
+  $fieldmap_objects = salesforce_api_fieldmap_objects('salesforce');
+  $defaults = array_keys($fieldmap_objects['salesforce']);
 
   $options = $disabled = array();
   foreach ($response->types as $obj) {
     $options[$obj->name] = $obj->name . ' (' . $obj->label . ')';
   }
 
-  // Disable any SF Object types currently in use by fieldmap(s).
-  $result = db_query('SELECT DISTINCT salesforce FROM {salesforce_field_map}');
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  // Disable any Salesforce object types currently in use by fieldmap(s).
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
   foreach ($fieldmaps as $map) {
     $disabled[$map->salesforce] = $map->salesforce;
   }
@@ -1194,7 +1218,7 @@ function salesforce_api_admin_object($form, &$form_state) {
  */
 function salesforce_api_admin_object_submit($form, &$form_state) {
   $values = $form_state['values']['objects'];
-  // Start off with all the SF Object types already in use.
+  // Start off with all the Salesforce object types already in use.
   $real_types = $form['disabled_types']['#value'];
   foreach ($values as $i => $t) {
     if (empty($t)) {
@@ -1213,7 +1237,7 @@ function salesforce_api_admin_object_submit($form, &$form_state) {
 /**
  * Placeholder for per-object configuration settings. Any ideas?
  */
-function salesforce_api_admin_object_settings($form, $form_state, $type) {
+/* function salesforce_api_admin_object_settings($form, $form_state, $type) {
   return array('settings' => array(
       '#type' => 'markup',
       '#value' => 'Placeholder for per-object configuration settings.',
@@ -1225,11 +1249,11 @@ function salesforce_api_admin_object_settings($form, $form_state, $type) {
         '#description' => '<pre>' . print_r(salesforce_api_describeSObject($type), 1) . '</pre>',
       ),
     ));
-}
+} */
 
 /**
- * Theming function for salesforce_api_admin_setup
- * For locally-cached SF Objects, add a "configure" or "re-map" link next to the checkbox
+ * Theming function for salesforce_api_admin_object().
+ * For locally-cached Salesforce objects, add a "re-map" link next to the checkbox, if there are errors.
  */
 function theme_salesforce_api_object_options($variables) {
   $element = $variables['element'];
@@ -1238,7 +1262,7 @@ function theme_salesforce_api_object_options($variables) {
   }
   $objects = $element['objects'];
   $options = $objects['#options'];
-  // Disable checkboxes for SF Types which are currently in use.
+  // Disable checkboxes for Salesforce object types which are currently in use.
   foreach ($options as $key => $value) {
     if (empty($objects[$key]['#value'])) {
       continue;
@@ -1248,14 +1272,15 @@ function theme_salesforce_api_object_options($variables) {
       $element['objects'][$key]['#description'] =
         t('This object is in use by one or more fieldmaps and cannot be disabled.');
     }
-    $link = l(t('configure'), SALESFORCE_PATH_OBJECT . '/' . $key);
-    if ($_SESSION['objects_error'][$key]) {
+    // @todo: Add back per-object configuration settings if there are any.
+    // $link = l(t('configure'), SALESFORCE_PATH_OBJECT . '/' . $key);
+    if (isset($_SESSION['objects_error']) && $_SESSION['objects_error'][$key]) {
       $element['objects'][$key]['#prefix'] = '<div class="error">';
       $element['objects'][$key]['#suffix'] = '</div>';
       unset($_SESSION['objects_error'][$key]);
       $link = l(t('re-map fields'), SALESFORCE_PATH_OBJECT . '/' . $key);
+      $element['objects'][$key]['#title'] .= ' | ' . $link;
     }
-    $element['objects'][$key]['#title'] .= ' | ' . $link;
   }
   unset($_SESSION['objects_error']);
   return drupal_render_children($element);

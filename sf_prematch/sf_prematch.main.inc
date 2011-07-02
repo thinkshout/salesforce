@@ -15,14 +15,14 @@
  * @param array $match_by
  * @return string sfid
  */
-function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
+function sf_prematch_export($entity_name, $bundle_name, $drupal_object, $map, $match_by) {
   if (empty($drupal_object) || empty($map->drupal) || empty($match_by)) {
     return;
   }
   // Get information to allow using handlers to get values of Drupal fields.
-  $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
+  $drupal_object_info = salesforce_api_fieldmap_objects_load('drupal', $map->drupal_entity, $map->drupal_bundle);
   $drupal_fields_info = $drupal_object_info['fields'];
-  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
+  $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map->salesforce);
 
   $values = array();
   $select_clause = "SELECT ";
@@ -155,13 +155,13 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
  * @todo Please document this function.
  * @see http://drupal.org/node/1354
  */
-function sf_prematch_import($object_type, $object, $map, $match_by) {
+function sf_prematch_import($entity_name, $bundle_name, $object, $map, $match_by) {
 
   // This is a generic solution only for object types of "user" or "node".
   // If another object type is found, no prematching will be done.
   // The developer should implement their own hook_sf_find_match() function
   // to match this unsupportted type.
-  switch ($object_type) {
+  switch ($entity_name) {
     case "user":
       $id_name = "uid";
       $table_name = "users";

@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -8,7 +7,7 @@
 // @todo add tracking and reporting of messages received from Salesforce
 
 /**
- * SF Notifications settings
+ * Salesforce Notifications settings
  *
  * @todo Response handling: under what conditions should we return a successful response? 
  *       Note if we do not return a successful response, Salesforce will re-send the outbound
@@ -24,10 +23,10 @@ function sf_notifications_settings_form($form, &$form_state) {
         '#default_value' => variable_get('sf_notifications_active_maps', array()),
       ),
     ));
-  $maps = salesforce_api_salesforce_field_map_load_all();
+  $maps = salesforce_api_salesforce_fieldmap_load_all();
   foreach ($maps as $id => $map) {
     $edit = l(t('edit'), SALESFORCE_PATH_FIELDMAPS . '/' . $id . '/edit', array('query' => array('destination' => drupal_get_destination())));
-    $form['sf_notifications']['sf_notifications_active_maps']['#options'][$id] = t('@drupal => @salesforce - %description (!edit)', array('@drupal' => $map->drupal, '@salesforce' => $map->salesforce, '%description' => $map->description, '!edit' => $edit));
+    $form['sf_notifications']['sf_notifications_active_maps']['#options'][$id] = t('@drupal => @salesforce - %description (!edit)', array('@drupal' => $map->drupal_entity . ' : ' . $map->drupal_bundle, '@salesforce' => $map->salesforce, '%description' => $map->description, '!edit' => $edit));
   }
 
   // IP Whitelist form

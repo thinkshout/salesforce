@@ -51,7 +51,7 @@ function sf_prematch_menu() {
 }
 
 /**
- * Prematching access callback. There are two prematching local tasks
+ * Prematching access callback. There are two prematching local tasks:
  * prematching overview and fieldmap prematching. The latter only applies when
  * we're looking at a specific fieldmap, so hide the former if this is the case.
  */
@@ -131,13 +131,11 @@ function sf_prematch_match_by_load($fieldmap) {
 }
 
 /**
- * Helper function to delete a fieldmap prematch
+ * Helper function to delete a fieldmap prematch.
  *
  * @param $fieldmap
  */
 function sf_prematch_match_by_delete($name) {
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query("DELETE FROM {salesforce_prematch} WHERE name = '%s'", $name) */
   db_delete('salesforce_prematch')
   ->condition('name', $name)
   ->execute();
@@ -150,7 +148,7 @@ function sf_prematch_match_by_delete($name) {
  * @param stdClass $object
  * @param array $map
  */
-function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
+function sf_prematch_sf_find_match($action, $entity_name, $bundle_name, $object, $map) {
   if (is_object($map)) {
     $fieldmap_name = $map->name;
   }
@@ -162,13 +160,13 @@ function sf_prematch_sf_find_match($action, $object_type, $object, $map) {
     return;
   }
   require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'sf_prematch') . '/sf_prematch.main.inc';
-  $map = salesforce_api_fieldmap_load($fieldmap_name);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap_name);
   switch ($action) {
     case 'export':
-      $result = sf_prematch_export($object_type, $object, $map, $match_by);
+      $result = sf_prematch_export($entity_name, $bundle_name, $object, $map, $match_by);
       break;
     case 'import':
-      $result = sf_prematch_import($object_type, $object, $map, $match_by);
+      $result = sf_prematch_import($entity_name, $bundle_name, $object, $map, $match_by);
       break;
     default:
       $result = NULL;

@@ -13,16 +13,16 @@ function sf_notifications_enable() {
   global $base_url;
   $sfuser = variable_get('salesforce_api_username', 'user@example.com');
   $formula = '<code>NOT($User.Username = \'' . $sfuser . '\')</code>';
+  // @todo: Find a way to link to outbound messages and workflow rules without hard-coded URLs
+  //  since these vary per Salesforce org.
   $args = array(
-    '!messages' => 'https://na1.salesforce.com/04k',
-    '!workflow' => 'https://na1.salesforce.com/01Q',
     '!base_url' => $base_url,
     '!formula' => $formula,
   );
   drupal_set_message(t('You have successfully enabled Salesforce Notifications. To make use
     of this module, you will probably want to head over to salesforce.com and
-    <a href="!message">set up some outbound messages</a> and <a href="!workflow">
-    associate them with workflow rules</a>. Point the outbound message(s) to
+    set up some outbound messages and
+    associate them with workflow rules. Point the outbound message(s) to
     !base_url and set up the workflow rules to fire when the user is NOT your
     SFDC API user. Use the following formula if you are unsure: !formula.', $args), 'warning');
 }
@@ -33,6 +33,6 @@ function sf_notifications_enable() {
  */
 function sf_notifications_disable() {
   drupal_set_message(t('You have successfully disabled Salesforce Notifications. You may
-    want to <a href="!workflow">deactivate any workflow rules</a> associated
-    with this site.', array('!workflow' => 'https://na1.salesforce.com/01Q')));
+    want to deactivate any workflow rules associated
+    with this site.'));
 }

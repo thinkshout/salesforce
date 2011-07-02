@@ -20,7 +20,7 @@ function salesforce_api_views_data() {
           'field' => 'oid',
           'extra' => array(
             array(
-              'field' => 'drupal_type',
+              'field' => 'drupal_entity',
               'value' => 'node',
             ),
           ),
@@ -30,7 +30,7 @@ function salesforce_api_views_data() {
           'field' => 'oid',
           'extra' => array(
             array(
-              'field' => 'drupal_type',
+              'field' => 'drupal_entity',
               'value' => 'user',
             ),
           ),
