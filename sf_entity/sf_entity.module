@@ -28,7 +28,11 @@ function sf_entity_menu() {
     }
     else {
       $uri_callback = $info['uri callback'];
-      $uri = $uri_callback($stub);
+      // The uri callbacks for entities defined by EntityAPI rely on
+      // having a full entity, not just a stub with id's - cf [#1207720]
+      if($info['controller class'] != 'EntityAPIController') {
+        $uri = $uri_callback($stub);
+      }
     }
     if(!isset($uri) && !is_array($uri)) {
       continue;
