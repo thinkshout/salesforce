@@ -675,7 +675,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
     $sf_field_type = $value['type'];
     // Determine to which table this field should belong.
     if (($sf_field_type & SALESFORCE_FIELD_CREATEABLE)
-      && !($sf_field_type & SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE)) {
+      && !($sf_field_type & (SALESFORCE_FIELD_NILLABLE | SALESFORCE_FIELD_DEFAULTEDONCREATE))) {
       // If the field is not nillable and not defaulted on create, then it must be required.
       $type = 'required';
       $required = ' <span class="form-required" title="' . t('This field is required.') . '">*</span>';
@@ -712,6 +712,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
       'target' => array('#markup' => $value['label'] . $required),
     );
 
+    // @todo: What should this do? Default for source not set correctly. Cf. [#1214094].
     if (is_array($map->fields[$key])) {
       $default_key = $map->fields[$key]['type'];
       $default_value = $map->fields[$key]['value'];
