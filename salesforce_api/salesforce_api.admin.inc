@@ -61,14 +61,13 @@ function salesforce_api_settings_form($form, &$form_state) {
   $form['api']['encryption'] = array(
     '#type' => 'item',
     '#title' => 'Encryption',
-    '#value' => t('It is highly recommended that you use encryption to protect your Salesforce.com credentials. Encryption is supported via <a href="http://drupal.org/project/aes">AES module</a>.'),
     'status' => array(
       '#type' => 'item',
       '#title' => FALSE,
     ),
   );
   if (salesforce_api_encryption_available(array('display_all' => TRUE))) {
-    $form['api']['encryption']['status']['#value'] =
+    $form['api']['encryption']['status']['#markup'] =
       'Encryption is available and configured properly.';
     $form['api']['encryption']['salesforce_api_encrypt'] = array(
       '#type' => 'checkbox',
@@ -78,9 +77,9 @@ function salesforce_api_settings_form($form, &$form_state) {
     );
   }
   else {
-    $form['api']['encryption']['status']['#value'] =
-      '<span class="error">AES is not installed - encryption is not
-      available.</span>';
+    $form['api']['encryption']['status']['#markup'] =
+      '<span class="error"><a href="http://drupal.org/project/aes" target="_blank">AES</a> is not 
+      installed - your login credentials will not be encrypted.</span>';
   }
 
   $form['log'] = array(
