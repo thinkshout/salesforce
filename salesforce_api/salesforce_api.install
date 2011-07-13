@@ -79,6 +79,7 @@ function salesforce_api_schema() {
     'indexes' => array(
       'sfid' => array('sfid'),
       'name' => array('name'),
+      'entity_bundle_oid' => array('drupal_entity', 'drupal_bundle', 'oid'),
     ),
     // Primary key has been changed to the fieldmap:
     // one fieldmapping for each Drupal object - cf. [#1018690-8]
@@ -392,9 +393,3 @@ function salesforce_api_update_6204(&$sandbox) {
     return t('TODO Add a descriptive string here to show in the UI.') /* array('#finished' => $finished) */;
   }
 }
-
-
-
-
-
-
