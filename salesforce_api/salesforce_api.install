@@ -20,8 +20,8 @@ function salesforce_api_install() {
  */
 function salesforce_api_uninstall() {
   drupal_uninstall_schema('salesforce_api');
-  db_query("DELETE FROM {variable} WHERE {name} LIKE 'salesforce%'");
-  db_query("DELETE FROM {cache} WHERE {cid} = 'salesforce_api_sf_objects'");
+  db_query("DELETE FROM {variable} WHERE name LIKE 'salesforce%%'");
+  db_query("DELETE FROM {cache} WHERE cid = 'salesforce_api_sf_objects'");
 }
 
 /**
