@@ -1410,9 +1410,14 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
  */
 function salesforce_api_cron() {
   $cache = cache_get('salesforce_api_sf_objects');
-  // if the cache has already been delete or is expired then rebuild
-  if (!$cache || time() > $cache->expire) {
-    salesforce_api_cache_build();
+
+  // Check to see if we can connect to Salesforce
+  $sf = salesforce_api_connect();
+  if ($sf == TRUE) {
+    // if the cache has already been cleared or is expired, then rebuild it.
+    if (!$cache || time() > $cache->expire) { 
+      salesforce_api_cache_build();
+    }
   }
   return;
 }
