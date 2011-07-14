@@ -1415,7 +1415,7 @@ function salesforce_api_cron() {
   $sf = salesforce_api_connect();
   if ($sf == TRUE) {
     // if the cache has already been cleared or is expired, then rebuild it.
-    if (!$cache || time() > $cache->expire) { 
+    if (!$cache || (int) $_SERVER['REQUEST_TIME'] > $cache->expire) { 
       salesforce_api_cache_build();
     }
   }
