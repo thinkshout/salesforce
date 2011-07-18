@@ -80,6 +80,12 @@ function salesforce_api_schema() {
       'identifier' => 'salesforce_field_map',
       'default hook' => 'default_salesforce_field_maps',
       'export callback' => 'salesforce_api_salesforce_field_map_export',
+      'api' => array(
+        'owner' => 'salesforce_api',
+        'api' => 'salesforce_api',
+        'minimum_version' => 1,
+        'current_version' => 1,
+      ),
     ),
     'fields' => array(
       // "name" field is only in schema for ctools exportable support and not in
@@ -330,9 +336,4 @@ function salesforce_api_update_6204(&$sandbox) {
     return array('#finished' => $finished);
   }
 }
-
-
-
-
-
 

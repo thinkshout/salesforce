@@ -41,10 +41,32 @@ function salesforce_field_map_features_export_render($module, $data, $export = N
 /**
  * Implements hook_features_revert().
  */
-function salesforce_field_map_features_revert($module = 'salesforce_api') {
-  ctools_component_features_revert($module);
+function salesforce_field_map_features_revert($module) {
+  salesforce_field_map_features_rebuild($module);
 }
 
 /**
- * }
+ * Implements hook_features_rebuild().
  */
+function salesforce_field_map_features_rebuild($module) {
+  $table = 'salesforce_field_map';
+  $defaults = features_get_default($table, $module);
+  if (empty($defaults)) {
+    return;
+  }
+
+  // Revert.
+  if (!empty($defaults)) {
+    foreach ($defaults as $object) {
+      if (empty($object->name) || empty($object->drupal) || empty($object->salesforce)) {
+        continue;
+      }
+
+      // If it exists just update the record.
+      $existing = salesforce_api_fieldmap_load($object->name);
+      $primary_key = isset($existing) ? 'name' : NULL;
+      drupal_write_record('salesforce_field_map', $object, $primary_key);
+    }
+  }
+}
+
