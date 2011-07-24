@@ -10,7 +10,7 @@ function sf_notifications_menu() {
   return array(
     SALESFORCE_PATH_NOTIFICATIONS_ADMIN => array(
       'title' => 'Notifications',
-      'description' => 'Placeholder for more Salesforce Notifications settings',
+      'description' => 'Salesforce Notifications configuration settings - allowed IPs, active fieldmaps',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('sf_notifications_settings_form'),
       'access arguments' => array('administer salesforce'),
@@ -403,8 +403,7 @@ function _sf_notifications_parse_message($domDoc) {
     $result['salesforce'][$obj->Id] = $obj;
   }
 
-  // @todo: Please convert this statement to the D7 database API syntax.
-  $result = db_query('SELECT name, oid, sfid, drupal_type FROM {salesforce_object_map} WHERE sfid IN :sfids', $sfids);
+  $result = db_query('SELECT name, oid, sfid, drupal_entity, drupal_bundle FROM {salesforce_object_map} WHERE sfid IN :sfids', $sfids);
   while($row = $result->fetchAssoc()) {
     $result['drupal'][] = $row;
   }

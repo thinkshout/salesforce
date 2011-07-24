@@ -52,14 +52,16 @@ function sf_notifications_settings_form($form, &$form_state) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Form builder function for fieldmap-specific Salesforce Notifications settings.
  */
 function sf_notifications_fieldmap_settings($form, &$form_state, $fieldmap_id) {
-  $map = salesforce_api_fieldmap_load($fieldmap_id);
+  $map = salesforce_api_salesforce_fieldmap_load($fieldmap_id);
   $active = variable_get('sf_notifications_active_maps', array());
   $active = $active[$fieldmap_id];
-  // @todo: Determine why this is not saving. Problem with this being a system_settings_form()?
+  if($active != '') {
+    $active = TRUE;
+  }
+  // @todo: Determine how to get this value unset.
   $form = array(
     'active' => array(
       '#type' => 'checkbox',
@@ -84,14 +86,22 @@ function sf_notifications_fieldmap_settings($form, &$form_state, $fieldmap_id) {
     '#tree' => TRUE,
     '#type' => 'fieldset',
     '#title' => 'Conditions',
-    '#descripiton' => 'You may assign conditions under which notifications will respond to Outbound Message events. Notifications failing these conditions will not trigger this fieldmap. This may be particularly useful, e.g. in the case of Salesforce objects that are mapped to multiple Drupal objects.',
+    '#description' => 'You may assign conditions under which notifications will respond to Outbound Message events. Notifications failing these conditions will not trigger this fieldmap. This may be particularly useful, e.g. in the case of Salesforce objects that are mapped to multiple Drupal objects.',
   );
-  $settings = $settings[$fieldmap_id];
+  if(isset($settings[$fieldmap_id])) {
+    $settings = $settings[$fieldmap_id];
+  }
+  if(isset($settings['condition'])) {
+    $condition = $settings['condition'];
+  }
+  else {
+    $condition = '';
+  }
   $form['sf_notifications_settings'][$fieldmap_id]['condition'] = array(
     '#type' => 'textarea',
     '#title' => FALSE,
-    '#default_value' => $settings['condition'],
-    '#description' => t('PHP code - <strong>do not include &lt;?php ?> tags</strong>. This code should return TRUE or FALSE to determine whether this fieldmap should be triggered on a relevant Outbound Message event. Available variables are $map (fieldmap object to be used to create the import), $notification_data (array of parsed object data from salesforce, keys are "oid" - drupal object id on update or empty on insert; "name" - machine name of fieldmap used for this operation; "fields" - object with the actual data from Salesforce), $operation ("insert", "update", or "delete")'),
+    '#default_value' => $condition,
+    '#description' => 'PHP code - <strong>do not include &lt;?php ?> tags</strong>. This code should return TRUE or FALSE to determine whether this fieldmap should be triggered on a relevant Outbound Message event. Available variables are $map (fieldmap object to be used to create the import), $notification_data (array of parsed object data from salesforce, keys are "oid" - drupal object id on update or empty on insert; "name" - machine name of fieldmap used for this operation; "fields" - object with the actual data from Salesforce), $operation ("insert", "update", or "delete")',
   );
   return system_settings_form($form);
 }
