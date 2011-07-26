@@ -403,7 +403,7 @@ function _sf_notifications_parse_message($domDoc) {
     $result['salesforce'][$obj->Id] = $obj;
   }
 
-  $result = db_query('SELECT name, oid, sfid, drupal_entity, drupal_bundle FROM {salesforce_object_map} WHERE sfid IN :sfids', $sfids);
+  $result = db_query('SELECT name, oid, sfid, drupal_entity, drupal_bundle FROM {salesforce_object_map} WHERE sfid IN :sfids', array('sfids' => $sfids));
   while($row = $result->fetchAssoc()) {
     $result['drupal'][] = $row;
   }
