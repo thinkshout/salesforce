@@ -74,7 +74,7 @@ function sf_notifications_allowed_ips() {
  * Adapted from http://stackoverflow.com/questions/594112
  */
 function _sf_notifications_cidr_match($ip, $range) {
-  list($subnet, $bits) = split('/', $range);
+  list($subnet, $bits) = explode('/', $range);
   $ip = ip2long($ip);
   $subnet = ip2long($subnet);
   // Sanity check: ip2long() returns FALSE for an invalid IP address.
@@ -82,7 +82,7 @@ function _sf_notifications_cidr_match($ip, $range) {
     return FALSE;
   }
   $mask = -1 << (32 - $bits);
-  $subnet &= $mask; # nb: in case the supplied subnet wasn't correctly aligned
+  $subnet &= $mask;// in case the supplied subnet wasn't correctly aligned
   return ($ip & $mask) == $subnet;
 }
 
@@ -214,7 +214,8 @@ function _sf_notifications_handle_message($objects) {
       $object_record = array(
         'oid' => NULL,
         'name' => $map->name,
-        'drupal_type' => $fieldmap_type,
+        'drupal_entity' => $map->drupal_entity,
+        'drupal_bundle' => $map->drupal_bundle,
         'fields' => $obj->fields,
         'operation' => 'insert',
       );
@@ -326,7 +327,7 @@ function sf_notifications_update_record($object_record) {
     else {
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications failed to update '
-        . $object_record['drupal_type'] . ' from record.
+        . $object_record['drupal_entity'] . ' from record.
         <pre>' . print_r($object_record, 1) . '</pre>');
       $success = FALSE;
     }
@@ -334,7 +335,7 @@ function sf_notifications_update_record($object_record) {
   else {
     salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications: Import handler ' . $function . ' undefined.
-        Drupal ' . $object_record['drupal_type'] . ' with id '
+        Drupal ' . $object_record['drupal_entity'] . ' with id '
         . $object_record['oid'] . ' was not updated.');
     $success = FALSE;
   }
@@ -366,7 +367,7 @@ function sf_notifications_check_condition($operation, $notification_data, $map) 
  *
  * @param (object) $domDoc
  *  A DOMDocument representation of the outbound SOAP message from Salesforce.
- * @return (array) $result
+ * @return (array) $matches
  *  An array with two sub-arrays, keyed as:
  *  'drupal':
  *    A sequential array containing relevant salesforce_ids records.
@@ -375,7 +376,7 @@ function sf_notifications_check_condition($operation, $notification_data, $map) 
  *    An indexed array mapping sfids to SObject records from Salesforce.
  */
 function _sf_notifications_parse_message($domDoc) {
-  $result = array(
+  $matches = array(
     'salesforce' => array(),
     'drupal' => array(),
   );
@@ -400,15 +401,16 @@ function _sf_notifications_parse_message($domDoc) {
       $obj->fields->$fieldname = $node->nodeValue;
       array_push($obj->fieldnames, $fieldname);
     }
-    $result['salesforce'][$obj->Id] = $obj;
+    $matches['salesforce'][$obj->Id] = $obj;
   }
 
-  $result = db_query('SELECT name, oid, sfid, drupal_entity, drupal_bundle FROM {salesforce_object_map} WHERE sfid IN :sfids', array('sfids' => $sfids));
+  $result = db_query('SELECT name, oid, sfid, drupal_entity, drupal_bundle FROM {salesforce_object_map} WHERE sfid IN (:sfids)', array(':sfids' => $sfids));
   while($row = $result->fetchAssoc()) {
-    $result['drupal'][] = $row;
+    $matches['drupal'][] = $row;
   }
+  salesforce_api_log(SALESFORCE_LOG_ALL, 'Salesforce Notifications found the following matches for the outbound message: ' . '<pre>' . print_r($matches, TRUE) . '</pre>');
 
-  return $result;
+  return $matches;
 }
 
 /**

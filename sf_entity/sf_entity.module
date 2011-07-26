@@ -816,7 +816,7 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
  * @param array $options
  *   Additional options to control how the import should be done.
  * @return
- *   The id of the imported node or FALSE on failure.
+ *   The id of the imported entity or FALSE on failure.
  */
 function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
   // Connect to Salesforce and retrieve the object.
@@ -852,7 +852,12 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map->salesforce);
 
   // Load the entity to update, if there is one.
-  $entities = entity_load($map->drupal_entity, array($id));
+  if(!empty($id)) {
+    $entities = entity_load($map->drupal_entity, array($id));
+  }
+  else {
+    $entity = $entities = NULL;
+  }
   if (is_array($entities)) {
     $entity = current($entities);
   }
