@@ -871,7 +871,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
     if (!empty($matches)) {
       $id = reset($matches);
       if (!empty($id)) {
-        $entities = entity_load($mapped_entity, array($id));
+        $entities = entity_load($map->drupal_entity, array($id));
         if (is_array($entities)) {
           $entity = current($entities);
         }
@@ -882,7 +882,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
     }
     if (empty($entity)) {
       $create = TRUE;
-      $ids = array(NULL, NULL, $mapped_bundle);
+      $ids = array(NULL, NULL, $map->drupal_bundle);
       $entity = entity_create_stub_entity($map->drupal_entity, $ids);
       $entity->is_new = TRUE;
     }
