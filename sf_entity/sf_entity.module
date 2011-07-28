@@ -893,7 +893,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
   // Loop through the fields on the fieldmap.
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
     // Don't check for fixed or PHP values.
-    if(!is_array($drupal_fieldname) && isset($entity->$drupal_fieldname)) {
+    if (!is_array($drupal_fieldname) && isset($entity->$drupal_fieldname)) {
       $previous_value = $entity->$drupal_fieldname;
     }
     // If a handler is specified for importing a value from Salesforce....
@@ -904,6 +904,12 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
     }
     elseif (isset($drupal_object_definition['fields'][$drupal_fieldname]['import'])) {
       $drupal_field_import_handler = $drupal_object_definition['fields'][$drupal_fieldname]['import'];
+      // Previous values for FieldAPI fields are a special case. Handle here for now.
+      // @todo: Come up with a more elegant solution.
+      if($drupal_field_import_handler == 'sf_entity_import_field_default') {
+        list($fieldapi_fieldname, $column) = explode(':', $drupal_fieldname, 2);
+        $previous_value = $entity->$fieldapi_fieldname;
+      }
       $drupal_field_definition = $drupal_object_definition['fields'][$drupal_fieldname];
       $sf_field_definition = $salesforce_object_definition['fields'][$sf_fieldname];
       // Let the handler function set the value for the field on the node.
@@ -916,26 +922,18 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
         $entity->$drupal_fieldname = $sf_data->$sf_fieldname;
       }
     }
-    // Compare the new values to the previous values
-    // @todo: Determine if this is still the structure for a date field in Drupal 7.
+    // Compare the new values to the previous values.
     if(isset($previous_value)) {
-      if (isset($previous_value[0]['date_type'])) {
-        $new_value = $entity->$drupal_fieldname;
-        $new_value = $new_value[0]['value']; // This conversion is necessary due to the field's structure.
-        if (strncmp($previous_value[0]['value'], $new_value, strlen($new_value)) != 0) {
-          $changed_fields++;
-        }
+      if (isset($entity->$drupal_fieldname) && $entity->$drupal_fieldname != $previous_value) {
+        $changed_fields++;
       }
-      else {
-        if (isset($entity->$drupal_fieldname) && $entity->$drupal_fieldname != $previous_value) {
-          $changed_fields++;
-        }
+      elseif (isset($entity->$fieldapi_fieldname) && $entity->$fieldapi_fieldname != $previous_value) {
+        $changed_fields++;
       }
     }
   }
 
-  // Clone the entity in order to do comparison.
-  // @todo: Determine whether this should happen before or after the pre_import hook.
+  // Clone the entity in order to do comparison, to ensure that it is not getting altered by the pre-import hook.
   $comparison_entity = clone $entity;
 
   // Allow modules to alter the data and fieldmap prior to import.
@@ -1008,7 +1006,7 @@ function sf_entity_export_field_default($entity, $fieldkey, $drupal_field_defini
     $data = current($entity->$fieldname);
   }
   else {
-    // Uncomment the following line if debugging is necessary.
+    // Uncomment the following line if debugging is necessary of why the field could not be found at all.
     // sf_dpm(func_get_args(), FALSE);
     return;
   }
@@ -1030,60 +1028,55 @@ function sf_entity_export_field_default($entity, $fieldkey, $drupal_field_defini
 }
 
 // Populates the value of a Field API field from its corresponding Salesforce field's value.
-function sf_entity_import_field_default(&$entity, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+function sf_entity_import_field_default(&$entity, $fieldkey, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  // Get language settings.
+  // Default is 'und' for undefined.
+  $lang = empty($entity->language)
+    ? 'und' : $entity->language;
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  if (empty($column)) {
+    $column = 'value';
+  }
+
   // Don't try to do an import for a field that does't exist in the response from Salesforce.
   if(!isset($sf_data->$sf_fieldname)) {
     return;
   }
-  $data = array();
 
-  // Convert data based on what SF type we're importing.
+  // Convert data based on what Salesforce type we're importing.
+  // @todo: Also does conversions based on what types (checkbox, date field) it is assumed are being used
+  // to map them in Drupal. Later, change that to be a separate case statement based on field_info_field().
   switch ($sf_field_definition['salesforce']['type']) {
     case 'multipicklist':
-      // SF sends multiple values as a semicolon-delimited string.
-      if ($drupal_field_definition['multiple']) {
+      // Salesforce sends multiple values as a semicolon-delimited string.
+      // @todo: Determine how the field definition for multi-valued fields in Drupal is being set.
+      if (isset($drupal_field_definition['multiple'])) {
         $sf_data = explode(';', $sf_data->$sf_fieldname);
         foreach ($sf_data as $row) {
-          $data[] = array('value' => $row);
+          $data[$lang][] = array('value' => $row);
         }
       }
       else {
-        $data[0]['value'] = $sf_data->$sf_fieldname;
+        $data[$lang][0]['value'] = $sf_data->$sf_fieldname;
       }
-    break;
+      break;
+    case 'boolean':
+      // Drupal stores boolean fields as ints.
+      // Trying to pass a boolean value (TRUE, FALSE) will cause a fatal database error.
+      $data[$lang][0]['value'] = (int) $sf_data->$sf_fieldname;
+      break;
+    case 'date':
+    case 'datetime':
+      // Truncate the date to a length that can be saved.
+      $data[$lang][0]['value'] = substr($sf_data->$sf_fieldname, 0, 19);
+      break;
     default:
       // Unless handled above in this switch, we don't yet handle fields with multiple values.
-      $data[0]['value'] = $sf_data->$sf_fieldname;
+      $data[$lang][0]['value'] = $sf_data->$sf_fieldname;
     break;
   }
-  $entity->$drupal_fieldname = $data;
-}
-
-// Returns the todate for a Field API date field.'
-// @todo: Link this in, above.
-function _sf_entity_export_fieldapi_date($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  // Get the name of the actual Field API field.
-  // drupal_* string functions are not necessary since these are machine names.
-  $key = substr($fieldname, 0, strlen($fieldname) - 7);
-
-  // Get the data array for the field.
-  $data = $node->$key;
-
-  // Return the to date from the field data.
-  return $data[0]['value2'];
-}
-
-// Returns the todate for a Field API date field.
-// @todo: Link this in, above.
-function _sf_entity_import_fieldapi_date(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  // drupal_* string functions are not necessary since these are machine names.
-  $key = substr($drupal_fieldname, 0, strlen($drupal_fieldname) - 7);
-
-  $data = $node->$key;
-
-  $data[0]['value2'] = $sf_data->$sf_fieldname;
-
-  $node->$key = $data;
+  $entity->$fieldname = $data;
 }
 
 // Returns the email address of the node's author, given by node->uid
@@ -1116,6 +1109,7 @@ function _sf_entity_node_import_body(&$node, $drupal_fieldname, $drupal_field_de
 } */
 
 // @todo: Add back in nodereference and userreference to conditional statement, above.
+// Will need to test the functions before committing, since I think syntax has changed.
 // Export sfid of referenced node.
 function _sf_entity_export_nodereference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
   $sfid = '';
