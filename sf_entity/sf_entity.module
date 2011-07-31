@@ -927,7 +927,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
       if (isset($entity->$drupal_fieldname) && $entity->$drupal_fieldname != $previous_value) {
         $changed_fields++;
       }
-      elseif (isset($entity->$fieldapi_fieldname) && $entity->$fieldapi_fieldname != $previous_value) {
+      elseif (isset($fieldapi_fieldname) && isset($entity->$fieldapi_fieldname) && $entity->$fieldapi_fieldname != $previous_value) {
         $changed_fields++;
       }
     }
@@ -976,7 +976,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
         || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
         || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
       // Store the Salesforce ID for the entity and return TRUE.
-      salesforce_api_id_save($id, $sfid, $name, $map->drupal);
+      salesforce_api_id_save($id, $entity->salesforce->sfid, $name, $map->drupal_entity, $map->drupal_bundle);
     }
   }
   // Allow modules to respond after an import.
