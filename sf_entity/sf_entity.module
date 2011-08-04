@@ -810,7 +810,7 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
  * @param $sf_data
  *   The Salesforce object OR The Salesforce ID of the object to be imported.
  * @param string $name
- *   The name of the fieldmap to use to create the export object.
+ *   The name of the fieldmap to use to create the import object.
  * @param int $id
  *   The id of the entity to update.  If left NULL, a new entity will be created.
  * @param array $options
@@ -889,6 +889,11 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
   }
   list($id, $vid, $bundle) = entity_extract_ids($map->drupal_entity, $entity);
 
+  $core_types = array('node', 'user', 'taxonomy_term');
+  if (isset($entity->is_new) && $entity->is_new == TRUE && in_array($map->drupal_entity, $core_types)) {
+    _sf_entity_import_preprocess_entity($entity, $map->drupal_entity, $map->drupal_bundle);
+  }
+
   $changed_fields = 0;
   // Loop through the fields on the fieldmap.
   foreach ($map->fields as $sf_fieldname => $drupal_fieldname) {
@@ -952,6 +957,8 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
     return $id;
   }
 
+  _sf_entity_import_process_entity($entity, $map->drupal_entity, $map->drupal_bundle);
+
   $entity->sf_entity_skip_export = TRUE;
   // It would be nice if we could just call entity_save($entity), but there is
   // no entity_save. Fortunately core modules all implement their save
@@ -985,6 +992,102 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
 
   // Return the Drupal ID of the imported entity.
   return $id;
+}
+
+/* Helper function to populate a new entity with other properties besides the stub properties. */
+function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_name = NULL) {
+  // Loads the information about all entity types.
+  $entities = entity_get_info();
+  $base_tables = array();
+  foreach($entities as $ent_type => $ent) {
+    $base_tables[$ent_type] = $ent['base table'];
+  }
+  if(is_object($entity)) {
+    // Loads the schema for the entity to get core fields.
+    // @todo: Collect from $entity['schema_fields_sql'] to pull from tables besides base table.
+    $schema = drupal_get_schema($base_tables[$entity_type]);
+    if (isset($schema['fields'])) {
+      $core_fields = array_keys($schema['fields']);
+    }
+    // If there is a $bundle_name set, then load the FieldAPI fields for this entity also.
+    if (isset($bundle_name)) {
+      $fieldapi_fields = array_keys(field_info_instances($entity_type, $bundle_name));
+    }
+    // Set the fields on the entity itself.
+    if (isset($core_fields) && is_array($core_fields)) {
+      foreach ($core_fields as $fieldname) {
+        $entity->$fieldname = '';
+      }
+    }
+    if (isset($fieldapi_fields) && is_array($fieldapi_fields)) {
+      foreach ($fieldapi_fields as $fieldname) {
+        // Note: This only works for sf_entity_import() since the actual field array structure
+        // is set in the sf_entity_field_import_default() function.
+        $entity->$fieldname = '';
+      }
+    }
+  }
+  // Set the newly inserted node to published.
+  // (Needed for Solr indexing to work.)
+  if($entity_type == 'node') {
+    if(!isset($entity->status) || empty($empty->status)) {
+      $entity->status = 1;
+    }
+    // To save a node, a uid must be set. (Otherwise the comment_node_insert() call will fail.)
+    // To do this correctly, it must be pulled from a fieldmap of some sort, but that would require
+    // another Salesforce API function, to match the supplied sfid, without also providing a fieldmap.
+    if(!isset($entity->uid) || empty($entity->uid)) {
+      // $uid = salesforce_api_get_id_with_sfid('003K0000002BNNkIAO', 'salesforce_api_default_user_contact_fieldmap');
+      // $entity->uid = $uid;
+      // For now, just save the node with anonymous ownership
+      // (since that is the only uid guaranteed to exist.)
+      $entity->uid = 0;
+    }
+  }
+  // To save a taxonomy term, you need to set the vid (voabulary id).
+  if($entity_type == 'taxonomy_term') {
+    $vocab_data = taxonomy_vocabulary_machine_name_load($bundle_name);
+    $vid = $vocab_data->vid;
+    $entity->vid = $vid;
+  }
+}
+
+/* Helper function to populate necessary values after the import data is received, and do matching. */
+function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) {
+  if($entity_type == 'user') {
+    // If status is still empty, set it to 1 (active)
+    if(!isset($entity->status) || empty($entity->status)) {
+      $entity->status = 1;
+    }
+    // If the created date is still empty, set it to now.
+    if(!isset($entity->created) || empty($entity->created)) {
+      $entity->created = REQUEST_TIME;
+    }
+    // Look for an existing user if there is a username set.
+    // @todo: Instead of using $conditions here, fix sf_prematch.module
+    // to use EntityFieldQuery as per #1214100.
+    if(isset($entity->name)) {
+      $existing_user = entity_load('user', FALSE, array('name' => $entity->name));
+    }
+    if (is_array($existing_user)) {
+      $existing_user = current($existing_user);
+    }
+    // If there is an existing user, then set the uid for an update, and unset the is_new flag.
+    if(isset($existing_user) && is_object($existing_user) && isset($existing_user->uid)) {
+      $entity->uid = $existing_user->uid;
+      $entity->roles = $existing_user->roles;
+      unset($entity->is_new);
+    }
+  }
+  // If language has not yet been set for a node, set it to unknown.
+  if($entity_type == 'node') {
+    if(!isset($entity->language) || empty($entity->language)) {
+      $entity->language = LANGUAGE_NONE;
+    }
+    if(!isset($entity->created) || empty($entity->created)) {
+      $entity->created = REQUEST_TIME;
+    }
+  }
 }
 
 /* Export/import callbacks */

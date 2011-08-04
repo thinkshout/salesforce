@@ -200,7 +200,7 @@ function _sf_notifications_handle_message($objects) {
     if (empty($maps)) {
       salesforce_api_log(SALESFORCE_LOG_SOME,
             'Salesforce Notifications: No fieldmap found.
-            <pre>' . print_r($obj, 1) . '</pre>');
+            <pre>' . print_r($obj, TRUE) . '</pre>');
       $success = FALSE;
       continue;
     }
@@ -238,9 +238,9 @@ function _sf_notifications_handle_message($objects) {
  */
 function sf_notifications_delete_record($object_record) {
   // Try to delete the local record. Since the record is no more, in this
-  // case we're agnostic to the drupal_type ("node" or "user").
+  // case we're agnostic to the drupal_entity ("node" or "user").
   $success = TRUE;
-  switch ($object_record['drupal_type']) {
+  switch ($object_record['drupal_entity']) {
     case 'user':
       user_cancel(array(), $object_record['oid'], $method = 'user_cancel_block' /* TODO Set this variable */);
       salesforce_api_log(SALESFORCE_LOG_ALL,
@@ -282,7 +282,7 @@ function sf_notifications_delete_record($object_record) {
       else {
         salesforce_api_log(SALESFORCE_LOG_SOME,
           ' Salesforce Notifications: Could not find delete handler for deleted
-          Salesforce record <pre>' . print_r($object_record, 1) . '</pre>');
+          Salesforce record <pre>' . print_r($object_record, TRUE) . '</pre>');
         $success = FALSE;
       }
       break;
@@ -322,13 +322,13 @@ function sf_notifications_update_record($object_record) {
     if ($drupal_id) {
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications successful ' . $object_record['operation'] .
-        ' of ' . $drupal_type . ' ' . $drupal_id);
+        ' of ' . $drupal_entity . ' ' . $drupal_id);
     }
     else {
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications failed to update '
         . $object_record['drupal_entity'] . ' from record.
-        <pre>' . print_r($object_record, 1) . '</pre>');
+        <pre>' . print_r($object_record, TRUE) . '</pre>');
       $success = FALSE;
     }
   }
