@@ -115,6 +115,7 @@ function sf_queue_salesforce_api_delete($sfid, $map, $oid) {
  * Helper function to add / update a queue item.
  */
 function sf_queue_enqueue($op, $sf_object, $map, $oid) {
+
   $object = (object) array(
     'sf_op' => $op,
     'oid' => $oid,
@@ -127,24 +128,12 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
     'fieldmap_name' => $map->name,
     'sf_data' => $sf_object,
   );
-  $update = array();
-  $sql =
-    'SELECT oid
-      FROM {salesforce_export_queue}
-      WHERE drupal_type = "%s" AND fieldmap_name = "%s" AND oid = %d';
-  // If an existing operation is queued for this drupal object / fieldmap pair,
-  // update the queue by merging the two records instead of appending to it.
-  if ($existing = db_fetch_array(db_query('SELECT oid
-      FROM {salesforce_export_queue}
-      WHERE drupal_type = :drupal_type AND fieldmap_name = :fieldmap_name AND oid = :oid', array(':drupal_type' => $map->drupal, ':fieldmap_name' => $map->name, ':oid' => $oid)))) {
-    $update = 'oid';
-    $object->oid = $existing['oid'];
-  }
 
   // If we successfully wrote to the queue, then we return FALSE to prevent an
   // immediate salesforce export. If we failed to write to the queue, log an
   // error but don't prevent the export.
-  if (drupal_write_record('salesforce_export_queue', $object, $update)) {
+  $queue = DrupalQueue::get('sf_export_queue');
+  if ($queue->createItem($object)) {
     if (user_access('administer salesforce')) {
       drupal_set_message(t('Drupal !type queued for Salesforce export.', array('!type' => $map->drupal)));
     }
@@ -163,6 +152,7 @@ function sf_queue_cron() {
   if (!variable_get('sf_queue_enabled', FALSE)) {
     return FALSE;
   }
+
   $settings = variable_get('sf_queue_settings', _sf_queue_default_settings());
   $state = variable_get('sf_queue_state', _sf_queue_default_state());
   $request_time = REQUEST_TIME;
@@ -170,28 +160,6 @@ function sf_queue_cron() {
     $state['last_attempt'] = $request_time;
     variable_set('sf_queue_state', $state);
     sf_queue_process_queue($settings, $state);
-  }
-}
-
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
-function sf_queue_process_queue_force($redir = TRUE) {
-  if (!variable_get('sf_queue_enabled', FALSE)) {
-    return FALSE;
-  }
-  $settings = variable_get('sf_queue_settings', _sf_queue_default_settings());
-  $state = variable_get('sf_queue_state', _sf_queue_default_state());
-  $request_time = REQUEST_TIME;
-  $state['last_attempt'] = $request_time;
-  variable_set('sf_queue_state', $state);
-  sf_queue_process_queue($settings, $state);
-  if (user_access('administer salesforce')) {
-    drupal_set_message(t('Salesforce export queue processed.'));
-  }
-  if ($redir == TRUE) {
-    drupal_goto("admin/reports/sf_queue/");
   }
 }
 
@@ -207,46 +175,44 @@ function sf_queue_process_queue($settings, $state) {
   $limit = ini_get('max_execution_time') * $duration;
   $start_time = REQUEST_TIME;
 
-  // Clean up the queue before we do any processing.
-  // TODO Please review the conversion of this statement to the D7 database API syntax.
-  /* db_query('DELETE FROM {salesforce_export_queue} WHERE sf_op IN ("delete", "update") AND (sfid IS NULL OR sfid = NULL OR sfid = "")') */
-  db_delete('salesforce_export_queue')
-    ->where('sf_op IN ("delete", "update") AND (sfid IS NULL OR sfid = NULL OR sfid = "")')
-  ->execute();
-
   $settings = array_merge($settings, array('start_time' => $start_time, 'limit' => $limit));
-  // Order of operations: delete, update, create
-  if (in_array('delete', $settings['cron_operations'])) {
-    sf_queue_handle_deletes($settings);
+  $queue = DrupalQueue::get('sf_export_queue');
+  $items = array();
+
+  // Fetch the items in the queue, and send place them in bins by sf_op type
+  // for processing.
+  while ($item = $queue->claimItem()) {
+    if ($settings['retry_num_attempts'] >= 0 && $item->data['attempts'] <= $settings['retry_num_attempts']) {
+    // Place to bin for the type.
+    $items[$item->data['sf_op']][] = $item;
   }
 
-  if (in_array('create', $settings['cron_operations'])
-    || in_array('update', $settings['cron_operations'])) {
-    sf_queue_handle_upserts($settings);
+  // Process the bins.
+  if (!empty($items)) {
+    if (in_array('delete', $settings['cron_operations'])) {
+      sf_queue_handle_deletes($items, $queue, $settings);
+    }
+
+    if (in_array('create', $settings['cron_operations'])
+      || in_array('update', $settings['cron_operations'])) {
+      sf_queue_handle_upserts($items, $queue, $settings);
+    }
   }
 }
+
 
 /**
  * Helper function to process queue deletes. Since we can delete across object
  * types by SFID alone, plow through 200 deletes at a time, oldest first.
  */
-function sf_queue_handle_deletes($settings) {
-  $args = array();
-  $sql = "SELECT id, oid, fieldmap_name, drupal_type, sf_type, sfid
-    FROM {salesforce_export_queue}
-    WHERE sf_op = 'delete'";
-  if ($settings['retry_num_attempts'] >= 0) {
-    $sql .= ' AND attempts < %d';
-    $args[] = $settings['retry_num_attempts'] + 1;
-  }
-  $sql .= ' ORDER BY created LIMIT ' . $settings['cron_num_objects'];
-  $done = FALSE;
-  $sfids = $deletes = $real_deletes = $fails = array();
-  // TODO Please convert this statement to the D7 database API syntax.
-  $result = db_query($sql, $args);
-  while ($row = db_fetch_array($result)) {
-    $sfids[] = $row['sfid'];
-    $deletes[] = $row;
+function sf_queue_handle_deletes($items, $queue, $settings) {
+
+  // We are only interested in the delete op here.
+  $items = $items['delete'];
+
+  foreach ($items as $item) {
+    $sfids[] = $item->data['sfid'];
+    $deletes[] = $item;
   }
   if (count($deletes) == 0) {
     return;
@@ -259,7 +225,7 @@ function sf_queue_handle_deletes($settings) {
   try {
     $sf = salesforce_api_connect();
     $responses = $sf->client->delete($sfids);
-    sf_queue_handle_responses($responses, $deletes);
+    sf_queue_handle_responses($responses, $deletes, $queue);
   }
   catch (Exception $e) {
     sf_queue_handle_exception($e, $deletes);
@@ -280,7 +246,7 @@ function sf_queue_handle_deletes($settings) {
  * - On each iteration of each major loop, break if we have exceeded our
  *   allotted processing time limit.
  */
-function sf_queue_handle_upserts($settings) {
+function sf_queue_handle_upserts($items, $queue, $settings) {
   $ph_op = db_placeholders(array_filter($settings['cron_operations']), 'text');
   //$count_args = $settings['cron_operations'];
 
@@ -309,12 +275,12 @@ function sf_queue_handle_upserts($settings) {
   $sql .= ' ORDER BY created LIMIT ' . $settings['cron_num_objects'];
   $done = FALSE;
 
-  while ($settings['start_time'] + $settings['limit'] > REQUEST_TIME && $row = db_fetch_array($count_result)) {
+  while ($settings['start_time'] + $settings['limit'] > time() && $row = db_fetch_array($count_result)) {
     $sf_type = $row['sf_type'];
     foreach (array('update', 'create') as $op) {
       $op_done = FALSE;
       $args = array($op, $sf_type, $settings['retry_num_attempts'] + 1);
-      while ($settings['start_time'] + $settings['limit'] > REQUEST_TIME && $op_done == FALSE) {
+      while ($settings['start_time'] + $settings['limit'] > time() && $op_done == FALSE) {
         $items = $ids = $items = $objects = array();
         // TODO Please convert this statement to the D7 database API syntax.
         $result = db_query($sql, $args);
@@ -391,10 +357,85 @@ function sf_queue_handle_upserts($settings) {
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Helper function to process queue updates and inserts (creates). The logic
+ * proceeds basically like this:
+ * - Get a list of object types that we're going to upsert by eliminating those
+ *   queue item groups that do not meet the criteria (too many fails, threshold
+ *   not met, etc.)
+ * - For each object type:
+ *   - update up to 200 records at a time
+ *   - then, create up to 200 records at a time
+ * - On each iteration of each major loop, break if we have exceeded our
+ *   allotted processing time limit.
  */
-function sf_queue_handle_responses($responses, $dataset) {
+function sf_queue_handle_upserts($items, $queue, $settings) {
+
+  // Generate an array of items we want to create indexed by sf_type.
+  $creates = $queue_items == array();
+  foreach ($items['create'] as $create) {
+    $creates[$create->data['sf_type']][] = $create->data;
+    $queue_items[$create->data['sf_type']][] = $create;
+  }
+
+  foreach ($creates as $sf_type => $objects) {
+    try {
+      $sf = salesforce_api_connect();
+      $responses = $sf->client->create($objects, $sf_type);
+      list($wins, $fails) = sf_queue_handle_responses($responses, $queue_items[$sf_type], $queue);
+    }
+    catch (Exception $e) {
+      sf_queue_handle_exception($e, $responses);
+      continue;
+    }
+
+    if (count($fails) > 0) {
+      watchdog('sf_queue', "Failed objects [<pre>" . print_r($objects, TRUE) . "</pre>]");
+    }
+    if (count($wins) == 0) {
+      break;
+    }
+
+    // Instead of using salesforce_api_id_save to generate 2 SQL queries per
+    // record, we collect them all to do 2 massive queries for all the
+    // records at once.
+    // @TODO: salesforce_api_id_save_multi
+
+    // @TODO: Fix this statement to work as $wins is now an array of salesforce
+    // objects indexed by sfid rather than an array of oids indexed by sfid.
+    db_delete('salesforce_object_map')
+      ->condition('oid', $wins, 'IN')
+      ->execute();
+
+    $values = array();
+    foreach ($wins as $sfid => $item) {
+
+      db_delete('salesforce_object_map')
+      ->condition('drupal_entity', $item['drupal_entity'])
+      ->condition('drupal_bundle', $item['drupal_bundle'])
+      ->condition('oid', $item['oid'])
+      ->execute();
+
+      $drupal_type = $objects[$offset]['drupal_type'];
+      if (strpos($drupal_type, 'node_') === 0) {
+        $drupal_type = 'node';
+      }
+      $values[] = array('drupal_entity' => $item['drupal_entity'],
+                        'drupal_bundle' => $item['drupal_bundle'],
+                        'oid' => $item['oid'],
+                        'sfid' => $sfid,
+                        'name' => $item['fieldmap_name']);
+    }
+
+  }
+
+}
+
+/**
+ * Handle the responses from Salesforce. Remove the item from the queue if the
+ * push was successful; otherwise, increment the retries.
+ */
+function sf_queue_handle_responses($responses, $dataset, $queue) {
+
   $wins = $fails = array();
   if (!is_array($responses)) {
     $responses = array($responses);
@@ -402,22 +443,23 @@ function sf_queue_handle_responses($responses, $dataset) {
   foreach ($responses as $key => $response) {
     $item = $dataset[$key];
     if (!empty($response->success)) {
-      $wins[$response->id] = $item['oid'];
+      $wins[$response->id] = $item->data;
     }
     else {
       $error_str = t("Error from Salesforce:<br>Message - !message<br>Fields - !fields<br>Status code - !code", array('!message' => $response->errors->message, '!fields' => $response->errors->fields, '!code' => $response->errors->statusCode));
-      $fails[$response->id] = $item['oid'];
+      $fails[$response->id] = $item->data;
     }
   }
   if (count($wins) > 0) {
-    $q_str = 'DELETE FROM {salesforce_export_queue} WHERE oid IN (' . db_placeholders($wins) . ')';
-    // TODO Please convert this statement to the D7 database API syntax.
-    db_query($q_str, $wins);
+    $queue->deleteItem($item);
   }
   if (count($fails) > 0) {
-    $q_str = 'UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($fails) . ')';
-    // TODO Please convert this statement to the D7 database API syntax.
-    db_query($q_str, $fails);
+    // TODO we should track failures so we can display them to the admin, and
+    // track retries. This will work for now as eventually the claim ticket will
+    // expire and the item will be processed again.
+
+    //$q_str = 'UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($fails) . ')';
+    //db_query($q_str, $fails);
   }
   return array($wins, $fails);
 }
@@ -427,7 +469,7 @@ function sf_queue_handle_responses($responses, $dataset) {
  * wrong, or if there are any other "blocker" exceptions. Otherwise, log the
  * exception and update the queue records with failure attempts.
  */
-function sf_queue_handle_exception($e, $dataset) {
+function sf_queue_handle_exception($e, $dataset, $queue) {
   // TODO: Parse the exception and take action on it
   $oids = array();
   if (is_array($dataset)) {
@@ -439,8 +481,8 @@ function sf_queue_handle_exception($e, $dataset) {
     $oids[] = $dataset['oid'];
   }
   if (is_int($oid[0])) {
-    // TODO Please convert this statement to the D7 database API syntax.
-    db_query('UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($oids) . ')', $oids);
+    // TODO We need to update the rety counter as well for the remaining items.
+    // db_query('UPDATE {salesforce_export_queue} SET attempts = attempts + 1 WHERE oid IN (' . db_placeholders($oids) . ')', $oids);
   }
 }
 
@@ -580,4 +622,3 @@ function _sf_queue_default_state() {
     'last_attempt' => NULL,
   );
 }
-

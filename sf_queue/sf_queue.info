@@ -6,3 +6,4 @@ core = 7.x
 files[] = sf_queue.admin.inc
 files[] = sf_queue.install
 files[] = sf_queue.module
+files[] = sf_queue.queue.inc

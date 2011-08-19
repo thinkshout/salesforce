@@ -10,20 +10,25 @@
  * Implements hook_install().
  */
 function sf_queue_install() {
-  // TODO The drupal_(un)install_schema functions are called automatically in D7.
-  // drupal_install_schema('sf_queue')
+  // Create our queues.
+
+  $queue = DrupalQueue::get('sf_export_queue');
+  $queue->createQueue();
 }
 
 /**
  * Implements hook_uninstall().
  */
 function sf_queue_uninstall() {
-  // TODO The drupal_(un)install_schema functions are called automatically in D7.
-  // drupal_uninstall_schema('sf_queue')
+  // Delete our queues.
+  $queue = DrupalQueue::get('sf_export_queue');
+  $queue->deleteQueue();
+
+
   // TODO Please review the conversion of this statement to the D7 database API syntax.
   /* db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_queue_%'") */
   db_delete('variable')
-  ->condition('{name}', 'sf_queue_%', 'LIKE')
+  ->condition('name', 'sf_queue_%', 'LIKE')
   ->execute();
 }
 
