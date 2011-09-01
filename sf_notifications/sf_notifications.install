@@ -36,3 +36,26 @@ function sf_notifications_disable() {
     want to deactivate any workflow rules associated
     with this site.'));
 }
+
+/**
+ * Implements hook_install().
+ */
+function sf_notifications_install() {
+  // Create our incoming notification queue.
+  $queue = DrupalQueue::get('sf_notifications_queue');
+  $queue->createQueue();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function sf_notifications_uninstall() {
+  // Delete our queues.
+  $queue = DrupalQueue::get('sf_notifications_queue');
+  $queue->deleteQueue();
+
+  // Delete our variables.
+  db_delete('variable')
+  ->condition('name', 'sf_notifications_%', 'LIKE')
+  ->execute();
+}
