@@ -34,6 +34,33 @@ function sf_notifications_menu() {
       'type' => MENU_LOCAL_TASK,
       'weight' => 15,
     ),
+    SALESFORCE_PATH_NOTIFICATIONS_ADMIN . '/queue' => array(
+      'title' => 'Manage Notifications queue',
+      'description' => 'Salesforce Notifications queue view and actions.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sf_notifications_queue_form'),
+      'access arguments' => array('administer salesforce'),
+      'type' => MENU_CALLBACK,
+      'file' => 'sf_notifications.admin.inc',
+    ),
+    SALESFORCE_PATH_NOTIFICATIONS_ADMIN . '/queue/process' => array(
+      'title' => 'Process Notifications queue',
+      'description' => 'Process Salesforce notifications queue',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sf_notifications_process_confirm_form'),
+      'access arguments' => array('administer salesforce'),
+      'type' => MENU_CALLBACK,
+      'file' => 'sf_notifications.admin.inc',
+    ),
+    SALESFORCE_PATH_NOTIFICATIONS_ADMIN . '/queue/empty' => array(
+      'title' => 'Process Notifications queue',
+      'description' => 'Empty Salesforce notifications queue',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('sf_notifications_empty_confirm_form'),
+      'access arguments' => array('administer salesforce'),
+      'type' => MENU_CALLBACK,
+      'file' => 'sf_notifications.admin.inc',
+    ),
   );
 }
 
@@ -119,22 +146,26 @@ function sf_notifications_endpoint() {
   $content = file_get_contents('php://input');
   if (empty($content)) {
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce Notifications: Empty request.');
-    exit;
+    drupal_exit();
   }
 
   salesforce_api_log(SALESFORCE_LOG_ALL, 'New outbound message received from Salesforce. Contents: <pre>%content</pre>', array('%content' => print_r($content, TRUE)));
 
-  $dom = new DOMDocument();
-  $dom->loadXML($content);
-  if (empty($dom) || !$dom->hasChildNodes()) {
-    salesforce_api_log(SALESFORCE_LOG_NONE,
-      'Salesforce Notifications: Failed to parse into DOM Document.
-      <pre>' . print_r($content) . '</pre>');
-    _sf_notifications_soap_respond('false');
-    exit;
+  // If enabled, try to place the item in the notifications queue and exit. If not
+  // succesful, log it, and try to process directly.
+  if (variable_get('sf_notifications_use_queue', 0)) {
+    $queue = DrupalQueue::get('sf_notifications_queue');
+    if ($queue->createItem($content)) {
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Outbound message from Salesforce pushed to queue.', array());
+      _sf_notifications_soap_respond('true');
+      drupal_exit();
+    }
+    else {
+      salesforce_api_log(SALESFORCE_LOG_ALL, 'Unable to store outbound message from Salesforce in queue, attempting to process directly. Contents: <pre>%content</pre>', array('%content' => print_r($content, TRUE)), WATCHDOG_ERROR);
+    }
   }
-  $resultArray = _sf_notifications_parse_message($dom);
-  $ret = _sf_notifications_handle_message($resultArray);
+
+  $ret = _sf_notifications_parse_handle_message($content);
 
   // Sends SOAP response to SFDC
   if ($ret) {
@@ -143,7 +174,7 @@ function sf_notifications_endpoint() {
   else {
     _sf_notifications_soap_respond('false');
   }
-  exit;
+  drupal_exit();
 }
 
 /**
@@ -431,4 +462,49 @@ function _sf_notifications_soap_respond($tf = 'true') {
     </soapenv:Body>
 </soapenv:Envelope>
 ';
+}
+
+/**
+ * Parses and handles an outbound message from Salesforce.
+ *
+ * @param string $content The XML contents of the outbound message from Salesforce.
+ * @return (boolean) FALSE if there were errors. TRUE otherwise.
+ */
+function _sf_notifications_parse_handle_message($content) {
+
+  $dom = new DOMDocument();
+  $dom->loadXML($content);
+  if (empty($dom) || !$dom->hasChildNodes()) {
+    salesforce_api_log(SALESFORCE_LOG_NONE,
+      'Salesforce Notifications: Failed to parse into DOM Document.
+      <pre>' . print_r($content) . '</pre>', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  $resultArray = _sf_notifications_parse_message($dom);
+  $ret = _sf_notifications_handle_message($resultArray);
+
+  return $ret;
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * We claim an item for 60 seconds. If it processes, we remove it from the queue.
+ * If it doesn't, we leave it. We don't relinquish the claim so we can move past it
+ * and continue processing other queue items. We log a watchdog items for the
+ * admin's notice.
+ */
+function sf_notifications_cron() {
+  $queue = DrupalQueue::get('sf_notifications_queue');
+  $end = time() + 60;
+  while (time() < $end && ($item = $queue->claimItem(60))) {
+    $ret = _sf_notifications_parse_handle_message($item->data);
+    if ($ret) {
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Queued notification processed. Contents: <pre>%content</pre>', array('%content' => print_r($item->data, TRUE)));
+      $queue->deleteItem($item);
+    }
+    else {
+      salesforce_api_log(SALESFORCE_LOG_ALL, 'Queued notification processing failed. Contents: <pre>%content</pre>', array('%content' => print_r($item->data, TRUE)), WATCHDOG_ERROR);
+    }
+  }
 }
