@@ -75,7 +75,7 @@ function sf_import_settings_form($form, $form_state) {
   }
 
   // Load the fieldmaps
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
   $maps = array();
   foreach ($fieldmaps as $map) {
     $maps[$map->name] = $map->name;
@@ -99,7 +99,7 @@ function sf_import_settings_form($form, $form_state) {
   if ($import_maps) {
     foreach ($import_maps as $import_map_key => $import_map_value) {
       if ($import_map_value !== 0) {
-        $map = salesforce_api_salesforce_field_map_load($import_map_key);
+        $map = salesforce_api_salesforce_fieldmap_load($import_map_key);
         $start = variable_get('sf_import_queue_last_import', REQUEST_TIME);
         $end = REQUEST_TIME;
         // salesforce_api_get_updated requires the query window to be at least 1 minute
@@ -195,7 +195,7 @@ function sf_import_create($form, &$form_state, $ongoing = 0) {
 
   $form = $options = array();
 
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
   foreach ($fieldmaps as $map) {
     $edit = l('edit', SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit', array('query' => array('destination' => drupal_get_destination())));
     $options[$map->name] =
@@ -442,7 +442,7 @@ function sf_import_cron() {
  * new records since the last time the import process was run.
  */
 function _sf_import_get_updated_records() {
-  $fieldmaps = variable_get('sf_import_fieldmaps', salesforce_api_salesforce_field_map_load_all());
+  $fieldmaps = variable_get('sf_import_fieldmaps', salesforce_api_salesforce_fieldmap_load_all());
   $active_fieldmaps = array();
   foreach ($fieldmaps as $map_key => $map_value) {
     if ($map_value !== 0) {
@@ -458,7 +458,7 @@ function _sf_import_get_updated_records() {
   // Get updated and/or deleted items for each fieldmap and store in sf_import_queue
   // Start date is newest date of SFID stored in sf_import_queue, end date is time()
   foreach ($active_fieldmaps as $map) {
-    $map = salesforce_api_salesforce_field_map_load($map);
+    $map = salesforce_api_salesforce_fieldmap_load($map);
     $sql = "SELECT time FROM {sf_import_queue} ORDER BY time DESC LIMIT 1";
     $start = db_query($sql)->fetchField();
     if (!$start) {
@@ -506,7 +506,7 @@ function _sf_import_get_updated_records() {
  */
 function _sf_import_process_records() {
   // Process sf_import_queue items
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
   $records = array();
   $result = db_query("SELECT sfid, fieldmap FROM {sf_import_queue}");
   foreach ($result as $sfids) {

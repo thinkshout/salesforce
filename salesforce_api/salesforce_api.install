@@ -290,7 +290,7 @@ function salesforce_api_update_6201() {
  * Try to fix existing maps based on the new cck support
  */
 function salesforce_api_update_6202() {
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
   $ret = array();
   $changes = array();
   module_enable(array('sf_contrib'));

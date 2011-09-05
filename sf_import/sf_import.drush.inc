@@ -104,7 +104,7 @@ function drush_sf_import_sf_get_updated() {
  * Display available Salesforce field mappings
  */
 function _drush_sf_import_show_fieldmaps() {
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
 
   $table = array(array('Key', 'Import', 'Description'));
   foreach ($fieldmaps as $k => $map) {
