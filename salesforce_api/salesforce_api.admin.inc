@@ -230,7 +230,8 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
     ini_set('soap.wsdl_cache_enabled',    '0');
   }
 
-  if ($values['salesforce_api_reset_credentials']) {
+  if (isset($values['salesforce_api_reset_credentials']) &&
+    $values['salesforce_api_reset_credentials'] == 1) {
     unset($form_state['values']['salesforce_api_reset_credentials']);
     foreach (array('username', 'password', 'token', 'encrypt') as $value) {
       variable_del('salesforce_api_' . $value);
