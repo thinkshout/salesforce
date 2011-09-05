@@ -1,5 +1,5 @@
 name = Salesforce Notifications
-description = Responds to SOAP Outbound Messages from Salesforce.
+description = Responds to SOAP Outbound Messages from Salesforce. (PARTIAL PORT)
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

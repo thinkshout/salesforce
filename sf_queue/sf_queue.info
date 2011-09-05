@@ -1,8 +1,5 @@
 name = Salesforce Export Queue
-description = Implements an export queue for Salesforce API
+description = Implements an export queue for Salesforce API. (TO BE REDONE)
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x
-files[] = sf_queue.admin.inc
-files[] = sf_queue.install
-files[] = sf_queue.module

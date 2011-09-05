@@ -1,5 +1,5 @@
 name = Salesforce Import
-description = Provides facilities to import Salesforce records into Drupal.
+description = Provides facilities to import Salesforce records into Drupal. (UNTESTED)
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

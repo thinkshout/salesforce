@@ -1,5 +1,5 @@
 name = Salesforce Match
-description = Extends Salesforce API module so it checks for an existing Salesforce object to match a Drupal object before creating a new one in Salesforce.
+description = Extends Salesforce API module so it checks for an existing Salesforce object to match a Drupal object before creating a new one in Salesforce. (UNTESTED)
 dependencies[] = salesforce_api
 package = Salesforce
 core = 7.x

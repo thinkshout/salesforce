@@ -1,5 +1,5 @@
 name = Salesforce API
-description = Defines an API that enables modules to interact with the Salesforce server.
+description = Defines an API that enables modules to interact with the Salesforce server. (STABLE)
 dependencies[] = ctools
 dependencies[] = libraries
 package = Salesforce
