@@ -225,7 +225,7 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
     drupal_set_message(t('Please make sure the WSDL directory is writeable, and upload a valid Salesforce .xml or .wsdl file.'));
     $form_state['redirect'] = array(
       SALESFORCE_PATH_UPDATE_WSDL,
-      array('query' => 'destination=' . SALESFORCE_PATH_ADMIN),
+      array('query' => array('destination' => SALESFORCE_PATH_ADMIN)),
     );
     ini_set('soap.wsdl_cache_enabled',    '0');
   }
