@@ -920,6 +920,9 @@ function salesforce_api_update_wsdl_form() {
   // WSDL file should be outside of webroot. The admin should specify a path
   // outside the webroot, then upload a WSDL file to it.
   $wsdl_dir = variable_get('salesforce_api_dir_wsdl', FALSE);
+  if (!$wsdl_dir) {
+    $wsdl_dir = SALESFORCE_DIR_WSDL;
+  }
   $form['wsdl'] = array(
     '#type' => 'textfield',
     '#title' => t('WSDL Directory'),
@@ -949,7 +952,7 @@ function salesforce_api_update_wsdl_form() {
 function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
   $source = 'salesforce_api_wsdl_file';
   // Find the dir the file should go into
-  if (!$dir = variable_get('salesforce_api_dir_wsdl', FALSE)) {
+  if (!$dir = $form_state['values']['wsdl']) {
     $dir = drupal_get_path('module', 'salesforce_api') . '/wsdl';
   }
   $dir = rtrim($dir, '/');
@@ -1010,6 +1013,9 @@ function salesforce_api_update_wsdl_form_validate($form, &$form_state) {
  */
 function salesforce_api_update_wsdl_form_submit($form, &$form_state) {
   drupal_set_message(t('The WSDL file has been successfully uploaded. You should remove write permissions from the wsdl directory.'));
+
+  // Set the WSDL directory, already validated to exist and be writable
+  variable_set('salesforce_api_dir_wsdl', $form_state['values']['wsdl']);
 
   // Disable PHP SOAP WSDL cache for this request. This doesn't disable the
   // cache permanently, but should force PHP to reload it.
