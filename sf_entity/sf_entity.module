@@ -1089,7 +1089,7 @@ function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) 
     }
   }
   // Ensure that all taxonomy terms have an input format set.
-  if($entity_type == 'term') {
+  if($entity_type == 'taxonomy_term') {
     if(!isset($entity->format) || empty($entity->format)) {
       $entity->format = 'filtered_html';
     }
