@@ -846,7 +846,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
 
   // Load the fieldmap data.
   $map = salesforce_api_salesforce_fieldmap_load($name);
-  
+
   // Load the object definitions.
   $drupal_object_definition = salesforce_api_fieldmap_objects_load('drupal', $map->drupal_entity, $map->drupal_bundle);
   $salesforce_object_definition = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map->salesforce);
@@ -1086,6 +1086,12 @@ function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) 
     }
     if(!isset($entity->created) || empty($entity->created)) {
       $entity->created = REQUEST_TIME;
+    }
+  }
+  // Ensure that all taxonomy terms have an input format set.
+  if($entity_type == 'term') {
+    if(!isset($entity->format) || empty($entity->format)) {
+      $entity->format = 'filtered_html';
     }
   }
 }
