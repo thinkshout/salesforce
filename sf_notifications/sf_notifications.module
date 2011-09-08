@@ -139,9 +139,6 @@ function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
  * http://www.salesforce.com/us/developer/docs/ajax/Content/sforce_api_ajax_queryresultiterator.htm
  */
 function sf_notifications_endpoint() {
-  // Needed for the reference to SObject in parse_message, otherwise it just
-  // seems to die when it tries to call new SObject()
-  require_once DRUPAL_ROOT . '/' . SALESFORCE_DIR_SOAPCLIENT . '/SforcePartnerClient.php';
 
   $content = file_get_contents('php://input');
   if (empty($content)) {
@@ -379,6 +376,13 @@ function sf_notifications_update_record($object_record) {
  */
 function sf_notifications_check_condition($operation, $notification_data, $map) {
   $settings = variable_get('sf_notifications_settings', array());
+
+  // If the fieldmap-specific notifications form has not been saved, the variable
+  // won't contain the map specific settings. In that case, there are no conditions
+  // we need to evaluate.
+  if (!isset($settings[$map->name])) {
+    return TRUE;
+  }
   $setting = $settings[$map->name];
   if (empty($setting['condition'])) {
     return TRUE;
@@ -407,6 +411,9 @@ function sf_notifications_check_condition($operation, $notification_data, $map) 
  *    An indexed array mapping sfids to SObject records from Salesforce.
  */
 function _sf_notifications_parse_message($domDoc) {
+  // Needed for the reference to SObject, since the Enterprise Toolkit doesn't have an SObject class.
+  require_once DRUPAL_ROOT . '/' . SALESFORCE_DIR_SOAPCLIENT . '/SforcePartnerClient.php';
+
   $matches = array(
     'salesforce' => array(),
     'drupal' => array(),
@@ -495,6 +502,10 @@ function _sf_notifications_parse_handle_message($content) {
  * admin's notice.
  */
 function sf_notifications_cron() {
+
+  // Release any expired claims so they are available to be re-claimed.
+  sf_notifications_release_expired_claims();
+
   $queue = DrupalQueue::get('sf_notifications_queue');
   $end = time() + 60;
   while (time() < $end && ($item = $queue->claimItem(60))) {
@@ -507,4 +518,21 @@ function sf_notifications_cron() {
       salesforce_api_log(SALESFORCE_LOG_ALL, 'Queued notification processing failed. Contents: <pre>%content</pre>', array('%content' => print_r($item->data, TRUE)), WATCHDOG_ERROR);
     }
   }
+}
+
+/**
+ * Release items which have already had their claims expired, but have not been
+ * released. Usually, this happens on cron, but we want to do it before processing
+ * clearing the queue.
+ */
+function sf_notifications_release_expired_claims() {
+  // Reset expired sf_notifications_queue items in the queue table.
+  db_update('queue')
+    ->fields(array(
+    'expire' => 0,
+  ))
+    ->condition('expire', 0, '<>')
+    ->condition('expire', REQUEST_TIME, '<')
+    ->condition('name', 'sf_notifications_queue')
+    ->execute();
 }

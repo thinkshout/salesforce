@@ -72,7 +72,7 @@ function sf_notifications_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Process messages on Drupal cron.'),
     '#default_value' => variable_get('sf_notifications_use_drupal_cron', 1),
-    '#description' => t('This checkbox has no effect it the queue is not enabled above. If this box is checked, the queue will be processed as part of the normal Drupal cron. However, if you want your messages processed on a different schedule, copy sf_notifications.process_queue.php to your Drupal root directory, and add a system cron job for it.'),
+    '#description' => t('This checkbox has no effect it the queue is not enabled above. If this box is checked, the queue will be processed as part of the normal Drupal cron. However, if you want your messages processed on a different schedule, you can create a system cron job to execute the sf-process-notifications drush task. Note: The user executing the cron job / drush task must have read access to your AES module keyfile.'),
   );
 
   return system_settings_form($form);
@@ -149,9 +149,9 @@ function sf_notifications_queue_form($form, &$form_state) {
   // get a list of items from the queue.
   $queue_items = array();
   $results = db_query("SELECT item_id, data, created FROM {queue} WHERE name = 'sf_notifications_queue'");
-  foreach ($results as $r) {
+  foreach ($results as $item) {
     $data = unserialize($item->data);
-    $queue_items[] = array($r->item_id, print_r($data, TRUE), format_date($r->created));
+    $queue_items[] = array($item->item_id, print_r($data, TRUE), format_date($item->created));
   }
 
   $header = array(array('data' => 'Queue ID', 'field' => 'item_id'), 'Data', array('data' => 'Created', 'field' => 'created'));
@@ -161,6 +161,11 @@ function sf_notifications_queue_form($form, &$form_state) {
   );
 
   $form['actions']['#type'] = 'actions';
+
+  $form['actions']['help_text'] = array(
+    '#markup' => '<p>' . t("The buttons below only act on items in the queue that are not currently claimed for processing. If items still remain in the queue after clicking 'Empty Notifications Queue', please wait a minute for the queue claim to expire, then try again.") . '</p>',
+  );
+
   $form['actions']['process'] = array(
     '#type' => 'submit',
     '#value' => t('Process queue items'),
@@ -205,6 +210,9 @@ function sf_notifications_process_confirm_form($form, &$form_state) {
 
 // Submit handler for the 'Process queue items' button confirmation form.
 function sf_notifications_process_confirm_form_submit($form, &$form_state) {
+  // Release any expired claims so they are available to be re-claimed.
+  sf_notifications_release_expired_claims();
+
   $queue = DrupalQueue::get('sf_notifications_queue');
 
   while ($item = $queue->claimItem(60)) {
@@ -240,6 +248,10 @@ function sf_notifications_empty_confirm_form($form, &$form_state) {
 
 // Submit handler for the 'Empty queue items' button confirmation form.
 function sf_notifications_empty_confirm_form_submit($form, &$form_state) {
+
+  // Release any expired claims so they are available to be re-claimed.
+  sf_notifications_release_expired_claims();
+
   $queue = DrupalQueue::get('sf_notifications_queue');
   while ($item = $queue->claimItem(60)) {
       $queue->deleteItem($item);
