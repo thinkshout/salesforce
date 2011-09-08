@@ -24,16 +24,6 @@ function sf_notifications_menu() {
       'access callback' => 'sf_notifications_allowed_ips',
       'type' => MENU_CALLBACK,
     ),
-    SALESFORCE_PATH_FIELDMAPS . '/%/notifications' => array(
-      'title' => 'Notifications',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('sf_notifications_fieldmap_settings', 4),
-      'access callback' => 'sf_notifications_fieldmap_settings_access',
-      'access arguments' => array(4, 'administer salesforce'),
-      'file' => 'sf_notifications.admin.inc',
-      'type' => MENU_LOCAL_TASK,
-      'weight' => 15,
-    ),
     SALESFORCE_PATH_NOTIFICATIONS_ADMIN . '/queue' => array(
       'title' => 'Manage Notifications queue',
       'description' => 'Salesforce Notifications queue view and actions.',
@@ -207,8 +197,14 @@ function _sf_notifications_handle_message($objects) {
     $operation = $obj->fields->IsDeleted == 'true' ? 'delete' : 'update';
     $object_record['fields'] = $obj->fields;
     $object_record['operation'] = $operation;
-    if (!sf_notifications_check_condition($operation, $object_record, $map)) {
-      continue;
+
+    // Check if any implementations of hook_sf_notifications_check_condition()
+    // tell us we can't process this item with this map.
+    $results = module_invoke_all('sf_notifications_check_condition', $operation, $object_record, $map);
+    foreach ($results as $result) {
+      if (!$result) {
+        continue 2;
+      }
     }
 
     switch ($operation) {
@@ -247,9 +243,16 @@ function _sf_notifications_handle_message($objects) {
         'fields' => $obj->fields,
         'operation' => 'insert',
       );
-      if (!sf_notifications_check_condition('insert', $object_record, $map)) {
-        continue;
+
+      // Check if any implementations of hook_sf_notifications_check_condition()
+      // tell us we can't process this item with this map.
+      $results = module_invoke_all('sf_notifications_check_condition', 'insert', $object_record, $map);
+      foreach ($results as $result) {
+        if (!$result) {
+          continue 2;
+        }
       }
+
       $success = $success && sf_notifications_update_record($object_record);
     }
   }
@@ -368,33 +371,6 @@ function sf_notifications_update_record($object_record) {
     $success = FALSE;
   }
   return $success;
-}
-
-/**
- * Helper function to check condition of a fieldmap. Adapted from drupal_eval()
- * since we need to pass a couple variables along to the eval() call.
- */
-function sf_notifications_check_condition($operation, $notification_data, $map) {
-  $settings = variable_get('sf_notifications_settings', array());
-
-  // If the fieldmap-specific notifications form has not been saved, the variable
-  // won't contain the map specific settings. In that case, there are no conditions
-  // we need to evaluate.
-  if (!isset($settings[$map->name])) {
-    return TRUE;
-  }
-  $setting = $settings[$map->name];
-  if (empty($setting['condition'])) {
-    return TRUE;
-  }
-  $code = $setting['condition'];
-  unset($setting, $settings);
-
-  ob_start();
-  print eval('?><?php ' . $code);
-  $output = ob_get_contents();
-  ob_end_clean();
-  return $output;
 }
 
 /**

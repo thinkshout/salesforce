@@ -79,61 +79,6 @@ function sf_notifications_settings_form($form, &$form_state) {
 }
 
 /**
- * Form builder function for fieldmap-specific Salesforce Notifications settings.
- */
-function sf_notifications_fieldmap_settings($form, &$form_state, $fieldmap_id) {
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap_id);
-  $active = variable_get('sf_notifications_active_maps', array());
-  $active = $active[$fieldmap_id];
-  if($active != '') {
-    $active = TRUE;
-  }
-  // @todo: Determine how to get this value unset.
-  $form = array(
-    'active' => array(
-      '#type' => 'checkbox',
-      '#title' => 'Active',
-      '#description' => 'Check this box if this fieldmap should respond to Salesforce Outbound Message events.',
-      '#default_value' => $active,
-    ),
-  );
-
-  $form['sf_notifications_settings'] = array(
-    '#tree' => TRUE,
-  );
-  $settings = variable_get('sf_notifications_settings', array('condition' => array()));
-
-  foreach ($settings as $id => $setting) {
-    $form['sf_notifications_settings'][$id] = array(
-      '#type' => 'value',
-      '#value' => $setting,
-    );
-  }
-  $form['sf_notifications_settings'][$fieldmap_id] = array(
-    '#tree' => TRUE,
-    '#type' => 'fieldset',
-    '#title' => 'Conditions',
-    '#description' => 'You may assign conditions under which notifications will respond to Outbound Message events. Notifications failing these conditions will not trigger this fieldmap. This may be particularly useful, e.g. in the case of Salesforce objects that are mapped to multiple Drupal objects.',
-  );
-  if(isset($settings[$fieldmap_id])) {
-    $settings = $settings[$fieldmap_id];
-  }
-  if(isset($settings['condition'])) {
-    $condition = $settings['condition'];
-  }
-  else {
-    $condition = '';
-  }
-  $form['sf_notifications_settings'][$fieldmap_id]['condition'] = array(
-    '#type' => 'textarea',
-    '#title' => FALSE,
-    '#default_value' => $condition,
-    '#description' => 'PHP code - <strong>do not include &lt;?php ?> tags</strong>. This code should return TRUE or FALSE to determine whether this fieldmap should be triggered on a relevant Outbound Message event. Available variables are $map (fieldmap object to be used to create the import), $notification_data (array of parsed object data from salesforce, keys are "oid" - drupal object id on update or empty on insert; "name" - machine name of fieldmap used for this operation; "fields" - object with the actual data from Salesforce), $operation ("insert", "update", or "delete")',
-  );
-  return system_settings_form($form);
-}
-
-/**
  * Salesforce Notifications queue form.
  *
  * Shows queue contents, and adds some controls to process and empty the queue.
