@@ -257,9 +257,6 @@ function _sf_notifications_handle_message($objects) {
     }
   }
 
-  // Clear the page and block caches, for good measure.
-  cache_clear_all();
-
   return $success;
 }
 
@@ -274,6 +271,10 @@ function sf_notifications_delete_record($object_record) {
   switch ($object_record['drupal_entity']) {
     case 'user':
       user_cancel(array(), $object_record['oid'], $method = 'user_cancel_block' /* TODO Set this variable */);
+
+      // Invoke hook_sf_notifications_processed().
+      module_invoke_all('sf_notifications_processed', 'delete', $object_record);
+
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications deleted user '
         . $object_record['oid'] . ' sfid ' . $sfid);
@@ -296,6 +297,9 @@ function sf_notifications_delete_record($object_record) {
       module_invoke_all('node_delete', $node);
       search_wipe($node->nid, 'node');
 
+      // Invoke hook_sf_notifications_processed().
+      module_invoke_all('sf_notifications_processed', 'delete', $object_record);
+
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications deleted node '
         . $object_record['oid'] . ' sfid ' . $sfid);
@@ -305,6 +309,10 @@ function sf_notifications_delete_record($object_record) {
       if (function_exists($object_record['drupal_entity'] . '_delete')) {
         $function = $object_record['drupal_entity'] . '_delete';
         $function($object_record['oid']);
+
+        // Invoke hook_sf_notifications_processed().
+        module_invoke_all('sf_notifications_processed', 'delete', $object_record);
+
         salesforce_api_log(SALESFORCE_LOG_ALL,
           'Salesforce Notifications deleted '
           . $object_record['drupal_type'] . ' ' . $object_record['oid']
@@ -319,6 +327,7 @@ function sf_notifications_delete_record($object_record) {
       break;
 
   }
+
   return $success;
 }
 
@@ -354,6 +363,9 @@ function sf_notifications_update_record($object_record) {
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications successful ' . $object_record['operation'] .
         ' of ' . $drupal_entity . ' ' . $drupal_id);
+
+      // Invoke hook_sf_notifications_processed().
+      module_invoke_all('sf_notifications_processed', $object_record['operation'], $object_record);
     }
     else {
       salesforce_api_log(SALESFORCE_LOG_ALL,
