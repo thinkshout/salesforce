@@ -1131,6 +1131,15 @@ function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
  * @todo salesforce_api_id_save_multi()
  */
 function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
+  // Allow other modules to respond to salesforce_api_id_save being called
+  foreach (module_implements('salesforce_api_id_save_alter') as $module) {
+    $function = $module . '_salesforce_api_id_save_alter';
+    $continue = $function($drupal_type, $oid, $sfid, $name);
+    if ($continue === FALSE) {
+      return FALSE;
+    }
+  }
+
   if ($oid) {
     $oid = (int)$oid;
   }
