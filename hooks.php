@@ -258,7 +258,7 @@ function hook_salesforce_api_pre_import(&$object, $name, $sf_data, &$changes = N
  *  was passed to user_save(). Otherwise null.
  * @return void
  */
-function hook_salesforce_api_post_import($object, $name, $sf_data, $name, $create, $changes = NULL) {
+function hook_salesforce_api_post_import($object, $name, $sf_data, $create, $changes = NULL) {
   
 }
 
