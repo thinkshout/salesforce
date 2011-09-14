@@ -111,6 +111,16 @@ function sf_entity_save($entity, $type, $op) {
     return;
   }
 
+  // Allow modules to alter the Salesforce object and fieldmap prior to saving,
+  // or to claim it for queue processing.
+  foreach (module_implements('salesforce_api_pre_save') as $module) {
+    $function = $module . '_salesforce_api_pre_save';
+    $continue = $function($entity, $type, $op);
+    if ($continue === FALSE) {
+      return;
+    }
+  }
+
   // If this is an update, and the node already has a Salesforce mapping,
   // try to load it. If the load fails, we need to fetch the appropriate
   // fieldmap. Either way, we're upserting the Salesforce record.

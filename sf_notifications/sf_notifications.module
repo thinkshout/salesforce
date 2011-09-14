@@ -24,16 +24,6 @@ function sf_notifications_menu() {
       'access callback' => 'sf_notifications_allowed_ips',
       'type' => MENU_CALLBACK,
     ),
-    SALESFORCE_PATH_FIELDMAPS . '/%/notifications' => array(
-      'title' => 'Notifications',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('sf_notifications_fieldmap_settings', 4),
-      'access callback' => 'sf_notifications_fieldmap_settings_access',
-      'access arguments' => array(4, 'administer salesforce'),
-      'file' => 'sf_notifications.admin.inc',
-      'type' => MENU_LOCAL_TASK,
-      'weight' => 15,
-    ),
     SALESFORCE_PATH_NOTIFICATIONS_ADMIN . '/queue' => array(
       'title' => 'Manage Notifications queue',
       'description' => 'Salesforce Notifications queue view and actions.',
@@ -207,8 +197,14 @@ function _sf_notifications_handle_message($objects) {
     $operation = $obj->fields->IsDeleted == 'true' ? 'delete' : 'update';
     $object_record['fields'] = $obj->fields;
     $object_record['operation'] = $operation;
-    if (!sf_notifications_check_condition($operation, $object_record, $map)) {
-      continue;
+
+    // Check if any implementations of hook_sf_notifications_check_condition()
+    // tell us we can't process this item with this map.
+    $results = module_invoke_all('sf_notifications_check_condition', $operation, $object_record, $map);
+    foreach ($results as $result) {
+      if (!$result) {
+        continue 2;
+      }
     }
 
     switch ($operation) {
@@ -247,15 +243,19 @@ function _sf_notifications_handle_message($objects) {
         'fields' => $obj->fields,
         'operation' => 'insert',
       );
-      if (!sf_notifications_check_condition('insert', $object_record, $map)) {
-        continue;
+
+      // Check if any implementations of hook_sf_notifications_check_condition()
+      // tell us we can't process this item with this map.
+      $results = module_invoke_all('sf_notifications_check_condition', 'insert', $object_record, $map);
+      foreach ($results as $result) {
+        if (!$result) {
+          continue 2;
+        }
       }
+
       $success = $success && sf_notifications_update_record($object_record);
     }
   }
-
-  // Clear the page and block caches, for good measure.
-  cache_clear_all();
 
   return $success;
 }
@@ -271,6 +271,10 @@ function sf_notifications_delete_record($object_record) {
   switch ($object_record['drupal_entity']) {
     case 'user':
       user_cancel(array(), $object_record['oid'], $method = 'user_cancel_block' /* TODO Set this variable */);
+
+      // Invoke hook_sf_notifications_processed().
+      module_invoke_all('sf_notifications_processed', 'delete', $object_record);
+
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications deleted user '
         . $object_record['oid'] . ' sfid ' . $sfid);
@@ -293,6 +297,9 @@ function sf_notifications_delete_record($object_record) {
       module_invoke_all('node_delete', $node);
       search_wipe($node->nid, 'node');
 
+      // Invoke hook_sf_notifications_processed().
+      module_invoke_all('sf_notifications_processed', 'delete', $object_record);
+
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications deleted node '
         . $object_record['oid'] . ' sfid ' . $sfid);
@@ -302,6 +309,10 @@ function sf_notifications_delete_record($object_record) {
       if (function_exists($object_record['drupal_entity'] . '_delete')) {
         $function = $object_record['drupal_entity'] . '_delete';
         $function($object_record['oid']);
+
+        // Invoke hook_sf_notifications_processed().
+        module_invoke_all('sf_notifications_processed', 'delete', $object_record);
+
         salesforce_api_log(SALESFORCE_LOG_ALL,
           'Salesforce Notifications deleted '
           . $object_record['drupal_type'] . ' ' . $object_record['oid']
@@ -316,6 +327,7 @@ function sf_notifications_delete_record($object_record) {
       break;
 
   }
+
   return $success;
 }
 
@@ -336,12 +348,14 @@ function sf_notifications_update_record($object_record) {
       $drupal_entity = $map->drupal_entity;
     }
   }
-  // Check to see if the drupal_entity is one handled by sf_entity.
+  // Check to see if the drupal_entity is one handled by the sf_entity module.
   $entities = field_info_bundles();
   $entity_names = array_keys($entities);
   if(in_array($drupal_entity, $entity_names)) {
     $function = 'sf_entity_import';
   }
+  // Otherwise, assume that there is a function name containing the name of the drupal object,
+  // which can handle its insertion.
   else {
     $function = 'sf_' . $drupal_entity . '_import';
   }
@@ -351,6 +365,9 @@ function sf_notifications_update_record($object_record) {
       salesforce_api_log(SALESFORCE_LOG_ALL,
         'Salesforce Notifications successful ' . $object_record['operation'] .
         ' of ' . $drupal_entity . ' ' . $drupal_id);
+
+      // Invoke hook_sf_notifications_processed().
+      module_invoke_all('sf_notifications_processed', $object_record['operation'], $object_record, $drupal_id);
     }
     else {
       salesforce_api_log(SALESFORCE_LOG_ALL,
@@ -368,33 +385,6 @@ function sf_notifications_update_record($object_record) {
     $success = FALSE;
   }
   return $success;
-}
-
-/**
- * Helper function to check condition of a fieldmap. Adapted from drupal_eval()
- * since we need to pass a couple variables along to the eval() call.
- */
-function sf_notifications_check_condition($operation, $notification_data, $map) {
-  $settings = variable_get('sf_notifications_settings', array());
-
-  // If the fieldmap-specific notifications form has not been saved, the variable
-  // won't contain the map specific settings. In that case, there are no conditions
-  // we need to evaluate.
-  if (!isset($settings[$map->name])) {
-    return TRUE;
-  }
-  $setting = $settings[$map->name];
-  if (empty($setting['condition'])) {
-    return TRUE;
-  }
-  $code = $setting['condition'];
-  unset($setting, $settings);
-
-  ob_start();
-  print eval('?><?php ' . $code);
-  $output = ob_get_contents();
-  ob_end_clean();
-  return $output;
 }
 
 /**
