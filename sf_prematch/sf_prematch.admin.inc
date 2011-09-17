@@ -67,10 +67,7 @@ function sf_prematch_list() {
  * @todo Please document this function.
  * @see http://drupal.org/node/1354
  */
-function sf_prematch_edit_form($form, &$form_state, $fieldmap) {
-  // Load the fieldmap from the database.
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
-
+function sf_prematch_edit_form($form, &$form_state, $map) {
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
     drupal_set_message(t('That fieldmap does not exist.'), 'error');
@@ -84,14 +81,14 @@ function sf_prematch_edit_form($form, &$form_state, $fieldmap) {
   }
 
   // Load the prematch from the database.
-  $prematch = sf_prematch_match_by_load($fieldmap);
+  $prematch = sf_prematch_match_by_load($map->name);
 
   $form = array();
 
   // Add the index to the form array.
   $form['name'] = array(
     '#type' => 'value',
-    '#value' => $fieldmap,
+    '#value' => $map->name,
   );
 
   // Set flag for use in deciding where to redirect to on form submit.
@@ -211,10 +208,8 @@ function sf_prematch_edit_form_submit($form, &$form_state) {
  * @todo Please document this function.
  * @see http://drupal.org/node/1354
  */
-function sf_prematch_delete_form($form, &$form_state, $fieldmap) {
-  // Load the fieldmap and prematch from the database.
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
-  $match_by = sf_prematch_match_by_load($fieldmap);
+function sf_prematch_delete_form($form, &$form_state, $map) {
+  $match_by = sf_prematch_match_by_load($map->name);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($match_by)) {
@@ -227,7 +222,7 @@ function sf_prematch_delete_form($form, &$form_state, $fieldmap) {
   // Add the fieldmap to the form array.
   $form['name'] = array(
     '#type' => 'value',
-    '#value' => $fieldmap,
+    '#value' => $map->name,
   );
 
   // Build the description text for this prematch.

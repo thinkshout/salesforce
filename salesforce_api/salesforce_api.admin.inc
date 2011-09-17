@@ -461,9 +461,7 @@ function salesforce_api_fieldmap_create($values) {
  * Displays the form for cloning a fieldmap
  *
  */
-function salesforce_api_fieldmap_clone_form($form, &$form_state, $fieldmap) {
-  // Load the fieldmap from the database.
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
+function salesforce_api_fieldmap_clone_form($form, &$form_state, $map) {
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
     drupal_set_message(t('That fieldmap does not exist.'), 'error');
@@ -474,7 +472,7 @@ function salesforce_api_fieldmap_clone_form($form, &$form_state, $fieldmap) {
   // Add the fieldmap to the form array.
   $form['fieldmap_index'] = array(
     '#type' => 'value',
-    '#value' => $fieldmap,
+    '#value' => $map->name,
   );
 
   // Build the description text for this fieldmap.
@@ -506,10 +504,8 @@ function salesforce_api_fieldmap_clone_form_submit($form, &$form_state) {
 /**
  * Displays the confirmation form for deleting a fieldmap.
  */
-function salesforce_api_fieldmap_delete_form($form, &$form_state, $fieldmap) {
+function salesforce_api_fieldmap_delete_form($form, &$form_state, $map) {
   $args = arg();
-  // Load the fieldmap from the database.
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -522,7 +518,7 @@ function salesforce_api_fieldmap_delete_form($form, &$form_state, $fieldmap) {
   // Add the fieldmap to the form array.
   $form['fieldmap_index'] = array(
     '#type' => 'value',
-    '#value' => $fieldmap,
+    '#value' => $map->name,
   );
 
   // Build the description text for this fieldmap.
@@ -554,14 +550,11 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
  */
 // @todo: 1) Two-way sync rules on the field level.
 //        2) Determine why required fields for a particular type are not getting added.
-function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
+function salesforce_api_fieldmap_edit_form($form, &$form_state, $map) {
   // Include the CSS and JS for the form.
   $path = drupal_get_path('module', 'salesforce_api');
   drupal_add_css($path . '/misc/salesforce_api.admin.css');
   drupal_add_js($path . '/misc/salesforce_api.admin.js');
-
-  // Load the fieldmap from the database.
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
 
   // Return to the admin page if the fieldmap did not exist.
   if (empty($map)) {
@@ -574,7 +567,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $fieldmap) {
   // Add the index to the form array.
   $form['fieldmap_index'] = array(
     '#type' => 'value',
-    '#value' => $fieldmap,
+    '#value' => $map->name,
   );
 
   // Add a description of the source fieldmap to the form array.
@@ -929,15 +922,12 @@ function salesforce_api_fieldmap_edit_form_submit($form, &$form_state) {
 /**
  * Given a fieldmap name and a field, remove the field from the fieldmap.
  * Redirect to the fieldmap edit page unless specified.
- * @param string or object $fieldmap - the name of the fieldmap, or the fieldmap itself
+ * @param object $map - the name of the fieldmap, or the fieldmap itself
  * @param string $field - the name of the field to be removed
  * @param bool $redirect (optional) - default true. Whether to redirect to the fieldmap edit form.
  */
-function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRUE) {
-  if (is_string($fieldmap)) {
-    $fieldmap = salesforce_api_salesforce_fieldmap_load($fieldmap);
-  }
-  $object_definition = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $fieldmap->salesforce);
+function salesforce_api_fieldmap_remove_field($map, $field, $redirect = TRUE) {
+  $object_definition = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $map->salesforce);
   $success = TRUE;
 
   if (empty($object_definition['fields'][$field])) {
@@ -949,12 +939,12 @@ function salesforce_api_fieldmap_remove_field($fieldmap, $field, $redirect = TRU
     $success = FALSE;
   }
   else {
-    unset($fieldmap->fields[$field]);
-    salesforce_api_fieldmap_save($fieldmap);
+    unset($map->fields[$field]);
+    salesforce_api_fieldmap_save($map);
     $success = TRUE;
   }
   if ($redirect) {
-    drupal_goto(SALESFORCE_PATH_FIELDMAPS . '/' . $fieldmap->name . '/edit');
+    drupal_goto(SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit');
     exit;
   }
   return $success;

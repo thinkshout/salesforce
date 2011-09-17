@@ -153,7 +153,17 @@ function salesforce_api_menu() {
     'weight' => 5,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/%/edit'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap'] = array(
+    'title' => 'Edit',
+    'description' => 'Edit an existing fieldmap.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_api_fieldmap_edit_form', $map_id_arg),
+    'access callback' => '_salesforce_fieldmap_access',
+    'access arguments' => array('administer salesforce', 'edit', $map_id_arg),
+    'file' => 'salesforce_api.admin.inc',
+    'weight' => 10,
+  );
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/edit'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -164,7 +174,7 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 10,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/%/remove/%'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/remove/%'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing fieldmap.',
     'page callback' => 'salesforce_api_fieldmap_remove_field',
@@ -174,7 +184,7 @@ function salesforce_api_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'salesforce_api.admin.inc',
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/%/clone'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/clone'] = array(
     'title' => 'Clone',
     'description' => 'Clone an existing fieldmap.',
     'page callback' => 'drupal_get_form',
@@ -185,23 +195,22 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 15,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/%/delete'] = array(
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/delete'] = array(
     'title' => 'Delete',
     'description' => 'Delete an existing fieldmap.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_api_fieldmap_delete_form', $map_id_arg),
-    'access callback' => '_salesforce_fieldmap_access',
+    'access callback' => '_salesforce_fieldmap_delete_revert_access',
     'access arguments' => array('administer salesforce', 'delete', $map_id_arg),
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
     'weight' => 20,
   );
-  $items[SALESFORCE_PATH_FIELDMAPS . '/%/revert'] =
-    $items[SALESFORCE_PATH_FIELDMAPS . '/%/delete'];
-  $items[SALESFORCE_PATH_FIELDMAPS . '/%/revert']['title'] = 'Revert';
-  unset($items[SALESFORCE_PATH_FIELDMAPS . '/%/revert']['type'],
-        $items[SALESFORCE_PATH_FIELDMAPS . '/%/revert']['weight']);
-
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/revert'] =
+    $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/delete'];
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/revert']['title'] = 'Revert';
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/revert']['access callback'] = '_salesforce_fieldmap_delete_revert_access';
+  $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/revert']['access arguments'] = array('administer salesforce', 'revert', $map_id_arg);
 
   $items[SALESFORCE_PATH_OBJECT] = array(
     'title' => 'Object setup',
@@ -231,7 +240,7 @@ function salesforce_api_menu() {
   );
 
   if (module_exists('ctools')) {
-    $items[SALESFORCE_PATH_FIELDMAPS . '/%/export'] = array(
+    $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/export'] = array(
       'title' => 'Export',
       'description' => 'Export a fieldmap.',
       'page callback' => 'salesforce_api_export_salesforce_fieldmap',
@@ -258,6 +267,17 @@ function salesforce_api_menu() {
 }
 
 /**
+ * %wildcard_load implementation for %salesforce_api_fieldmap menu wildcard.
+ * @see salesforce_api_salesforce_fieldmap_load
+ */
+function salesforce_api_fieldmap_load($name) {
+  if (empty($name)) {
+    return;
+  }
+  return salesforce_api_salesforce_fieldmap_load($name);
+}
+
+/**
  * Implements hook_permission().
  */
 function salesforce_api_permission() {
@@ -281,19 +301,30 @@ function salesforce_api_permission() {
  * Access callback for fieldmap editing screens.
  *
  */
-function _salesforce_fieldmap_access($perm, $op = 'edit', $id = NULL) {
-  if (empty($id)) {
+function _salesforce_fieldmap_access($perm, $op = 'edit', $map = NULL) {
+  if (empty($map) || !is_object($map)) {
     return FALSE;
   }
-  else {
-    $maps = salesforce_api_salesforce_fieldmap_load_all();
-    foreach ($maps as $map) {
-      if ($id == $map->name) {
-        return user_access($perm);
-      }
-    }
+  return user_access($perm);
+}
+
+/**
+ * Access callback for delete / revert operations. Only code-based, overridden
+ * maps can be reverted and only database-only maps can be deleted.
+ */
+function _salesforce_fieldmap_delete_revert_access($perm, $op = 'delete', $map = NULL) {
+  if (empty($map) || !is_object($map)) {
+    return FALSE;
   }
-  return FALSE;
+
+  switch ($map->type) {
+    case 'Normal':
+      return $op == 'delete' && user_access($perm);
+    case 'Default':
+      return FALSE;
+    case 'Overridden':
+      return $op == 'revert' && user_access($perm);
+  }
 }
 
 /**
@@ -1767,8 +1798,7 @@ function salesforce_api_salesforce_fieldmap_load_by($conditions) {
  * @return array
  *   A CTools exportable form.
  */
-function salesforce_api_export_salesforce_fieldmap($fieldmap) {
-  $map = salesforce_api_salesforce_fieldmap_load($fieldmap);
+function salesforce_api_export_salesforce_fieldmap($map) {
   drupal_set_title(t('Export Fieldmap'));
   $code = salesforce_api_salesforce_fieldmap_export($map);
   return drupal_get_form('ctools_export_form', $code, 'Export Fieldmap');
