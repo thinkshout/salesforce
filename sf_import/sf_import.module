@@ -430,10 +430,12 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
  * Implements hook_cron().
  */
 function sf_import_cron() {
-  // Get new records from Salesforce since last time cron was run
-  _sf_import_get_updated_records();
-  // Process the records (insert/update records)
-  _sf_import_process_records();
+  if ($sf = salesforce_api_connect()) {
+    // Get new records from Salesforce since last time cron was run
+    _sf_import_get_updated_records();
+    // Process the records (insert/update records)
+    _sf_import_process_records();
+  }
 }
 
 /**
