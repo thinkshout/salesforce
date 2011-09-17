@@ -327,7 +327,6 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
       salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
     // $context['sandbox']['salesforce']['salesforce_object'] =
     //   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
-    $sql = 'SELECT oid, sfid FROM {salesforce_object_map} WHERE name = "%s"';
     $result = db_query('SELECT oid, sfid FROM {salesforce_object_map} WHERE name = :name', array(':name' => $map->name));
     while ($row = $result->fetchAssoc()) {
       $context['sandbox']['salesforce']['existing'][$row['sfid']] = $row['oid'];
@@ -524,8 +523,6 @@ function _sf_import_process_records() {
       $oid = $function($sfids->sfid, $sfids->fieldmap, $drupal_id);
       $records[] = array($sfids->sfid, $oid, $sfids->fieldmap);
     }
-    // TODO Please review the conversion of this statement to the D7 database API syntax.
-    /* db_query("DELETE FROM {sf_import_queue} WHERE sfid = '%s'", $sfids->sfid) */
     db_delete('sf_import_queue')
       ->condition('sfid', $sfids->sfid)
       ->execute();
