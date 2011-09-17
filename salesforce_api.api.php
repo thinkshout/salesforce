@@ -187,6 +187,30 @@ function hook_default_salesforce_fieldmaps($export = array()) {
 }
 
 /**
+ * Modify Salesforce IDs before they are saved to the {salesforce_object_map}
+ * table.
+ * @param $oid
+ *   The associated unique ID used to identify the object in Drupal.
+ * @param $sfid
+ *   The Salesforce ID of the associated object in the Salesforce database.
+ * @param $name
+ *   The name of the fieldmap used to generate the export.
+ * @param $entity_name
+ *   The type of Drupal entity being saved.
+ * @param $bundle_name
+ *   The Drupal bundle type being saved.
+ * @return
+ *   TRUE if salesforce_api_id_save() should proceed with saving the link, FALSE
+ *   otherwise.
+*/
+function hook_salesforce_api_id_save_alter($oid, $sfid, $name, $entity_name, $bundle_name) {
+  // Example: Do not allow a mapping to be saved between UID 1 and Salesforce
+  if ($oid == 1 && $entity_name == 'user') {
+    return FALSE;
+  }
+}
+
+/**
  * Called immediately before a Salesforce object is to be created or updated
  * during export (e.g. sf_user_export, sf_node_export). Entity-based modules
  * that invoke Salesforce create, update, or upsert methods should always invoke
