@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file
@@ -706,13 +705,17 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $map) {
       'target' => array('#markup' => $value['label'] . $required),
     );
 
-    // @todo: What should this do? Default for source not set correctly. Cf. [#1214094].
-    if (is_array($map->fields[$key])) {
+    if (isset($maps->fields[$key]) && is_array($map->fields[$key])) {
       $default_key = $map->fields[$key]['type'];
       $default_value = $map->fields[$key]['value'];
     }
-    else {
+    elseif (isset($map->fields[$key])) {
       $default_key = $map->fields[$key];
+      $default_value = NULL;
+    }
+    else {
+      $options = array('' => '') + $options;
+      $default_key = NULL;
       $default_value = NULL;
     }
 
