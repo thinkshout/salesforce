@@ -443,6 +443,16 @@ function salesforce_api_login($username, $password, $token) {
     $wsdl = SALESFORCE_DIR_SOAPCLIENT . '/enterprise.wsdl.xml';
   }
 
+  // Get proxy settings if a proxy is configured.
+  $proxy = NULL;
+  if (variable_get('salesforce_api_proxy', FALSE)) {
+    $proxy = new ProxySettings();
+    $proxy->host = variable_get('salesforce_api_proxy_host', '');
+    $proxy->port = variable_get('salesforce_api_proxy_port', '');
+    $proxy->login = variable_get('salesforce_api_proxy_login', '');
+    $proxy->password = variable_get('salesforce_api_proxy_password', '');
+  }
+
   // Connect to the server and login, logging any failures to the watchdog.
   try {
     // Connect to the server.

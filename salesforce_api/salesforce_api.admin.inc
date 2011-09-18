@@ -146,6 +146,48 @@ function salesforce_api_settings_form($form, &$form_state) {
     '#value' => t('Clear cached object data'),
     '#submit' => array('salesforce_api_cache_build'),
   );
+  
+  $form['proxy'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Proxy settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+ 
+  $form['proxy']['salesforce_api_proxy'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Connect to Salesforce via a proxy'),
+    '#description' => 'Note: enabling this setting will cause all requests to Salesforce to go via the proxy defined below.',
+    '#default_value' => variable_get('salesforce_api_proxy', FALSE),
+  );
+ 
+  $form['proxy']['salesforce_api_proxy_host'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Proxy Hostname'),
+    '#description' => t('The hostname the proxy is on.'),
+    '#default_value' => variable_get('salesforce_api_proxy_host', ''),
+  );
+
+  $form['proxy']['salesforce_api_proxy_port'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Proxy Port'),
+    '#description' => t('The port the proxy is on.'),
+    '#default_value' => variable_get('salesforce_api_proxy_port', ''),
+  );
+
+  $form['proxy']['salesforce_api_proxy_login'] = array(
+    '#type' => 'password',
+    '#title' => t('Proxy Username'),
+    '#description' => t('The username for the proxy if applicable.'),
+    '#default_value' => variable_get('salesforce_api_proxy_login', ''),
+  );
+
+  $form['proxy']['salesforce_api_proxy_password'] = array(
+    '#type' => 'password',
+    '#title' => t('Proxy Password'),
+    '#description' => t('The password for the proxy if applicable.'),
+    '#default_value' => variable_get('salesforce_api_proxy_password', ''),
+  );
 
   // Validate handler makes sure that the salesforce_api_password doesn't get set to null on accident
   $form['#validate'][] = 'salesforce_api_settings_form_validate';
