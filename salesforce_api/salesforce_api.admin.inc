@@ -747,7 +747,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $map) {
       'target' => array('#markup' => $value['label'] . $required),
     );
 
-    if (isset($maps->fields[$key]) && is_array($map->fields[$key])) {
+    if (isset($map->fields[$key]) && is_array($map->fields[$key])) {
       $default_key = $map->fields[$key]['type'];
       $default_value = $map->fields[$key]['value'];
     }
