@@ -66,9 +66,16 @@ function sf_import_settings_form($form_state) {
   $last_import = variable_get('sf_import_queue_last_import', NULL);
   if ($last_import) {
     $date = date('M j Y H:i:s', $last_import);
+    // Get the number of items remaining in the import queue
+    $num_items = db_result(db_query("SELECT COUNT(sfid) FROM {sf_import_queue}"));
+
+    $data = '<strong>Last import: </strong>' . $date . ' <br /><strong>Number of items imported:</strong> ' .
+      variable_get('sf_import_queue_import_count', 0) . '<br /><strong>Number of items processed:</strong> ' .
+      variable_get('sf_import_queue_processed_count', 0) . '<br /><strong>Number of items remaining in queue:</strong> ' .
+      $num_items;
+
     $form['last_import'] = array(
-      '#value' => '<strong>Last import: </strong>' . $date . ' <br /><strong>Number of items imported:</strong> ' 
-        . variable_get('sf_import_queue_import_count', 0) . '<br /><strong>Number of items processed:</strong> ' . variable_get('sf_import_queue_processed_count', 0),
+      '#value' => $data,
       '#prefix' => '<p>',
       '#suffix' => '</p>',
     );
