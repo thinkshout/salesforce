@@ -57,3 +57,12 @@ function sf_import_uninstall() {
   drupal_uninstall_schema('sf_import');
   db_query("DELETE FROM {variable} WHERE {name} LIKE 'sf_import%'");
 }
+
+/**
+ * Implements hook_update_N().
+ */
+function sf_import_update_6200(&$sandbox) {
+  // Since sf_import has been broken out into several files
+  // clearing the cache is necessary.
+  cache_clear_all();
+}

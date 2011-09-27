@@ -1,4 +1,3 @@
-; $Id$
 name = Salesforce Import
 description = Provides facilities to import Salesforce records into Drupal.
 dependencies[] = salesforce_api
