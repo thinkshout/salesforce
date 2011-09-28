@@ -112,6 +112,10 @@ function _sf_import_get_updated_records() {
     variable_set('sf_import_queue_last_import', time());
     if ($updates = salesforce_api_get_updated($map->salesforce, $start, $end)) {
       $update_sfids = $updates->ids;
+      // Handle single record
+      if (!is_array($update_sfids)) {
+        $update_sfids = array($update_sfids);
+      }
       foreach ($update_sfids as $sfid) {
         $sql = "SELECT sfid FROM {sf_import_queue} WHERE sfid = '%s'";
         $exists = db_result(db_query($sql, $sfid));
