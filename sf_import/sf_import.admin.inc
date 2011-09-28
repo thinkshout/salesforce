@@ -62,7 +62,7 @@ function sf_import_settings_form($form_state) {
     '#collapsed' => TRUE,
   );
 
-  $form['sf_import_advanced']['sf_import_cron'] = array (
+  $form['sf_import_advanced']['sf_import_cron'] = array(
     '#type' => 'fieldset',
     '#title' => t('Cron'),
     '#description' => t('You should only uncheck the boxes below if you intend to implement your own import and processing functions.'),
@@ -100,14 +100,14 @@ function sf_import_settings_form($form_state) {
 
         $form[$import_map_key . '_information'] = array(
           '#type' => 'fieldset',
-          '#title' => t('Information for fieldmap <em>' . check_plain($import_map_key) . '</em>'),
+          '#title' => t('Information for fieldmap "@map"', array('@map' => (!empty($map->description) ? $map->description : $import_map_key))),
           '#description' => t('Number of updated records and timestamp of last update, if information is available.'),
           '#collapsible' => TRUE,
           '#collapsed' => $sf_updated ? FALSE : TRUE,
         );
         if ($sf_updated) {
           $form[$import_map_key . '_information']['pending'] = array(
-            '#value' => '<em>' . count($sf_updated->ids) . '</em> updated record(s) in Salesforce pending import.<br />Newest object in Salesforce dated <em>' . $sf_updated->latestDateCovered . '.</em>',
+            '#value' => t('@count updated record(s) in Salesforce pending import.<br />Newest object in Salesforce dated @date', array('@count' => count($sf_updated->ids), '@date' => $sf_updated->latestDateCovered)),
             '#prefix' => '<div>',
             '#suffix' => '</div>',
           );
