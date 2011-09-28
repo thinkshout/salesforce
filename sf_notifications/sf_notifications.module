@@ -21,7 +21,6 @@ function sf_notifications_menu() {
       'title' => FALSE,
       'page callback' => 'sf_notifications_endpoint',
       'access arguments' => array('access content'),
-      'access callback' => 'sf_notifications_allowed_ips',
       'type' => MENU_CALLBACK,
       ),
     SALESFORCE_PATH_FIELDMAPS . '/%/notifications' => array(
@@ -109,8 +108,16 @@ function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
  * http://www.salesforce.com/us/developer/docs/ajax/Content/sforce_api_ajax_queryresultiterator.htm
  */
 function sf_notifications_endpoint() {
+
+  // If the request is coming from outside the defined range of
+  // Salesforce IPs, then do not continue.
+  if (sf_notifications_allowed_ips() == FALSE) {
+    exit;
+  }
+
   // Needed for the reference to SObject in parse_message, otherwise it just
   // seems to die when it tries to call new SObject()
+
   require_once(SALESFORCE_DIR_SOAPCLIENT . '/SforcePartnerClient.php');
 
   $content = file_get_contents('php://input');
