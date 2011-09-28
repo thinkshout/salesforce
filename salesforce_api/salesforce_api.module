@@ -1322,7 +1322,7 @@ function salesforce_api_retrieve($ids, $name) {
  *  The timestamp for the beginning of the query
  * @param int $end
  *  The timestamp for the end of the query
- * @return object containing an array of Ids and the latest date covered.
+ * @return FALSE if failed, or an object containing an array of Ids and the latest date covered.
  *  $response->ids = array of SFIDS
  *  $response->latestDateCovered = timestamp of latest updated Salesforce object
  */
@@ -1332,7 +1332,15 @@ function salesforce_api_get_updated($type, $start, $end) {
   }
   $sf = salesforce_api_connect();
   if ($sf) {
-    $response = $sf->client->getUpdated($type, (int)$start, (int)$end);
+    try {
+      $response = $sf->client->getUpdated($type, (int)$start, (int)$end);
+    }
+    catch (Exception $e) {
+      // Log the error message.
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Could not get updated records from Salesforce: %message.', array('%message' => $e->faultstring, '!debug' => check_plain($sf->client->getLastRequest())), WATCHDOG_ERROR);
+      // Indicate the failed action.
+      return FALSE;
+    }
     if ($response->ids) {
       return $response;
     } else {
@@ -1350,7 +1358,7 @@ function salesforce_api_get_updated($type, $start, $end) {
  *  The timestamp for the beginning of the query
  * @param int $end
  *  The timestamp for the end of the query
- * @return object containing an array of Ids and the latest date covered.
+ * @return FALSE if failed, or an object containing an array of Ids and the latest date covered.
  *  $response->deletedRecords = array of objects containing deletedDate and SFID
  *  $response->earliestDateAvailable = timestamp of the earliest available deleted object for the query
  *  $response->latestDateCovered = timestamp of latest deleted Salesforce object
@@ -1361,7 +1369,15 @@ function salesforce_api_get_deleted($type, $start, $end) {
   }
   $sf = salesforce_api_connect();
   if ($sf) {
-    $response = $sf->client->getDeleted($type, $start, $end);
+    try {
+      $response = $sf->client->getDeleted($type, $start, $end);
+    }
+    catch (Exception $e) {
+      // Log the error message.
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Could not get deleted records from Salesforce: %message.', array('%message' => $e->faultstring, '!debug' => check_plain($sf->client->getLastRequest())), WATCHDOG_ERROR);
+      // Indicate the failed delete.
+      return FALSE;
+    }
     if ($response->deletedRecords) {
       return $response;
     } else {
