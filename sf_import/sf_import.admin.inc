@@ -54,8 +54,36 @@ function sf_import_settings_form($form_state) {
     '#default_value' => variable_get('sf_import_fieldmaps', array()),
   );
 
-  // For fieldmaps that have import enabled, show some information about them
+  // Advanced settings
+  $form['sf_import_advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
 
+  $form['sf_import_advanced']['sf_import_cron'] = array (
+    '#type' => 'fieldset',
+    '#title' => t('Cron'),
+    '#description' => t('You should only uncheck the boxes below if you intend to implement your own import and processing functions.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+
+  $form['sf_import_advanced']['sf_import_cron']['sf_import_cron_import'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('On cron run, import SFIDs returned by the Salesforce API <code>get_updated()</code> function.'),
+    '#default_value' => variable_get('sf_import_cron_import', 1),
+  );
+
+  $form['sf_import_advanced']['sf_import_cron']['sf_import_cron_process'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('On cron run, run import operations for SFIDs in the Salesforce import queue.'),
+    '#default_value' => variable_get('sf_import_cron_process', 1),
+  );
+
+
+  // For fieldmaps that have import enabled, show some information about them
   $import_maps = variable_get('sf_import_fieldmaps', array());
   $active_import_maps = array();
   if ($import_maps) {
