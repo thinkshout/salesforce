@@ -199,8 +199,8 @@ function sf_import_create($form, &$form_state, $ongoing = 0) {
   foreach ($fieldmaps as $map) {
     $edit = l('edit', SALESFORCE_PATH_FIELDMAPS . '/' . $map->name . '/edit', array('query' => array('destination' => drupal_get_destination())));
     $options[$map->name] =
-      salesforce_api_fieldmap_object_label('salesforce', $map->salesforce) . ' => ' .
-      salesforce_api_fieldmap_object_label('drupal', $map->drupal) . ' - <em>' . $map->description . '</em>' . ' (' . $edit . ')';
+      salesforce_api_fieldmap_object_label('salesforce', 'salesforce', $map->salesforce) . ' => ' .
+      salesforce_api_fieldmap_object_label('drupal', $map->drupal_entity, $map->drupal_bundle) . ' - <em>' . $map->description . '</em>' . ' (' . $edit . ')';
   }
 
   // Add a message if no objects have been mapped.
@@ -231,8 +231,8 @@ function sf_import_create($form, &$form_state, $ongoing = 0) {
   );
 
   $form['extra-options']['extra-linked'] = array(
-    '#title' => t('Link nodes to Salesforce objects on import?'),
-    '#description' => t('Links the imported Drupal node to the salesforce object allowing the ability to issue manual syncronization of data to and from Drupal and Salesforce business objects. Linking also enables the ability to use node reference to relate business objects in Drupal (like accounts to contacts).'),
+    '#title' => t('Link entities to Salesforce objects on import?'),
+    '#description' => t('Links the imported Drupal entity to the Salesforce object allowing the ability to issue manual syncronization of data to and from Drupal and Salesforce business objects. Linking also enables the ability to use node/term/user reference fields to relate business objects in Drupal (like accounts to contacts).'),
     '#type' => 'checkbox',
   );
 
@@ -398,11 +398,10 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $record = get_object_vars($record);
   }
   $created = !isset($existing[$record['Id']]);
-  $type = $map->drupal;
-  // "node" mappings are like "node_contenttype".
-  // others are like "user", "uc_order", etc.
-  if (strpos($type, 'node_') === 0) {
-    $type = 'node';
+  $type = $map->drupal_entity;
+  // Check to see if the fieldmap matches a Drupal entity. If so, use the entity import function.
+  if ($entity_type = entity_get_info($map->drupal_entity)) {
+    $type = 'entity';
   }
 
   $function = 'sf_' . $type . '_import';
@@ -417,7 +416,14 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   }
 
   if ($oid) {
-    $context['results'][] = ($created ? 'Created' : 'Updated') . ' ' . l($type . ' ' . $oid, $type . '/' . $oid);
+    // @todo: Find a way to get the proper entity_uri without having to reload the entity.
+    if($map->drupal_entity = 'taxonomy_term') {
+      $entity_path = 'taxonomy/term';
+    }
+    else {
+      $entity_path = $map->drupal_entity;
+    }
+    $context['results'][] = ($created ? 'Created' : 'Updated') . ' ' . l($map->drupal_entity . ' : ' . $map->drupal_bundle . ' ' . $oid, $entity_path . '/' . $oid);
     $context['sandbox']['imported']++;
   }
 
