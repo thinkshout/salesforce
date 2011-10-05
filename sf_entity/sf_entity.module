@@ -1049,25 +1049,32 @@ function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_nam
       }
     }
   }
-  // Set the newly inserted node to published.
-  // (Needed for Solr indexing to work.)
-  if($entity_type == 'node') {
-    if(!isset($entity->status) || empty($empty->status)) {
+
+  if ($entity_type == 'node') {
+    if (!empty($bundle_name)) {
+      // If a bundle name is set, then set it as the node type.
+      $entity->type = $bundle_name;
+      // After that node_object_prepare() can be called to set default values.
+      node_object_prepare($entity);
+    }
+    // Set the node to published, if a status has not already been set.
+    if (!isset($entity->status) || empty($entity->status)) {
       $entity->status = 1;
     }
-    // To save a node, a uid must be set. (Otherwise the comment_node_insert() call will fail.)
-    // To do this correctly, it must be pulled from a fieldmap of some sort, but that would require
+    // To save a node, a uid must be set.
+    // (Otherwise the comment_node_insert() call will fail, if comment.module is enabled.)
+    // To do this correctly, the UID must be pulled from a fieldmap of some sort, but that would require
     // another Salesforce API function, to match the supplied sfid, without also providing a fieldmap.
-    if(!isset($entity->uid) || empty($entity->uid)) {
+    if (!isset($entity->uid) || empty($entity->uid)) {
       // $uid = salesforce_api_get_id_with_sfid('003K0000002BNNkIAO', 'salesforce_api_default_user_contact_fieldmap');
       // $entity->uid = $uid;
       // For now, just save the node with anonymous ownership
-      // (since that is the only uid guaranteed to exist.)
+      // (since that is the only uid guaranteed to exist).
       $entity->uid = 0;
     }
   }
   // To save a taxonomy term, you need to set the vid (voabulary id).
-  if($entity_type == 'taxonomy_term') {
+  elseif ($entity_type == 'taxonomy_term') {
     $vocab_data = taxonomy_vocabulary_machine_name_load($bundle_name);
     $vid = $vocab_data->vid;
     $entity->vid = $vid;
@@ -1076,44 +1083,49 @@ function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_nam
 
 /* Helper function to populate necessary values after the import data is received, and do matching. */
 function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) {
-  if($entity_type == 'user') {
+  if ($entity_type == 'user') {
     // If status is still empty, set it to 1 (active)
-    if(!isset($entity->status) || empty($entity->status)) {
+    if (!isset($entity->status) || empty($entity->status)) {
       $entity->status = 1;
     }
     // If the created date is still empty, set it to now.
-    if(!isset($entity->created) || empty($entity->created)) {
+    if (!isset($entity->created) || empty($entity->created)) {
       $entity->created = REQUEST_TIME;
+    }
+    // If there is no password set, then generate a random password.
+    if (!isset($entity->pass) || empty($entity->pass)) {
+      $entity->pass = drupal_hash_base64(drupal_random_bytes(55));
     }
     // Look for an existing user if there is a username set.
     // @todo: Instead of using $conditions here, fix sf_prematch.module
     // to use EntityFieldQuery as per #1214100.
-    if(isset($entity->name)) {
+    if (isset($entity->name)) {
       $existing_user = entity_load('user', FALSE, array('name' => $entity->name));
     }
     if (is_array($existing_user)) {
       $existing_user = current($existing_user);
     }
     // If there is an existing user, then set the uid for an update, and unset the is_new flag.
-    if(isset($existing_user) && is_object($existing_user) && isset($existing_user->uid)) {
+    if (isset($existing_user) && is_object($existing_user) && isset($existing_user->uid)) {
       $entity->uid = $existing_user->uid;
       $entity->roles = $existing_user->roles;
       unset($entity->is_new);
     }
   }
   // If language has not yet been set for a node, set it to unknown.
-  if($entity_type == 'node') {
+  if ($entity_type == 'node') {
     if(!isset($entity->language) || empty($entity->language)) {
       $entity->language = LANGUAGE_NONE;
     }
-    if(!isset($entity->created) || empty($entity->created)) {
+    if (!isset($entity->created) || empty($entity->created)) {
       $entity->created = REQUEST_TIME;
     }
   }
   // Ensure that all taxonomy terms have an input format set.
-  if($entity_type == 'taxonomy_term') {
-    if(!isset($entity->format) || empty($entity->format)) {
-      $entity->format = 'filtered_html';
+  // Use plain_text as the default, since it should always exist.
+  if ($entity_type == 'taxonomy_term') {
+    if (!isset($entity->format) || empty($entity->format)) {
+      $entity->format = 'plain_text';
     }
   }
 }
