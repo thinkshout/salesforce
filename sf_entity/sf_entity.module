@@ -988,12 +988,24 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
   }
   list($id, $vid, $bundle) = entity_extract_ids($map->drupal_entity, $entity);
 
-  if(!empty($id)) {
+  // If the entity id has been set...
+  if (!empty($id)) {
+    // Then check whether the mapping is configured to auto-sync on create or update, or the option for linkage is set.
     if ((($map->automatic & SALESFORCE_AUTO_SYNC_CREATE) && $create)
         || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
         || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
-      // Store the Salesforce ID for the entity and return TRUE.
-      salesforce_api_id_save($id, $entity->salesforce->sfid, $name, $map->drupal_entity, $map->drupal_bundle);
+      // If so, then store the Salesforce ID for the entity if it is available.
+      // The SFID in the entity object itself takes precedence over the one that comes from Salesforce.
+      $sfid = '';
+      if (isset($entity->salesforce) && !empty($entity->salesforce->sfid) && is_sfid($entity->salesforce->sfid)) {
+        $sfid = $entity->salesforce->sfid;
+      }
+      elseif (isset($sf_data->Id) && is_sfid($sf_data->Id)) {
+        $sfid = $sf_data->Id;
+      }
+      if (!empty($sfid)) {
+        salesforce_api_id_save($id, $sfid, $name, $map->drupal_entity, $map->drupal_bundle);
+      }
     }
   }
   // Allow modules to respond after an import.
