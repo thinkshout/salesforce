@@ -21,7 +21,6 @@ function sf_notifications_menu() {
       'title' => FALSE,
       'page callback' => 'sf_notifications_endpoint',
       'access arguments' => array('access content'),
-      'access callback' => 'sf_notifications_allowed_ips',
       'type' => MENU_CALLBACK,
     ),
     SALESFORCE_PATH_NOTIFICATIONS_ADMIN . '/queue' => array(
@@ -129,6 +128,11 @@ function sf_notifications_fieldmap_settings_access($fieldmap_id, $perm) {
  * http://www.salesforce.com/us/developer/docs/ajax/Content/sforce_api_ajax_queryresultiterator.htm
  */
 function sf_notifications_endpoint() {
+  // If the request is coming from outside the defined range of
+  // Salesforce IPs, then do not continue.
+  if (sf_notifications_allowed_ips() == FALSE) {
+     exit;
+  }
 
   $content = file_get_contents('php://input');
   if (empty($content)) {
@@ -154,7 +158,7 @@ function sf_notifications_endpoint() {
 
   $ret = _sf_notifications_parse_handle_message($content);
 
-  // Sends SOAP response to SFDC
+  // Sends SOAP response to SFDC.
   if ($ret) {
     _sf_notifications_soap_respond('true');
   }
