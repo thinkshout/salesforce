@@ -1765,7 +1765,7 @@ function salesforce_api_describeGlobal() {
  */
 function salesforce_api_object_to_fieldmap_fields($object) {
   $fieldmap_object = array(
-    'label' => t($object->label),
+    'label' => $object->label,
     'fields' => array(),
   );
   if (!empty($object->fields) && is_array($object->fields)) {
