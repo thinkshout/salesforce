@@ -417,7 +417,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
 
   if ($oid) {
     // @todo: Find a way to get the proper entity_uri without having to reload the entity.
-    if($map->drupal_entity = 'taxonomy_term') {
+    if ($map->drupal_entity == 'taxonomy_term') {
       $entity_path = 'taxonomy/term';
     }
     else {
