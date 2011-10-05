@@ -1429,6 +1429,121 @@ function salesforce_api_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Wraps SforceBaseClient::query. Queries Salesforce for a record or set of records. For information about SOQL syntax, @see http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_soql_select.htm
+ * @param string $query
+ *  A SOQL query string.
+ * @param array $options.
+ *  An array of options for how the query should be done.
+ *  Valid options are:
+ *  queryAll (bool)
+ *    Whether or not to include deleted records in this query. Default FALSE.
+ *  queryMore (bool)
+ *    Whether or not to include all records matching this query. Default FALSE.
+ *  limit (integer)
+ *    Set the SOQL Batch Size. This is NOT analagous to SOQL LIMIT (nor SQL
+ *    LIMIT). Minimum value is 200. Maximum value is 2,000. Default varies. For
+ *    more information about batch size, @see http://www.salesforce.com/us/developer/docs/api/Content/sforce_api_calls_soql_changing_batch_size.htm
+ * @param object $sf
+ *  A Salesforce connection. If not set, this function will connect.
+ * @return object
+ *  An array of matching records on success, or FALSE on failure.
+ */
+function salesforce_api_query($query, $options = array(), $sf = NULL) {
+  // If not passed a Salesforce connection, then connect to Salesforce.
+  if(!is_object($sf)) {
+    $sf = salesforce_api_connect();
+    // Return FALSE if could not connect to Salesforce.
+    if($sf == FALSE) {
+      return FALSE;
+    }
+  }
+
+  // Merge in defaults.
+  $options += array(
+    'queryAll' => FALSE,
+    'queryMore' => FALSE,
+    'limit' => NULL,
+  );
+
+  // Set a limit for the query if requested.
+  // @todo: Determine why this limit is not being applied.
+  if(is_numeric($options['limit']) && $options['limit'] > 0) {
+    if ($options['limit'] > 2000) { $options['limit'] = 2000; }
+    if ($options['limit'] < 200) { $options['limit'] = 200; }
+    $queryOptions = new QueryOptions($options['limit']);
+    $sf->client->setQueryOptions($queryOptions);
+  }
+
+  // Execute the query. Include deleted records if set to queryAll.
+  try {
+    if (!$options['queryAll']) {
+      $result = $sf->client->query($query);
+    }
+    else {
+      $query = preg_replace("@SELECT\s+@si", "SELECT IsDeleted, ", $query);
+      $result = $sf->client->queryAll($query);
+    }
+  }
+  // Handle any exceptions.
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'Salesforce query failed with exception: ' . $e->getMessage(), array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  $records = $result->records;
+
+  // If set to queryMore and this query hasn't retrieved all the results, then query for the rest.
+  // @todo: Find a resultset large enough to test this.
+  if(!$result->done && $options['queryMore']) {
+    $moreRecords = _salesforce_api_querymore($result->queryLocator, $sf);
+    if (is_array($moreRecords)) {
+      $records = array_merge($records, $moreRecords);
+    }
+  }
+
+  // Return records if any have been retrieved, or else return FALSE.
+  return is_array($records) ? $records : FALSE;
+}
+
+/**
+ * Wraps SforceBaseClient::queryMore. Needs a query locator for an active query
+ * and a Salesforce connection, so this must only be called from salesforce_api_query().
+ * Calls itself recursively until records are retrieved.
+ *
+ * @param object $queryLocator
+ *  The position within the current query from which to begin.
+ * @param object $sf
+ *  The active Salesforce connection.
+ * @return array
+ *  An array of matching records on success, or FALSE on failure.
+ */
+function _salesforce_api_querymore($queryLocator, $sf) {
+  if(!is_object($sf)) {
+    return FALSE;
+  }
+  // Execute the queryMore
+  try {
+    $result = $sf->client->queryMore($queryLocator);
+  }
+  // Handle any exceptions.
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'Salesforce queryMore failed with exception: ' . $e->getMessage(), array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Recursively merge results
+  $records = $result->records;
+  if(!$result->done) {
+    $moreRecords = _salesforce_api_querymore($result->queryLocator, $sf);
+    if (is_array($moreRecords)) {
+      $records = array_merge($records, $moreRecords);
+    }
+  }
+
+  return $records;
+}
+
+/**
  * Wraps SforceBaseClient::retrieve. Retrieve an object from Salesforce with
  * standard fields and any data in fields defined in the name object.
  *
