@@ -1544,6 +1544,106 @@ function _salesforce_api_querymore($queryLocator, $sf) {
 }
 
 /**
+ * Wraps SforceBaseClient::upsert. Upserts a record in Salesforce.
+ * If there is an existing record in Salesforce with the same ID, that record is
+ * updated. Otherwise, a new record is created.
+ * @param array $records
+ *  Either an array of arrays of Salesforce fields, to be converted to sObjects, of the specified
+ *  type, or else an array of sObjects.
+ * @param string $type
+ *  The type of sObject to update. Must either be a core sObject, or a custom type defined in your
+ *  WSDL. Custom types all end in "__c". Default type is "Contact".
+ * @param string $key
+ *  The Salesforce field, or external ID, on which to upsert. Default is "Id".
+ * @param object $sf
+ *  A currently-active Salesforce connection. If none is passed in, one will be created.
+ * @return array
+ *  An array containing an array of Salesforce IDs successfully upserted, and the number of failures,
+ *  or FALSE if no Salesforce connection could be made or an exception was thrown.
+*/
+function salesforce_api_upsert(array $records, $type = 'Contact', $key = 'Id', $sf = NULL) {
+  // Connects to Salesforce if no existing connection supplied.
+  if(!is_object($sf)) {
+    $sf = salesforce_api_connect();
+    // Return FALSE if could not connect to Salesforce.
+    if($sf == FALSE) {
+      return FALSE;
+    }
+  }
+
+  // Iterates through the records passed in and convert them to objects if necessary.
+  $i = 0;
+  foreach($records as $record) {
+    if(!is_object($record)) {
+      $records[$i] = (object) $record;
+    }
+    $i++;
+  }
+
+  try {
+    $results = $sf->client->upsert($key, $records, $type);
+  }
+  // Handle any exceptions.
+  catch (Exception $e) {
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'The following exception occurred while attempting to upsert records: <pre>%e</pre>',
+      array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Sets up the variables for the array of information about results of upsert operation.
+  $success_ids = array();
+  $failures = 0;
+  $created_ids = array();
+  $updated_ids = array();
+  // $is_deleted_ids = array();
+
+  // Iterate over the resultset.
+  foreach ($results as $result) {
+    // Handle any errors.
+    // @todo: Log is_deleted errors separately, so they can be handled by unlink & upsert on
+    // a successive call to this function.
+    if (isset($result->errors) && is_array($result->errors)) {
+      $err_msgs = array();
+      $status_codes = array();
+      // Log all errors to watchdog.
+      // @todo: Present them more nicely than an array with print_r().
+      foreach($result->errors as $error) {
+        $err_msgs[] = $error->message;
+        $status_codes[] = $error->statusCode;
+        if($error->statusCode == 'ENTITY_IS_DELETED') {
+          // @todo: Figure out a way to determine which one was deleted.
+        }
+      }
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Errors occurred while attempting to upsert record: <pre>%msgs</pre>',
+          array('%msgs' => print_r($err_msgs, TRUE), '%codes' => print_r($status_codes, TRUE)), WATCHDOG_ERROR);
+      // Increment the number of failures.
+      $failures++;
+    }
+    // Records ids of successes.
+    elseif (isset($result->success) && $result->success == TRUE) {
+      $success_ids[] = $result->id;
+      // Separates successes into creates and updates.
+      if (isset($result->created) && $result->created == TRUE) {
+        $created_ids[] = $result->id;
+      }
+      else {
+        $updated_ids[] = $result->id;
+      }
+    }
+  }
+
+  // Return the ids of results, grouped appropriately.
+  $result_info = array(
+    'successes' => $success_ids,
+    'failures' => $failures,
+    'created' => $created_ids,
+    'updated' => $updated_ids,
+    //'is_deleted' => $is_deleted_ids,
+  );
+  return $result_info;
+}
+
+/**
  * Wraps SforceBaseClient::retrieve. Retrieve an object from Salesforce with
  * standard fields and any data in fields defined in the name object.
  *
