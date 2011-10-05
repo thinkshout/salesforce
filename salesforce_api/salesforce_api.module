@@ -1680,12 +1680,12 @@ function salesforce_api_retrieve($ids, $name) {
  * Wrapper for SOAP SforceBaseClient::getUpdated. Searches for records
  * updated/created between start and end date.
  * @param string $type
- *  The name of the Salesforce object to retrieve data for
+ *  The name of the Salesforce object to retrieve data for.
  * @param int $start
- *  The timestamp for the beginning of the query
+ *  The timestamp for the beginning of the query.
  * @param int $end
- *  The timestamp for the end of the query
- * @return object containing an array of Ids and the latest date covered.
+ *  The timestamp for the end of the query.
+ * @return FALSE if failed, or an object containing an array of Ids and the latest date covered.
  *  $response->ids = array of SFIDS
  *  $response->latestDateCovered = timestamp of latest updated Salesforce object
  */
@@ -1695,7 +1695,15 @@ function salesforce_api_get_updated($type, $start, $end) {
   }
   $sf = salesforce_api_connect();
   if ($sf) {
-    $response = $sf->client->getUpdated($type, (int) $start, (int) $end);
+    try {
+       $response = $sf->client->getUpdated($type, (int)$start, (int)$end);
+    }
+    catch (Exception $e) {
+      // Log the error message.
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Could not get updated records from Salesforce: %message.', array('%message' => $e->faultstring, '!debug' => check_plain($sf->client->getLastRequest())), WATCHDOG_ERROR);
+      // Indicate the failed action.
+      return FALSE;
+    }
     if (isset($response->ids)) {
       return $response;
     }
@@ -1709,12 +1717,12 @@ function salesforce_api_get_updated($type, $start, $end) {
  * Wrapper for SOAP SforceBaseClient::getDeleted. Searches for records
  * deleted between start and end date.
  * @param string $type
- *  The name of the Salesforce object to retrieve data for
+ *  The name of the Salesforce object to retrieve data for.
  * @param int $start
- *  The timestamp for the beginning of the query
+ *  The timestamp for the beginning of the query.
  * @param int $end
- *  The timestamp for the end of the query
- * @return object containing an array of Ids and the latest date covered.
+ *  The timestamp for the end of the query.
+ * @return FALSE if failed, or an object containing an array of Ids and the latest date covered.
  *  $response->deletedRecords = array of objects containing deletedDate and SFID
  *  $response->earliestDateAvailable = timestamp of the earliest available deleted object for the query
  *  $response->latestDateCovered = timestamp of latest deleted Salesforce object
@@ -1725,7 +1733,15 @@ function salesforce_api_get_deleted($type, $start, $end) {
   }
   $sf = salesforce_api_connect();
   if ($sf) {
-    $response = $sf->client->getDeleted($type, $start, $end);
+    try {
+      $response = $sf->client->getDeleted($type, $start, $end);
+    }
+    catch (Exception $e) {
+      // Log the error message.
+      salesforce_api_log(SALESFORCE_LOG_SOME, 'Could not get deleted records from Salesforce: %message.', array('%message' => $e->faultstring, '!debug' => check_plain($sf->client->getLastRequest())), WATCHDOG_ERROR);
+      // Indicate the failed delete.
+      return FALSE;
+    }
     if ($response->deletedRecords) {
       return $response;
     }
