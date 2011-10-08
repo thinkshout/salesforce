@@ -1,25 +1,10 @@
+(function ($) {
+
 Drupal.behaviors.sf_fieldmap_options = {
   attach: function() {
-    $.fn.sf_fieldmap_option_change = function() {
-      var key = $(this).attr('id');
-      key = key.replace(/sf-fieldmap-option-/, '');
-      $(this).sf_fieldmap_option_toggle(key);
-    }
-
-    $.fn.sf_fieldmap_option_toggle = function(fieldname) {
-      var fielddiv = '#' + fieldname + '-extra-hidden';
-      if ($(this).val() == 'fixed'
-       || $(this).val() == 'php')  {
-        $(fielddiv).show();
-      } else  {
-        $(fielddiv).hide();
-        $(fielddiv + ' input').val('');
-      }
-    }
-  
     // Bind the change action
     $('.sf_fieldmap_options').bind('change', function() {
-      $(this).sf_fieldmap_option_change();
+      Drupal.sf_fieldmap_option_change(this);
     });
 
     // Hide hidden fields
@@ -31,3 +16,22 @@ Drupal.behaviors.sf_fieldmap_options = {
     });
   }
 }
+
+Drupal.sf_fieldmap_option_change = function(context) {
+  var key = $(context).attr('id');
+  key = key.replace(/sf-fieldmap-option-/, '');
+  Drupal.sf_fieldmap_option_toggle(context, key);
+};
+
+Drupal.sf_fieldmap_option_toggle = function(context, fieldname) {
+  var fielddiv = '#' + fieldname + '-extra-hidden';
+  if ($(context).val() == 'fixed'
+   || $(context).val() == 'php')  {
+    $(fielddiv).show();
+  } else  {
+    $(fielddiv).hide();
+    $(fielddiv + ' input').val('');
+  }
+};
+
+})(jQuery);
