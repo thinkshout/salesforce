@@ -1048,6 +1048,11 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
             $value = $map->fields[$sf_fieldname]['value'];
           }
           break;
+        case 'tokens':
+          if (isset($map->fields[$sf_fieldname]['value'])) {
+            $value = token_replace($map->fields[$sf_fieldname]['value'], array($map->drupal_entity => $drupal_data), array('clear' => TRUE, 'sanitize' => FALSE));
+          }
+          break;
         case 'php':
           if (isset($map->fields[$sf_fieldname]['value'])) {
             $value = eval($map->fields[$sf_fieldname]['value']);

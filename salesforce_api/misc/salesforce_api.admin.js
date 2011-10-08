@@ -26,11 +26,18 @@ Drupal.sf_fieldmap_option_change = function(context) {
 Drupal.sf_fieldmap_option_toggle = function(context, fieldname) {
   var fielddiv = '#' + fieldname + '-extra-hidden';
   if ($(context).val() == 'fixed'
-   || $(context).val() == 'php')  {
+   || $(context).val() == 'php'
+   || $(context).val() == 'tokens')  {
     $(fielddiv).show();
   } else  {
     $(fielddiv).hide();
     $(fielddiv + ' input').val('');
+  }
+  if ($(context).val() != 'php') {
+    $(fielddiv + ' .description').hide();
+  }
+  else {
+    $(fielddiv + ' .description').show();
   }
 };
 

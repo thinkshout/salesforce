@@ -692,6 +692,7 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $map) {
   // Adding fixed value and evaluate PHP options
   $options = salesforce_api_fieldmap_field_options($source);
   $options['Other']['fixed'] = t('Fixed value');
+  $options['Other']['tokens'] = t('Token value');
   if ( user_access('use php for salesforce fixed values') ) {
     $options['Other']['php'] = t('Evaluate PHP');
   }
@@ -802,6 +803,22 @@ function salesforce_api_fieldmap_edit_form($form, &$form_state, $map) {
   // Combine the rows arrays into one with required fields displayed first.
   $form['fields']['rows'] = array_merge($rows['required'], $rows['optional']);
   $form['fields']['rows']['#tree'] = TRUE;
+
+  if (module_exists('token')) {
+    // Show help on available tokens.
+    $form['token_help'] = array(
+      '#title' => t('Replacement patterns'),
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['token_help']['help'] = array(
+      '#theme' => 'token_tree',
+      '#token_types' => array($map->drupal_entity),
+      '#global_types' => TRUE,
+    );
+  }
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save changes'),
