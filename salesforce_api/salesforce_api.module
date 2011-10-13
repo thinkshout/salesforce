@@ -1244,7 +1244,7 @@ function salesforce_api_id_load($oid, $entity_name, $bundle_name = NULL) {
 }
 
 /**
- * Get an object id using the Salesforce id
+ * Get an object id using the Salesforce id and fieldmap.
  *
  * @param $sfid
  *   A saleforce id
@@ -1253,8 +1253,13 @@ function salesforce_api_id_load($oid, $entity_name, $bundle_name = NULL) {
  * @return
  *   The associated unique ID used to identify the object in Drupal or FALSE.
  */
-function salesforce_api_get_id_with_sfid($sfid, $name) {
-  $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = :sfid AND name = :name", array(':sfid' => $sfid, ':name' => $name));
+function salesforce_api_get_id_with_sfid($sfid, $name = NULL) {
+  if(isset($name)) {
+    $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = :sfid AND name = :name", array(':sfid' => $sfid, ':name' => $name));
+  }
+  else {
+    $result = db_query("SELECT oid FROM {salesforce_object_map} WHERE sfid = :sfid", array(':sfid' => $sfid));
+  }
   return $result->fetchField();
 }
 

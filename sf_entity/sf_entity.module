@@ -312,12 +312,31 @@ function sf_entity_fieldmap_objects($type) {
             if ($col_name == 'format') {
               continue;
             }
-            // @todo: Set the export/import handlers for custom field formats.
+            // Set the export and import handler based on the field type.
+            // Currently only standard Field API fields and reference fields are supported.
+            switch($more_field_info['type']) {
+              case 'taxonomy_term_reference':
+                $export_handler = '_sf_entity_export_termreference';
+                $import_handler = '_sf_entity_import_termreference';
+                break;
+              case 'node_reference':
+                $export_handler = '_sf_entity_export_nodereference';
+                $import_handler = '_sf_entity_import_nodereference';
+                break;
+              case 'user_reference':
+                $export_handler = '_sf_entity_export_userreference';
+                $import_handler = '_sf_entity_import_userreference';
+                break;
+              default:
+                $export_handler = 'sf_entity_export_field_default';
+                $import_handler = 'sf_entity_import_field_default';
+                break;
+            }
             $data = array(
               'label' => t('@label (@column)', array('@label' => $field_info['label'], '@column' => $col_name)),
               'group' => $bundle_info['label'] . ' Fields',
-              'export' => 'sf_entity_export_field_default',
-              'import' => 'sf_entity_import_field_default',
+              'export' => $export_handler,
+              'import' => $import_handler,
             );
             $key = $field_name . ':' . $col_name;
             $objects[$entity_name][$bundle_name]['fields'][$key] = $data;
@@ -1132,16 +1151,17 @@ function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) 
 
 /* Export/import callbacks */
 
+/* @todo: Handle multi-valued Field API fields. */
+
 // Returns the basic value of a field
 function sf_entity_export_field_default($entity, $fieldkey, $drupal_field_definition, $sf_field_definition) {
-  global $language;
+  // Get the language.
+  $lang = _sf_entity_get_language($entity);
   // Get the data array for the field.
   list($fieldname, $column) = explode(':', $fieldkey, 2);
   if (empty($column)) {
     $column = 'value';
   }
-  $lang = empty($entity->language)
-    ? $language->language : $entity->language;
   if (isset($entity->$fieldname[$lang])) {
     $data = $entity->$fieldname[$lang];
   }
@@ -1172,10 +1192,8 @@ function sf_entity_export_field_default($entity, $fieldkey, $drupal_field_defini
 
 // Populates the value of a Field API field from its corresponding Salesforce field's value.
 function sf_entity_import_field_default(&$entity, $fieldkey, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  // Get language settings.
-  // Default is 'und' for undefined.
-  $lang = empty($entity->language)
-    ? 'und' : $entity->language;
+  // Get the language.
+  $lang = _sf_entity_get_language($entity);
   // Get the data array for the field.
   list($fieldname, $column) = explode(':', $fieldkey, 2);
   if (empty($column)) {
@@ -1223,8 +1241,8 @@ function sf_entity_import_field_default(&$entity, $fieldkey, $drupal_field_defin
 }
 
 // Returns the email address of the node's author, given by node->uid
-function _sf_entity_export_author_email($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  $uid = $node->uid;
+function _sf_entity_export_author_email($entity, $fieldname, $drupal_field_definition, $sf_field_definition) {
+  $uid = $entity->uid;
   if (!is_numeric($uid)) {
     return NULL;
   }
@@ -1241,46 +1259,74 @@ function _sf_entity_import_date(&$entity, $drupal_fieldname, $drupal_field_defin
   $entity->$drupal_fieldname = strtotime($source->$sf_fieldname);
 }
 
-// @todo: Determine whether the Field API summary and value import handlers are sufficient.
-/* function _sf_entity_node_export_body($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
-  return $node->teaser . '<!--break-->' . $node->body;
+// Export Salesforce ID based on referenced term
+function _sf_entity_export_termreference($entity, $fieldkey, $drupal_field_definition, $sf_field_definition) {
+  $lang = _sf_entity_get_language($entity);
+  $sfid = '';
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  if ($tid = $entity->{$fieldname}[$lang][0]['tid']) {
+    $sf_data = salesforce_api_id_load($tid, 'taxonomy_term');
+    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : '';
+  }
+  return $sfid;
 }
 
-function _sf_entity_node_import_body(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  $node->teaser = node_teaser($sf_data->$sf_fieldname);
-  $node->body = $sf_data->$sf_fieldname;
-} */
+// Import term id of referenced term
+function _sf_entity_import_termreference(&$entity, $fieldkey, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $lang = _sf_entity_get_language($entity);
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  $entity->{$fieldname}[$lang][0]['tid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
+}
 
-// @todo: Add back in nodereference and userreference to conditional statement, above.
-// Will need to test the functions before committing, since I think syntax has changed.
-// Export sfid of referenced node.
-function _sf_entity_export_nodereference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+function _sf_entity_export_nodereference($entity, $fieldkey, $drupal_field_definition, $sf_field_definition) {
+  $lang = _sf_entity_get_language($entity);
   $sfid = '';
-  if ($nid = $node->{$fieldname}[0]['nid']) {
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  if ($nid = $entity->{$fieldname}[$lang][0]['nid']) {
     $sf_data = salesforce_api_id_load($nid, 'node');
-    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : '';
+    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : '';
   }
   return $sfid;
 }
 
 // Import node id of referenced node
-function _sf_entity_import_nodereference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  $node->{$drupal_fieldname}[0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
+function _sf_entity_import_nodereference(&$entity, $fieldkey, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  $entity->{$fieldname}[$lang][0]['nid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
 }
 
 // Export SFID of referenced user
-function _sf_entity_export_userreference($node, $fieldname, $drupal_field_definition, $sf_field_definition) {
+function _sf_entity_export_userreference($entity, $fieldkey, $drupal_field_definition, $sf_field_definition) {
+  $lang = _sf_entity_get_language($entity);
   $sfid = '';
-  if ($uid = $node->{$fieldname}[0]['uid']) {
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  if ($uid = $node->{$fieldname}[$lang][0]['uid']) {
     $sf_data = salesforce_api_id_load($uid, 'user');
-    $sfid = isset($sf_data['sfid']) ? $sf_data['sfid'] : '';
+    $sfid = isset($sf_data->sfid) ? $sf_data->sfid : '';
   }
   return $sfid;
 }
 
 // Import node id of referenced user
-function _sf_entity_import_userreference(&$node, $drupal_fieldname, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
-  $node->{$drupal_fieldname}[0]['uid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname, $type = 'user');
+function _sf_entity_import_userreference(&$entity, $fieldkey, $drupal_field_definition, $sf_data, $sf_fieldname, $sf_field_definition) {
+  $lang = _sf_entity_get_language($entity);
+  // Get the data array for the field.
+  list($fieldname, $column) = explode(':', $fieldkey, 2);
+  $entity->{$fieldname}[$lang][0]['uid'] = salesforce_api_get_id_with_sfid($sf_data->$sf_fieldname);
+}
+
+// Helper function to get language for a field.
+function _sf_entity_get_language($entity) {
+  // Check the entity's language.
+  // If not set, use LANGUAGE_NONE = 'und'
+  $lang = empty($entity->language)
+    ? LANGUAGE_NONE : $entity->language;
+  return $lang;
 }
 
 /**
