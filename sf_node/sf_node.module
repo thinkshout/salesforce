@@ -810,9 +810,10 @@ function sf_node_import($sf_data, $name, $nid = NULL, $options = array()) {
     }
     if (empty($node)) {
       $create = TRUE;
+      global $language;
       $node = (object)array(
         'type' => substr($map->drupal, 5),
-        'language' => 'en',
+        'language' => $language->language,
         'uid' => 1,
       );
     }
