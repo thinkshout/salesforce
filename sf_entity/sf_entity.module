@@ -105,6 +105,53 @@ function sf_entity_entity_load(&$entities, $type) {
   }
 }
 
+/**
+ * Implements of hook_queue_report_item_name_alter().
+ * Used on the export queue report.
+ * @todo: 1) Move this to an sf_entity_queue() module?
+ *        2) Have this use some kind of entity API function to grab the correct name?
+ */
+function sf_entity_queue_report_item_title_alter(&$row) {
+  if ($row['type'] == 'user') {
+    $title = db_query('SELECT name FROM {users} WHERE uid = :uid', array(':uid' => $row['oid']))->fetchField();
+    $row['title'] = $title;
+  }
+  elseif ($row['type'] == 'node') {
+    $title = db_query('SELECT title FROM {node} WHERE nid = :nid', array(':nid' => $row['oid']))->fetchField();
+  }
+  elseif ($row['type'] == 'taxonomy_term') {
+    $title = db_query('SELECT name FROM {taxonomy_term_data} WHERE tid = :tid', array(':tid' => $row['tid']))->fetchField();
+  }
+}
+
+/**
+ * Implements hook_queue_preprocess_batch_alter().
+ */
+function sf_entity_queue_preprocess_batch_alter(&$batch) {
+  switch ($batch['action']) {
+    case 'upsert':
+    case 'update':
+      // Get any objects that have already been exported to Salesforce. These will be used 
+      // when generating the export objects to cut down on API calls.
+      $objects = sf_queue_processor_get_objects_in_batch($batch['sfids'], $batch['name']);
+
+      foreach($batch['records'] as $key => $record) {
+        // Load the entity corresponding to this ID.
+        $entity = entity_load($batch['type'], array($record->oid));
+        // Determine which entities have already been exported. Use their SFIDs to create an array of Salesforce objects
+        // to pass to the object creation function.
+        $object = salesforce_api_fieldmap_export_create($batch['name'], $entity);
+        // Add the object to the batch record.
+        $batch['records'][$key]->object = $object;
+      }
+      break;
+    case 'delete':
+      break;
+  }
+}
+
+// @todo: Implement hook_queue_postprocess_batch()?
+
 function sf_entity_save($entity, $type, $op) {
   // When importing *from* Salesforce, don't export *back* to Salesforce.
   if (isset($entity->sf_entity_skip_export)) {

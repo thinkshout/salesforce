@@ -1,0 +1,25 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the sf_queue_processor module.
+ *
+ */
+
+/**
+ * Implements hook_install().
+ */
+function sf_queue_processor_install() {
+  variable_set('queue_processing_order', array('user', 'node'));
+  variable_set('queue_batch_size', 200);
+  variable_set('queue_retry_max', 3);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function sf_queue_processor_uninstall() {
+  variable_del('queue_processing_order');
+  variable_del('queue_batch_size');
+  variable_del('queue_retry_max');
+}

@@ -172,6 +172,16 @@ function salesforce_api_menu() {
     'file' => 'salesforce_api.admin.inc',
     'weight' => 10,
   );
+  $items[SALESFORCE_PATH_FIELDMAPS .'/%salesforce_api_fieldmap/dedupe'] = array(
+   'title' => 'Dedupe settings',
+   'description' => 'Dedupe key for mapping fieldmap.',
+   'page callback' => 'drupal_get_form',
+   'page arguments' => array('salesforce_api_fieldmap_dedupe_form', $map_id_arg),
+   'access arguments' => array('administer salesforce management'),
+   'type' => MENU_LOCAL_TASK,
+   'weight' => 15,
+   'file' => 'salesforce_api.admin.inc',
+  );
   $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/remove/%'] = array(
     'title' => 'Edit',
     'description' => 'Edit an existing fieldmap.',
@@ -191,7 +201,7 @@ function salesforce_api_menu() {
     'access arguments' => array('administer salesforce', 'clone', $map_id_arg),
     'type' => MENU_LOCAL_TASK,
     'file' => 'salesforce_api.admin.inc',
-    'weight' => 15,
+    'weight' => 16,
   );
   $items[SALESFORCE_PATH_FIELDMAPS . '/%salesforce_api_fieldmap/delete'] = array(
     'title' => 'Delete',

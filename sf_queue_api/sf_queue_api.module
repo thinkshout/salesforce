@@ -1,0 +1,189 @@
+<?php
+
+/**
+ * @file
+ * API methods for interacting with the Salesforce export queue.
+ *
+ */
+
+
+/**
+ * Public queue insertion method. Performs validation logic on incoming queue requests.
+ *
+ * @param $oid int 
+ *   Salesforce object ID
+ * @param $type string 
+ *   Drupal object type
+ * @param $action string 
+ *   Method of insert: is one of "create", "upsert", "update", "delete".
+ * @return bool
+ */
+function sf_queue_insert($oid, $type, $action) {
+  /**
+   * @var array
+   * $queue_rules[existing][new] = decision
+   * null means keep neither request in queue
+   */
+  $queue_rules = array(
+    'create' => array(
+      'update' => 'create',
+      'upsert' => 'upsert',
+      'delete' => null,
+    ),
+    'update' => array(
+      'create' => 'update',
+      'upsert' => 'upsert',
+      'delete' => 'delete',
+    ),
+    'upsert' => array(
+      'create' => 'upsert',
+      'update' => 'upsert',
+      'delete' => null,
+    ),
+    'delete' => array(
+      'create' => 'delete',
+      'update' => 'delete',
+      'upsert' => 'delete',
+    ),
+  );
+
+  $valid = true;
+
+  // make sure object is not already in the queue
+  if ($pending = _in_queue($oid, $type)) {
+    $watchdog = array(
+      '!action' => $action,
+      '!type' => $type,
+      '!pending' => $pending,
+      '!oid' => $oid,
+    );
+
+    // ignore duplicate actions
+    if ($pending == $action) {
+      $valid = false;
+      watchdog('sf_queue_api', t('!action requested for !type #!oid pending !pending, ignoring duplicate request'), $watchdog, null, WATCHDOG_INFO);
+    }
+    else {
+      if ($queue_rules[$pending][$action] == $pending) {
+        $valid = false;
+        watchdog('sf_queue_api', t('!action requested for !type #!oid pending !pending, ignoring new !action'), $watchdog, null, WATCHDOG_INFO);
+      }
+      elseif ($queue_rules[$pending][$action] == $action) {
+        sf_queue_delete($oid, $type);
+        watchdog('sf_queue_api', t('!action requested for !type #!oid pending !pending, replacing existing !pending'), $watchdog, null, WATCHDOG_INFO);
+      }
+      elseif ($queue_rules[$pending][$action] == null) {
+        sf_queue_delete($oid, $type);
+        $valid = false;
+        watchdog('sf_queue_api', t('!action requested for !type #!oid pending !pending, removing from queue'), $watchdog, null, WATCHDOG_INFO);
+      }
+    }
+  }
+
+  if ($valid) {
+    _sf_queue_insert($oid, $type, $action);
+  }
+}
+
+/**
+ * Internal queue insert method. Do not use directly.
+ *
+ * @param $oid int 
+ *   Salesforce object ID
+ * @param $type string 
+ *   Drupal object type
+ * @param $action string 
+ *   Method of insert: is one of "create", "upsert", "update", "delete".
+ */
+function _sf_queue_insert($oid, $type, $action) {
+  // remove from retry queue
+  sf_retry_queue_delete($oid, $type);
+  // remove from permanent failures
+  delete_from_permanent_failures($oid, $type);
+
+  // lookup up sfid, fieldmap, and salesforce type
+  $sf_data = salesforce_api_id_load($type, $oid);
+
+  $record = new stdClass();
+  $record->oid = $oid;
+  $record->type = $type;
+  $record->action = $action;
+  $record->name = $sf_data->name;
+  $record->sfid = $sf_data->sfid;
+  $record->created = REQUEST_TIME;
+
+  // allow other modules to alter the queue record before it is inserted
+  drupal_alter('queue_api_insert', $record);
+
+  drupal_write_record('sf_queue', $record);
+  watchdog('sf_queue_api', t('!type !oid successfully added to the Salesforce queue.', array('!type' => ucfirst($type), '!oid' => $oid)), NULL, WATCHDOG_INFO);
+}
+
+/**
+ * Removes an item from the queue.
+ */
+function sf_queue_delete($oid, $type) {
+  db_delete('sf_queue')
+    ->condition('oid', $oid)
+    ->condition('type', $type)
+    ->execute();
+}
+
+/**
+ * Removes an item from the retry queue.
+ */
+function sf_retry_queue_delete($oid, $type) {
+  if (_in_retry_queue($oid, $type)) {
+    db_delete('sf_retry_queue')
+      ->condition('oid', $oid)
+      ->condition('type', $type)
+      ->execute();
+    watchdog('sf_queue_api', t('!type !oid removed from retry queue because it has been inserted into the normal queue', array('!type' => ucfirst($type), '!oid' => $oid)), NULL, WATCHDOG_INFO);
+  }
+}
+
+/**
+ * Determines whether or not an object is already in the queue. Prevents multiple records.
+ */
+function _in_queue($oid, $type) {
+  $result = db_query("SELECT action FROM {sf_queue} WHERE oid = :oid AND type = :type", array(':oid' => $oid, ':type' => $type));
+  if (!$data = db_fetch_array($result)) {
+    return false;
+  }
+
+  return $data['action'];
+}
+
+/**
+ * Determines whether or not an object is already in the retry queue.
+ */
+function _in_retry_queue($oid, $type) {
+  $result = db_query("SELECT id FROM {sf_retry_queue} WHERE oid = :oid AND type = :type", array(':oid' => $oid, ':type' => $type));
+  if (!$data = db_fetch_array($result)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Determines whether or not an object is already on the heap. Prevents multiple records.
+ */
+function _in_heap($oid, $type) {
+  $result = db_query("SELECT id FROM {sf_heap} WHERE oid = :oid AND type = :type", array(':oid' => $oid, ':type' => $type));
+  if (!$data = db_fetch_array($result)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Deletes an object from permanent failures table.
+ */
+function delete_from_permanent_failures($oid, $type) {
+  db_delete('sf_permanent_failure')
+    ->condition('oid', $oid)
+    ->condition('type', $type)
+    ->execute();
+}

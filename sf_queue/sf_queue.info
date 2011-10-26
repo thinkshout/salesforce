@@ -1,5 +1,0 @@
-name = Salesforce Export Queue
-description = Implements an export queue for Salesforce API. (TO BE REDONE)
-dependencies[] = salesforce_api
-package = Salesforce
-core = 7.x

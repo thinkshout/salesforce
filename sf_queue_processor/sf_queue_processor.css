@@ -1,0 +1,38 @@
+#batch-item-container h5 {
+	font-size: 14px;
+	border-bottom: 1px solid #666;
+	margin-top: 12px;
+	margin-bottom: 8px;
+}
+
+.batch-item span {
+	display: block;
+	float: left;
+	width: 100px;
+}
+
+.batch-item a {
+	clear: left;
+}
+
+#batch-details {
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+#batch-details h2 {
+	font-size: 18px;
+}
+
+#batch-details h4 {
+	margin-top: 12px;
+}
+
+.item-error {
+	color: #A80000;
+}
+
+.object-type {
+	font-weight: bold;
+	text-decoration: underline;
+}

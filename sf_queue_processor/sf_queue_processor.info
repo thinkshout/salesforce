@@ -1,0 +1,7 @@
+name = Salesforce Queue Processor
+description = Processes the Salesforce queue
+core = 7.x
+dependencies[] = salesforce_api
+dependencies[] = sf_queue_api
+dependencies[] = trigger
+package = Salesforce

@@ -590,7 +590,6 @@ function salesforce_api_fieldmap_delete_form_submit($form, &$form_state) {
  * Displays the edit form for adding field associations to a fieldmap.
  */
 // @todo: 1) Two-way sync rules on the field level.
-//        2) Determine why required fields for a particular type are not getting added.
 function salesforce_api_fieldmap_edit_form($form, &$form_state, $map) {
   // Include the CSS and JS for the form.
   $path = drupal_get_path('module', 'salesforce_api');
@@ -1080,6 +1079,52 @@ function theme_salesforce_api_fieldmap_edit_form_table($variables) {
   return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes, 'caption' => $caption));
 }
 
+// Form for setting dedupe key for a mapping of users to a fieldmap.
+function salesforce_api_fieldmap_dedupe_form($form, &$form_state, $fieldmap) {
+  $object = salesforce_api_fieldmap_objects_load('salesforce', 'salesforce', $fieldmap->salesforce);
+
+  // Return to the admin page if the fieldmap did not exist.
+  if (empty($fieldmap)) {
+    drupal_set_message(t('That fieldmap does not exist.'), 'error');
+    drupal_goto(SALESFORCE_PATH_FIELDMAPS);
+  }
+  $form = array();
+  // Add the fieldmap name to the form array.
+  $form['fieldmap_name'] = array(
+    '#type' => 'value',
+    '#value' => $fieldmap->name,
+  );
+  // Loop through each of the target fields.
+  $field = array();
+  foreach ($object['fields'] as $key => $value) {
+    $field[$key] = $value['label'];
+  }
+  asort($field);
+  $form['fieldmap_options'] = array(
+    '#type' => 'select', 
+    '#title' => t('Dedupe key for mapping'), 
+    '#default_value' =>  isset($map['dedupe_key']) ? $map['dedupe_key'] : '',
+    '#options' => $field,
+    '#description' => t('The %name fieldmap maps Salesforce %sf_object objects to Drupal %entity:%bundle objects.', array('%name' => $fieldmap->name, '%sf_object' => $fieldmap->salesforce, '%entity' => $fieldmap->drupal_entity, '%bundle' => $fieldmap->drupal_bundle)),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save changes'),
+    '#suffix' => l(t('Cancel'), SALESFORCE_PATH_FIELDMAPS),
+  );
+  return $form;
+}
+function salesforce_api_fieldmap_dedupe_form_submit($form, &$form_state) {
+  // Update the fieldmap in the database.
+  $name = $form_state['values']['fieldmap_name'];
+  $dedupe_key = $form_state['values']['fieldmap_options'];
+  db_update('salesforce_fieldmap')
+    ->fields(array(
+      'dedupe_key' => $dedupe_key,
+    ))
+    ->condition('name', $name, '=')
+    ->execute();
+}
 
 /**
  * Show form for admin to upload a new WSDL file

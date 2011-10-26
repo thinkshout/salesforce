@@ -1,0 +1,5 @@
+name = Salesforce Queue API
+description = Adds batch processing capabilities to all Salesforce integration modules
+core = 7.x
+dependencies[] = salesforce_api
+package = Salesforce

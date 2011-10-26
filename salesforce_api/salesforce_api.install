@@ -43,7 +43,7 @@ function salesforce_api_schema() {
     'description' => 'Drupal to Salesforce object mapping table',
     'fields' => array(
       'name' => array(
-        'description' => 'Foreign key for salesforce_field_map - the fieldmap that corresponds to this record.',
+        'description' => 'Foreign key for salesforce_fieldmap - the fieldmap that corresponds to this record.',
         'type' => 'varchar',
         'length' => 64,
       ),
@@ -135,6 +135,13 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'dedupe_key' => array(
+	      'description' => t('The field on which to match for de-duping of objects pushed to Salesforce.'),
+	      'type' => 'varchar',
+	      'length' => '64',
+	      'not null' => FALSE,
+	      'default' => '',
+	  ),
       'description' => array(
         'description' => 'Name or brief description of this fieldmap',
         'type' => 'varchar',
@@ -393,3 +400,6 @@ function salesforce_api_update_6204(&$sandbox) {
     return t('TODO Add a descriptive string here to show in the UI.') /* array('#finished' => $finished) */;
   }
 }
+
+/* @todo: 1) Add upgrade path for D6->D7
+          2) Add upgrade path for addition of dedupe_key. */
