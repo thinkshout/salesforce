@@ -24,11 +24,13 @@
  *   The Salesforce ID of the associated object in the Salesforce database.
  * @param $name
  *   The name of the fieldmap used to generate the export.
+ * @param string $op_type
+ *   The operation being performed, 'import' or 'export'
  * @return
  *   TRUE if salesforce_api_id_save() should proceed with saving the link, FALSE
  *   otherwise
 */
-function hook_salesforce_api_id_save_alter(&$drupal_type, &$oid, &$sfid, &$name) {
+function hook_salesforce_api_id_save_alter(&$drupal_type, &$oid, &$sfid, &$name, &$op_type) {
   // Example: Do not allow a mapping to be saved between UID 1 and Salesforce
   if ($oid == 1 && $drupal_type == 'user') {
     return FALSE;

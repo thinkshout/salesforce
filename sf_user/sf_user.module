@@ -479,7 +479,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
     if (!empty($matches)) {
       $object->Id = $sfid = reset($matches);
       $account->salesforce = array('sfid' => $sfid, 'name' => $name);
-      salesforce_api_id_save('user', $account->uid, $sfid, $name);
+      salesforce_api_id_save('user', $account->uid, $sfid, $name, 'export');
     }
   }
   else {
@@ -541,7 +541,7 @@ function sf_user_export($uid, $name, $sfid = NULL) {
   // If the export was successful...
   if ($response->success) {
     // Store the Salesforce ID for the user and return TRUE.
-    salesforce_api_id_save('user', $uid, $response->id, $name);
+    salesforce_api_id_save('user', $uid, $response->id, $name, 'export');
   }
   else {
     // Otherwise log the error and return FALSE.
@@ -705,7 +705,7 @@ function sf_user_import($sf_data, $name, $uid = NULL, $options = array()) {
     || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
     || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
     // Store the Salesforce ID for the node and return TRUE.
-    salesforce_api_id_save('user', $account->uid, $sfid, $name);
+    salesforce_api_id_save('user', $account->uid, $sfid, $name, 'import');
   }
   module_invoke_all('salesforce_api_post_import', $account, $name, $sf_data, $create, $changes);
   unset($account->sf_user_skip_export);

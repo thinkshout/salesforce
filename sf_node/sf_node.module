@@ -660,7 +660,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
     if (!empty($matches)) {
       $sfid = reset($matches);
       $node->salesforce = array('sfid' => $sfid, 'name' => $name);
-      salesforce_api_id_save('node', $node->nid, $sfid, $name);
+      salesforce_api_id_save('node', $node->nid, $sfid, $name, 'export');
       $node = node_load($node->nid, NULL, TRUE);
     }
     if (empty($node)) {
@@ -734,7 +734,7 @@ function sf_node_export($node, $name, $sfid = NULL) {
   // If the export was successful...
   if ($response->success) {
     // Store the Salesforce ID for the node and return TRUE.
-    salesforce_api_id_save('node', $node->nid, $response->id, $name);
+    salesforce_api_id_save('node', $node->nid, $response->id, $name, 'export');
   }
   else {
     // Otherwise log the error and return FALSE.
@@ -880,7 +880,7 @@ function sf_node_import($sf_data, $name, $nid = NULL, $options = array()) {
     || (($map->automatic & SALESFORCE_AUTO_SYNC_UPDATE) && !$create)
     || (!empty($options['extra-linked']) && $options['extra-linked'] == TRUE)) {
     // Store the Salesforce ID for the node and return TRUE.
-    salesforce_api_id_save('node', $node->nid, $sfid, $name);
+    salesforce_api_id_save('node', $node->nid, $sfid, $name, 'import');
   }
   module_invoke_all('salesforce_api_post_import', $node, $name, $sf_data, $create);
   unset($node->sf_node_skip_export);

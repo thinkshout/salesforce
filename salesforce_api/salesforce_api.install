@@ -1,11 +1,8 @@
 <?php
-// $Id$
-
 /**
  * @file
  * Installs any global tables needed for Salesforce integration.
  */
-
 
 /**
  * Implementation of hook_install().
@@ -66,6 +63,25 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'created' => array(
+        'description' => 'The UNIX timestamp when the mapping was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'last_import' => array(
+        'description' => 'The Unix timestamp when the record was last imported from Salesforce to Drupal.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'last_export' => array(
+        'description' => 'The Unix timestamp when the record was last exported from Drupal to Salesforce.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+
     ),
     'indexes' => array(
       'sfid' => array('sfid'),
@@ -73,6 +89,7 @@ function salesforce_api_schema() {
     ),
     'primary key' => array('drupal_type', 'oid'),
   );
+  // Salesforce Field Map schema
   $schema['salesforce_field_map'] = array(
     'description' => t('Drupal to Salesforce field mappings'),
     'export' => array(
@@ -337,3 +354,16 @@ function salesforce_api_update_6204(&$sandbox) {
   }
 }
 
+/**
+ * Alter {salesforce_object_map} to add last_import and last_export fields.
+ * @TODO: Update existing items in {salesforce_object_map} with best guesses of
+ * last import/export times.
+ */
+function salesforce_api_update_6205(&$sandbox) {
+  $ret = array();
+  db_add_field($ret, 'salesforce_object_map', 'created', array('type' => 'int', 'not null' => TRUE, 'description' => 'The UNIX timestamp when the mapping was created.'));
+  db_add_field($ret, 'salesforce_object_map', 'last_import', array('type' => 'int', 'not null' => TRUE, 'description' => 'The UNIX timestamp when the last import occurred for this item.'));
+  db_add_field($ret, 'salesforce_object_map', 'last_export', array('type' => 'int', 'not null' => TRUE, 'description' => 'The UNIX timestamp when the last export occurred for this item.'));
+
+  return $ret;
+}

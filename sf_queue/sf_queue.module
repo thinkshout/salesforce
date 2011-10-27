@@ -333,8 +333,8 @@ error_log(print_r($count_sql, 1));
           // records at once.
           // @TODO: salesforce_api_id_save_multi
           $delete_sql = 'DELETE FROM {salesforce_object_map} WHERE oid IN (' . db_placeholders($wins) . ')';
-          $insert_sql = 'INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name) VALUES ';
-          $row_ph = '("%s", %d, "%s", "%s")';
+          $insert_sql = 'INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name, last_export) VALUES ';
+          $row_ph = '("%s", %d, "%s", "%s", %d)';
           $rows = '';
           $args = array();
           //, $drupal_type, $oid, $sfid, $name);
@@ -352,6 +352,7 @@ error_log(print_r($count_sql, 1));
             $args[] = $oid;
             $args[] = $sfid;
             $args[] = $items[$offset]['fieldmap_name'];
+            $args[] = time();
             $offset++;
           }
           $insert_sql .= ' ' . $rows;

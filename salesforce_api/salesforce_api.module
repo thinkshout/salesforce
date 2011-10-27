@@ -1117,43 +1117,76 @@ function salesforce_api_get_id_with_sfid($sfid, $type = 'node') {
 
 /**
  * Saves the Salesforce ID and fieldmap index of a Drupal object.
- *
- * @param $drupal_type
+ * This function will store the timestamp of creation of the object mapping
+ * It will also store data about when the object was last exported to Salesforce
+ * or imported to Drupal.
+ * *
+ * @param string$drupal_type
  *   The type of the Drupal object you are requesting data for; node or user.
- * @param $oid
+ * @param int $oid
  *   The associated unique ID used to identify the object in Drupal.
- * @param $sfid
+ * @param string $sfid
  *   The Salesforce ID of the associated object in the Salesforce database.
- * @param $name
+ * @param string $name
  *   The name of the fieldmap used to generate the export.
+ * @param string $op_type
+ *   The type of operation being performed. Possible values are 'import' and
+ *   'export'.
  * @return
  *   TRUE if was successfull in saving the link, FALSE otherwise.
  * @todo salesforce_api_id_save_multi()
  */
-function salesforce_api_id_save($drupal_type, $oid, $sfid, $name) {
+function salesforce_api_id_save($drupal_type = NULL, $oid = NULL, $sfid = NULl, $name = NULL, $op_type = NULL) {
   // Allow other modules to respond to salesforce_api_id_save being called
   foreach (module_implements('salesforce_api_id_save_alter') as $module) {
     $function = $module . '_salesforce_api_id_save_alter';
-    $continue = $function($drupal_type, $oid, $sfid, $name);
+    $continue = $function($drupal_type, $oid, $sfid, $name, $op_type);
     if ($continue === FALSE) {
       return FALSE;
     }
   }
 
-  if ($oid) {
-    $oid = (int)$oid;
-  }
-  if ($drupal_type && $oid && $sfid && $name) {
-    db_query("DELETE FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid);
-    $insert = db_query("INSERT INTO {salesforce_object_map} (drupal_type, oid, sfid, name) VALUES ('%s', %d, '%s', '%s')", $drupal_type, $oid, $sfid, $name);
-    if ($insert) {
-      salesforce_api_log(SALESFORCE_LOG_ALL, 'Successfully linked Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
-      return TRUE;
+  if ($drupal_type && $oid && $sfid && $name && $op_type) {
+    // Create our record for saving to the database
+    $record = new stdClass();
+    $record->drupal_type = $drupal_type;
+    $record->name = $name;
+    $record->oid = (int)$oid;
+    // Set the last_import/last_export field depending on what type of operation
+    // is being performed
+    ($op_type == 'export') ? $record->last_export = time() : $record->last_import = time();
+    $record->sfid = $sfid;
+    $existing_record = db_fetch_array(db_query("SELECT oid, drupal_type, name, sfid, last_import, last_export, created FROM {salesforce_object_map} WHERE drupal_type = '%s' AND oid = %d", $drupal_type, $oid));
+
+    if ($existing_record['sfid']) {
+      // Update the record
+      if (drupal_write_record('salesforce_object_map', $record, array('drupal_type', 'oid'))) {
+        salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, successfully re-saved mapping between Drupal !type !oid and Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
+        return TRUE;
+      }
+      else {
+        // Log an error if we failed to re-save the mapping
+        salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, failed to re-save mapping between Drupal !type !oid with Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
+        return FALSE;
+      }
+    }
+    else {
+      // We will insert a new mapping, so set the value of created
+      $record->created = time();
+      if (drupal_write_record('salesforce_object_map', $record)) {
+        salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, successfully saved new mapping between Drupal !type !oid and Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
+        return TRUE;
+      }
+      else {
+        // Log an error if the new mapping was not saved
+        salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, failed to save new mapping between Drupal !type !oid with Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
+        return FALSE;
+      }
     }
   }
   else {
-    salesforce_api_log(SALESFORCE_LOG_ALL, 'Failed to link Drupal !type !oid to Salesforce ID !sfid with fieldmap !name', array('!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
-    return FALSE;
+    // salesforce_api_id_save was called with insufficient information
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'salesforce_api_id_save() called with insufficient data. Drupal type: !type, OID: !oid, SFID: !sfid, Fieldmap !name, Op !op', array('!op' => $op_type, '!type' => $drupal_type, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
   }
 }
 
