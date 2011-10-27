@@ -951,6 +951,7 @@ function salesforce_api_fieldmap_object_label($type, $entity, $bundle) {
 
   // If no label is specified, return the object name.
   if (empty($object['label'])) {
+    $name = $entity . ':' . $bundle;
     return check_plain($name);
   }
 
