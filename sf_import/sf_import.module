@@ -61,7 +61,7 @@ function sf_import_cron() {
   if ($sf = salesforce_api_connect()) {
     // Get new records from Salesforce since last time cron was run
     if (variable_get('sf_import_cron_import', 1)) {
-      _sf_import_get_updated_records();
+      sf_import_import_records();
     }
     // Process the records (insert/update records)
     if (variable_get('sf_import_cron_process', 1)) {
@@ -71,10 +71,53 @@ function sf_import_cron() {
 }
 
 /**
- * Loops through fieldmaps with automatic create/update settings and imports
- * new records since the last time the import process was run.
+ * For the fieldmap provided, attempt to pull updated Salesforce IDs using
+ * the SOQL query defined for the map.
+ * @param object $map
+ *   A Salesforce fieldmap object, @see salesforce_api_fieldmap_load().
+ * @return FALSE if failed, or an object containing an array of Ids and the latest date covered.
+ *  $response->ids = array of SFIDS
+ *  $response->latestDateCovered = timestamp of latest updated Salesforce object
  */
-function _sf_import_get_updated_records() {
+function _sf_import_get_soql_records($map, $start, $end) {
+  if (!$map->salesforce) {
+    return FALSE;
+  }
+  $date_time = gmdate(DATE_ATOM, $start);
+  $default_soql = 'SELECT Id, LastModifiedDate FROM ' . $map->salesforce . ' WHERE LastModifiedDate > ' . $date_time;
+  $soql_where = variable_get('sf_import_' . $map->name . '_soql', NULL);
+  $soql = NULL;
+  $order_by = ' ORDER BY LastModifiedDate DESC';
+  (is_null($soql_where)) ? $soql = $default_soql . $order_by : $soql = $default_soql . ' AND ' . $soql_where . $order_by;
+  if ($soql) {
+    // Run the query
+    $results = salesforce_api_query($soql, array('queryAll' => FALSE, 'queryMore' => TRUE, 'limit' => 2000));
+    if (empty($results)) {
+      return FALSE;
+    }
+  }
+  $response = new stdClass();
+  $records = array();
+  foreach ($results as $key => $object) {
+    // Check to see that the last_import field in {salesforce_object_map} is older than
+    // the LastModifiedDate on this object
+    $last_import = db_result(db_query("SELECT last_import FROM {salesforce_object_map} WHERE sfid = '%s'", $object->Id));
+    if ($last_import < strtotime($object->LastModifiedDate)) {
+      $records[] = $object->Id;
+    }
+  }
+  $response->ids = $records;
+  $response->latestDateCovered = $results[0]->LastModifiedDate;
+  return $response;
+}
+
+/**
+ * This function is called on cron run. It is responsible for calling
+ * functions to import records using the getUpdated() method or a custom SOQL
+ * query, depending on what the user selected in admin settings for sf_import.
+ */
+function sf_import_import_records() {
+
   $fieldmaps = variable_get('sf_import_fieldmaps', salesforce_api_salesforce_field_map_load_all());
   $active_fieldmaps = array();
   foreach ($fieldmaps as $map_key => $map_value) {
@@ -110,7 +153,9 @@ function _sf_import_get_updated_records() {
 
     // Set the time that the last import took place
     variable_set('sf_import_queue_last_import', time());
-    if ($updates = salesforce_api_get_updated($map->salesforce, $start, $end)) {
+    $import_method = variable_get('sf_import_' . $map->name . '_update_method', 'get_updated');
+    $import_function = ($import_method == 'get_updated') ? 'salesforce_api_get_updated' : '_sf_import_get_soql_records';
+    if ($updates = $import_function($map, $start, $end)) {
       $update_sfids = $updates->ids;
       // Handle single record
       if (!is_array($update_sfids)) {

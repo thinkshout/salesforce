@@ -61,6 +61,39 @@ function sf_import_settings_form($form_state) {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
+  $import_maps = variable_get('sf_import_fieldmaps', array());
+  $active_import_maps = array();
+  if ($import_maps) {
+    foreach ($import_maps as $import_map_key => $import_map_value) {
+      // Custom import settings
+      $form['sf_import_advanced'][$import_map_key]['update_settings'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Import settings for fieldmap "@map"', array('@map' => (!empty($fieldmaps[$import_map_key]->description) ? $fieldmaps[$import_map_key]->description : $fieldmaps[$import_map_key]->name))),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+      );
+      $form['sf_import_advanced'][$import_map_key]['update_settings']['sf_import_' . $import_map_key . '_update_method'] = array(
+        '#type' => 'radios',
+        '#title' => 'Import method',
+        '#description' => 'Select the method for selecting Salesforce IDs to import.',
+        '#options' => array('soql' => 'Custom SOQL query', 'get_updated' => 'Salesforce API getUpdated() method'),
+        '#default_value' => variable_get('sf_import_' . $import_map_key . '_update_method', 'get_updated'),
+      );
+      $form['sf_import_advanced'][$import_map_key]['update_settings']['default_soql'] = array(
+        '#value' => 'Default SOQL statement used for importing data: <code>SELECT Id, LastModifiedDate FROM ' . $fieldmaps[$import_$map_key]->salesforce . ' WHERE LastModifiedDate > ' . gmdate(DATE_ATOM, variable_get('sf_import_queue_last_import', time())) . '</code>',
+        '#prefix' => '<p>',
+        '#suffix' => '</p>',
+      );
+      $form['sf_import_advanced'][$import_map_key]['update_settings']['sf_import_' . $import_map_key . '_soql'] = array(
+        '#type' => 'textarea',
+        '#title' => 'SOQL query',
+        '#description' => t('Enter any additional SOQL WHERE clauses for querying Salesforce about updated records in the format of "Email != NULL AND FirstName != NULL".'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+        '#default_value' => variable_get('sf_import_' . $import_map_key . '_soql', NULL),
+      );
+    }
+  }
 
   $form['sf_import_advanced']['sf_import_cron'] = array(
     '#type' => 'fieldset',
@@ -72,13 +105,13 @@ function sf_import_settings_form($form_state) {
 
   $form['sf_import_advanced']['sf_import_cron']['sf_import_cron_import'] = array(
     '#type' => 'checkbox',
-    '#title' => t('On cron run, import SFIDs returned by the Salesforce API <code>get_updated()</code> function.'),
+    '#title' => t('On cron run, import updated SFIDs to the {sf_import_queue} table.'),
     '#default_value' => variable_get('sf_import_cron_import', 1),
   );
 
   $form['sf_import_advanced']['sf_import_cron']['sf_import_cron_process'] = array(
     '#type' => 'checkbox',
-    '#title' => t('On cron run, run import operations for SFIDs in the Salesforce import queue.'),
+    '#title' => t('On cron run, process SFIDs in the Salesforce import queue.'),
     '#default_value' => variable_get('sf_import_cron_process', 1),
   );
 
@@ -96,7 +129,9 @@ function sf_import_settings_form($form_state) {
         if ($end - $start < 60) {
           $start = $end - 61;
         }
-        $sf_updated = salesforce_api_get_updated($map->salesforce, $start, $end);
+        $import_method = variable_get('sf_import_' . $map->name . '_update_method', 'get_updated');
+        $import_function = ($import_method == 'get_updated') ? 'salesforce_api_get_updated' : '_sf_import_get_soql_records';
+        $sf_updated = $import_function($map->salesforce, $start, $end);
 
         $form[$import_map_key . '_information'] = array(
           '#type' => 'fieldset',
@@ -105,6 +140,7 @@ function sf_import_settings_form($form_state) {
           '#collapsible' => TRUE,
           '#collapsed' => $sf_updated ? FALSE : TRUE,
         );
+
         if ($sf_updated) {
           $form[$import_map_key . '_information']['pending'] = array(
             '#value' => t('@count updated record(s) in Salesforce pending import.<br />Newest object in Salesforce dated @date', array('@count' => count($sf_updated->ids), '@date' => $sf_updated->latestDateCovered)),
