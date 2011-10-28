@@ -195,6 +195,8 @@ function hook_default_salesforce_fieldmaps($export = array()) {
  *   The Salesforce ID of the associated object in the Salesforce database.
  * @param $name
  *   The name of the fieldmap used to generate the export.
+ * @param $op_type
+ *   The operation being performed, 'import' or 'export'.
  * @param $entity_name
  *   The type of Drupal entity being saved.
  * @param $bundle_name
@@ -203,7 +205,7 @@ function hook_default_salesforce_fieldmaps($export = array()) {
  *   TRUE if salesforce_api_id_save() should proceed with saving the link, FALSE
  *   otherwise.
 */
-function hook_salesforce_api_id_save_alter($oid, $sfid, $name, $entity_name, $bundle_name) {
+function hook_salesforce_api_id_save_alter(&$oid, &$sfid, &$name, &$entity_name, &$bundle_name, &$op_type) {
   // Example: Do not allow a mapping to be saved between UID 1 and Salesforce
   if ($oid == 1 && $entity_name == 'user') {
     return FALSE;

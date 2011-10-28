@@ -39,6 +39,7 @@ function salesforce_api_enable() {
  */
 function salesforce_api_schema() {
   require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
+  // Object mapping table.
   $schema['salesforce_object_map'] = array(
     'description' => 'Drupal to Salesforce object mapping table',
     'fields' => array(
@@ -75,6 +76,24 @@ function salesforce_api_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the mapping was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+     ),
+     'last_import' => array(
+        'description' => 'The Unix timestamp when the record was last imported from Salesforce to Drupal.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'last_export' => array(
+        'description' => 'The Unix timestamp when the record was last exported from Drupal to Salesforce.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'indexes' => array(
       'sfid' => array('sfid'),
@@ -83,8 +102,10 @@ function salesforce_api_schema() {
     ),
     // Primary key has been changed to the fieldmap:
     // one fieldmapping for each Drupal object - cf. [#1018690-8]
+    // @todo: Write the 7.x upgrade routine to reflect this.
     'primary key' => array('name', 'oid'),
   );
+  // Field mapping table.
   $schema['salesforce_fieldmap'] = array(
     'description' => 'Drupal to Salesforce field mappings',
     'export' => array(
@@ -208,10 +229,10 @@ function salesforce_api_requirements($phase) {
  * now "name". Although the value of name is not particularly important, it must
  * be set and it must be unique. In this update function, we are doing a few
  * things:
- * 1) Add "name" columns to salesforce_field_map and salesforce_object_map
- * 2) Assign unique values to "name" column in salesforce_field_map
- * 3) Assign "name" values to columns in salesforce_object_map
- * 4) Drop "fieldmap" column from salesforce_object_map
+ * 1) Add "name" columns to salesforce_field_map and salesforce_object_map.
+ * 2) Assign unique values to "name" column in salesforce_field_map.
+ * 3) Assign "name" values to columns in salesforce_object_map.
+ * 4) Drop "fieldmap" column from salesforce_object_map.
  *
  */
 function salesforce_api_update_6201() {
@@ -280,14 +301,11 @@ function salesforce_api_update_6201() {
     }
   }
 
-  // hook_update_N() no longer returns a $ret array. Instead, return
-  // nothing or a translated string indicating the update ran successfully.
-  // See http://drupal.org/node/224333#update_sql.
-  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
+  return t('Added CTools support to Salesforce Suite, making name the primary key.');
 }
 
 /**
- * Try to fix existing maps based on the new cck support
+ * Try to fix existing maps based on the new CCK support.
  */
 function salesforce_api_update_6202() {
   $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
@@ -334,25 +352,20 @@ function salesforce_api_update_6202() {
       );
     }
   }
-  // hook_update_N() no longer returns a $ret array. Instead, return
-  // nothing or a translated string indicating the update ran successfully.
-  // See http://drupal.org/node/224333#update_sql.
-  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
+
+  return t('Attempted to fix fieldmaps using CCK support; you may need to review these manually.');
 }
 
 /**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
+ * Set fieldmaps to automatic.
  */
 function salesforce_api_update_6203() {
   $ret = array();
   db_change_field('salesforce_field_map', 'automatic', 'automatic', array('type' => 'int', 'size' => 'small', 'not null' => TRUE, 'default' => SALESFORCE_AUTO_SYNC_OFF));
-  // TODO update_sql has been removed. Use the database API for any schema or data changes.
-  array() /* update_sql(sprintf('UPDATE {salesforce_field_map} SET automatic = %d', SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE)) */;
-  // hook_update_N() no longer returns a $ret array. Instead, return
-  // nothing or a translated string indicating the update ran successfully.
-  // See http://drupal.org/node/224333#update_sql.
-  return t('TODO Add a descriptive string here to show in the UI.') /* $ret */;
+  $num_updated = db_update('salesforce_field_map')
+    ->fields(array('automatic' => SALESFORCE_AUTO_SYNC_CREATE | SALESFORCE_AUTO_SYNC_UPDATE))
+    ->execute();
+  return t('Set fieldmaps to automatic.');
 }
 
 /**
@@ -384,12 +397,50 @@ function salesforce_api_update_6204(&$sandbox) {
   $sandbox['position']++;
   $finished = $sandbox['position'] / $sandbox['n_users'];
   if ($finished >= 1) {
-    return array(array('success' => TRUE, 'query' => t('Fixed !n user accounts.', array('!n' => $sandbox['n_users']))));
+    return t('Fixed !n user accounts.', array('!n' => $sandbox['n_users']));
   }
   else {
-    // hook_update_N() no longer returns a $ret array. Instead, return
-    // nothing or a translated string indicating the update ran successfully.
-    // See http://drupal.org/node/224333#update_sql.
-    return t('TODO Add a descriptive string here to show in the UI.') /* array('#finished' => $finished) */;
+    return t('No user accounts needed to be updated.');
+  }
+}
+
+/**
+ * Alter {salesforce_object_map} to add last_import and last_export fields.
+ * @todo: Update existing items in {salesforce_object_map} with best guesses of
+ * last import and last export times.
+ */
+function salesforce_api_update_6205(&$sandbox) {
+  db_add_field('salesforce_object_map', 'created', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'description' => 'The Unix timestamp when the mapping was created.'));
+  db_add_field('salesforce_object_map', 'last_import', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'description' => 'The Unix timestamp when the last import occurred for this item.'));
+  db_add_field('salesforce_object_map', 'last_export', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'description' => 'The Unix timestamp when the last export occurred for this item.'));
+
+  return t('Updated the {salesforce_object_map} table to track object created, import, and export times.');
+}
+
+/**
+ * Adds in the new fields to salesforce_object_map if they are not already set.
+ * @todo: Add the upgrade path from 6.x to 7.x, immediately prior to this.
+ */
+function salesforce_api_update_7001(&$sandbox) {
+  $added_fields = array();
+  if(!db_field_exists('salesforce_object_map', 'created')) {
+    db_add_field('salesforce_object_map', 'created', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'description' => 'The Unix timestamp when the mapping was created.'));
+    $added_fields[] = 'created';
+  }
+  if(!db_field_exists('salesforce_object_map', 'last_import')) {
+    db_add_field('salesforce_object_map', 'last_import', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'description' => 'The Unix timestamp when the last import occurred for this item.'));
+    $added_fields[] = 'last_import';
+  }
+  if(!db_field_exists('salesforce_object_map', 'last_export')) {
+    db_add_field('salesforce_object_map', 'last_export', array('type' => 'int', 'not null' => TRUE, 'default' => 0, 'description' => 'The Unix timestamp when the last export occurred for this item.'));
+    $added_fields[] = 'last_export';
+  }
+
+  if(empty($added_fields)) {
+    return t('The created, last_import, and last_export fields already existed in {salesforce_object_map}. No action performed.');
+  }
+  else {
+    $added_fields = implode(', ', $added_fields);
+    return t('Added the following fields to {salesforce_object_map}: @fields', array('@fields' => $added_fields));
   }
 }

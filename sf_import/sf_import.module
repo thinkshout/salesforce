@@ -462,10 +462,17 @@ function _sf_import_get_updated_records() {
   }
 
   $records = array();
-  // Get updated and/or deleted items for each fieldmap and store in sf_import_queue
-  // Start date is newest date of SFID stored in sf_import_queue, end date is time()
-  foreach ($active_fieldmaps as $map) {
-    $map = salesforce_api_salesforce_fieldmap_load($map);
+  // Get updated and/or deleted items for each fieldmap and store in sf_import_queue.
+  // Start date is newest date of SFID stored in sf_import_queue, end date is REQUEST_TIME.
+  foreach ($active_fieldmaps as $name => $map) {
+    $map = salesforce_api_salesforce_fieldmap_load($name);
+
+    // Skip to next fieldmap if the fieldmap couldn't be loaded
+    // (such as when it doesn't exist in the database).
+    if(!is_object($map)) {
+      continue;
+    }
+
     $sql = "SELECT time FROM {sf_import_queue} ORDER BY time DESC LIMIT 1";
     $start = db_query($sql)->fetchField();
     if (!$start) {
@@ -477,7 +484,7 @@ function _sf_import_get_updated_records() {
 
     // If the last time we checked for updated records was within the last
     // hour, then push the $start value back an hour.
-    // This helps enusre that we don't skip over any updated records
+    // This helps ensure that we don't skip over any updated records.
     if ($end - $start < 3600) {
       $start = $start - 3600;
     }

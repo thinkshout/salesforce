@@ -951,7 +951,6 @@ function salesforce_api_fieldmap_object_label($type, $entity, $bundle) {
 
   // If no label is specified, return the object name.
   if (empty($object['label'])) {
-    $name = $entity . ':' . $bundle;
     return check_plain($name);
   }
 
@@ -1266,26 +1265,30 @@ function salesforce_api_get_id_with_sfid($sfid, $name = NULL) {
 
 /**
  * Saves the Salesforce ID and fieldmap index of a Drupal object.
+ * Also stores the timestamp of creation for the object mapping, and when the
+ * object was last exported to Salesforce or imported to Drupal.
  *
- * @param $oid
+ * @param int $oid
  *   The associated unique ID used to identify the object in Drupal.
- * @param $sfid
+ * @param string $sfid
  *   The Salesforce ID of the associated object in the Salesforce database.
- * @param $name
+ * @param string $name
  *   The name of the fieldmap used to generate the export.
- * @param $entity_name
+ * @param string $entity_name
  *   The type of Drupal entity being saved.
- * @param $bundle_name
+ * @param string $bundle_name
  *   The Drupal bundle type being saved.
+ * @param string $op_type
+ *   The type of operation being performed. Possible values are 'import' and 'export'.
  * @return
  *   TRUE if was successful in saving the link, FALSE otherwise.
  * @todo salesforce_api_id_save_multi()
  */
-function salesforce_api_id_save($oid, $sfid, $name, $entity_name, $bundle_name) {
+function salesforce_api_id_save($oid = NULL, $sfid = NULL, $name = NULL, $entity_name = NULL, $bundle_name = NULL, $op_type = NULL) {
   // Allows other modules to respond to salesforce_api_id_save being called.
   foreach (module_implements('salesforce_api_id_save_alter') as $module) {
     $function = $module . '_salesforce_api_id_save_alter';
-    $continue = $function($oid, $sfid, $name, $entity_name, $bundle_name);
+    $continue = $function($oid, $sfid, $name, $entity_name, $bundle_name, $op_type);
     if ($continue === FALSE) {
       return FALSE;
     }
@@ -1294,29 +1297,43 @@ function salesforce_api_id_save($oid, $sfid, $name, $entity_name, $bundle_name) 
   if ($oid) {
     $oid = (int) $oid;
   }
-  if ($oid && $sfid && $name && $entity_name && $bundle_name) {
-    db_delete('salesforce_object_map')
-      ->condition('name', $name)
-      ->condition('oid', $oid)
-      ->condition('drupal_entity', $entity_name)
-      ->condition('drupal_bundle', $bundle_name)
-      ->execute();
-    $insert = $id = db_insert('salesforce_object_map')
-      ->fields(array(
+  if ($oid && $sfid && $name && $entity_name && $bundle_name && $op_type) {
+    ($op_type == 'export') ? $fieldname = 'last_export' : $fieldname = 'last_import';
+    $result = db_merge('salesforce_object_map')
+      ->key(array(
+          'oid' => $oid,
+          'name' => $name,
+        ))
+      ->insertFields(array(
         'oid' => $oid,
         'sfid' => $sfid,
         'name' => $name,
         'drupal_entity' => $entity_name,
         'drupal_bundle' => $bundle_name,
+        'created' => REQUEST_TIME,
+        $fieldname => REQUEST_TIME,
+      ))
+      ->updateFields(array(
+        $fieldname => REQUEST_TIME
       ))
       ->execute();
-    if ($insert) {
-      salesforce_api_log(SALESFORCE_LOG_ALL, 'Successfully linked Drupal !entity : !bundle !oid to Salesforce ID !sfid with fieldmap !name', array('!entity' => $entity_name, '!bundle' => $bundle_name, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
+    // Log if an insert has been performed.
+    if ($result == MergeQuery::STATUS_INSERT) {
+      salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, successfully linked Drupal !entity : !bundle !oid to Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!entity' => $entity_name, '!bundle' => $bundle_name, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
       return TRUE;
+    }
+    // Log if an update has been performed.
+    elseif ($result == MergeQuery::STATUS_UPDATE) {
+      salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, successfully re-saved linkage between Drupal !entity : !bundle !oid to Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!entity' => $entity_name, '!bundle' => $bundle_name, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name));
+      return TRUE;
+    }
+    // Otherwise, log an error.
+    else {
+       salesforce_api_log(SALESFORCE_LOG_ALL, 'On !op, failed to link Drupal !entity : !bundle !oid to Salesforce ID !sfid with fieldmap !name', array('!op' => $op_type, '!entity' => $entity_name, '!bundle' => $bundle_name, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
     }
   }
   else {
-    salesforce_api_log(SALESFORCE_LOG_ALL, 'Failed to link Drupal !entity : !bundle !oid to Salesforce ID !sfid with fieldmap !name', array('!entity' => $entity_name, '!bundle' => $bundle_name, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name), WATCHDOG_ERROR);
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'Attempted to save Drupal->Salesforce linkage with insufficient information. Drupal entity: !entity, Drupal bundle: !bundle, Drupal entity id: !oid, Salesforce ID: !sfid, Fieldmap: !name, Operation: !op', array('!entity' => $entity_name, '!bundle' => $bundle_name, '!oid' => $oid, '!sfid' => $sfid, '!name' => $name, '!op' => $op_type), WATCHDOG_ERROR);
     return FALSE;
   }
 }
@@ -1350,8 +1367,9 @@ function salesforce_api_id_save($oid, $sfid, $name, $entity_name, $bundle_name) 
  *    - 'name', 'oid'
  *    - 'drupal_entity', 'oid'
  */
-// @todo: Need to add drupal_bundle in here as an option? Would need to be combined with something,
-//        probably, in order to make it meaningful.
+// @todo: Need to add drupal_bundle in here as an option?
+//        Would need to be combined with something, probably, in order to make it meaningful.
+//        Also consider adding date-based unlinking (i.e., created, last_import, last_export.
 function salesforce_api_id_unlink($args) {
   $valid_args =
     !empty($args['sfid'])

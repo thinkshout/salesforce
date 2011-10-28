@@ -676,7 +676,8 @@ function sf_entity_salesforce_form_submit($form, &$form_state) {
 
     // Import changes from Salesforce.
     case t('Import'):
-      if (sf_entity_import($form_state['values']['sfid'], $form_state['values']['fieldmap'], $oid)) {
+      // Call the sf_entity_import() function with the extra-linked parameter, so that the import time will get updated.
+      if (sf_entity_import($form_state['values']['sfid'], $form_state['values']['fieldmap'], $oid, array('extra-linked' => TRUE))) {
         drupal_set_message(t('The %entity has been updated with values from Salesforce.', array('%entity' => $form_state['values']['entity type'])));
       }
       else {
@@ -742,7 +743,7 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
     if (!empty($matches)) {
       $sfid = reset($matches);
       $entity->salesforce->sfid = $sfid;
-      salesforce_api_id_save($id, $sfid, $name, $map->drupal_entity, $map->drupal_bundle);
+      salesforce_api_id_save($id, $sfid, $name, $map->drupal_entity, $map->drupal_bundle, 'export');
       $entity = entity_load($map->drupal_entity, array($id), array(), TRUE);
     }
   }
@@ -816,7 +817,7 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
   // If the export was successful, save the Salesforce ID for the Drupal entity.
   if (isset($response->success) && $response->success == TRUE) {
     // Store the Salesforce ID for the entity and return TRUE.
-    salesforce_api_id_save($id, $response->id, $name, $map->drupal_entity, $map->drupal_bundle);
+    salesforce_api_id_save($id, $response->id, $name, $map->drupal_entity, $map->drupal_bundle, 'export');
   }
   else {
     // Otherwise log the error.
@@ -1023,7 +1024,7 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
         $sfid = $sf_data->Id;
       }
       if (!empty($sfid)) {
-        salesforce_api_id_save($id, $sfid, $name, $map->drupal_entity, $map->drupal_bundle);
+        salesforce_api_id_save($id, $sfid, $name, $map->drupal_entity, $map->drupal_bundle, 'import');
       }
     }
   }
