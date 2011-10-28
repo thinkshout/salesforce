@@ -1036,7 +1036,17 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
   return $id;
 }
 
-/* Helper function to populate a new entity with other properties besides the stub properties. */
+/**
+ * Helper function to populate a new entity with other properties
+ * besides the stub properties.
+ * @param object $entity
+ *   The entity object, passed by reference so it can be modified by this function.
+ * @param string $entity_type
+ *   The entity type for the entity being created.
+ * @param string $bundle_name
+ *   Name of the bundle for the given entity. (Optional)
+ * @return void
+ */
 function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_name = NULL) {
   // Loads the information about all entity types.
   $entities = entity_get_info();
@@ -1086,8 +1096,7 @@ function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_nam
     // To do this correctly, the UID must be pulled from a fieldmap of some sort, but that would require
     // another Salesforce API function, to match the supplied sfid, without also providing a fieldmap.
     if (!isset($entity->uid) || empty($entity->uid)) {
-      // $uid = salesforce_api_get_id_with_sfid('003K0000002BNNkIAO', 'salesforce_api_default_user_contact_fieldmap');
-      // $entity->uid = $uid;
+      // @todo: Provide a variable to set the proper uid.
       // For now, just save the node with anonymous ownership
       // (since that is the only uid guaranteed to exist).
       $entity->uid = 0;
@@ -1101,8 +1110,19 @@ function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_nam
   }
 }
 
-/* Helper function to populate necessary values after the import data is received, and do matching. */
-function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) {
+/**
+ * Helper function to populate necessary values after the import data
+ * is received, and do matching necessary to prevent duplicate entry errors.
+ * Includes a hook to add additional properties to the entity.
+ * @param object $entity
+ *   The entity object, passed by reference so it can be modified by this function.
+ * @param string $entity_type
+ *   The entity type for the entity being created.
+ * @param string $bundle_name
+ *   Name of the bundle for the given entity. (Optional)
+ * @return void
+ */
+function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name = NULL) {
   if ($entity_type == 'user') {
     // If status is still empty, set it to 1 (active)
     if (!isset($entity->status) || empty($entity->status)) {
@@ -1147,6 +1167,12 @@ function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name) 
     if (!isset($entity->format) || empty($entity->format)) {
       $entity->format = 'plain_text';
     }
+  }
+  // Invoke a hook to process the entity further as needed.
+  // We cannot use module_invoke_all() since the entity needs to be passed by reference.
+  foreach(module_implements('salesforce_api_process_entity') as $module) {
+    $function = $module . '_salesforce_api_process_entity';
+    $function($entity, $entity_type, $bundle_name);
   }
 }
 
