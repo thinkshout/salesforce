@@ -1709,7 +1709,8 @@ function salesforce_api_retrieve($ids, $name) {
  * Wrapper for SOAP SforceBaseClient::getUpdated. Searches for records
  * updated/created between start and end date.
  * @param string $type
- *  The name of the Salesforce object to retrieve data for.
+ *  The name of the Salesforce object for which to retrieve data, or
+ *  a Salesforce fieldmap object.
  * @param int $start
  *  The timestamp for the beginning of the query.
  * @param int $end
@@ -1721,6 +1722,10 @@ function salesforce_api_retrieve($ids, $name) {
 function salesforce_api_get_updated($type, $start, $end) {
   if (!$type || !$start || !$end) {
     return FALSE;
+  }
+  // If $type is an object, we only need the Salesforce type.
+ if (is_object($type) && $type->salesforce) {
+    $type = $type->salesforce;
   }
   $sf = salesforce_api_connect();
   if ($sf) {
