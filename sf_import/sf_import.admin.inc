@@ -80,7 +80,7 @@ function sf_import_settings_form($form_state) {
         '#default_value' => variable_get('sf_import_' . $import_map_key . '_update_method', 'get_updated'),
       );
       $form['sf_import_advanced'][$import_map_key]['update_settings']['default_soql'] = array(
-        '#value' => 'Default SOQL statement used for importing data: <code>SELECT Id, LastModifiedDate FROM ' . $fieldmaps[$import_$map_key]->salesforce . ' WHERE LastModifiedDate > ' . gmdate(DATE_ATOM, variable_get('sf_import_queue_last_import', time())) . '</code>',
+        '#value' => 'Default SOQL statement used for importing data: <code>SELECT Id, LastModifiedDate FROM ' . $fieldmaps[$import_map_key]->salesforce . ' WHERE LastModifiedDate > ' . gmdate(DATE_ATOM, variable_get('sf_import_queue_last_import', time())) . '</code>',
         '#prefix' => '<p>',
         '#suffix' => '</p>',
       );
