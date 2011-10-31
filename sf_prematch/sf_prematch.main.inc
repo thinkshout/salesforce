@@ -25,8 +25,6 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   $sf_object_info = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
 
   $values = array();
-  $select_clause = "SELECT ";
-  $fields_list = "";
   $safe_fields = array();
   foreach ($map->fields as $key => $value) {
     if (is_array($value)) {
@@ -40,11 +38,12 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   // Create $values array allowing easy mapping from match_by fields to query fields and values.
   // Also build out SOQL select clause to include all match by sf fields.
   foreach ($match_by as $match_by_field => $drupal_field_name) {
-    if ($match_by_field == 'fieldmap' || $match_by_field == 'rule') {
+    if ($match_by_field == 'fieldmap' || $match_by_field == 'rule' || !$drupal_to_salesforce_fieldmap[$drupal_field_name]) {
       continue;
     }
-    $values[$match_by_field] = array();
+
     // If a handler is specified for retrieving a value for the source field...
+    $drupal_value = NULL;
     if (isset($drupal_fields_info[$drupal_field_name]['export'])) {
       $drupal_field_definition = $drupal_fields_info[$drupal_field_name];
       $sf_field_definition = $sf_object_info['fields'][$drupal_to_salesforce_fieldmap[$drupal_field_name]];
@@ -57,29 +56,18 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
     elseif (isset($drupal_object->$drupal_field_name)) {
       $drupal_value = $drupal_object->$drupal_field_name;
     }
-    else {
-      $drupal_value = NULL;
-    }
-    $values[$match_by_field]['drupal_value'] = $drupal_value;
-    $values[$match_by_field]['salesforce_field_name'] = $drupal_to_salesforce_fieldmap[$drupal_field_name];
-    $values[$match_by_field]['salesforce_type'] = $sf_field_definition['salesforce']['type'];
 
-    // If there's a salesforce field to match by, include it in the select clause.
-    if ($values[$match_by_field]['salesforce_field_name'] && (!empty($drupal_value))) {
-      if (!empty($fields_list)) {
-        $fields_list .= ', ';
-      }
-      $fields_list .= $values[$match_by_field]['salesforce_field_name'];
+    if (!empty($drupal_value)) {
+      $values[$match_by_field]['drupal_value'] = $drupal_value;
+      $values[$match_by_field]['salesforce_field_name'] = $drupal_to_salesforce_fieldmap[$drupal_field_name];
+      $values[$match_by_field]['salesforce_type'] = $sf_field_definition['salesforce']['type'];
     }
   }
 
   // If no values were found for the fields found, then we have nothing to match on
-  if (empty($fields_list)) {
+  if (empty($values)) {
     return;
   }
-
-  $sf_class = $map->salesforce;
-  $from_where_clause = " FROM $sf_class WHERE ";
 
   foreach ($values as $key => $value) {
     switch ($value['salesforce_type']) {
@@ -102,22 +90,23 @@ function sf_prematch_export($object_type, $drupal_object, $map, $match_by) {
   }
 
   // Use match by rule to build out where clause.
+  $where_clause = '';
   switch ($match_by['rule']) {
     case SF_PREMATCH_PRIMARY_SECONDARY_AND_TERTIARY:
-      $from_where_clause .= $values['tertiary_field']['salesforce_field_name'] . " = " . $values['tertiary_field']['drupal_value'] . " AND ";
+      $where_clause .= $values['tertiary_field']['salesforce_field_name'] . " = " . $values['tertiary_field']['drupal_value'] . " AND ";
       // no break;
     case SF_PREMATCH_PRIMARY_AND_SECONDARY:
-      $from_where_clause .= $values['secondary_field']['salesforce_field_name'] . " = " . $values['secondary_field']['drupal_value'] . " AND ";
+      $where_clause .= $values['secondary_field']['salesforce_field_name'] . " = " . $values['secondary_field']['drupal_value'] . " AND ";
       // no break;
     case SF_PREMATCH_PRIMARY:
-      $from_where_clause .= $values['primary_field']['salesforce_field_name'] . " = " . $values['primary_field']['drupal_value'];
+      $where_clause .= $values['primary_field']['salesforce_field_name'] . " = " . $values['primary_field']['drupal_value'];
       break;
     default:
       // no prematch is set
       return;
   }
 
-  $query = $select_clause . ' ' . $fields_list . $from_where_clause . ' ORDER BY CreatedDate ASC';
+  $query = 'SELECT Id FROM ' . $map->salesforce . ' WHERE ' . $where_clause . ' ORDER BY CreatedDate ASC';
 
   // Run the SOQL query against the Salesforce API
   if ($sf = salesforce_api_connect()) {
