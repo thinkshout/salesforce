@@ -92,6 +92,7 @@ function _sf_import_get_soql_records($map, $start, $end) {
   if ($soql) {
     // Run the query
     $results = salesforce_api_query($soql, array('queryAll' => FALSE, 'queryMore' => TRUE, 'limit' => 2000));
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'Query to retreive updated records: %soql. !count result(s) returned: <pre>%ret</pre>', array('%soql' => print_r($soql, TRUE), '!count' => count($results), '%ret' => print_r($results, TRUE)));
     if (empty($results)) {
       return FALSE;
     }
