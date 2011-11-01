@@ -904,3 +904,13 @@ function sf_node_default_salesforce_field_maps($drupal = NULL, $sf = NULL) {
       'description' => 'This is a simple example fieldmap to get you started using the Salesforce API.',
     ));
 }
+
+/**
+ * Implementation of hook_views_api().
+ */
+function sf_node_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'sf_node') . '/includes',
+  );
+}

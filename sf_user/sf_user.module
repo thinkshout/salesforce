@@ -768,3 +768,13 @@ function _sf_user_profile_date_valid($date) {
   $is_valid = (is_array($date) && (isset($date['month']) && is_numeric($date['month'])) && (isset($date['day']) && is_numeric($date['day'])) && (isset($date['year']) && is_numeric($date['year']))) ? TRUE : FALSE;
   return $is_valid;
 }
+
+/**
+ * Implementation of hook_views_api().
+ */
+function sf_user_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'sf_user') . '/includes',
+  );
+}

@@ -53,36 +53,45 @@ function salesforce_api_views_data() {
       'title' => t('Timestamp of initial link between Drupal/Salesforce'),
       'help' => t('The timestamp when the link between Drupal and Salesforce was first created for this object.'),
       'field' => array(
-        'handler' => 'views_handler_field',
+        'handler' => 'views_handler_field_date',
         'click sortable' => TRUE,
       ),
       'filter' => array(
-        'handler' => 'views_handler_filter_string',
+        'handler' => 'views_handler_filter_date',
         'allow empty' => 1,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort_date',
       ),
     ),
     'last_export' => array(
       'title' => t('Timestamp of last export from Drupal to Salesforce'),
       'help' => t('The timestamp when the object was last exported from Drupal to Salesforce.'),
       'field' => array(
-        'handler' => 'views_handler_field',
+        'handler' => 'views_handler_field_date',
         'click sortable' => TRUE,
       ),
       'filter' => array(
-        'handler' => 'views_handler_filter_string',
+        'handler' => 'views_handler_filter_date',
         'allow empty' => 1,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort_date',
       ),
     ),
     'last_import' => array(
       'title' => t('Timestamp of last import from Salesforce to Drupal'),
       'help' => t('The timestamp when the object was last imported from Salesforce to Drupal.'),
       'field' => array(
-        'handler' => 'views_handler_field',
+        'handler' => 'views_handler_field_date',
         'click sortable' => TRUE,
       ),
       'filter' => array(
-        'handler' => 'views_handler_filter_string',
+        'handler' => 'views_handler_filter_date',
         'allow empty' => 1,
+      ),
+      'sort' => array(
+        'handler' => 'views_handler_sort_date',
       ),
     ),
   );
