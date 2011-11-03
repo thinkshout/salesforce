@@ -287,7 +287,89 @@ function sf_import_create_submit($form, &$form_state, $ongoing = 0) {
   $extra_options = array();
   $extra_options['extra-linked'] = $form_state['values']['extra-linked'];
   $extra_options['extra-where'] = $form_state['values']['extra-where'];
-
   $batch = sf_import_create_batchjob($form_state['values']['fieldmap'], $extra_options);
   batch_set($batch);
+}
+
+/**
+ * Page callback for Manual imports. Allow a user to specify a list of
+ * Salesforce IDs for importing from Salesforce to Drupal.
+ *
+ * @param array &$form_state
+ */
+function sf_import_manual(&$form_state) {
+  $form = array();
+  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $maps = array();
+  foreach ($fieldmaps as $map) {
+    $maps[$map->name] = !empty($map->description) ? $map->description : $map->name;
+  }
+
+  $form['fieldmap'] = array(
+    '#type' => 'select',
+    '#title' => t('Fieldmap to use for import'),
+    '#options' => $maps,
+    '#required' => TRUE,
+    '#description' => t('Select a fieldmap to use for importing the SFIDs to Drupal.'),
+  );
+
+  $form['sfids'] = array(
+    '#title' => t('Salesforce IDs'),
+    '#type' => 'textarea',
+    '#required' => TRUE,
+    '#description' => t('Enter a list of Salesforce IDs, one per line, that you would like to import from Salesforce to Drupal.'),
+  );
+
+  $form['submit'] = array('#type' => 'submit', '#value' => 'Import');
+
+  return $form;
+}
+
+/**
+ * Validation callback for sf_import_manual.
+ * Checks to see if the SFIDs appear to be in a valid format using the is_sfid()
+ * function.
+ */
+function sf_import_manual_validate($form, &$form_state) {
+  $sfid_data = $form_state['values']['sfids'];
+  $sfids = explode("\n", $sfid_data);
+  $errors = array();
+  // Check for errors, and run sfids through rtrim() to remove
+  // trailing spaces.
+  foreach ($sfids as &$sfid) {
+    $sfid = rtrim($sfid);
+    if (!empty($sfid) && !is_sfid($sfid)) {
+      $errors[] = $sfid;
+    }
+  }
+  if ($errors) {
+    form_set_error('sfids', t('The following SFID(s) do not appear to be valid: @errors.', array('@errors' => implode(', ', $errors))));
+  }
+  $form_state['storage']['sfids'] = $sfids;
+  $form_state['storage']['fieldmap'] = $form_state['values']['fieldmap'];
+}
+
+/**
+ * Submit call back for sf_import_manual.
+ */
+function sf_import_manual_submit($form, &$form_state) {
+  $sfids = $form_state['storage']['sfids'];
+  $map = $form_state['storage']['fieldmap'];
+  $fieldmap = salesforce_api_salesforce_field_map_load($map);
+  $function = 'sf_' . $fieldmap->drupal . '_import';
+  if (function_exists($function) && $fieldmap->name) {
+    $errors = array();
+    $successes = array();
+    foreach ($sfids as $sfid) {
+      if ($uid = $function($sfid, $fieldmap->name)) {
+        if (user_access('administer salesforce')) {
+          drupal_set_message(t('Succesfully linked SFID @sfid with user !user.', array('@sfid' => $sfid, '!user' => $uid)));
+        }
+      } else {
+        if (user_access('administer salesforce')) {
+          drupal_set_message(t('Failed to import SFID @sfid', array('@sfid' => $sfid)), 'error');
+        }
+      }
+    }
+  }
 }

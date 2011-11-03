@@ -27,6 +27,16 @@ function sf_import_menu() {
     'type' => MENU_LOCAL_TASK,
   );
 
+  $items[SALESFORCE_PATH_ADMIN_IMPORT . '/manual'] = array(
+    'title' => 'Manual Import',
+    'description' => 'Import Salesforce records manually.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sf_import_manual'),
+    'access arguments' => array('administer salesforce'),
+    'file' => 'sf_import.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+  );
+
   $items[SALESFORCE_PATH_ADMIN_IMPORT . '/overview'] = array(
     'title' => 'Import Settings',
     'access arguments' => array('administer salesforce'),
