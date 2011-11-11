@@ -73,7 +73,7 @@ function sf_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           salesforce_api_delete_salesforce_objects($node->salesforce->sfid);
         }
       }
-      salesforce_api_delete_object_map('node_' . $node->type, $node->uid);
+      salesforce_api_delete_object_map('node', $node->nid);
       break;
 
     case 'update':
