@@ -20,6 +20,7 @@ function sf_import_create_batchjob($fieldmap, $extra = NULL) {
     'operations' => array(
       array('sf_import_batchjob', $params)),
     'finished' => 'sf_import_batchjob_finalize',
+    'file' => drupal_get_path('module', 'sf_import') . '/sf_import.batch.inc',
   );
 }
 

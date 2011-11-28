@@ -283,7 +283,7 @@ function sf_import_create(&$form_state, $ongoing = 0) {
  */
 function sf_import_create_submit($form, &$form_state, $ongoing = 0) {
   // Create a new batch job to do the import
-
+  module_load_include('inc', 'sf_import', 'sf_import.batch');
   $extra_options = array();
   $extra_options['extra-linked'] = $form_state['values']['extra-linked'];
   $extra_options['extra-where'] = $form_state['values']['extra-where'];
