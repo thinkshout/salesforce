@@ -477,7 +477,7 @@ function sf_queue_form_salesforce_api_settings_form_alter(&$form, $form_state) {
   $frequency = drupal_map_assoc(array(0, 60, 180, 300, 600, 900, 1800, 2700, 3600, 10800, 21600, 32400, 43200, 86400), 'format_interval');
   $frequency[0] = t('Every cron run');
 
-  $fieldmaps = salesforce_api_salesforce_field_map_load_all();
+  $fieldmaps = salesforce_api_salesforce_fieldmap_load_all();
   $objects = array();
   foreach ($fieldmaps as $map) {
     $objects[$map->salesforce] = $map->salesforce;
