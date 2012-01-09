@@ -516,10 +516,21 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
       $form['export']['manual_linking']['sfid'] = array(
         '#type' => 'textfield',
         '#title' => t('Salesforce ID'),
-        '#description' => t('If this entity already has a corresponding object
-        in Salesforce, enter the Salesforce ID to manually link the entities.'),
+        '#description' => t('If this node already has a corresponding object
+        in Salesforce, enter the Salesforce ID to manually link the entities.
+        Salesforce record will be linked using the fieldmap selected above.
+        <strong>Please ensure that the Salesforce object type matches that of
+        fieldmap selected above.</strong>.<br /><br /><em>Create Link</em> will
+        link two Drupal and Salesforce records, leaving field values unchanged.
+        <br /><em>Export Node</em> will upsert the Drupal record, inserting or
+        updating any Salesforce record as necessary.'),
         '#size' => 18,
         '#maxlength' => 18,
+      );
+
+      $form['export']['manual_linking']['link'] = array(
+        '#type' => 'submit',
+        '#value' => t('Create Link'),
       );
 
       $form['export']['submit'] = array(
@@ -654,7 +665,7 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
  *
  */
 function sf_entity_salesforce_form_submit($form, &$form_state) {
-  if($form_state['values']['op'] == t('Export') || $form_state['values']['op'] == t('Import')) {
+  if($form_state['values']['op'] == t('Export') || $form_state['values']['op'] == t('Import') || $form_state['values']['op'] == t('Create Link')) {
     $info = $form_state['values']['entity info'];
     list($oid, $vid, $bundle) = $form_state['values']['entity keys'];
     // entity_load actually accepts an array of entity ids
@@ -683,6 +694,15 @@ function sf_entity_salesforce_form_submit($form, &$form_state) {
       else {
         drupal_set_message(t('An error occurred while importing the changes from Salesforce. Check watchdog for more information.'), 'error');
       }
+      break;
+
+    case t('Create Link'):
+      if (!is_sfid($form_state['values']['sfid'])) {
+        drupal_set_message(t('Invalid SFID provided.'), 'error');
+        break;
+      }
+      list($oid, $vid, $bundle) = $form_state['values']['entity keys'];
+      salesforce_api_id_save($oid, $form_state['values']['sfid'], $form_state['values']['fieldmap'], $form_state['values']['entity type'], $bundle, 'link');
       break;
 
     // Unlink from Salesforce.

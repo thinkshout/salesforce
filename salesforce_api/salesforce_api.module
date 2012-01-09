@@ -1279,7 +1279,7 @@ function salesforce_api_get_id_with_sfid($sfid, $name = NULL) {
  * @param string $bundle_name
  *   The Drupal bundle type being saved.
  * @param string $op_type
- *   The type of operation being performed. Possible values are 'import' and 'export'.
+ *   The type of operation being performed. Possible values are 'import', 'export', and 'link'.
  * @return
  *   TRUE if was successful in saving the link, FALSE otherwise.
  * @todo salesforce_api_id_save_multi()
