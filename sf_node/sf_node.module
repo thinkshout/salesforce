@@ -460,9 +460,20 @@ function sf_node_salesforce_form(&$form_state, $node) {
       '#type' => 'textfield',
       '#title' => t('Salesforce ID'),
       '#description' => t('If this node already has a corresponding object
-      in Salesforce, enter the Salesforce ID to manually link the entities.'),
+      in Salesforce, enter the Salesforce ID to manually link the entities.
+      Salesforce record will be linked using the fieldmap selected above.
+      <strong>Please ensure that the Salesforce object type matches that of
+      fieldmap selected above.</strong>.<br /><br /><em>Create Link</em> will
+      link two Drupal and Salesforce records, leaving field values unchanged.
+      <br /><em>Export Node</em> will upsert the Drupal record, inserting or
+      updating any Salesforce record as necessary.'),
       '#size' => 18,
       '#maxlength' => 18,
+    );
+
+    $form['export']['manual_linking']['link'] = array(
+      '#type' => 'submit',
+      '#value' => t('Create Link'),
     );
 
     $form['export']['export_node'] = array(
@@ -603,6 +614,13 @@ function sf_node_salesforce_form_submit($form, &$form_state) {
       else {
         drupal_set_message(t('An error occurred while importing the changes from Salesforce. Check the watchdog for more information.'), 'error');
       }
+      break;
+    case $form_state['values']['link']:
+      if (!is_sfid($form_state['values']['sfid'])) {
+        drupal_set_message(t('Invalid SFID provided.'), 'error');
+        break;
+      }
+      salesforce_api_id_save('node', $form_state['values']['nid'], $form_state['values']['sfid'], $form_state['values']['fieldmap'], 'link');
       break;
     case $form_state['values']['unlink']:
     case t('Unlink'):
