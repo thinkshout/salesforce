@@ -1850,12 +1850,12 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
     return;
   }
 
-  if (!salesforce_api_fieldmap_source_enabled($map)) {
+  if (!salesforce_api_fieldmap_source_enabled($salesforce_field_map)) {
     form_error($form['object'], t('This fieldmap cannot be imported, because the module which supports the Drupal entity "%entity" cannot be found. Please make sure you have required any modules with which this fieldmap was built.', array('%entity' => $salesforce_field_map->drupal)));
   }
 
   // Try to enable the SF object if it was not found.
-  if (!salesforce_api_fieldmap_target_enabled($map)) {
+  if (!salesforce_api_fieldmap_target_enabled($salesforce_field_map)) {
     form_error($form['object'], t('This fieldmap cannot be imported because salesforce_api cannot find a definition for the Salesforce object "%sfobj". Please verify your Salesforce connection and settings.', array('%sfobj' => $salesforce_field_map->salesforce)));
   }
   $form_state['obj'] = $salesforce_field_map;
@@ -1868,7 +1868,7 @@ function salesforce_api_import_salesforce_field_map_validate($form, &$form_state
  * @param object $map
  * @return boolean
  */
-function salesforce_api_fieldmap_source_enabled($map) {
+function salesforce_api_fieldmap_source_enabled($salesforce_field_map) {
   $source = salesforce_api_fieldmap_objects_load('drupal', $salesforce_field_map->drupal);
   return !empty($source);
 }
