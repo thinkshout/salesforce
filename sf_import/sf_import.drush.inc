@@ -273,6 +273,7 @@ function drush_sf_import($fieldmap_key) {
   $updated = 0;
   $skipped = 0;
   $failed  = 0;
+  $imported  = 0;
 
   for ($i = $start; $i < $start + $count; $i++) {
     $record = $query->records[$i];
@@ -304,10 +305,12 @@ function drush_sf_import($fieldmap_key) {
     }
 
     $oid = FALSE;
-    try {
-      $oid = $function($record->Id, $map->name, $existing[$record->Id]);
-    } catch (Exception $e) {
-      drush_log("Error importing record $record->Id : " . $e->getMessage(), 'error');
+    if (isset($existing[$record->Id])) {
+      try {
+        $oid = $function($record->Id, $map->name, $existing[$record->Id]);
+      } catch (Exception $e) {
+        drush_log("Error importing record $record->Id : " . $e->getMessage(), 'error');
+      }
     }
 
     if (!$oid) {
