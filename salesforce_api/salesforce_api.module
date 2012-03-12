@@ -17,7 +17,7 @@ define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR . '/wsdl');
 
 
 // Define Drupal paths for various parts of the Salesforce UI.
-define('SALESFORCE_PATH_ADMIN', 'admin/config/salesforce');
+define('SALESFORCE_PATH_ADMIN', 'admin/config/services/salesforce');
 define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN . '/fieldmap');
 define('SALESFORCE_PATH_DEMO', SALESFORCE_PATH_ADMIN . '/demo');
 define('SALESFORCE_PATH_OBJECT', SALESFORCE_PATH_ADMIN . '/object');
