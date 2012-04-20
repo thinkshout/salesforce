@@ -77,7 +77,7 @@ function salesforce_api_settings_form($form, &$form_state) {
   }
   else {
     $form['api']['encryption']['status']['#markup'] =
-      '<span class="error"><a href="http://drupal.org/project/aes" target="_blank">AES</a> is not 
+      '<span class="error"><a href="http://drupal.org/project/aes" target="_blank">AES</a> is not
       installed - your login credentials will not be encrypted.</span>';
   }
 
@@ -146,21 +146,21 @@ function salesforce_api_settings_form($form, &$form_state) {
     '#value' => t('Clear cached object data'),
     '#submit' => array('salesforce_api_cache_build'),
   );
-  
+
   $form['proxy'] = array(
     '#type' => 'fieldset',
     '#title' => t('Proxy settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
- 
+
   $form['proxy']['salesforce_api_proxy'] = array(
     '#type' => 'checkbox',
     '#title' => t('Connect to Salesforce via a proxy'),
     '#description' => 'Note: enabling this setting will cause all requests to Salesforce to go via the proxy defined below.',
     '#default_value' => variable_get('salesforce_api_proxy', FALSE),
   );
- 
+
   $form['proxy']['salesforce_api_proxy_host'] = array(
     '#type' => 'textfield',
     '#title' => t('Proxy Hostname'),
@@ -284,7 +284,7 @@ function salesforce_api_settings_form_submit($form, &$form_state) {
     return;
   }
 
-  if ($values['salesforce_api_encrypt'] &&
+  if (isset($values['salesforce_api_encrypt']) &&
   !empty($values['salesforce_api_username'])) {
     $form_state['values']['salesforce_api_username'] =
       salesforce_api_encrypt($values['salesforce_api_username']);
