@@ -456,7 +456,7 @@ function salesforce_api_login($username, $password, $token) {
   // Connect to the server and login, logging any failures to the watchdog.
   try {
     // Connect to the server.
-    $sf->client->createConnection($wsdl);
+    $sf->client->createConnection($wsdl, $proxy);
 
     // Attempt a login with the credentials entered by the user.
     $sf->login = $sf->client->login($username, $password . $token);
