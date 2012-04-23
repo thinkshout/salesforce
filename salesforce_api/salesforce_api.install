@@ -220,8 +220,8 @@ function salesforce_api_requirements($phase) {
       'description' => $description,
       'severity' => $severity,
     );
-    return $req;
   }
+  return $req;
 }
 
 /**
