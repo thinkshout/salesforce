@@ -231,8 +231,11 @@ function drush_sf_import($fieldmap_key) {
   if ($check_date && !in_array('LastModifiedDate', $fields)) {
     $fields[] = 'LastModifiedDate';
   }
+  if (!in_array('Id', $fields)) {
+    $fields[] = 'Id';
+  }
   $soql = "
-    SELECT Id, " . implode(', ', $fields) . "
+    SELECT " . implode(', ', $fields) . "
     FROM   " . $map->salesforce . "
   ";
   if ($where) {
@@ -248,7 +251,7 @@ function drush_sf_import($fieldmap_key) {
 
   // Prepare for import
   $type = $map->drupal;
-  if (strpos($type, 'node_') === 1) {
+  if (strpos($type, 'node_') === 0) {
     $type = 'node';
   }
   $function = 'sf_' . $type . '_import';
