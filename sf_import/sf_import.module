@@ -152,16 +152,18 @@ function sf_import_import_records() {
 
     $end = REQUEST_TIME;
 
+    $import_method = variable_get('sf_import_' . $map->name . '_update_method', 'get_updated');
+
     // If the last time we checked for updated records was within the last
     // hour, then push the $start value back an hour.
     // This helps ensure that we don't skip over any updated records.
-    if ($end - $start < 3600) {
+    // @todo Make this an admin configurable option.
+    if ($end - $start < 3600 && $import_method == 'get_updated') {
       $start = $start - 3600;
     }
 
     // Set the time that the last import took place.
     variable_set('sf_import_queue_last_import', REQUEST_TIME);
-    $import_method = variable_get('sf_import_' . $map->name . '_update_method', 'get_updated');
     $import_function = ($import_method == 'get_updated') ? 'salesforce_api_get_updated' : '_sf_import_get_soql_records';
     if ($updates = $import_function($map, $start, $end)) {
       $update_sfids = $updates->ids;
