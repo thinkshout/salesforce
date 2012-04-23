@@ -184,8 +184,8 @@ function salesforce_api_schema() {
  */
 function salesforce_api_requirements($phase) {
   $req = array();
-  require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
   if ($phase == 'runtime') {
+    require_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'salesforce_api') . '/salesforce_api.module';
     $username = variable_get('salesforce_api_username', FALSE);
     if (!salesforce_api_toolkit_installed()) {
       $description = t('Salesforce module installed, but missing Salesforce PHP Toolkit. Please make sure Salesforce PHP Toolkit is available at ' . SALESFORCE_DIR_SOAPCLIENT . '/SforceEnterpriseClient.php');
