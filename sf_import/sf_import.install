@@ -41,6 +41,15 @@ function sf_import_schema() {
 }
 
 /**
+ * Implements hook_udpate_N().
+ *
+ * Clear caches after update due to splitting SF Import into multiple files.
+ */
+function sf_import_update_7200(&$sandbox) {
+  cache_clear_all();
+}
+
+/**
  * Implements hook_install().
  */
 function sf_import_install() {
