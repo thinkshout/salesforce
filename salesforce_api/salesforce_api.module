@@ -2319,12 +2319,12 @@ function salesforce_api_encryption_available($options = array()) {
   $warnings = array();
 
   if (!module_exists('aes')) {
-    $errors[] = 'AES Encryption module is not installed.';
+    $warnings[] = 'AES Encryption module is not installed.';
   }
   elseif ($check_config) {
     if (!variable_get('aes_key_path', FALSE)
       || variable_get('aes_key_storage_method', FALSE) != 'File') {
-      $warnings[] = 'AES Encryption is installed but not configured securely.
+      $errors[] = 'AES Encryption is installed but not configured securely.
         Please go <a href="/admin/settings/aes">configure AES Encryption to use
         file storage</a> to enable encryption for Salesforce credentials.';
     }
@@ -2333,12 +2333,6 @@ function salesforce_api_encryption_available($options = array()) {
   if ($display_errors || $display_all) {
     foreach ($errors as $msg) {
       drupal_set_message(t($msg), 'error');
-    }
-  }
-
-  if ($display_warnings || $display_all) {
-    foreach ($warnings as $msg) {
-      drupal_set_message(t($msg), 'warning');
     }
   }
 

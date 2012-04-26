@@ -57,28 +57,23 @@ function salesforce_api_settings_form($form, &$form_state) {
         API credentials will prevent your website from connecting to Salesforce.com',
     );
   }
-  $form['api']['encryption'] = array(
-    '#type' => 'item',
-    '#title' => 'Encryption',
-    'status' => array(
-      '#type' => 'item',
-      '#title' => FALSE,
-    ),
-  );
+
   if (salesforce_api_encryption_available(array('display_all' => TRUE))) {
-    $form['api']['encryption']['status']['#markup'] =
-      'Encryption is available and configured properly.';
+    $form['api']['encryption'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'Encryption',
+    );
+    $form['api']['encryption']['status'] = array(
+      '#markup' => 'Encryption is available and configured properly.',
+      '#prefix' => '<div class = "messages status">',
+      '#suffix' => '</div>',
+    );
     $form['api']['encryption']['salesforce_api_encrypt'] = array(
       '#type' => 'checkbox',
-      '#title' => 'Encrypt Salesforce credentials (HIGHLY RECOMMENDED)',
+      '#title' => 'Encrypt Salesforce credentials',
       '#description' => 'Note: enabling this setting will not encrypt existing credentials.',
       '#default_value' => TRUE,
     );
-  }
-  else {
-    $form['api']['encryption']['status']['#markup'] =
-      '<span class="error"><a href="http://drupal.org/project/aes" target="_blank">AES</a> is not
-      installed - your login credentials will not be encrypted.</span>';
   }
 
   $form['log'] = array(

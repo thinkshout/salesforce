@@ -198,8 +198,8 @@ function salesforce_api_requirements($phase) {
       $severity = REQUIREMENT_WARNING;
     }
     elseif (!salesforce_api_encryption_available(array('check_config' => FALSE))) {
-      $description = t('Encryption is unavailable. Using encryption is <strong>highly recommended</strong> in order to better secure your data.');
-      $severity = REQUIREMENT_WARNING;
+      $description = t('Encryption is unavailable. Using encryption is recommended in order to better secure your data.');
+      $severity = REQUIREMENT_INFO;
     }
     elseif (!salesforce_api_encryption_available(array('check_config' => TRUE))) {
       $description = t('Salesforce encryption is enabled but not configured securely.');
