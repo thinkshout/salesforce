@@ -12,6 +12,12 @@
  */
 function salesforce_api_install() {
   variable_set('salesforce_api_enabled_objects', array('Campaign', 'Contact', 'Lead'));
+
+  // Do not show these messages if module is installed via Drush
+  if (!drupal_is_cli()) {
+    drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url_wsdl">upload your WSDL</a> and <a href="!url_cred">enter your Salesforce API credentials</a>.', array('!url_wsdl' => url(SALESFORCE_PATH_UPDATE_WSDL), '!url_cred' => url(SALESFORCE_PATH_ADMIN))), 'warning');
+    drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled. To export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
+  }
 }
 
 /**
@@ -24,14 +30,6 @@ function salesforce_api_uninstall() {
   db_delete('cache')
   ->condition('cid', 'salesforce_api_sf_objects')
   ->execute();
-}
-
-/**
- * Implements hook_enable().
- */
-function salesforce_api_enable() {
-  drupal_set_message(t('Salesforce API: Before making any Salesforce connections, please <a href="!url_wsdl">upload your WSDL</a> and <a href="!url_cred">enter your Salesforce API credentials</a>.', array('!url_wsdl' => url(SALESFORCE_PATH_UPDATE_WSDL), '!url_cred' => url(SALESFORCE_PATH_ADMIN))), 'warning');
-  drupal_set_message(t('Salesforce API: The default Salesforce objects have been enabled. To export/import any other objects see the <a href="!url">Object setup</a> page.', array('!url' => url(SALESFORCE_PATH_OBJECT))), 'warning');
 }
 
 /**
