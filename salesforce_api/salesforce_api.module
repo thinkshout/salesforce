@@ -68,17 +68,17 @@ if (!function_exists('is_sfid')) {
  *   The path to the Salesforce Toolkit, or an empty string if not found.
  */
 function salesforce_api_locate_toolkit() {
-  $toolkit_path = variable_get('salesforce_toolkit_path', '');
+  $toolkit_path = variable_get('salesforce_api_toolkit_path', '');
 
   // If the toolkit path is not set or is no longer valid, try to find it.
-  if ($toolkit_path == '' || !file_exists($toolkit_path)) {
+  if ($toolkit_path == '' || !file_exists($toolkit_path . '/soapclient/SforceEnterpriseClient.php')) {
 
     $profile = drupal_get_profile();
     $config = conf_path();
 
     // Use Libraries if it is available
     if (function_exists('libraries_get_path')) {
-      $toolkit_path = libraries_get_path('salesforce');
+      $toolkit_path = libraries_get_path('salesforce') . '/toolkit';
     }
     // Then check if this was provided along with the profile.
     else if (file_exists("profiles/$profile/libraries/salesforce/toolkit")) {
@@ -97,7 +97,7 @@ function salesforce_api_locate_toolkit() {
       $toolkit_path = "";
     }
 
-    variable_set('salesforce_toolkit_path', $toolkit_path);
+    variable_set('salesforce_api_toolkit_path', $toolkit_path);
   }
 
   return $toolkit_path;
