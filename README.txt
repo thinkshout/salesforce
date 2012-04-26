@@ -50,7 +50,6 @@ REQUIREMENTS
 
   4) Required modules
      Chaos Tool Suite - http://drupal.org/project/ctools
-     Libraries API - http://drupal.org/project/libraries
 
   5) Recommended modules
      AES encryption - http://drupal.org/project/aes

@@ -11,7 +11,7 @@ define('SALESFORCE_API_CURRENT_VERSION', 1);
 
 // Define default directory paths for the Toolkit and WSDL files.
 define('SALESFORCE_DIR', drupal_get_path('module', 'salesforce_api'));
-define('SALESFORCE_DIR_TOOLKIT', libraries_get_path('salesforce') . '/toolkit');
+define('SALESFORCE_DIR_TOOLKIT', salesforce_api_locate_toolkit());
 define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT . '/soapclient');
 define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR . '/wsdl');
 
@@ -59,6 +59,48 @@ if (!function_exists('is_sfid')) {
     }
     return FALSE;
   }
+}
+
+/**
+ * Locates the Salesforce PHP Toolkit, if installed.
+ *
+ * @return string $toolkit_path
+ *   The path to the Salesforce Toolkit, or an empty string if not found.
+ */
+function salesforce_api_locate_toolkit() {
+  $toolkit_path = variable_get('salesforce_toolkit_path', '');
+
+  // If the toolkit path is not set or is no longer valid, try to find it.
+  if ($toolkit_path == '' || !file_exists($toolkit_path)) {
+
+    $profile = drupal_get_profile();
+    $config = conf_path();
+
+    // Use Libraries if it is available
+    if (function_exists('libraries_get_path')) {
+      $toolkit_path = libraries_get_path('salesforce');
+    }
+    // Then check if this was provided along with the profile.
+    else if (file_exists("profiles/$profile/libraries/salesforce/toolkit")) {
+      $toolkit_path = "profiles/$profile/libraries/salesforce/toolkit";
+    }
+    // Check the sites/all directory.
+    else if (file_exists("sites/all/libraries/salesforce/toolkit")) {
+      $toolkit_path = "sites/all/libraries/salesforce/toolkit";
+    }
+    // Now check our current site directory (if multisite).
+    else if (file_exists("$config/libraries/salesforce/toolkit")) {
+      $toolkit_path = "$config/libraries/salesforce/toolkit";
+    }
+    // Toolkit not installed.
+    else {
+      $toolkit_path = "";
+    }
+
+    variable_set('salesforce_toolkit_path', $toolkit_path);
+  }
+
+  return $toolkit_path;
 }
 
 /**
