@@ -498,6 +498,9 @@ function salesforce_api_login($username, $password, $token) {
   // Connect to the server and login, logging any failures to the watchdog.
   try {
     // Connect to the server.
+    // Ensure that the WSDL cache is not set.
+    ini_set('soap.wsdl_cache_enabled', '0');
+    ini_set('soap.wsdl_cache_ttl', '0');
     $sf->client->createConnection($wsdl, $proxy);
 
     // Attempt a login with the credentials entered by the user.
