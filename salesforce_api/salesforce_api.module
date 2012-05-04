@@ -989,14 +989,20 @@ function salesforce_api_toolkit_installed() {
  * Returns the label for the object of the specified type and name.
  * Note that both the $type and $entity parameters will be 'salesforce'
  * in the case of Salesforce objects.
+ *
+ * @param $type
+ * @param $entity
+ * @param $bundle
+ * @return string
+ *   The label for the object.
  */
 function salesforce_api_fieldmap_object_label($type, $entity, $bundle) {
   // Get the object definition.
   $object = salesforce_api_fieldmap_objects_load($type, $entity, $bundle);
 
   // If no label is specified, return the object name.
-  if (empty($object['label'])) {
-    return check_plain($name);
+  if (!isset($object['label']) && isset($object['fields']['name'])) {
+    return check_plain($object['fields']['name']['label']);
   }
 
   return $object['label'];
