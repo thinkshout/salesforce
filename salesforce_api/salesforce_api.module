@@ -15,7 +15,6 @@ define('SALESFORCE_DIR_TOOLKIT', function_exists('libraries_get_path') ? librari
 define('SALESFORCE_DIR_SOAPCLIENT', SALESFORCE_DIR_TOOLKIT .'/soapclient');
 define('SALESFORCE_DIR_WSDL', SALESFORCE_DIR .'/wsdl');
 
-
 // Define Drupal paths for various parts of the Salesforce UI.
 define('SALESFORCE_PATH_ADMIN', 'admin/settings/salesforce');
 define('SALESFORCE_PATH_FIELDMAPS', SALESFORCE_PATH_ADMIN .'/fieldmap');
@@ -1928,11 +1927,11 @@ function salesforce_api_import_salesforce_field_map_submit($form, &$form_state) 
  * transition easier.
  */
 function salesforce_api_decrypt($value) {
-  return aes_decrypt($value);
+  return (function_exists('aes_decrypt')) ? aes_decrypt($value) : $value;
 }
 
 function salesforce_api_encrypt($value) {
-  return aes_encrypt($value);
+  return (function_exists('aes_encrypt')) ? aes_encrypt($value) : $value;
 }
 
 function salesforce_api_encryption_available($options = array()) {
