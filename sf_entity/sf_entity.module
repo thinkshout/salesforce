@@ -65,10 +65,19 @@ function sf_entity_menu() {
   return $items;
 }
 
-// Access callback for the Salesforce tab on entities.
-function sf_entity_salesforce_form_access($entity_type, $entity) {
-  list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
-  return user_access('administer salesforce') and salesforce_api_fieldmap_options($entity_type, $bundle);
+/**
+ * Access callback for the Salesforce tab on entities.
+ *
+ * @param  $entity_type
+ * @param  $entity
+ * @return TRUE if the user has access, FALSE otherwise
+ */
+function sf_entity_salesforce_form_access($entity_type, $entity = NULL) {
+  if (isset($entity_type && isset($entity))) {
+    list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
+    return user_access('administer salesforce') and salesforce_api_fieldmap_options($entity_type, $bundle);
+  }
+  return FALSE;
 }
 
 /**
