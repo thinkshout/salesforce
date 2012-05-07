@@ -1498,7 +1498,7 @@ function salesforce_api_get_updated($type, $start, $end) {
       // Indicate the failed action.
       return FALSE;
     }
-    if ($response->ids) {
+    if (!empty($response->ids)) {
       return $response;
     } else {
       return FALSE;
@@ -1584,7 +1584,9 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
       $source = get_object_vars($field);
       $sf_definition = array_intersect_key($source, array_flip($properties));
       foreach ($booleans as $bool) {
-        $sf_definition['sf_type'] |= (int)$source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
+        if (empty($sf_definition['sf_type'])) {
+          $sf_definition['sf_type'] = (int)$source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
+        }
       }
       $fieldmap_object['fields'][$field->name] = array(
         'name' => $sf_definition['name'],
