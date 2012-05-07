@@ -20,7 +20,7 @@ function sf_notifications_menu() {
     SALESFORCE_PATH_NOTIFICATIONS_ENDPOINT => array(
       'title' => FALSE,
       'page callback' => 'sf_notifications_endpoint',
-      'access arguments' => array('access content'),
+      'access callback' => TRUE,
       'type' => MENU_CALLBACK,
       ),
     SALESFORCE_PATH_FIELDMAPS . '/%/notifications' => array(
