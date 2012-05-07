@@ -2301,14 +2301,14 @@ function salesforce_api_import_salesforce_fieldmap_submit($form, &$form_state) {
  * Decrypt a specified value.
  */
 function salesforce_api_decrypt($value) {
-  return aes_decrypt($value);
+  return (function_exists('aes_decrypt')) ? aes_decrypt($value) : $value;
 }
 
 /**
  * Encrypt a specified value.
  */
 function salesforce_api_encrypt($value) {
-  return aes_encrypt($value);
+  return (function_exists('aes_encrypt')) ? aes_encrypt($value) : $value;
 }
 
 /**
