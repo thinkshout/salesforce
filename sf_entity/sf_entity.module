@@ -73,7 +73,7 @@ function sf_entity_menu() {
  * @return TRUE if the user has access, FALSE otherwise
  */
 function sf_entity_salesforce_form_access($entity_type, $entity = NULL) {
-  if (isset($entity_type && isset($entity))) {
+  if (isset($entity_type) && isset($entity)) {
     list($id, $vid, $bundle) = entity_extract_ids($entity_type, $entity);
     return user_access('administer salesforce') and salesforce_api_fieldmap_options($entity_type, $bundle);
   }
