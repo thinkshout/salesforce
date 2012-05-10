@@ -35,7 +35,7 @@ function sf_entity_menu() {
       }
     }
     // Don't create a local task if the uri callback could not be obtained.
-    if(!isset($uri) || !is_array($uri)) {
+    if(!isset($uri['path']) || !is_array($uri)) {
       continue;
     }
     $parts = explode('/', $uri['path']);
