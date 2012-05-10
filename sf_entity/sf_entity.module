@@ -1386,6 +1386,24 @@ function _sf_entity_get_language($entity) {
 }
 
 /**
+ * Allow a "read-only" option and log data if desired.
+ * These options must be set using Drush variable-set or in settings.php via the
+ * $conf array.
+ *
+ * @return FALSE if read only mode is enabled.
+ */
+function sf_entity_salesforce_api_pre_export(&$sf_object, &$map, $drupal_id) {
+  // Log values to be exported
+  if (variable_get('salesforce_api_log_pre_export', FALSE)) {
+    salesforce_api_log(SALESFORCE_LOG_ALL, 'Data in pre_export hook: SF Object: <pre>%sf_object</pre> Map: <pre>%map</pre> Drupal ID: !drupal_id', array('%sf_object' => print_r($sf_object, TRUE), '%map' => print_r($map, TRUE), '!drupal_id' => $drupal_id));
+  }
+  // Read-only, halt the export
+  if (variable_get('salesforce_api_read_only', FALSE)) {
+    return FALSE;
+  }
+}
+
+/**
  * Implements hook_default_salesforce_fieldmaps().
  *
  */

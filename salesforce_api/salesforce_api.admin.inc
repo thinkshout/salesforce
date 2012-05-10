@@ -12,6 +12,11 @@
 function salesforce_api_settings_form($form, &$form_state) {
   $form = array();
 
+  // Let user know if read-only is set
+  if (variable_get('salesforce_api_read_only', FALSE)) {
+    drupal_set_message(t('Read-only mode is enabled. No data will be exported to Salesforce'), 'warning');
+  }
+
   // Use the username field to collapse the API settings fieldset.
   $username = variable_get('salesforce_api_username', '');
 
