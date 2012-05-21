@@ -304,13 +304,17 @@ function drush_sf_import($fieldmap_key) {
       }
     }
 
+    if ($exists) {
+      $existing_oid = $existing[$record->Id];
+    } else {
+      $existing_oid = NULL;
+    }
+
     $oid = FALSE;
-    if (isset($existing[$record->Id])) {
-      try {
-        $oid = $function($record->Id, $map->name, $existing[$record->Id]);
-      } catch (Exception $e) {
-        drush_log("Error importing record $record->Id : " . $e->getMessage(), 'error');
-      }
+    try {
+      $oid = $function($record->Id, $map->name, $existing_oid);
+    } catch (Exception $e) {
+      drush_log("Error importing record $record->Id : " . $e->getMessage(), 'error');
     }
 
     if (!$oid) {
