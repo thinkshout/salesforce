@@ -1585,6 +1585,8 @@ function salesforce_api_object_to_fieldmap_fields($object)  {
       foreach ($booleans as $bool) {
         if (empty($sf_definition['sf_type'])) {
           $sf_definition['sf_type'] = (int)$source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
+        } else {
+          $sf_definition['sf_type'] |= (int)$source[$bool] * constant('SALESFORCE_FIELD_' . strtoupper($bool));
         }
       }
       $fieldmap_object['fields'][$field->name] = array(
