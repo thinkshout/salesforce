@@ -1060,7 +1060,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
 
     }
     $max_len = $sf_field_definition['salesforce']['length'];
-    if ($max_len && drupal_strlen($object->$sf_fieldname) > $max_len) {
+    if ($max_len && isset($object->$sf_fieldname) && drupal_strlen($object->$sf_fieldname) > $max_len) {
       $object->$sf_fieldname = substr($object->$sf_fieldname, 0, $max_len);
     }
   }
