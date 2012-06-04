@@ -14,35 +14,40 @@ function sf_entity_menu() {
   $items = array();
   foreach ($entities as $entity => $bundles) {
     $info = entity_get_info($entity);
-    if (empty($info) || empty($info['fieldable'])) {
+
+    // entity needs to be fieldable with  URI callback
+    if (empty($info) || empty($info['fieldable']) || empty($info['uri callback'])) {
       continue;
     }
-    $fake_ids = array('__ENTITY_ID__', '__ENTITY_VID__', '__ENTITY_BUNDLE__');
-    if (!$info['entity keys']['revision']) {
-      $fake_ids[1] = NULL;
-    }
-    $stub = entity_create_stub_entity($entity, $fake_ids);
-    // Don't create a local task for entities with no uri callback - cf. [#1042676].
-    if (empty($info['uri callback'])) {
-      continue;
+
+    // entity uses Entity API
+    if (in_array('EntityAPIControllerInterface', class_implements($info['controller class']))) {
+      $stub = entity_create($entity, array(
+        $info['entity keys']['id'] => 0,
+        $info['bundle keys']['bundle'] => '__ENTITY_BUNDLE__'
+      ));
     }
     else {
-      $uri_callback = $info['uri callback'];
-      // The uri callbacks for entities defined by EntityAPI rely on
-      // having a full entity, not just a stub with id's - cf [#1207720]
-      if($info['controller class'] != 'EntityAPIController') {
-        $uri = $uri_callback($stub);
+      $fake_ids = array(0, '__ENTITY_VID__', '__ENTITY_BUNDLE__');
+      if (!$info['entity keys']['revision']) {
+        $fake_ids[1] = NULL;
       }
+      $stub = entity_create_stub_entity($entity, $fake_ids);
     }
+
+    $uri_callback = $info['uri callback'];
+    $uri = $uri_callback($stub);
+
     // Don't create a local task if the uri callback could not be obtained.
     if(!isset($uri['path']) || !is_array($uri)) {
       continue;
     }
+
     $parts = explode('/', $uri['path']);
     $page_args = array('sf_entity_salesforce_form', $entity);
     $access_args = array($entity);
     foreach ($parts as $i => $part) {
-      if ($part == '__ENTITY_ID__') {
+      if ($part === '0') {
         $parts[$i] = '%' . $entity;
         $page_args[] = $i;
         $access_args[] = $i;
