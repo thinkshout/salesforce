@@ -142,9 +142,9 @@ function sf_import_settings_form($form, $form_state) {
         );
         if ($sf_updated) {
           $form[$import_map_key . '_information']['pending'] = array(
-            '#value' => t('@count updated record(s) in Salesforce pending import.<br />Newest object in Salesforce dated @date', array('@count' => count($sf_updated->ids), '@date' => $sf_updated->latestDateCovered)),
-            '#prefix' => '<div>',
-            '#suffix' => '</div>',
+            '#markup' => t('@count updated record(s) in Salesforce pending import.<br />Newest object in Salesforce dated @date', array('@count' => count($sf_updated->ids), '@date' => $sf_updated->latestDateCovered)),
+            '#prefix' => '<p>',
+            '#suffix' => '</p>',
           );
           $active_import_maps[$import_map_key] = $import_map_value;
           // Show table of SFIDs pending import.
@@ -156,17 +156,17 @@ function sf_import_settings_form($form, $form_state) {
             $rows[] = array($sfid);
           }
 
-          $form[$import_map_key . '_information']['pending']['data'] = array(
-            '#value' => theme('table', array('header' => $header, 'rows' => $rows)),
+          $form[$import_map_key . '_information']['data'] = array(
+            '#markup' => theme('table', array('header' => $header, 'rows' => $rows)),
             '#prefix' => '<div>',
             '#suffix' => '</div>',
           );
         }
         else {
           $form[$import_map_key . '_information']['nodata'] = array(
-            '#value' => 'There are no pending updates for this fieldmap.',
-            '#prefix' => '<div>',
-            '#suffix' => '</div>',
+            '#markup' => 'There are no pending updates for this fieldmap.',
+            '#prefix' => '<p>',
+            '#suffix' => '</p>',
           );
         }
       }
@@ -198,7 +198,7 @@ function sf_import_settings_form($form, $form_state) {
 function sf_import_settings_form_submit($form, &$form_state) {
   if ($form_state['values']['op'] == 'Import updates') {
     if (variable_get('sf_import_fieldmaps', array())) {
-      $updates = _sf_import_get_updated_records();
+      $updates = sf_import_import_records();
       $processed = _sf_import_process_records();
       if (user_access('administer salesforce')) {
         if ($updates) {
