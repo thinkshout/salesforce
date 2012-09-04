@@ -1277,7 +1277,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
  // @todo: What to do if this returns multiple results?
 function salesforce_api_id_load($oid, $entity_name, $bundle_name = NULL) {
   // Query the main ID table for the associated data.
-  if(empty($bundle)) {
+  if(empty($bundle_name)) {
     $result = db_query("SELECT sfid, name FROM {salesforce_object_map} WHERE drupal_entity = :drupal_entity AND oid = :oid", array(':drupal_entity' => $entity_name, ':oid' => $oid));
   }
   else {
