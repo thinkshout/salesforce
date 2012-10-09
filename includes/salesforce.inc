@@ -5,7 +5,7 @@
  */
 
 /**
- *
+ * Ability to authorize and communicate with the Salesforce REST API.
  */
 class Salesforce {
 
@@ -77,6 +77,13 @@ class Salesforce {
     return $data;
   }
 
+  /**
+   * Build the request, including path and headers. Internal use.
+   *
+   * @param $path
+   * @param $params
+   * @param $method
+   */
   private function buildRequest($path, $params, $method) {
     $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
 
@@ -94,18 +101,50 @@ class Salesforce {
     );
   }
 
+  /**
+   * Make the HTTP request. Wrapper around drupal_http_request().
+   *
+   * @return object response.
+   */
   private function httpRequest() {
     return drupal_http_request($this->request['url'], $this->request['options']);
   }
 
+  /**
+   * Getter and setter for SF API instance URL.
+   */
   private function getInstanceURL() {
     return variable_get('salesforce_instance_url', '');
   }
-
   private function setInstanceURL($url) {
     variable_set('salesforce_instance_url', $url);
   }
 
+  /**
+   * Getter and setter for the access token. It's stored in session.
+   */
+  private function getAccessToken() {
+    return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
+  }
+  private function setAccessToken($token) {
+    $_SESSION['salesforce_access_token'] = $token;
+  }
+
+  /**
+   * Getter and setter for refresh token.
+   */
+  private function getRefreshToken() {
+    return variable_get('salesforce_refresh_token', '');
+  }
+  private function setRefreshToken($token) {
+    variable_set('salesforce_refresh_token', $token);
+  }
+
+  /**
+   * Refresh access token based on the refresh token. Updates session variable.
+   *
+   * @throws SalesforceException
+   */
   private function refreshToken() {
     $token_url = $this->login_url . '/services/oauth2/token';
 
@@ -140,14 +179,10 @@ class Salesforce {
     $this->setAccessToken($data['access_token']);
   }
 
-  private function getRefreshToken() {
-    return variable_get('salesforce_refresh_token', '');
-  }
-
-  private function setRefreshToken($token) {
-    variable_set('salesforce_refresh_token', $token);
-  }
-
+  /**
+   * OAuth step 1
+   * Used to redirect to Salesforce and request and authorization code.
+   */
   public function getAuthorizationCode() {
     $url = $this->login_url . '/services/oauth2/authorize';
     $query = array(
@@ -159,6 +194,12 @@ class Salesforce {
     drupal_goto($url, array('query' => $query));
   }
 
+  /**
+   * OAuth step 2
+   * Exchange an authorization code for an access token.
+   *
+   * @param $code
+   */
   public function requestToken($code) {
     $token_url = $this->login_url . '/services/oauth2/token';
 
@@ -190,14 +231,11 @@ class Salesforce {
     $this->setAccessToken($data['access_token']);
   }
 
-  private function setAccessToken($token) {
-    $_SESSION['salesforce_access_token'] = $token;
-  }
-
-  private function getAccessToken() {
-    return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
-  }
-
+  /**
+   * Helper to build the redirect URL for OAUTH workflow.
+   *
+   * @return string
+   */
   private function redirectUrl() {
     return url('salesforce/oauth_callback', array(
       'absolute' => TRUE,
