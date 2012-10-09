@@ -161,7 +161,7 @@ class Salesforce {
 
     $query = array(
       'grant_type' => 'refresh_token',
-      'refresh_token' => $this->getRefreshToken(),
+      'refresh_token' => $refresh_token,
       'client_id' => $this->consumer_key,
       'client_secret' => $this->consumer_secret,
     );
@@ -231,11 +231,11 @@ class Salesforce {
       )
     ));
 
-    if ($response->code != 200) {
-      //@todo: deal with error
-    }
-
     $data = drupal_json_decode($response->data);
+
+    if ($response->code != 200) {
+      throw new SalesforceException($data['error_description'], $response->code);
+    }
 
     $this->setRefreshToken($data['refresh_token']);
     $this->setInstanceURL($data['instance_url']);
