@@ -1,0 +1,14 @@
+<?php
+
+/**
+ * @file
+ * Install/uninstall tasks for the Salesforce module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function salesforce_uninstall() {
+  variable_del('salesforce_consumer_key');
+  variable_del('salesforce_consumer_secret');
+}
