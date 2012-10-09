@@ -1,0 +1,117 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_menu() {
+  $items = array();
+  $items['admin/config/services/salesforce'] = array(
+    'title' => 'Salesforce',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_oauth_form'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/config/services/salesforce/authorize'] = array(
+    'title' => 'Authorize',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/config/services/salesforce/status'] = array(
+    'title' => 'Status',
+    'page callback' => 'salesforce_status',
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['salesforce/oauth_callback'] = array(
+    'title' => 'Salesforce oauth callback',
+    'page callback' => 'salesforce_oauth_callback',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+function salesforce_oauth_form() {
+  $form = array();
+
+  $consumer_key = variable_get('salesforce_consumer_key', FALSE);
+  $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
+
+  $form['salesforce_consumer_key'] = array(
+    '#title' => t('Salesforce consumer key'),
+    '#type' => 'textfield',
+    '#description' => t('Client ID of the Salesforce instance you want to grant access to'),
+    '#default_value' => $consumer_key
+  );
+  $form['salesforce_consumer_secret'] = array(
+    '#title' => t('Salesforce consumer secret'),
+    '#type' => 'textfield',
+    '#description' => t(''),
+    '#default_value' => $consumer_secret
+  );
+  $form['submit'] = array(
+    '#value' => t('Authorize'),
+    '#type' => 'submit',
+    '#description' => t('Click to authorize Salesforce'),
+  );
+
+  $form['status'] = array(
+    '#title' => t('Status'),
+    '#type' => 'item',
+  );
+
+  $form['salesforce_rest_api_version'] = array(
+    '#title' => t('REST API Version'),
+    '#type' => 'select',
+    '#description' => t('Select a Salesforce REST API version to use with this site. Defaults to the latest.'),
+    '#default_value' => salesforce_rest_api_version()
+  );
+
+  if ($consumer_key && $consumer_secret) {
+    $sfapi = new Salesforce($consumer_key, $consumer_secret);
+
+    $form['salesforce_rest_api_version'] = array(
+      '#title' => t('REST API Version'),
+      '#type' => 'select',
+      '#description' => t('Select a Salesforce REST API version to use with this site. Defaults to the latest.'),
+      '#default_value' => salesforce_rest_api_version()
+    );
+  }
+  
+  
+  return $form;
+}
+
+function salesforce_oauth_form_submit($form, &$form_state) {
+  $consumer_key = $form_state['values']['salesforce_consumer_key'];
+  $consumer_secret = $form_state['values']['salesforce_consumer_secret'];
+  variable_set('salesforce_consumer_key', $consumer_key);
+  variable_set('salesforce_consumer_secret', $consumer_secret);
+  variable_set('salesforce_rest_api_version', $form_state['values']['salesforce_rest_api_version']);
+
+  $salesforce = new Salesforce($consumer_key, $consumer_secret);
+  $salesforce->getAuthorizationCode();
+}
+
+function salesforce_oauth_callback() {
+  $salesforce = new Salesforce(
+    variable_get('salesforce_consumer_key', ''),
+    variable_get('salesforce_consumer_secret', '')
+  );
+  $salesforce->requestToken($_GET['code']);
+}
+
+function salesforce_status() {
+  $salesforce = new Salesforce(
+    variable_get('salesforce_consumer_key', ''),
+    variable_get('salesforce_consumer_secret', '')
+  );
+
+  $result = $salesforce->objects();
+  dpm($result);
+  return '<pre>' . $result . '</pre>';
+}
+
+function salesforce_rest_api_version() {
+
+}
