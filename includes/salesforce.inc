@@ -152,6 +152,11 @@ class Salesforce {
    * @throws SalesforceException
    */
   private function refreshToken() {
+    $refresh_token = $this->getRefreshToken();
+    if (empty($refresh_token)) {
+      throw new SalesforceException(t('There is no refresh token.'));
+    }
+
     $token_url = $this->login_url . '/services/oauth2/token';
 
     $query = array(
