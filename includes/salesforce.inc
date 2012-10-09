@@ -65,7 +65,13 @@ class Salesforce {
         break;
       default:
         // we have problem
-        throw new SalesforceException($$response->message, $response->code);
+        $error = $response->error;
+        if (!empty($response->data)) {
+          $data = drupal_json_decode($response->data);
+          $error = isset($data['message']) ? $data['message'] : '';
+        }
+
+        throw new SalesforceException($error, $response->code);
     }
 
     $data = drupal_json_decode($response->data);
