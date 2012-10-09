@@ -14,6 +14,8 @@ class Salesforce {
 
   public $login_url = 'https://login.salesforce.com';
 
+  private $request;
+
   //@todo: does this need to be configurable?
   public $rest_api_version = array(
     "label" => "Summer '12",
@@ -26,11 +28,56 @@ class Salesforce {
     $this->consumer_secret = $consumer_secret;
   }
 
+  /**
+   * Make a call to the Salesforce REST API.
+   *
+   * @param $path
+   * @param array $params
+   * @param string $method
+   *
+   * @return mixed
+   * @throws SalesforceException
+   */
   public function apiCall($path, $params = array(), $method = 'GET') {
     if (!$this->getAccessToken()) {
       $this->refreshToken();
     }
 
+    $this->buildRequest($path, $params, $method);
+    $response = $this->httpRequest();
+
+    switch ($response->code) {
+      // The session ID or OAuth token used has expired or is invalid
+      case 401:
+        // refresh token
+        $this->refreshToken();
+
+        // rebuild our request and repeat request
+        $this->buildRequest($path, $params, $method);
+        $response = $this->httpRequest();
+        //@todo: test response code, don't get caught in a loop
+
+        break;
+      case 200:
+      case 201:
+      case 204:
+        // all clear
+        break;
+      default:
+        // we have problem
+        throw new SalesforceException($$response->message, $response->code);
+    }
+
+    $data = drupal_json_decode($response->data);
+
+    if (isset($data['error'])) {
+      throw new SalesforceException($data['error_description'], $data['error']);
+    }
+
+    return $data;
+  }
+
+  private function buildRequest($path, $params, $method) {
     $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
 
     $options = array(
@@ -41,14 +88,14 @@ class Salesforce {
       'data' => drupal_http_build_query($params)
     );
 
-    $response = drupal_http_request($url, $options);
-    $data = drupal_json_decode($response->data);
+    $this->request = array(
+      'url' => $url,
+      'options' => $options
+    );
+  }
 
-    if (isset($data['error'])) {
-      throw new SalesforceException($data['error_description'], $data['error']);
-    }
-
-    return $data;
+  private function httpRequest() {
+    return drupal_http_request($this->request['url'], $this->request['options']);
   }
 
   private function getInstanceURL() {

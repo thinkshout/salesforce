@@ -60,22 +60,8 @@ function salesforce_oauth_form() {
     '#type' => 'item',
   );
 
-  $form['salesforce_rest_api_version'] = array(
-    '#title' => t('REST API Version'),
-    '#type' => 'select',
-    '#description' => t('Select a Salesforce REST API version to use with this site. Defaults to the latest.'),
-    '#default_value' => salesforce_rest_api_version()
-  );
-
   if ($consumer_key && $consumer_secret) {
     $sfapi = new Salesforce($consumer_key, $consumer_secret);
-
-    $form['salesforce_rest_api_version'] = array(
-      '#title' => t('REST API Version'),
-      '#type' => 'select',
-      '#description' => t('Select a Salesforce REST API version to use with this site. Defaults to the latest.'),
-      '#default_value' => salesforce_rest_api_version()
-    );
   }
   
   
@@ -110,8 +96,4 @@ function salesforce_status() {
   $result = $salesforce->objects();
   dpm($result);
   return '<pre>' . $result . '</pre>';
-}
-
-function salesforce_rest_api_version() {
-
 }
