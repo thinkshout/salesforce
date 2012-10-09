@@ -90,7 +90,7 @@ class Salesforce {
     $options = array(
       'method' => $method,
       'headers' => array(
-        'Authorization: OAuth' => $this->getAccessToken()
+        'Authorization:' => 'OAuth ' . $this->getAccessToken()
       ),
       'data' => drupal_http_build_query($params)
     );
