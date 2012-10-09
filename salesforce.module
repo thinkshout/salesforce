@@ -34,6 +34,8 @@ function salesforce_menu() {
 function salesforce_oauth_form() {
   $form = array();
 
+  module_load_include('inc', 'salesforce', 'includes/salesforce');
+
   $consumer_key = variable_get('salesforce_consumer_key', FALSE);
   $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
 
@@ -55,15 +57,19 @@ function salesforce_oauth_form() {
     '#description' => t('Click to authorize Salesforce'),
   );
 
-  $form['status'] = array(
-    '#title' => t('Status'),
-    '#type' => 'item',
-  );
-
   if ($consumer_key && $consumer_secret) {
     $sfapi = new Salesforce($consumer_key, $consumer_secret);
+    $resources = $sfapi->apiCall('');
+    foreach ($resources as $key => $path) {
+      $items[] = $key . ': ' . $path;
+    }
+    $form['resources'] = array(
+      '#title' => t('Your Salesforce instance is authorized and has access to the following resources.'),
+      '#type' => 'item',
+      '#theme' => 'item_list',
+      '#items' => $items,
+    );
   }
-  
   
   return $form;
 }
