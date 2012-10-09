@@ -1,10 +1,13 @@
 <?php
 
+module_load_include('inc', 'salesforce', 'includes/salesforce');
+
 /**
  * Implements hook_menu().
  */
 function salesforce_menu() {
   $items = array();
+
   $items['admin/config/services/salesforce'] = array(
     'title' => 'Salesforce',
     'page callback' => 'drupal_get_form',
@@ -16,90 +19,100 @@ function salesforce_menu() {
     'title' => 'Authorize',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/config/services/salesforce/status'] = array(
-    'title' => 'Status',
-    'page callback' => 'salesforce_status',
-    'access arguments' => array('administer salesforce'),
-    'type' => MENU_LOCAL_TASK,
-  );
   $items['salesforce/oauth_callback'] = array(
     'title' => 'Salesforce oauth callback',
     'page callback' => 'salesforce_oauth_callback',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
   );
+
   return $items;
 }
 
+/**
+ * Generate the Salesforce authorization form.
+ *
+ * @return array
+ */
 function salesforce_oauth_form() {
   $form = array();
-
-  module_load_include('inc', 'salesforce', 'includes/salesforce');
 
   $consumer_key = variable_get('salesforce_consumer_key', FALSE);
   $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
 
+  $form['message'] = array(
+    '#type' => 'item',
+    '#markup' => t('Authorize this website to communicate with Salesforce by entering the consumer key and secret from a remote application. Clicking authorize will redirect you to Salesforce where you will be asked to grant access.'),
+  );
+
   $form['salesforce_consumer_key'] = array(
     '#title' => t('Salesforce consumer key'),
     '#type' => 'textfield',
-    '#description' => t('Client ID of the Salesforce instance you want to grant access to'),
+    '#description' => t('Consumer key of the Salesforce remote application you want to grant access to'),
+    '#required' => TRUE,
     '#default_value' => $consumer_key
   );
   $form['salesforce_consumer_secret'] = array(
     '#title' => t('Salesforce consumer secret'),
     '#type' => 'textfield',
-    '#description' => t(''),
+    '#description' => t('Consumer secret of the Salesforce remote application you want to grant access to'),
+    '#required' => TRUE,
     '#default_value' => $consumer_secret
   );
   $form['submit'] = array(
     '#value' => t('Authorize'),
     '#type' => 'submit',
-    '#description' => t('Click to authorize Salesforce'),
   );
 
+  // if we're authenticated, show a list of available REST resources
   if ($consumer_key && $consumer_secret) {
-    $sfapi = new Salesforce($consumer_key, $consumer_secret);
-    $resources = $sfapi->apiCall('');
-    foreach ($resources as $key => $path) {
-      $items[] = $key . ': ' . $path;
+    try{
+      $sfapi = new Salesforce($consumer_key, $consumer_secret);
+      $resources = $sfapi->apiCall('');
+      foreach ($resources as $key => $path) {
+        $items[] = $key . ': ' . $path;
+      }
+      $form['resources'] = array(
+        '#title' => t('Your Salesforce instance is authorized and has access to the following resources:'),
+        '#type' => 'item',
+        '#markup' => theme('item_list', array('items' => $items)),
+      );
     }
-    $form['resources'] = array(
-      '#title' => t('Your Salesforce instance is authorized and has access to the following resources.'),
-      '#type' => 'item',
-      '#theme' => 'item_list',
-      '#items' => $items,
-    );
+    catch(SalesforceException $e) {
+      drupal_set_message($e->getMessage(), 'warning');
+    }
   }
   
   return $form;
 }
 
+/**
+ * Submit handler for salesforce_oauth_form().
+ *
+ * @param $form
+ * @param $form_state
+ */
 function salesforce_oauth_form_submit($form, &$form_state) {
   $consumer_key = $form_state['values']['salesforce_consumer_key'];
   $consumer_secret = $form_state['values']['salesforce_consumer_secret'];
   variable_set('salesforce_consumer_key', $consumer_key);
   variable_set('salesforce_consumer_secret', $consumer_secret);
-  variable_set('salesforce_rest_api_version', $form_state['values']['salesforce_rest_api_version']);
 
   $salesforce = new Salesforce($consumer_key, $consumer_secret);
   $salesforce->getAuthorizationCode();
 }
 
+/**
+ * Callback for the oauth redirect URI. Exchanges an authorization code for an
+ * access token.
+ */
 function salesforce_oauth_callback() {
   $salesforce = new Salesforce(
     variable_get('salesforce_consumer_key', ''),
     variable_get('salesforce_consumer_secret', '')
   );
   $salesforce->requestToken($_GET['code']);
-}
 
-function salesforce_status() {
-  $salesforce = new Salesforce(
-    variable_get('salesforce_consumer_key', ''),
-    variable_get('salesforce_consumer_secret', '')
-  );
-
-  $result = $salesforce->objects();
-  dpm($result);
-  return '<pre>' . $result . '</pre>';
+  drupal_set_message('Salesforce OAUTH2 authorization successful.');
+  drupal_goto('admin/config/services/salesforce');
 }
