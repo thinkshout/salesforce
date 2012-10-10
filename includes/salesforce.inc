@@ -12,7 +12,6 @@ class Salesforce {
   public $consumer_key;
   public $consumer_secret;
   public $login_url = 'https://login.salesforce.com';
-  private $request;
 
   //@todo: does this need to be configurable?
   public $rest_api_version = array(
@@ -106,12 +105,7 @@ class Salesforce {
       'data' => drupal_http_build_query($params)
     );
 
-    $this->request = array(
-      'url' => $url,
-      'options' => $options
-    );
-
-    return drupal_http_request($this->request['url'], $this->request['options']);
+    return drupal_http_request($url, $options);
   }
 
   /**
