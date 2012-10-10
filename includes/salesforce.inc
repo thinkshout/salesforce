@@ -46,7 +46,11 @@ class Salesforce {
       $this->refreshToken();
     }
 
-    $response = $this->httpRequest($path, $params, $method);
+    $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
+    $headers = array(
+      'Authorization:' => 'OAuth ' . $this->getAccessToken()
+    );
+    $response = $this->httpRequest($url, $params, $headers, $method);
 
     switch ($response->code) {
       // The session ID or OAuth token used has expired or is invalid
@@ -93,15 +97,11 @@ class Salesforce {
    *
    * @return object response.
    */
-  private function httpRequest($path, $params, $method = 'GET') {
-    $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
-
+  private function httpRequest($url, $params, $headers = array(), $method = 'GET') {
     // Build the request, including path and headers. Internal use.
     $options = array(
       'method' => $method,
-      'headers' => array(
-        'Authorization:' => 'OAuth ' . $this->getAccessToken()
-      ),
+      'headers' => $headers,
       'data' => drupal_http_build_query($params)
     );
 
@@ -149,23 +149,19 @@ class Salesforce {
       throw new SalesforceException(t('There is no refresh token.'));
     }
 
-    $token_url = $this->login_url . '/services/oauth2/token';
-
-    $query = array(
+    $params = array(
       'grant_type' => 'refresh_token',
       'refresh_token' => $refresh_token,
       'client_id' => $this->consumer_key,
       'client_secret' => $this->consumer_secret,
     );
 
-    $response = drupal_http_request($token_url, array(
-      'data' => drupal_http_build_query($query),
-      'method' => 'POST',
-      'headers' => array(
-        // this is an undocumented requirement on SF's end
-        'Content-Type' => 'application/x-www-form-urlencoded'
-      )
-    ));
+    $url = $this->login_url . '/services/oauth2/token';
+    $headers = array(
+      // this is an undocumented requirement on SF's end
+      'Content-Type' => 'application/x-www-form-urlencoded'
+    );
+    $response = $this->httpRequest($url, $params, $headers, 'POST');
 
     if ($response->code != 200) {
       //@todo: deal with error better
@@ -204,9 +200,7 @@ class Salesforce {
    * @param $code
    */
   public function requestToken($code) {
-    $token_url = $this->login_url . '/services/oauth2/token';
-
-    $query = array(
+    $params = array(
       'code' => $code,
       'grant_type' => 'authorization_code',
       'client_id' => $this->consumer_key,
@@ -214,19 +208,18 @@ class Salesforce {
       'redirect_uri' => $this->redirectUrl()
     );
 
-    $response = drupal_http_request($token_url, array(
-      'data' => drupal_http_build_query($query),
-      'method' => 'POST',
-      'headers' => array(
-        // this is an undocumented requirement on SF's end
-        'Content-Type' => 'application/x-www-form-urlencoded'
-      )
-    ));
+    $url = $this->login_url . '/services/oauth2/token';
+    $headers = array(
+      // this is an undocumented requirement on SF's end
+      'Content-Type' => 'application/x-www-form-urlencoded'
+    );
+    $response = $this->httpRequest($url, $params, $headers, 'POST');
 
     $data = drupal_json_decode($response->data);
 
     if ($response->code != 200) {
-      throw new SalesforceException($data['error_description'], $response->code);
+      $error = isset($data['error_description']) ? $data['error_description'] : $response->error;
+      throw new SalesforceException($error, $response->code);
     }
 
     $this->setRefreshToken($data['refresh_token']);
