@@ -11,9 +11,7 @@ class Salesforce {
 
   public $consumer_key;
   public $consumer_secret;
-
   public $login_url = 'https://login.salesforce.com';
-
   private $request;
 
   //@todo: does this need to be configurable?
@@ -23,6 +21,12 @@ class Salesforce {
     "version" => "25.0"
   );
 
+  /**
+   * Constructor which initializes the consumer.
+   *
+   * @param $consumer_key
+   * @param string $consumer_secret
+   */
   public function __construct($consumer_key, $consumer_secret = '') {
     $this->consumer_key = $consumer_key;
     $this->consumer_secret = $consumer_secret;
@@ -43,8 +47,7 @@ class Salesforce {
       $this->refreshToken();
     }
 
-    $this->buildRequest($path, $params, $method);
-    $response = $this->httpRequest();
+    $response = $this->httpRequest($path, $params, $method);
 
     switch ($response->code) {
       // The session ID or OAuth token used has expired or is invalid
@@ -53,8 +56,7 @@ class Salesforce {
         $this->refreshToken();
 
         // rebuild our request and repeat request
-        $this->buildRequest($path, $params, $method);
-        $response = $this->httpRequest();
+        $response = $this->httpRequest($path, $params, $method);
         //@todo: test response code, don't get caught in a loop
 
         break;
@@ -84,15 +86,18 @@ class Salesforce {
   }
 
   /**
-   * Build the request, including path and headers. Internal use.
+   * Make the HTTP request. Wrapper around drupal_http_request().
    *
    * @param $path
    * @param $params
    * @param $method
+   *
+   * @return object response.
    */
-  private function buildRequest($path, $params, $method) {
+  private function httpRequest($path, $params, $method = 'GET') {
     $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
 
+    // Build the request, including path and headers. Internal use.
     $options = array(
       'method' => $method,
       'headers' => array(
@@ -105,14 +110,7 @@ class Salesforce {
       'url' => $url,
       'options' => $options
     );
-  }
 
-  /**
-   * Make the HTTP request. Wrapper around drupal_http_request().
-   *
-   * @return object response.
-   */
-  private function httpRequest() {
     return drupal_http_request($this->request['url'], $this->request['options']);
   }
 
