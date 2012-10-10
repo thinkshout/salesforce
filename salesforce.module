@@ -30,6 +30,19 @@ function salesforce_menu() {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function salesforce_permission() {
+  return array(
+    'administer salesforce' => array(
+      'title' => t('administer salesforce'),
+      'description' => t('Administer Salesforce integration.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
  * Generate the Salesforce authorization form.
  *
  * @return array
