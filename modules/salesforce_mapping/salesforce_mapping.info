@@ -1,0 +1,7 @@
+name = Salesforce Mapping
+description = Map Drupal entities to Salesforce objects.
+package = Salesforce
+core = 7.x
+
+dependencies[] = salesforce
+dependencies[] = entity

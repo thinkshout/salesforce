@@ -1,0 +1,126 @@
+<?php
+
+define('SALESFORCE_MAPPING_SYNC_OFF', 0x00);
+define('SALESFORCE_MAPPING_SYNC_CREATE', 0x01);
+define('SALESFORCE_MAPPING_SYNC_UPDATE', 0x02);
+define('SALESFORCE_MAPPING_SYNC_DELETE', 0x04);
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_mapping_menu() {
+  $items['admin/config/services/salesforce/mappings'] = array(
+    'title' => 'Mappings',
+    'page callback' => 'salesforce_mappings_page',
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
+  );
+  $items['admin/config/services/salesforce/mappings/add'] = array(
+    'title' => 'Add a mapping',
+    'description' => 'Add a new Salesforce mapping.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_mapping_form'),
+    'access arguments' => array('administer salesforce'),
+    'file' => 'includes/salesforce_mapping.admin.inc',
+    'type' => MENU_LOCAL_ACTION,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function salesforce_mapping_entity_info() {
+  $return = array(
+    'salesforce_mapping' => array(
+      'label' => t('Salesforce Mapping'),
+      'controller class' => 'EntityAPIControllerExportable',
+      'base table' => 'salesforce_mapping',
+      'uri callback' => 'node_uri',
+      'fieldable' => FALSE,
+      'exportable' => TRUE,
+      'module' => 'salesforce_mapping',
+      'entity keys' => array(
+        'id' => 'salesforce_mapping_id',
+        'name' => 'name',
+      ),
+      'bundle keys' => array(
+        'bundle' => 'bundle',
+      ),
+      'bundles' => array(
+        'salesforce_mapping' => array(
+          'label' => 'Salesforce Mapping',
+        ),
+      ),
+    ),
+  );
+
+  return $return;
+}
+
+
+/**
+ * Loads a salesforce_mapping by ID.
+ */
+function salesforce_mapping_load($list_id) {
+  $mappings = salesforce_mapping_load_multiple(array($list_id), array());
+  return $mappings ? reset($mappings) : FALSE;
+}
+
+/**
+ * Loads multiple salesforce_mappings by ID or based on a set of matching conditions.
+ *
+ * @see entity_load()
+ *
+ * @param $salesforce_mapping
+ * @param $conditions
+ *   An array of conditions on the {mailchimp_list} table in the form
+ *     'field' => $value.
+ * @param $reset
+ *   Whether to reset the internal contact loading cache.
+ *
+ * @return
+ *   An array of contact objects indexed by registration_id.
+ */
+function salesforce_mapping_load_multiple($salesforce_mapping_ids = array(), $conditions = array(), $reset = FALSE) {
+  if (empty($salesforce_mapping_ids)) {
+    $salesforce_mapping_ids = FALSE;
+  }
+
+  return entity_load('salesforce_mapping', $salesforce_mapping_ids, $conditions, $reset);
+}
+
+/**
+ * Deletes multiple salesforce_mappings by ID.
+ *
+ * @param $salesforce_mapping_ids
+ *   An array of mapping IDs to delete.
+ *
+ * @return
+ *   TRUE on success, FALSE otherwise.
+ */
+function salesforce_mapping_delete_multiple($salesforce_mapping_ids) {
+  return entity_get_controller('salesforce_mapping')->delete($salesforce_mapping_ids);
+}
+
+/**
+ * Saves a list.
+ *
+ * @param $list
+ *   The full list object to save.
+ *
+ * @return
+ *   The saved list object.
+ */
+function mailchimp_lists_save($salesforce_mapping) {
+  $salesforce_mapping->updated = REQUEST_TIME;
+  // Set the creation timestamp if not set.
+  if (!isset($salesforce_mapping->created) || empty($salesforce_mapping->created)) {
+    $salesforce_mapping->created = REQUEST_TIME;
+  }
+  return entity_get_controller('salesforce_mapping')->save($salesforce_mapping);
+}
+
+function salesforce_mappings_page() {
+  return 'mappings';
+}
