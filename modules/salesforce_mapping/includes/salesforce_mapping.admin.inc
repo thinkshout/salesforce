@@ -43,12 +43,13 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     );
   }
 
+  $sfapi = salesforce_get_api();
+
   $form['object_wrapper'] = array(
     '#prefix' => '<div id="object_wrapper">',
     '#suffix' => '</div>',
   );
   if ((isset($form_state['values']['drupal_bundle']) && !empty($form_state['values']['drupal_bundle'] )) || isset($mapping)) {
-    $sfapi = salesforce_get_api();
     $sobjects = array('' => t('-- Select --'));
     foreach ($sfapi->objects() as $object) {
       $sobjects[$object['name']] = $object['label'];
@@ -61,9 +62,29 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
         '!bundle' => $form_state['values']['drupal_bundle']
       )),
       '#default_value' => '',
-      '#options' => $sobjects
+      '#options' => $sobjects,
+      '#ajax' => array(
+        'callback' => 'salesforce_mapping_form_callback',
+        'wrapper' => 'fields_wrapper'
+      )
     );
+  }
 
+  $form['fields_wrapper'] = array(
+    '#prefix' => '<div id="fields_wrapper">',
+    '#suffix' => '</div>',
+  );
+  if ((isset($form_state['values']['salesforce_object']) && !empty($form_state['values']['salesforce_object'] )) || isset($mapping)) {
+    $object = $sfapi->objectDescribe($form_state['values']['salesforce_object']);
+    foreach ($object['fields'] as $sf_field) {
+      $sf_fields[$sf_field['name']] = $sf_field['label'];
+    }
+    $form['fields_wrapper']['salesforce_fields'] = array(
+      '#title' => t('Salesforce fields'),
+      '#type' => 'select',
+      '#description' => t('Select a Salesforce field to map.'),
+      '#options' => $sf_fields
+    );
   }
 
   return $form;
@@ -77,6 +98,10 @@ function salesforce_mapping_form_callback($form, &$form_state) {
     case 'drupal_bundle':
       $wrapper = 'object_wrapper';
       break;
+    case 'salesforce_object':
+      $wrapper = 'fields_wrapper';
+      break;
   }
+
   return $form[$wrapper];
 }
