@@ -266,6 +266,17 @@ class Salesforce {
     return $result['sobjects'];
   }
 
+  /**
+   * Retrieve all the metadata for an object, including information about each
+   * field, URLs, and child relationships.
+   *
+   * @param $name object name
+   *
+   * @return array
+   */
+  public function objectDescribe($name) {
+    return $this->apiCall("sobjects/{$name}/describe");
+  }
 }
 
 class SalesforceException extends Exception {}
