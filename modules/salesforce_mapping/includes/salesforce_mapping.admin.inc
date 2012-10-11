@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Return a form for a salesforce mapping entity.
+ *
+ * @param $form
+ * @param $form_state
+ * @param null $mapping
+ *
+ * @return mixed
+ */
 function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
 
   $types = array('' => t('-- Select --'));
@@ -90,6 +99,14 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
   return $form;
 }
 
+/**
+ * Ajax callback for salesforce_mapping_form().
+ *
+ * @param $form
+ * @param $form_state
+ *
+ * @return mixed
+ */
 function salesforce_mapping_form_callback($form, &$form_state) {
   switch ($form_state['triggering_element']['#name']) {
     case 'drupal_type':
