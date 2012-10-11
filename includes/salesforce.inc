@@ -243,9 +243,27 @@ class Salesforce {
 
   /**
    * Available objects and their metadata for your organization's data.
+   *
+   * @param array $conditions
+   *   Associative array of filters to apply to the retunred objects. Filters
+   *   are applied after the list is returned from Salesforce.
+   *
+   * @return array
    */
-  public function objects() {
-    return $this->apiCall('sobjects');
+  public function objects($conditions = array('updateable' => TRUE)) {
+    $result = $this->apiCall('sobjects');
+
+    if (!empty($conditions)) {
+      foreach ($result['sobjects'] as $key => $object) {
+        foreach ($conditions as $condition => $value) {
+          if (!$object[$condition] == $value) {
+            unset($result['sobjects'][$key]);
+          }
+        }
+      }
+    }
+
+    return $result['sobjects'];
   }
 
 }
