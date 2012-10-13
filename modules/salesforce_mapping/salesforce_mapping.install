@@ -78,13 +78,13 @@ function salesforce_mapping_schema() {
         'description' => 'A serialized object that stores the field mappings.',
       ),
       'created' => array(
-        'description' => 'The Unix timestamp when the mailchimp_list was created.',
+        'description' => 'The Unix timestamp when the salesforce_mapping was created.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
       ),
       'updated' => array(
-        'description' => 'The Unix timestamp when the mailchimp_list was most recently saved.',
+        'description' => 'The Unix timestamp when the salesforce_mapping was most recently saved.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
