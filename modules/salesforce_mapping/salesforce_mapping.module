@@ -104,15 +104,15 @@ function salesforce_mapping_delete_multiple($salesforce_mapping_ids) {
 }
 
 /**
- * Saves a list.
+ * Saves a saalesforce_mapping.
  *
- * @param $list
- *   The full list object to save.
+ * @param $salesforce_mapping
+ *   The full salesforce_mapping object to save.
  *
  * @return
- *   The saved list object.
+ *   The saved salesforce_mapping object.
  */
-function mailchimp_lists_save($salesforce_mapping) {
+function salesforce_mapping_save($salesforce_mapping) {
   $salesforce_mapping->updated = REQUEST_TIME;
   // Set the creation timestamp if not set.
   if (!isset($salesforce_mapping->created) || empty($salesforce_mapping->created)) {
