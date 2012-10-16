@@ -25,6 +25,7 @@ function salesforce_drush_command() {
     ),
     'options' => array(
       'fields' => 'Display information about fields that are part of the object.',
+      'field-data' => 'Display information about a specific field that is part of an object',
     ),
   );
   $items['sf-list-resources'] = array(
@@ -42,13 +43,13 @@ function drush_salesforce_sf_list_resources() {
   $salesforce = _drush_salesforce_drush_get_api();
 }
 
-function drush_salesforce_sf_describe_object($object = NULL) {
-  if (!$object) {
+function drush_salesforce_sf_describe_object($object_name = NULL) {
+  if (!$object_name) {
     return drush_log('Please specify an object as an argument.', 'error');
   }
   $salesforce = _drush_salesforce_drush_get_api();
 
-  $object = $salesforce->objectDescribe($object);
+  $object = $salesforce->objectDescribe($object_name);
 
   // Return if we cannot load any data
   if (!is_array($object)) {
@@ -56,24 +57,44 @@ function drush_salesforce_sf_describe_object($object = NULL) {
   }
   // Display only information about fields for an option
   if (drush_get_option('fields')) {
-    drush_print_r($object['fields']);
-    drush_print_r($object['childReleationships']);
+    $rows = array(array('Name', 'Type', 'Label'));
+    foreach ($object['fields'] as $field) {
+      $rows[] = array($field['name'], $field['type'], $field['label']);
+    }
+    drush_print_r($rows);
+    drush_print_table($rows, TRUE);
+    return;
+  }
+
+  // Display only information about a specific field
+  if ($fieldname = drush_get_option('field-data')) {
+    $field_data = NULL;
+    foreach ($object['fields'] as $field) {
+      if ($field['name'] === $fieldname) {
+        $field_data = $field;
+        break;
+      }
+    }
+    if (!$field_data) {
+      drush_log(dt('Could not load data for field !field on !object object', array('!field' => $fieldname, '!object' => $object_name)), 'error');
+    } else {
+      drush_print_r($field);
+    }
+
     return;
   }
 
   // Display information about the object
-  $rows[] = array('Name', 'Fields', 'childRelationships', 'searchable', 'createable', 'deletable', 'mergeable', 'queryable');
-  $rows[] = array(
-    $object['name'],
-    isset($object['fields']) ? count($object['fields']) : 0,
-    isset($object['childRelationships']) ? count($object['childRelationships']) : 0,
-    ($object['searchable'] == 1) ? 'TRUE' : 'FALSE',
-    ($object['createable'] == 1) ? 'TRUE' : 'FALSE',
-    ($object['deletable'] == 1) ? 'TRUE' : 'FALSE',
-    ($object['mergeable'] == 1) ? 'TRUE' : 'FALSE',
-    ($object['queryable'] == 1) ? 'TRUE' : 'FALSE',
-  );
-  drush_print_table($rows, TRUE);
+  $rows = array();
+  $rows[] = array('Name', $object['name']);
+  $rows[] = array('Fields', isset($object['fields']) ? count($object['fields']) : 0);
+  $rows[] = array('Child Relationships', isset($object['childRelationships']) ? count($object['childRelationships']) : 0);
+  $rows[] = array('Searchable', ($object['searchable'] == 1) ? 'TRUE' : 'FALSE');
+  $rows[] = array('Creatable', ($object['createable'] == 1) ? 'TRUE' : 'FALSE');
+  $rows[] = array('Deletable', ($object['deletable'] == 1) ? 'TRUE' : 'FALSE');
+  $rows[] = array('Mergeable', ($object['mergeable'] == 1) ? 'TRUE' : 'FALSE');
+  $rows[] = array('Queryable', ($object['queryable'] == 1) ? 'TRUE' : 'FALSE');
+  drush_print_table($rows);
 }
 
 /**
