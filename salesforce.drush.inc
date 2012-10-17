@@ -32,6 +32,14 @@ function salesforce_drush_command() {
     'description' => 'List the resources available for the specified API version. It provides the name and URI of each resource.',
     'aliases' => array('sflr'),
   );
+  $items['sf-session-id'] = array(
+    'description' => 'Obtain a Session ID for use with the Salesforce REST API.',
+    'options' => array(
+      'username' => 'The Salesforce username',
+      'password' => 'The password and token associated with the Salesforce username',
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_ROOT,
+  );
   return $items;
 }
 
@@ -165,4 +173,72 @@ function drush_salesforce_sf_list_objects() {
     drush_log('Could not load any information about available objects.', 'error');
   }
 
+}
+
+/**
+ * Obtain a new session ID using Salesforce username and password.
+ */
+function drush_salesforce_sf_session_id() {
+  // Check to see if we already have a session ID.
+  if ($_SESSION['salesforce_access_token']) {
+    if (!drush_confirm('You already have a session ID for interacting with Salesforce. Are you sure you want to obtain a new one?')) {
+      return;
+    }
+  }
+  $username = drush_get_option('username');
+  $password = drush_get_option('password');
+  if (!$username && !$password) {
+    drush_print('To obtain a new session ID, you must enter your username, and your password with your token.');
+  }
+
+  if (!$username) {
+    $username = drush_prompt('Login');
+  }
+  if (!$password) {
+    $password = drush_prompt('Password and Token');
+  }
+  $salesforce = salesforce_get_api();
+  $login_xml = _drush_salesforce_soap_login_xml($username, $password);
+  $login_url = 'https://login.salesforce.com/services/Soap/u/26.0';
+  // $ret = $salesforce->httpRequest($url, $login_xml, $headers);
+  $headers = array(
+    'SOAPAction' => 'login',
+    'Content-Type' => 'text/xml',
+  );
+  $raw_xml = drupal_http_request($login_url, array(
+    'headers' => $headers,
+    'method' => 'POST',
+    'data' => $login_xml,
+    )
+  );
+  if (isset($raw_xml->error)) {
+    return drush_log(dt('Failed to obtain a session ID. Error returned: code !code !error', array('!code' => $raw_xml->code, '!error' => $raw_xml->error)), 'error');
+  }
+  $dom = new DOMDocument();
+  $dom->loadXML($raw_xml->data);
+  $session_id = $dom->getElementsByTagName('sessionId')->item(0)->textContent;
+  if ($session_id) {
+    $_SESSION['salesforce_access_token'] = $session_id;
+    drush_log('Obtained and set new session ID.', 'success');
+  }
+  else {
+    return drush_log('Failed to obtain a session ID.', 'error');
+  }
+}
+
+/**
+ * Returns XML for Salesforce SOAP login method.
+ */
+function _drush_salesforce_soap_login_xml($username, $password) {
+  return '<?xml version="1.0" encoding="utf-8" ?>
+  <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+    <env:Body>
+      <n1:login xmlns:n1="urn:partner.soap.sforce.com">
+        <n1:username>' . $username . '</n1:username>
+        <n1:password>' . $password . '</n1:password>
+      </n1:login>
+    </env:Body>
+  </env:Envelope>';
 }
