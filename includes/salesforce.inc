@@ -277,6 +277,22 @@ class Salesforce {
   public function objectDescribe($name) {
     return $this->apiCall("sobjects/{$name}/describe");
   }
+
+  /**
+   * Use the Resources by Version resource to list the resources available for
+   * the specified API version.
+   *
+   * This provides the name and URI of each additional resource.
+   *
+   * @return array
+   */
+  public function listResources() {
+    $resources = $this->apiCall('');
+    foreach ($resources as $key => $path) {
+      $items[$key] = $path;
+    }
+    return $items;
+  }
 }
 
 class SalesforceException extends Exception {}
