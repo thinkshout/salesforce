@@ -11,4 +11,6 @@
 function salesforce_uninstall() {
   variable_del('salesforce_consumer_key');
   variable_del('salesforce_consumer_secret');
+  variable_del('salesforce_access_token');
+  variable_del('salesforce_refresh_token');
 }

@@ -119,13 +119,13 @@ class Salesforce {
   }
 
   /**
-   * Getter and setter for the access token. It's stored in session.
+   * Getter and setter for the access token.
    */
   private function getAccessToken() {
-    return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
+    return ($salesforce_access_token = variable_get('salesforce_access_token', NULL)) ? $salesforce_access_token : FALSE;
   }
   private function setAccessToken($token) {
-    $_SESSION['salesforce_access_token'] = $token;
+    variable_set('salesforce_access_token', $token);
   }
 
   /**
