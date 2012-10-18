@@ -29,7 +29,7 @@ function salesforce_drush_command() {
     ),
   );
   $items['sf-list-resources'] = array(
-    'description' => 'List the resources available for the specified API version. It provides the name and URI of each resource.',
+    'description' => 'Lists the resources available for the specified API version. It provides the name and URI of each resource.',
     'aliases' => array('sflr'),
   );
   return $items;
@@ -39,11 +39,22 @@ function salesforce_drush_command() {
  * List the resources available for the specified API version.
  *
  * This command provides the name and URI of each resource.
- *
- * @TODO implement function
  */
 function drush_salesforce_sf_list_resources() {
   $salesforce = _drush_salesforce_drush_get_api();
+  $resources = $salesforce->listResources();
+  if ($resources) {
+    $items[] = array('Resource', 'URL');
+    foreach ($resources as $resource => $url) {
+      $items[] = array($resource, $url);
+    }
+    drush_print("The following resources are available:\n");
+    drush_print_table($items);
+  }
+  else {
+    drush_log('Could not obtain a list of resources!', 'error');
+  }
+
 }
 
 /**
