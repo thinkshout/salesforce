@@ -35,8 +35,9 @@ function salesforce_mapping_entity_info() {
     'salesforce_mapping' => array(
       'label' => t('Salesforce Mapping'),
       'controller class' => 'EntityAPIControllerExportable',
+      'entity class' => 'SalesforceMapping',
       'base table' => 'salesforce_mapping',
-      'uri callback' => 'node_uri',
+      'uri callback' => 'entity_class_uri',
       'fieldable' => FALSE,
       'exportable' => TRUE,
       'module' => 'salesforce_mapping',
@@ -112,7 +113,7 @@ function salesforce_mapping_delete_multiple($salesforce_mapping_ids) {
  * @return
  *   The saved salesforce_mapping object.
  */
-function salesforce_mapping_save($salesforce_mapping) {
+function salesforce_mapping_save(SalesforceMapping $salesforce_mapping) {
   $salesforce_mapping->updated = REQUEST_TIME;
   // Set the creation timestamp if not set.
   if (!isset($salesforce_mapping->created) || empty($salesforce_mapping->created)) {
@@ -121,6 +122,11 @@ function salesforce_mapping_save($salesforce_mapping) {
   return entity_get_controller('salesforce_mapping')->save($salesforce_mapping);
 }
 
+/**
+ * Display a list of available Salesforce Mappings.
+ *
+ * @return array
+ */
 function salesforce_mappings_page() {
   return 'mappings';
 }

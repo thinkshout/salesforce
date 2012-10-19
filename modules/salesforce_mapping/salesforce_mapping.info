@@ -3,5 +3,7 @@ description = Map Drupal entities to Salesforce objects.
 package = Salesforce
 core = 7.x
 
+files[] = includes/salesforce_mapping.entity.inc
+
 dependencies[] = salesforce
 dependencies[] = entity
