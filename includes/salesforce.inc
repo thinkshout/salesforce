@@ -32,6 +32,16 @@ class Salesforce {
   }
 
   /**
+   * Determine if this SF instance is fully configured.
+   * TODO: Consider making a test API call.
+   *
+   * @return bool
+   */
+  public function isAuthorized() {
+    return !empty($this->consumer_key) && !empty($this->consumer_secret) && $this->getRefreshToken();
+  }
+
+  /**
    * Make a call to the Salesforce REST API.
    *
    * @param $path
