@@ -11,12 +11,11 @@
  */
 function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
 
+  $form['#id'] = 'salesforce_mapping_form';
+
   $form['drupal_entity'] = array(
     '#title' => t('Drupal entity'),
     '#type' => 'fieldset',
-    '#attributes' => array(
-      'id' => 'drupal_entity'
-    )
   );
 
   $types = array('' => t('-- Select --'));
@@ -32,7 +31,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     '#required' => TRUE,
     '#ajax' => array(
       'callback' => 'salesforce_mapping_form_callback',
-      'wrapper' => 'drupal_entity'
+      'wrapper' => 'salesforce_mapping_form'
     )
   );
 
@@ -51,47 +50,35 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       '#default_value' => array(),
       '#ajax' => array(
         'callback' => 'salesforce_mapping_form_callback',
-        'wrapper' => 'salesforce_object'
+        'wrapper' => 'salesforce_mapping_form'
       )
     );
   }
 
-  $form['salesforce_wrapper'] = array(
-    '#type' => 'item',
-    '#prefix' => '<div id="salesforce-wrapper">',
-    '#suffix' => '</div>'
-  );
-
-  $form['salesforce_wrapper']['salesforce_object'] = array(
+  $form['salesforce_object'] = array(
     '#title' => t('Salesforce object'),
     '#type' => 'fieldset',
-    '#attributes' => array(
-      'id' => 'salesforce_object'
-    )
   );
 
   $sfapi = salesforce_get_api();
 
-  if ((isset($form_state['values']['drupal_bundle']) && !empty($form_state['values']['drupal_bundle'] )) || isset($mapping)) {
-    $sobjects = array('' => t('-- Select --'));
-    foreach ($sfapi->objects() as $object) {
-      $sobjects[$object['name']] = $object['label'];
-    }
-
-    $form['salesforce_wrapper']['salesforce_object']['salesforce_type'] = array(
-      '#title' => t('Salesforce object'),
-      '#type' => 'select',
-      '#description' => t('Select a Salesforce object to map to !bundle', array(
-        '!bundle' => $form_state['values']['drupal_bundle']
-      )),
-      '#default_value' => '',
-      '#options' => $sobjects,
-      '#ajax' => array(
-        'callback' => 'salesforce_mapping_form_callback',
-        'wrapper' => 'salesforce-wrapper'
-      )
-    );
+  $sobjects = array('' => t('-- Select --'));
+  foreach ($sfapi->objects() as $object) {
+    $sobjects[$object['name']] = $object['label'];
   }
+
+  $form['salesforce_object']['salesforce_type'] = array(
+    '#title' => t('Salesforce object'),
+    '#type' => 'select',
+    '#description' => t('Select a Salesforce object to map.'),
+    '#default_value' => '',
+    '#options' => $sobjects,
+    '#ajax' => array(
+      'callback' => 'salesforce_mapping_form_callback',
+      'wrapper' => 'salesforce_mapping_form'
+    ),
+    '#required' => TRUE
+  );
 
   if ((isset($form_state['values']['salesforce_type']) && !empty($form_state['values']['salesforce_type'] )) || isset($mapping)) {
     $object = $sfapi->objectDescribe($form_state['values']['salesforce_type']);
@@ -99,43 +86,100 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     foreach ($object['recordTypeInfos'] as $type) {
       $sf_types[$type['recordTypeId']] = $type['name'];
     }
-    $form['salesforce_wrapper']['salesforce_object']['salesforce_record_type'] = array(
+    $form['salesforce_object']['salesforce_record_type'] = array(
       '#title' => t('Salesforce record type'),
       '#type' => 'select',
       '#description' => t('Select a Salesforce record type to map.'),
-      '#options' => $sf_types
+      '#options' => $sf_types,
+      '#required' => TRUE,
     );
 
     $sf_fields = array('' => t('-- Select --'));
     foreach ($object['fields'] as $sf_field) {
       $sf_fields[$sf_field['name']] = $sf_field['label'];
     }
-    $form['salesforce_wrapper']['salesforce_field_mappings'] = array(
+    $form['salesforce_field_mappings'] = array(
       '#title' => t('Field mappings'),
       '#type' => 'fieldset',
       '#attributes' => array(
         'id' => 'salesforce_field_mappings'
       ),
-      '#states' => array(
-        'invisible' => array(
-          ':input[name="salesforce_type"]' => array('value' => ''),
-        )
-      )
     );
-    $form['salesforce_wrapper']['salesforce_field_mappings']['salesforce_fields'] = array(
+    $form['salesforce_field_mappings']['salesforce_field'] = array(
       '#title' => t('Salesforce fields'),
       '#type' => 'select',
       '#description' => t('Select a Salesforce field to map.'),
       '#options' => $sf_fields
     );
-    $form['salesforce_wrapper']['salesforce_field_mappings']['salesforce_add_field'] = array(
-      '#value' => t('Add field'),
-      '#type' => 'submit',
-      '#description' => t('Add one or more field to configure a mapping for.'),
+
+    $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_type'], $form_state['values']['drupal_bundle']);
+    $form['salesforce_field_mappings']['drupal_field'] = array(
+      '#title' => t('Drupal fields & properties'),
+      '#type' => 'select',
+      '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
+      '#options' => $drupal_fields
     );
+    $form['salesforce_field_mappings']['salesforce_add_field'] = array(
+      '#value' => t('Add field mapping'),
+      '#type' => 'button',
+      '#description' => t('Add one or more field to configure a mapping for.'),
+      '#ajax' => array(
+        'callback' => 'salesforce_mapping_form_callback',
+        'wrapper' => 'salesforce_mapping_form'
+      )
+    );
+
+    $table = array(
+      '#theme' => 'theme_salesforce_fieldmap_form_table',
+      '#tree' => TRUE,
+      '#header' => array(
+        t('Salesforce field'),
+        t('Drupal field'),
+        t('Settings'),
+        t('Remove')
+      ),
+      '#parent_options' => array(),
+      '#rows' => array()
+    );
+
+//    if (!empty($form_state['values']['drupal_field'])) {
+//      $table['#rows'][] = array(
+//        'drupal_field' => array(
+//          '#markup' => $form_state['values']['drupal_field'],
+//        ),
+//        'salesforce_field' => array(
+//          '#markup' => $form_state['values']['drupal_field'],
+//        ),
+//        'settings' => array(
+//        ),
+//        'delete' => array(
+//          '#type' => 'link',
+//          '#title' => t('delete'),
+//          '#options' => array('attributes' => array('title' => t('Delete instance.'))),
+//        ),
+//      );
+//    }
+
+    $form['field_mappings_table'] = $table;
+
   }
 
   return $form;
+}
+
+function salesforce_mapping_drupal_fields($entity_type, $bundle) {
+  $options = array();
+  $fields = field_info_instances($entity_type, $bundle);
+  foreach ($fields as $field_name => $field_info) {
+    $options['fields'][$field_name] = $field_info['label'];
+  }
+
+  $properties = entity_get_all_property_info($entity_type);
+  foreach ($properties as $key => $property) {
+    $options['properties'][$key] = $property['label'];
+  }
+
+  return $options;
 }
 
 /**
@@ -147,6 +191,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
  * @return mixed
  */
 function salesforce_mapping_form_callback($form, &$form_state) {
+
   switch ($form_state['triggering_element']['#name']) {
     case 'drupal_type':
       $wrapper = 'drupal_entity';
@@ -157,8 +202,71 @@ function salesforce_mapping_form_callback($form, &$form_state) {
     case 'salesforce_type':
       $wrapper = 'salesforce_wrapper';
       break;
+    case 'op':
+      $form['field_mappings_table']['#rows'][] = array(
+        'drupal_field' => $form_state['values']['drupal_field'],
+        'salesforce_field' => $form_state['values']['salesforce_field'],
+        'settings' => array(),
+        'delete' => array(),
+      );
+
+      break;
   }
 
-  // return $form;
-  return $form[$wrapper];
+   return $form;
+}
+
+
+/**
+ * Themes the field associations on a fieldmap edit form into a table.
+ */
+function theme_salesforce_fieldmap_form_table($variables) {
+  $form = $variables['form'];
+  // Build the header array.
+  $header = array();
+
+  foreach (element_children($form['header']) as $element) {
+    $header[] = drupal_render($form['header'][$element]);
+  }
+  // Add the operations column. (Currently "Remove" is the only operation.
+  $header[] = 'Operations';
+
+  // Build the rows array.
+  $rows = array();
+  foreach (element_children($form['rows']) as $element) {
+    $rows[] = array(
+      array(
+        'data' => drupal_render($form['rows'][$element]['target']),
+        'class' => 'target-cell',
+      ),
+      array(
+        'data' => drupal_render($form['rows'][$element]['source']),
+        'class' => 'source-cell',
+      ),
+      array(
+       'data' => drupal_render($form['rows'][$element]['remove']),
+      )
+    );
+  }
+
+  // Add a message if no rows were found.
+  if (empty($rows)) {
+    $rows[] = array(
+      array(
+        'data' => t('No fields set.'),
+        'colspan' => 3,
+      ),
+    );
+  }
+
+  // Build the attributes array.
+  $attributes = array();
+
+  // Build the caption.
+  $caption = NULL;
+
+  if (isset($form['caption'] )) {
+    $caption = drupal_render_children($form['caption']);
+  }
+  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes, 'caption' => $caption));
 }
