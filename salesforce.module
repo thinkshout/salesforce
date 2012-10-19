@@ -79,20 +79,26 @@ function salesforce_oauth_form() {
 
   // if we're authenticated, show a list of available REST resources
   if ($consumer_key && $consumer_secret) {
-    try{
-      $sfapi = new Salesforce($consumer_key, $consumer_secret);
-      $resources = $sfapi->apiCall('');
-      foreach ($resources as $key => $path) {
-        $items[] = $key . ': ' . $path;
+    $sfapi = new Salesforce($consumer_key, $consumer_secret);
+    // if fully configured, attempt to connect to SF and return a list of resources
+    if ($sfapi->isAuthorized()) {
+      try{
+        $resources = $sfapi->listResources();
+        foreach ($resources as $key => $path) {
+          $items[] = $key . ': ' . $path;
+        }
+        $form['resources'] = array(
+          '#title' => t('Your Salesforce instance is authorized and has access to the following resources:'),
+          '#type' => 'item',
+          '#markup' => theme('item_list', array('items' => $items)),
+        );
       }
-      $form['resources'] = array(
-        '#title' => t('Your Salesforce instance is authorized and has access to the following resources:'),
-        '#type' => 'item',
-        '#markup' => theme('item_list', array('items' => $items)),
-      );
+      catch(SalesforceException $e) {
+        drupal_set_message($e->getMessage(), 'warning');
+      }
     }
-    catch(SalesforceException $e) {
-      drupal_set_message($e->getMessage(), 'warning');
+    else {
+      drupal_set_message(t('Salesforce needs to authorized to connect to this website.'));
     }
   }
   
