@@ -1,0 +1,4 @@
+name = Salesforce Pull
+description = Gets updated Salesforce records to place in a queue, processes queue
+package = Salesforce
+core = 7.x

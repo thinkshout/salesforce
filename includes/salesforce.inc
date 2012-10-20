@@ -255,7 +255,7 @@ class Salesforce {
    * Available objects and their metadata for your organization's data.
    *
    * @param array $conditions
-   *   Associative array of filters to apply to the retunred objects. Filters
+   *   Associative array of filters to apply to the returned objects. Filters
    *   are applied after the list is returned from Salesforce.
    *
    * @return array
@@ -274,6 +274,20 @@ class Salesforce {
     }
 
     return $result['sobjects'];
+  }
+
+  /**
+   * Use SOQL to get objects based on conditions
+   * @param array $conditions
+   *   Associative array of filters to apply to the SOQL query
+   *
+   * @return
+   */
+  public function query($conditions = NULL) {
+    // @todo: handle query conditions to create SOQL query
+    $result = $this->apiCall('query');
+
+    return '';
   }
 
   /**
