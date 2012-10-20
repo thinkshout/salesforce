@@ -130,38 +130,38 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     );
 
     $table = array(
-      '#theme' => 'theme_salesforce_fieldmap_form_table',
+      '#theme' => 'salesforce_fieldmap_form_table',
       '#tree' => TRUE,
       '#header' => array(
         t('Salesforce field'),
         t('Drupal field'),
         t('Settings'),
-        t('Remove')
       ),
       '#parent_options' => array(),
       '#rows' => array()
     );
 
-//    if (!empty($form_state['values']['drupal_field'])) {
-//      $table['#rows'][] = array(
-//        'drupal_field' => array(
+    if (!empty($form_state['values']['drupal_field'])) {
+      $table['#rows'][] = array(
+        'drupal_field' => $form_state['values']['drupal_field'], //array(
 //          '#markup' => $form_state['values']['drupal_field'],
 //        ),
-//        'salesforce_field' => array(
+        'salesforce_field' => $form_state['values']['salesforce_field'], //array(
 //          '#markup' => $form_state['values']['drupal_field'],
 //        ),
-//        'settings' => array(
-//        ),
-//        'delete' => array(
-//          '#type' => 'link',
-//          '#title' => t('delete'),
-//          '#options' => array('attributes' => array('title' => t('Delete instance.'))),
-//        ),
-//      );
-//    }
+        'settings' => array(
+        ),
+        'delete' => array(
+          'data' => array (
+            '#theme' => 'link',
+            '#text' => t('delete'),
+            '#options' => array('attributes' => array('title' => t('Delete instance.'))),
+          ),
+        ),
+      );
+    }
 
     $form['field_mappings_table'] = $table;
-
   }
 
   return $form;
@@ -203,12 +203,13 @@ function salesforce_mapping_form_callback($form, &$form_state) {
       $wrapper = 'salesforce_wrapper';
       break;
     case 'op':
-      $form['field_mappings_table']['#rows'][] = array(
-        'drupal_field' => $form_state['values']['drupal_field'],
-        'salesforce_field' => $form_state['values']['salesforce_field'],
-        'settings' => array(),
-        'delete' => array(),
-      );
+      // @todo: Save mapping?
+//      $form['field_mappings_table']['#rows'][] = array(
+//        'drupal_field' => $form_state['values']['drupal_field'],
+//        'salesforce_field' => $form_state['values']['salesforce_field'],
+//        'settings' => array(),
+//        'delete' => array(),
+//      );
 
       break;
   }
@@ -225,26 +226,27 @@ function theme_salesforce_fieldmap_form_table($variables) {
   // Build the header array.
   $header = array();
 
-  foreach (element_children($form['header']) as $element) {
-    $header[] = drupal_render($form['header'][$element]);
+  foreach ($form['#header'] as $element) {
+    $header[] = $element;
   }
   // Add the operations column. (Currently "Remove" is the only operation.
   $header[] = 'Operations';
 
   // Build the rows array.
   $rows = array();
-  foreach (element_children($form['rows']) as $element) {
+  foreach ($form['#rows'] as $element) {
     $rows[] = array(
       array(
-        'data' => drupal_render($form['rows'][$element]['target']),
+        'data' => $element['drupal_field'],
         'class' => 'target-cell',
       ),
       array(
-        'data' => drupal_render($form['rows'][$element]['source']),
+        'data' => $element['drupal_field'],
         'class' => 'source-cell',
       ),
+      array(),
       array(
-       'data' => drupal_render($form['rows'][$element]['remove']),
+       'data' => drupal_render($element['delete']),
       )
     );
   }
@@ -254,7 +256,7 @@ function theme_salesforce_fieldmap_form_table($variables) {
     $rows[] = array(
       array(
         'data' => t('No fields set.'),
-        'colspan' => 3,
+        'colspan' => 4,
       ),
     );
   }
