@@ -46,7 +46,7 @@ function salesforce_mapping_entity_info() {
         'name' => 'name',
       ),
       'bundle keys' => array(
-        'bundle' => 'bundle',
+        'bundle' => 'type',
       ),
       'bundles' => array(
         'salesforce_mapping' => array(
@@ -63,9 +63,9 @@ function salesforce_mapping_entity_info() {
 /**
  * Loads a salesforce_mapping by ID.
  */
-function salesforce_mapping_load($list_id) {
-  $mappings = salesforce_mapping_load_multiple(array($list_id), array());
-  return $mappings ? reset($mappings) : FALSE;
+function salesforce_mapping_load($name) {
+  $types = entity_load_multiple_by_name('salesforce_mapping', isset($name) ? array($name) : FALSE);
+  return isset($name) ? reset($types) : $types;
 }
 
 /**
@@ -129,4 +129,16 @@ function salesforce_mapping_save(SalesforceMapping $salesforce_mapping) {
  */
 function salesforce_mappings_page() {
   return 'mappings';
+}
+
+/**
+* Implements hook_theme().
+*/
+function salesforce_mapping_theme($existing, $type, $theme, $path) {
+  return array(
+    'salesforce_fieldmap_form_table' => array(
+      'render element' => 'elements',
+      'file' => 'includes/salesforce_mapping.admin.inc',
+    ),
+  );
 }
