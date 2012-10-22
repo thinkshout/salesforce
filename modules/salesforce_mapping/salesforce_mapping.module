@@ -72,7 +72,11 @@ function salesforce_mapping_entity_info() {
 
 
 /**
- * Loads a salesforce_mapping by ID.
+ * Loads a single salesforce_mapping or all of them if no name provided.
+ *
+ * @param null $name
+ *
+ * @return array
  */
 function salesforce_mapping_load($name = NULL) {
   $types = entity_load_multiple_by_name('salesforce_mapping', isset($name) ? array($name) : FALSE);
@@ -80,26 +84,35 @@ function salesforce_mapping_load($name = NULL) {
 }
 
 /**
- * Loads multiple salesforce_mappings by ID or based on a set of matching conditions.
+ * Loads multiple salesforce_mappings based on a set of matching conditions.
  *
- * @see entity_load()
- *
- * @param $salesforce_mapping
- * @param $conditions
- *   An array of conditions on the {salesforce_mapping} table in the form
+ * @param $properties
+ *   An array of properties on the {salesforce_mapping} table in the form
  *     'field' => $value.
  * @param $reset
  *   Whether to reset the internal contact loading cache.
  *
  * @return
- *   An array of contact objects indexed by registration_id.
+ *   An array of salesforce_mapping objects.
  */
-function salesforce_mapping_load_multiple($salesforce_mapping_ids = array(), $conditions = array(), $reset = FALSE) {
-  if (empty($salesforce_mapping_ids)) {
-    $salesforce_mapping_ids = FALSE;
+function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE) {
+  $mappings = array();
+  $efq = new EntityFieldQuery();
+  $efq->entityCondition('entity_type', 'salesforce_mapping');
+  foreach ($properties as $key => $value) {
+    $efq->propertyCondition($key, $value);
   }
 
-  return entity_load('salesforce_mapping', $salesforce_mapping_ids, $conditions, $reset);
+  $results = $efq->execute();
+  if (!empty($results)) {
+    $salesforce_mapping_ids = array_keys($results['salesforce_mapping']);
+
+    if (!empty($salesforce_mapping_ids)) {
+      $mappings = entity_load('salesforce_mapping', $salesforce_mapping_ids, array(), $reset);
+    }
+  }
+
+  return $mappings;
 }
 
 /**
