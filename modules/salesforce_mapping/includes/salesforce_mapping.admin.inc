@@ -9,10 +9,29 @@
  *
  * @return mixed
  */
-function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
+function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL) {
   $form['#id'] = 'salesforce_mapping_form';
 
-  //todo: add missing fields: machine name and description
+  $form['label'] = array(
+    '#title' => t('Label'),
+    '#type' => 'textfield',
+    '#default_value' => isset($mapping) ? $mapping->label : '',
+    '#description' => t('The human-readable name of this field mapping.'),
+    '#required' => TRUE,
+    '#size' => 30,
+  );
+
+  $form['name'] = array(
+    '#title' => t('Name'),
+    '#type' => 'machine_name',
+    '#description' => t(''),
+    '#default_value' => '',
+    '#disabled' => isset($mapping) && $mapping->locked,
+    '#machine_name' => array(
+      'exists' => 'salesforce_mapping_load',
+      'source' => array('label')
+     ),
+  );
 
   $form['drupal_entity'] = array(
     '#title' => t('Drupal entity'),
@@ -151,7 +170,8 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       )
     );
   }
-  
+
+  $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
     '#value' => t('Save mapping'),
     '#type' => 'submit',
@@ -230,6 +250,12 @@ function theme_salesforce_fieldmap_form_table($variables) {
   return theme('table', array('header' => $header, 'rows' => $rows));
 }
 
+/**
+ * Submit handler for salesforce_mapping_form().
+ *
+ * @param $form
+ * @param $form_state
+ */
 function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
@@ -238,6 +264,8 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   }
 
   $mapping = entity_create('salesforce_mapping', array(
+    'name' => $values['name'],
+    'label' => $values['label'],
     'salesforce_object_type' => $values['salesforce_object_type'],
     'salesforce_record_type' => $values['salesforce_record_type'],
     'drupal_entity_type' => $values['drupal_entity_type'],
