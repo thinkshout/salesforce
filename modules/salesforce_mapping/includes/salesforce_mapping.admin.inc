@@ -25,8 +25,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#title' => t('Name'),
     '#type' => 'machine_name',
     '#description' => t(''),
-    '#default_value' => '',
-    '#disabled' => isset($mapping) && $mapping->locked,
+    '#default_value' => isset($mapping) ? $mapping->name : '',
+    '#disabled' => !empty($mapping->name),
     '#machine_name' => array(
       'exists' => 'salesforce_mapping_load',
       'source' => array('label')
@@ -47,7 +47,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#type' => 'select',
     '#description' => t('Select a Drupal entity type to map to a Salesforce object.'),
     '#options' => $types,
-    '#default_value' => array(),
+    '#default_value' => isset($mapping) ? $mapping->drupal_entity_type : 0,
     '#required' => TRUE,
     '#ajax' => array(
       'callback' => 'salesforce_mapping_form_callback',
@@ -67,7 +67,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#required' => TRUE,
       '#description' => t('Select a Drupal entity bundle to map to a Salesforce object.'),
       '#options' => $bundles,
-      '#default_value' => array(),
+      '#default_value' => isset($mapping) ? $mapping->drupal_bundle : 0,
       '#ajax' => array(
         'callback' => 'salesforce_mapping_form_callback',
         'wrapper' => 'salesforce_mapping_form'
@@ -80,14 +80,12 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#type' => 'fieldset',
   );
 
-
   $sfapi = salesforce_get_api();
   $sfobjects = &$form_state['sf_objects'];
   if (!$sfobjects) {
     $sfobjects = $sfapi->objects();
     $form_state['sf_objects'] = $sfobjects;
   }
-
 
   $sfobject_options = array('' => t('-- Select --'));
   foreach ($sfobjects as $object) {
@@ -98,7 +96,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#title' => t('Salesforce object'),
     '#type' => 'select',
     '#description' => t('Select a Salesforce object to map.'),
-    '#default_value' => '',
+    '#default_value' => isset($mapping) ? $mapping->salesforce_object_type : 0,
     '#options' => $sfobject_options,
     '#ajax' => array(
       'callback' => 'salesforce_mapping_form_callback',
@@ -108,7 +106,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   );
 
   $salesforce_object_type = &$form_state['values']['salesforce_object_type'];
-  if (!empty($salesforce_object_type) || isset($mapping)) {
+  if (!$salesforce_object_type && isset($mapping)) {
+    $salesforce_object_type = $mapping->salesforce_object_type;
+  }
+  if (!empty($salesforce_object_type)) {
     $sfobject = &$form_state['salesforce_mapping_object_' . $salesforce_object_type];
     if (!$sfobject) {
       $sfobject = $sfapi->objectDescribe($salesforce_object_type);
@@ -121,6 +122,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#title' => t('Salesforce record type'),
       '#type' => 'select',
       '#description' => t('Select a Salesforce record type to map.'),
+      '#default_value' => isset($mapping) ? $mapping->salesforce_record_type : 0,
       '#options' => $sf_types,
       '#required' => TRUE,
     );
@@ -136,25 +138,35 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     );
 
     $mappings_count = isset($form_state['salesforce_mappings_count']) ? $form_state['salesforce_mappings_count'] : 0;
-    if ($form_state['triggering_element']['#name'] == 'salesforce_add_field') {
+    if (!$mappings_count && isset($mapping)) {
+      $mappings_count = count($mapping->field_mappings);
+    }
+
+    if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') {
       $mappings_count++;
       $form_state['salesforce_mappings_count'] = $mappings_count;
     }
 
-    $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_entity_type'], $form_state['values']['drupal_bundle']);
+    $drupal_entity_type = isset($form_state['values']['drupal_entity_type']) ? $form_state['values']['drupal_entity_type'] : $mapping->drupal_entity_type;
+    $drupal_bundle = isset($form_state['values']['drupal_bundle']) ? $form_state['values']['drupal_bundle'] : $mapping->drupal_bundle;
+
+    $drupal_fields = salesforce_mapping_drupal_fields($drupal_entity_type, $drupal_bundle);
 
     for ($delta = 0; $delta <= $mappings_count; $delta++) {
       $form['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
           '#type' => 'select',
           '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
-          '#options' => $drupal_fields
+          '#options' => $drupal_fields,
+          '#default_value' => isset($mapping->field_mappings[$delta]) ? key($mapping->field_mappings[$delta]) : 0,
         ),
         'salesforce_field' => array(
           '#type' => 'select',
           '#description' => t('Select a Salesforce field to map.'),
-          '#options' => $sf_fields
-        )
+          '#options' => $sf_fields,
+          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta] : 0,
+        ),
+        'remove' => array()
       );
     }
 
@@ -260,7 +272,12 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
   foreach ($values['salesforce_field_mappings'] as $mapping) {
-    $mappings[$mapping['drupal_field']] = $mapping['salesforce_field'];
+    if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
+      $mappings[] = array(
+        'drupal_field' => $mapping['drupal_field'],
+        'salesforce_field' => $mapping['salesforce_field']
+      );
+    }
   }
 
   $mapping = entity_create('salesforce_mapping', array(
@@ -271,7 +288,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     'drupal_entity_type' => $values['drupal_entity_type'],
     'drupal_bundle' => $values['drupal_bundle'],
     'description' => '',
-    'field_mapping' => serialize($mappings)
+    'field_mappings' => $mappings
   ));
 
   $mapping->save();
