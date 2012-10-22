@@ -10,13 +10,13 @@ define('SALESFORCE_MAPPING_SYNC_DELETE', 0x04);
  */
 function salesforce_mapping_menu() {
   $items['admin/config/services/salesforce/mappings'] = array(
-    'title' => 'Mappings',
+    'title' => 'Salesforce Mappings',
     'page callback' => 'salesforce_mappings_page',
     'access arguments' => array('administer salesforce'),
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/config/services/salesforce/mappings/add'] = array(
-    'title' => 'Add a mapping',
+    'title' => 'Add Salesforce mapping',
     'description' => 'Add a new Salesforce mapping.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_mapping_form'),
@@ -24,6 +24,16 @@ function salesforce_mapping_menu() {
     'file' => 'includes/salesforce_mapping.admin.inc',
     'type' => MENU_LOCAL_ACTION,
   );
+
+  $items['salesforce_mapping/%salesforce_mapping/edit'] = array(
+    'title' => 'Edit mapping',
+    'description' => 'Edit an existing Salesforce mapping.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_mapping_form', 1),
+    'access arguments' => array('administer salesforce'),
+    'file' => 'includes/salesforce_mapping.admin.inc',
+  );
+
   return $items;
 }
 
@@ -63,7 +73,7 @@ function salesforce_mapping_entity_info() {
 /**
  * Loads a salesforce_mapping by ID.
  */
-function salesforce_mapping_load($name) {
+function salesforce_mapping_load($name = NULL) {
   $types = entity_load_multiple_by_name('salesforce_mapping', isset($name) ? array($name) : FALSE);
   return isset($name) ? reset($types) : $types;
 }
@@ -128,7 +138,42 @@ function salesforce_mapping_save(SalesforceMapping $salesforce_mapping) {
  * @return array
  */
 function salesforce_mappings_page() {
-  return 'mappings';
+  $mappings = salesforce_mapping_load();
+  foreach ($mappings as $mapping) {
+    $uri = entity_uri('salesforce_mapping', $mapping);
+    $rows[] = array(
+      l($mapping->label, $uri['path']),
+      $mapping->drupal_entity_type,
+      $mapping->drupal_bundle,
+      $mapping->salesforce_object_type,
+      $mapping->salesforce_record_type,
+    );
+  }
+
+  if (empty($rows)) {
+    $rows[] = array(
+      array(
+        'data' => t('There are no Salesforce mappings.'),
+        'colspan' => 5
+      )
+    );
+  }
+
+  $header = array(
+    t('Label'),
+    t('Drupal entity'),
+    t('Drupal bundle'),
+    t('Salesforce object'),
+    t('Salesforce record type'),
+  );
+
+  $table = array(
+    '#theme' => 'table',
+    '#rows' => $rows,
+    '#header' => $header
+  );
+
+  return $table;
 }
 
 /**
