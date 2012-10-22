@@ -268,6 +268,36 @@ function theme_salesforce_fieldmap_form_table($variables) {
 }
 
 /**
+ * Validate salesforce_mapping_form().
+ *
+ * @param $form
+ * @param $form_state
+ */
+function salesforce_mapping_form_validate($form, &$form_state) {
+  $values = $form_state['values'];
+  $mapping = $form_state['salesforce_mapping'];
+
+  $efq = new EntityFieldQuery();
+  $efq
+    ->entityCondition('entity_type', 'salesforce_mapping')
+    ->propertyCondition('salesforce_object_type', $values['salesforce_object_type'])
+    ->propertyCondition('salesforce_record_type', $values['salesforce_record_type'])
+    ->propertyCondition('drupal_entity_type', $values['drupal_entity_type'])
+    ->propertyCondition('drupal_bundle', $values['drupal_bundle'])
+    ->count();
+
+  // existing mapping, ensure not using any other unique combo
+  if ($mapping) {
+    $efq->propertyCondition('name', $mapping->name, '<>');
+  }
+
+  $count = $efq->execute();
+  if ($count > 0) {
+    form_set_error('drupal_entity_type', t('This Drupal bundle has already been mapped to a Salesforce object.'));
+  }
+}
+
+/**
  * Submit handler for salesforce_mapping_form().
  *
  * @param $form
