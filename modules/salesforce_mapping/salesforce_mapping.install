@@ -122,7 +122,7 @@ function salesforce_mapping_schema() {
     'primary key' => array('salesforce_mapping_id'),
     'unique keys' => array(
       'name' => array('name'),
-      'name_sf_type_drupal_type' => array('name', 'drupal_entity_type', 'drupal_bundle', 'salesforce_object_type', 'salesforce_record_type'),
+      'name_sf_type_drupal_type' => array('drupal_entity_type', 'drupal_bundle', 'salesforce_object_type', 'salesforce_record_type'),
     ),
   );
 
