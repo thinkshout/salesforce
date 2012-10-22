@@ -299,6 +299,9 @@ class Salesforce {
    * @return array
    */
   public function objectDescribe($name) {
+    if (empty($name)) {
+      return array();
+    }
     return $this->apiCall("sobjects/{$name}/describe");
   }
 
