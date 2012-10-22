@@ -76,11 +76,10 @@ function salesforce_mapping_schema() {
         'not null' => FALSE,
         'default' => '',
       ),
-      'field_mapping' => array(
-        'type' => 'blob',
-        'not null' => FALSE,
-        'size' => 'big',
+      'field_mappings' => array(
+        'type' => 'text',
         'serialize' => TRUE,
+        'size' => 'big',
         'description' => 'A serialized object that stores the field mappings.',
       ),
       'created' => array(
