@@ -104,12 +104,6 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       '#required' => TRUE,
     );
 
-    $form['salesforce_field_mappings'] = array(
-      '#title' => t('Field mappings'),
-      '#type' => 'fieldset',
-      '#tree' => TRUE
-    );
-
     $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_type'], $form_state['values']['drupal_bundle']);
 
     $sf_fields = array('' => t('-- Select --'));
@@ -117,7 +111,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       $sf_fields[$sf_field['name']] = $sf_field['label'];
     }
 
-    $form['salesforce_field_mappings']['field_mappings_table'] = array(
+    $form['salesforce_field_mappings'] = array(
       '#theme' => 'salesforce_fieldmap_form_table',
       '#tree' => TRUE
     );
@@ -129,7 +123,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     }
 
     for ($delta = 0; $delta <= $mappings_count; $delta++) {
-      $form['salesforce_field_mappings']['field_mappings_table'][$delta] = array(
+      $form['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
           '#type' => 'select',
           '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
@@ -143,7 +137,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       );
     }
 
-    $form['salesforce_field_mappings']['salesforce_add_field'] = array(
+    $form['salesforce_add_field'] = array(
       '#value' => t('Add field mapping'),
       '#name' => 'salesforce_add_field',
       '#type' => 'button',
