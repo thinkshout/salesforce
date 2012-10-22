@@ -104,8 +104,6 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       '#required' => TRUE,
     );
 
-    $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_type'], $form_state['values']['drupal_bundle']);
-
     $sf_fields = array('' => t('-- Select --'));
     foreach ($sfobject['fields'] as $sf_field) {
       $sf_fields[$sf_field['name']] = $sf_field['label'];
@@ -121,6 +119,8 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       $mappings_count++;
       $form_state['salesforce_mappings_count'] = $mappings_count;
     }
+
+    $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_type'], $form_state['values']['drupal_bundle']);
 
     for ($delta = 0; $delta <= $mappings_count; $delta++) {
       $form['salesforce_field_mappings'][$delta] = array(
@@ -138,7 +138,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     }
 
     $form['salesforce_add_field'] = array(
-      '#value' => t('Add field mapping'),
+      '#value' => t('Add another field mapping'),
       '#name' => 'salesforce_add_field',
       '#type' => 'button',
       '#description' => t('Add one or more field to configure a mapping for.'),
@@ -149,20 +149,33 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       )
     );
   }
+  
+  $form['actions']['submit'] = array(
+    '#value' => t('Save mapping'),
+    '#type' => 'submit',
+  );
 
   return $form;
 }
 
+/**
+ * Return all possible Drupal entity field mappings.
+ *
+ * @param $entity_type
+ * @param $bundle
+ *
+ * @return array
+ */
 function salesforce_mapping_drupal_fields($entity_type, $bundle) {
-  $options = array();
+  $options = array('' => t('-- Select --'));
   $fields = field_info_instances($entity_type, $bundle);
   foreach ($fields as $field_name => $field_info) {
-    $options['fields'][$field_name] = $field_info['label'];
+    $options['Fields'][$field_name] = $field_info['label'];
   }
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    $options['properties'][$key] = $property['label'];
+    $options['Properties'][$key] = $property['label'];
   }
 
   return $options;
