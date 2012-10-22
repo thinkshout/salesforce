@@ -97,6 +97,13 @@ function salesforce_mapping_schema() {
       ),
 
       // following fields are for supporting exportable status.
+      'locked' => array(
+        'description' => 'A boolean indicating whether the administrator may delete this mapping.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny',
+      ),
       'status' => array(
         'type' => 'int',
         'not null' => TRUE,
