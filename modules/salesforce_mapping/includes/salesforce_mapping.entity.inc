@@ -27,4 +27,7 @@ class SalesforceMapping extends Entity {
     return parent::save();
   }
 
+  protected function defaultUri() {
+    return array('path' => 'salesforce_mapping/' . $this->identifier());
+  }
 }
