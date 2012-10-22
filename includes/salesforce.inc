@@ -83,7 +83,7 @@ class Salesforce {
         $error = $response->error;
         if (!empty($response->data)) {
           $data = drupal_json_decode($response->data);
-          $error = isset($data['message']) ? $data['message'] : '';
+          $error = isset($data[0]['message']) ? $data[0]['message'] : '';
         }
 
         throw new SalesforceException($error, $response->code);
