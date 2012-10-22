@@ -46,7 +46,7 @@ function salesforce_mapping_entity_info() {
         'name' => 'name',
       ),
       'bundle keys' => array(
-        'bundle' => 'bundle',
+        'bundle' => 'type',
       ),
       'bundles' => array(
         'salesforce_mapping' => array(
