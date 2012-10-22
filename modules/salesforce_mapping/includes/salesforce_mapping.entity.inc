@@ -17,4 +17,12 @@ class SalesforceMapping extends Entity {
     $created,
     $updated;
 
+  public function save() {
+    $this->updated = REQUEST_TIME;
+    if ($this->is_new) {
+      $this->created = REQUEST_TIME;
+    }
+    return parent::save();
+  }
+
 }
