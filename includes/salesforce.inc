@@ -278,6 +278,7 @@ class Salesforce {
 
   /**
    * Use SOQL to get objects based on conditions
+   *
    * @param array $conditions
    *   Associative array of filters to apply to the SOQL query
    *
@@ -306,12 +307,10 @@ class Salesforce {
   }
 
   /**
-   * Use the Resources by Version resource to list the resources available for
-   * the specified API version.
-   *
-   * This provides the name and URI of each additional resource.
+   * Return a list of available resources for the configured API version.
    *
    * @return array
+   *   Associative array keyed by name with a URI value.
    */
   public function listResources() {
     $resources = $this->apiCall('');
@@ -320,6 +319,7 @@ class Salesforce {
     }
     return $items;
   }
+
 }
 
 class SalesforceException extends Exception {}
