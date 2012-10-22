@@ -142,7 +142,7 @@ function salesforce_mappings_page() {
   foreach ($mappings as $mapping) {
     $uri = entity_uri('salesforce_mapping', $mapping);
     $rows[] = array(
-      l($mapping->label, $uri['path']),
+      l($mapping->label, $uri['path'] . '/edit'),
       $mapping->drupal_entity_type,
       $mapping->drupal_bundle,
       $mapping->salesforce_object_type,
