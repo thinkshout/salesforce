@@ -12,6 +12,8 @@
 function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
   $form['#id'] = 'salesforce_mapping_form';
 
+  //todo: add missing fields: machine name and description
+
   $form['drupal_entity'] = array(
     '#title' => t('Drupal entity'),
     '#type' => 'fieldset',
@@ -21,7 +23,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
   foreach (entity_get_info() as $type => $info) {
     $types[$type] = $info['label'];
   }
-  $form['drupal_entity']['drupal_type'] = array(
+  $form['drupal_entity']['drupal_entity_type'] = array(
     '#title' => t('Drupal Entity Type'),
     '#type' => 'select',
     '#description' => t('Select a Drupal entity type to map to a Salesforce object.'),
@@ -34,9 +36,9 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     )
   );
 
-  if (isset($form_state['values']['drupal_type'])) {
+  if (isset($form_state['values']['drupal_entity_type'])) {
     $bundles = array('' => t('-- Select --'));
-    $info  = entity_get_info($form_state['values']['drupal_type']);
+    $info  = entity_get_info($form_state['values']['drupal_entity_type']);
     foreach ($info['bundles'] as $key => $bundle) {
       $bundles[$key] = $bundle['label'];
     }
@@ -73,7 +75,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     $sfobject_options[$object['name']] = $object['label'];
   }
 
-  $form['salesforce_object']['salesforce_type'] = array(
+  $form['salesforce_object']['salesforce_object_type'] = array(
     '#title' => t('Salesforce object'),
     '#type' => 'select',
     '#description' => t('Select a Salesforce object to map.'),
@@ -86,7 +88,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     '#required' => TRUE
   );
 
-  $salesforce_object_type = &$form_state['values']['salesforce_type'];
+  $salesforce_object_type = &$form_state['values']['salesforce_object_type'];
   if (!empty($salesforce_object_type) || isset($mapping)) {
     $sfobject = &$form_state['salesforce_mapping_object_' . $salesforce_object_type];
     if (!$sfobject) {
@@ -120,7 +122,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       $form_state['salesforce_mappings_count'] = $mappings_count;
     }
 
-    $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_type'], $form_state['values']['drupal_bundle']);
+    $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_entity_type'], $form_state['values']['drupal_bundle']);
 
     for ($delta = 0; $delta <= $mappings_count; $delta++) {
       $form['salesforce_field_mappings'][$delta] = array(
@@ -226,4 +228,27 @@ function theme_salesforce_fieldmap_form_table($variables) {
   }
 
   return theme('table', array('header' => $header, 'rows' => $rows));
+}
+
+function salesforce_mapping_form_submit($form, &$form_state) {
+  $values = $form_state['values'];
+  $mappings = array();
+  foreach ($values['salesforce_field_mappings'] as $mapping) {
+    $mappings[$mapping['drupal_field']] = $mapping['salesforce_field'];
+  }
+
+  $mapping = entity_create('salesforce_mapping', array(
+    'salesforce_object_type' => $values['salesforce_object_type'],
+    'salesforce_record_type' => $values['salesforce_record_type'],
+    'drupal_entity_type' => $values['drupal_entity_type'],
+    'drupal_bundle' => $values['drupal_bundle'],
+    'description' => '',
+    'field_mapping' => serialize($mappings)
+  ));
+
+  $mapping->save();
+
+  drupal_set_message(t('Salesforce field mapping created.'));
+
+  $form_state['redirect'] = 'admin/config/services/salesforce/mappings';
 }
