@@ -10,7 +10,6 @@
  * @return mixed
  */
 function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
-
   $form['#id'] = 'salesforce_mapping_form';
 
   $form['drupal_entity'] = array(
@@ -60,11 +59,18 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     '#type' => 'fieldset',
   );
 
-  $sfapi = salesforce_get_api();
 
-  $sobjects = array('' => t('-- Select --'));
-  foreach ($sfapi->objects() as $object) {
-    $sobjects[$object['name']] = $object['label'];
+  $sfapi = salesforce_get_api();
+  $sfobjects = &$form_state['sf_objects'];
+  if (!$sfobjects) {
+    $sfobjects = $sfapi->objects();
+    $form_state['sf_objects'] = $sfobjects;
+  }
+
+
+  $sfobject_options = array('' => t('-- Select --'));
+  foreach ($sfobjects as $object) {
+    $sfobject_options[$object['name']] = $object['label'];
   }
 
   $form['salesforce_object']['salesforce_type'] = array(
@@ -72,7 +78,7 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     '#type' => 'select',
     '#description' => t('Select a Salesforce object to map.'),
     '#default_value' => '',
-    '#options' => $sobjects,
+    '#options' => $sfobject_options,
     '#ajax' => array(
       'callback' => 'salesforce_mapping_form_callback',
       'wrapper' => 'salesforce_mapping_form'
@@ -80,10 +86,14 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
     '#required' => TRUE
   );
 
-  if ((isset($form_state['values']['salesforce_type']) && !empty($form_state['values']['salesforce_type'] )) || isset($mapping)) {
-    $object = $sfapi->objectDescribe($form_state['values']['salesforce_type']);
+  $salesforce_object_type = &$form_state['values']['salesforce_type'];
+  if (!empty($salesforce_object_type) || isset($mapping)) {
+    $sfobject = &$form_state['salesforce_mapping_object_' . $salesforce_object_type];
+    if (!$sfobject) {
+      $sfobject = $sfapi->objectDescribe($salesforce_object_type);
+    }
     $sf_types = array('' => t('-- Select --'));
-    foreach ($object['recordTypeInfos'] as $type) {
+    foreach ($sfobject['recordTypeInfos'] as $type) {
       $sf_types[$type['recordTypeId']] = $type['name'];
     }
     $form['salesforce_object']['salesforce_record_type'] = array(
@@ -94,74 +104,56 @@ function salesforce_mapping_form($form, &$form_state, $mapping = NULL) {
       '#required' => TRUE,
     );
 
-    $sf_fields = array('' => t('-- Select --'));
-    foreach ($object['fields'] as $sf_field) {
-      $sf_fields[$sf_field['name']] = $sf_field['label'];
-    }
     $form['salesforce_field_mappings'] = array(
       '#title' => t('Field mappings'),
       '#type' => 'fieldset',
-      '#attributes' => array(
-        'id' => 'salesforce_field_mappings'
-      ),
-    );
-    $form['salesforce_field_mappings']['salesforce_field'] = array(
-      '#title' => t('Salesforce fields'),
-      '#type' => 'select',
-      '#description' => t('Select a Salesforce field to map.'),
-      '#options' => $sf_fields
+      '#tree' => TRUE
     );
 
     $drupal_fields = salesforce_mapping_drupal_fields($form_state['values']['drupal_type'], $form_state['values']['drupal_bundle']);
-    $form['salesforce_field_mappings']['drupal_field'] = array(
-      '#title' => t('Drupal fields & properties'),
-      '#type' => 'select',
-      '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
-      '#options' => $drupal_fields
+
+    $sf_fields = array('' => t('-- Select --'));
+    foreach ($sfobject['fields'] as $sf_field) {
+      $sf_fields[$sf_field['name']] = $sf_field['label'];
+    }
+
+    $form['salesforce_field_mappings']['field_mappings_table'] = array(
+      '#theme' => 'salesforce_fieldmap_form_table',
+      '#tree' => TRUE
     );
+
+    $mappings_count = isset($form_state['salesforce_mappings_count']) ? $form_state['salesforce_mappings_count'] : 0;
+    if ($form_state['triggering_element']['#name'] == 'salesforce_add_field') {
+      $mappings_count++;
+      $form_state['salesforce_mappings_count'] = $mappings_count;
+    }
+
+    for ($delta = 0; $delta <= $mappings_count; $delta++) {
+      $form['salesforce_field_mappings']['field_mappings_table'][$delta] = array(
+        'drupal_field' => array(
+          '#type' => 'select',
+          '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
+          '#options' => $drupal_fields
+        ),
+        'salesforce_field' => array(
+          '#type' => 'select',
+          '#description' => t('Select a Salesforce field to map.'),
+          '#options' => $sf_fields
+        )
+      );
+    }
+
     $form['salesforce_field_mappings']['salesforce_add_field'] = array(
       '#value' => t('Add field mapping'),
+      '#name' => 'salesforce_add_field',
       '#type' => 'button',
       '#description' => t('Add one or more field to configure a mapping for.'),
+//      '#limit_validation_errors' => array(),
       '#ajax' => array(
         'callback' => 'salesforce_mapping_form_callback',
         'wrapper' => 'salesforce_mapping_form'
       )
     );
-
-    $table = array(
-      '#theme' => 'salesforce_fieldmap_form_table',
-      '#tree' => TRUE,
-      '#header' => array(
-        t('Salesforce field'),
-        t('Drupal field'),
-        t('Settings'),
-      ),
-      '#parent_options' => array(),
-      '#rows' => array()
-    );
-
-    if (!empty($form_state['values']['drupal_field'])) {
-      $table['#rows'][] = array(
-        'drupal_field' => $form_state['values']['drupal_field'], //array(
-//          '#markup' => $form_state['values']['drupal_field'],
-//        ),
-        'salesforce_field' => $form_state['values']['salesforce_field'], //array(
-//          '#markup' => $form_state['values']['drupal_field'],
-//        ),
-        'settings' => array(
-        ),
-        'delete' => array(
-          'data' => array (
-            '#theme' => 'link',
-            '#text' => t('delete'),
-            '#options' => array('attributes' => array('title' => t('Delete instance.'))),
-          ),
-        ),
-      );
-    }
-
-    $form['field_mappings_table'] = $table;
   }
 
   return $form;
@@ -190,31 +182,9 @@ function salesforce_mapping_drupal_fields($entity_type, $bundle) {
  *
  * @return mixed
  */
-function salesforce_mapping_form_callback($form, &$form_state) {
-
-  switch ($form_state['triggering_element']['#name']) {
-    case 'drupal_type':
-      $wrapper = 'drupal_entity';
-      break;
-    case 'drupal_bundle':
-      $wrapper = 'salesforce_wrapper';
-      break;
-    case 'salesforce_type':
-      $wrapper = 'salesforce_wrapper';
-      break;
-    case 'op':
-      // @todo: Save mapping?
-//      $form['field_mappings_table']['#rows'][] = array(
-//        'drupal_field' => $form_state['values']['drupal_field'],
-//        'salesforce_field' => $form_state['values']['salesforce_field'],
-//        'settings' => array(),
-//        'delete' => array(),
-//      );
-
-      break;
-  }
-
-   return $form;
+function salesforce_mapping_form_callback($form, $form_state) {
+  // @todo: This is lazy, we should only return appropriate child elements.
+  return $form;
 }
 
 
@@ -222,53 +192,31 @@ function salesforce_mapping_form_callback($form, &$form_state) {
  * Themes the field associations on a fieldmap edit form into a table.
  */
 function theme_salesforce_fieldmap_form_table($variables) {
-  $form = $variables['form'];
-  // Build the header array.
-  $header = array();
+  $elements = $variables['elements'];
 
-  foreach ($form['#header'] as $element) {
-    $header[] = $element;
-  }
-  // Add the operations column. (Currently "Remove" is the only operation.
-  $header[] = 'Operations';
+  // Build the header array.
+  $header = array(
+    t('Salesforce field'),
+    t('Drupal field'),
+    t('Settings'),
+  );
 
   // Build the rows array.
   $rows = array();
-  foreach ($form['#rows'] as $element) {
+  foreach (element_children($elements) as $child_key) {
+    $child = &$elements[$child_key];
     $rows[] = array(
       array(
-        'data' => $element['drupal_field'],
-        'class' => 'target-cell',
+        'data' => drupal_render($child['drupal_field'])
       ),
       array(
-        'data' => $element['drupal_field'],
-        'class' => 'source-cell',
+        'data' => drupal_render($child['salesforce_field'])
       ),
-      array(),
       array(
-       'data' => drupal_render($element['delete']),
+       'data' => $child['remove'],
       )
     );
   }
 
-  // Add a message if no rows were found.
-  if (empty($rows)) {
-    $rows[] = array(
-      array(
-        'data' => t('No fields set.'),
-        'colspan' => 4,
-      ),
-    );
-  }
-
-  // Build the attributes array.
-  $attributes = array();
-
-  // Build the caption.
-  $caption = NULL;
-
-  if (isset($form['caption'] )) {
-    $caption = drupal_render_children($form['caption']);
-  }
-  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $attributes, 'caption' => $caption));
+  return theme('table', array('header' => $header, 'rows' => $rows));
 }
