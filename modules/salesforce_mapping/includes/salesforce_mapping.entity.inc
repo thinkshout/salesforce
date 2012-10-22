@@ -15,9 +15,13 @@ class SalesforceMapping extends Entity {
     $drupal_entity_type,
     $drupal_bundle,
     $description,
-    $field_mapping,
+    $field_mappings,
     $created,
     $updated;
+
+  public function __construct(array $values = array()) {
+    parent::__construct($values, 'salesforce_mapping');
+  }
 
   public function save() {
     $this->updated = REQUEST_TIME;
