@@ -1,0 +1,34 @@
+<?php
+
+/**
+ * Implements hook_entity_insert().
+ */
+function salesforce_push_entity_insert($entity, $type) {
+
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function salesforce_push_entity_update($entity, $type) {
+  salesforce_push_entity($entity, 'update');
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function salesforce_push_entity_delete($entity, $type) {
+
+}
+
+
+function salesforce_push_entity($entity, $op) {
+  $mappings = salesforce_mapping_load_multiple(array(
+    'drupal_entity_type' => $entity->entityType(),
+    'drupal_bundle' => $entity->bundle()
+  ));
+
+  if (!empty($mappings)) {
+
+  }
+}
