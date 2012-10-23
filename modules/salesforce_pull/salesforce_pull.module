@@ -1,5 +1,18 @@
 <?php
 
+/**
+ * Implements hook_menu().
+ */
+function salesforce_pull_menu() {
+  $items['admin/config/services/salesforce/query'] = array(
+    'title' => 'Query Test',
+    'page callback' => 'salesforce_pull_query_page',
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_LOCAL_TASK,
+  );
+  return $items;
+}
+
 /*
  * Implements hook_cron()
  */
@@ -21,6 +34,25 @@ function salesforce_pull_get_updated_records() {
  * Process records in the queue
  */
 function salesforce_pull_process_records() {
+  $sfapi = salesforce_get_api();
   // @ todo: get Salesforce object data and update drupal entity
-  $sfapi->query();
+  $sfapi->object();
+}
+
+/*
+ * Test page callback for testing queries
+ */
+function salesforce_pull_query_page() {
+
+  $sf_object_types = salesforce_mapping_get_mapped_objects();
+  $sfapi = salesforce_get_api();
+  foreach ($sf_object_types as $key => $types) {
+    dpm($sf_object_types[$key]);
+    $results = $sfapi->query('SELECT+id+from+' . $sf_object_types[$key]); // . '+where+LastModifiedDate>2012-09-15T17:04:47Z'
+
+    dpm($results);
+  }
+
+  dpm($sfapi->apiCall('sobjects/Organization/00DE0000000dORNMA2'));
+  return '';
 }

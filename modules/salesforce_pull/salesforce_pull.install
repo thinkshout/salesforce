@@ -12,19 +12,19 @@
 /**
  * Implements hook_schema().
  */
-function salesforce_pull_schema() {
-
-  // Salesforce queue table.
-  $schema['salesforce_queue'] = array(
-    'description' => 'Drupal to Salesforce mappings',
-    'fields' => array(
-      'sfid' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique Salesforce object ID.',
-      ),
-    )
-  );
-
-  return $schema;
-}
+//function salesforce_pull_schema() {
+//
+//  // Salesforce queue table.
+//  $schema['salesforce_queue'] = array(
+//    'description' => 'Drupal to Salesforce mappings',
+//    'fields' => array(
+//      'sfid' => array(
+//        'type' => 'serial',
+//        'not null' => TRUE,
+//        'description' => 'Primary Key: Unique Salesforce object ID.',
+//      ),
+//    )
+//  );
+//
+//  return $schema;
+//}

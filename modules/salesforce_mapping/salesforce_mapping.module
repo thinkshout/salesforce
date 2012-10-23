@@ -159,3 +159,15 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
     ),
   );
 }
+
+/*
+ *
+ */
+function salesforce_mapping_get_mapped_objects() {
+  $object_types = array();
+  $mappings = salesforce_mapping_load();
+  foreach ($mappings as $mapping) {
+    $object_types[$mapping->salesforce_object_type] = $mapping->salesforce_object_type;
+  }
+  return $object_types;
+}
