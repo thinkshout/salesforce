@@ -180,7 +180,6 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#name' => 'salesforce_add_field',
       '#type' => 'button',
       '#description' => t('Add one or more field to configure a mapping for.'),
-      '#limit_validation_errors' => array(),
       '#ajax' => array(
         'callback' => 'salesforce_mapping_form_callback',
         'wrapper' => 'salesforce_mapping_form'
