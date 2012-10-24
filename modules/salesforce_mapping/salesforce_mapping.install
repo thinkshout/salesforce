@@ -69,13 +69,6 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'description' => array(
-        'description' => 'Name or brief description of this mapping',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-        'default' => '',
-      ),
       'field_mappings' => array(
         'type' => 'text',
         'serialize' => TRUE,
