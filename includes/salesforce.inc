@@ -56,11 +56,7 @@ class Salesforce {
       $this->refreshToken();
     }
 
-    $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
-    $headers = array(
-      'Authorization:' => 'OAuth ' . $this->getAccessToken()
-    );
-    $response = $this->httpRequest($url, $params, $headers, $method);
+    $response = $this->apiHttpRequest($path, $params, $method);
 
     switch ($response->code) {
       // The session ID or OAuth token used has expired or is invalid
@@ -69,7 +65,7 @@ class Salesforce {
         $this->refreshToken();
 
         // rebuild our request and repeat request
-        $response = $this->httpRequest($path, $params, $method);
+        $response = $this->apiHttpRequest($path, $params, $method);
         //@todo: test response code, don't get caught in a loop
 
         break;
@@ -96,6 +92,23 @@ class Salesforce {
     }
 
     return $data;
+  }
+
+  /**
+   * Private helper to issue an SF API request.
+   *
+   * @param $path
+   * @param $params
+   * @param $method
+   *
+   * @return object
+   */
+  private function apiHttpRequest($path, $params, $method) {
+    $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
+    $headers = array(
+      'Authorization:' => 'OAuth ' . $this->getAccessToken()
+    );
+    return $this->httpRequest($url, $params, $headers, $method);
   }
 
   /**
