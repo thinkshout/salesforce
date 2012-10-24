@@ -14,7 +14,7 @@ function salesforce_mapping_menu() {
   $items['admin/config/services/salesforce/mappings'] = array(
     'title' => 'Salesforce Mappings',
     'page callback' => 'salesforce_mappings_page',
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'file' => 'includes/salesforce_mapping.pages.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -23,7 +23,7 @@ function salesforce_mapping_menu() {
     'description' => 'Add a new Salesforce mapping.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_mapping_form'),
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'file' => 'includes/salesforce_mapping.admin.inc',
     'type' => MENU_LOCAL_ACTION,
   );
@@ -33,11 +33,24 @@ function salesforce_mapping_menu() {
     'description' => 'Edit an existing Salesforce mapping.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_mapping_form', 1),
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'file' => 'includes/salesforce_mapping.admin.inc',
   );
 
   return $items;
+}
+
+/**
+ * Access callback for managing salesforce mappings.
+ *
+ * @return bool
+ */
+function salesforce_mappings_access() {
+  if (user_access('administer salesforce')) {
+    $sfapi = salesforce_get_api();
+    return $sfapi->isAuthorized();
+  }
+  return FALSE;
 }
 
 /**
