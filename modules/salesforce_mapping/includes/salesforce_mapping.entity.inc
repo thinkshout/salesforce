@@ -15,6 +15,7 @@ class SalesforceMapping extends Entity {
     $drupal_entity_type,
     $drupal_bundle,
     $field_mappings,
+    $sync_triggers,
     $created,
     $updated;
 

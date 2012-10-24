@@ -196,7 +196,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $default_triggers = array();
   if (isset($mapping)) {
     foreach (salesforce_mapping_sync_trigger_options() as $key => $option) {
-      if ($key & $mapping->sync_setting) {
+      if ($key & $mapping->sync_triggers) {
         $default_triggers[] = $key;
       }
     }
@@ -219,6 +219,11 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   return $form;
 }
 
+/**
+ * Return form options for available sync triggers.
+ *
+ * @return array
+ */
 function salesforce_mapping_sync_trigger_options() {
   return array(
     SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE => t('Drupal entity create'),
@@ -349,9 +354,9 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   }
 
   $sync_values = array_filter($values['sync_triggers']);
-  $sync_settings = 0x00;
+  $sync_triggers = 0x0000;
   foreach ($sync_values as $value) {
-    $sync_settings = $sync_settings | $value;
+    $sync_triggers = $sync_triggers | $value;
   }
 
   $mapping = $form_state['salesforce_mapping'];
@@ -363,7 +368,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     $mapping->drupal_bundle = $values['drupal_bundle'];
     $mapping->description = '';
     $mapping->field_mappings = $mappings;
-    $mapping->sync_setting = $sync_settings;
+    $mapping->sync_triggers = $sync_triggers;
   }
   else {
     $mapping = entity_create('salesforce_mapping', array(
@@ -375,7 +380,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
       'drupal_bundle' => $values['drupal_bundle'],
       'description' => '',
       'field_mappings' => $mappings,
-      'sync_setting' => $sync_settings
+      'sync_setting' => $sync_triggers
     ));
   }
 
