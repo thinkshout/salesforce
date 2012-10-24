@@ -88,7 +88,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $sfapi = salesforce_get_api();
   $sfobjects = &$form_state['sf_objects'];
   if (!$sfobjects) {
-    $sfobjects = $sfapi->objects();
+    // Note that we're filtering SF object types to a reasonable subset.
+    $sfobjects = $sfapi->objects(array('updateable' => TRUE, 'triggerable' => TRUE));
     $form_state['sf_objects'] = $sfobjects;
   }
 
