@@ -1,11 +1,20 @@
 <?php
 
+/**
+ * @file
+ * Manages Salesforce object and Drupal entity mappings.
+ */
+
+/**
+ * Bit flags defining when a data sync should take place for a given mapping.
+ */
+define('SALESFORCE_MAPPING_SYNC_OFF', 0x0000);
 define('SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE', 0x0001);
 define('SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE', 0x0002);
 define('SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE', 0x0004);
 define('SALESFORCE_MAPPING_SYNC_SF_CREATE', 0x0008);
-define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 0x0020);
-define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 0x0040);
+define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 0x0010);
+define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 0x0020);
 
 /**
  * Implements hook_menu().
