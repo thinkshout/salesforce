@@ -15,24 +15,9 @@
 function salesforce_pull_schema() {
 
   // Salesforce queue table.
-  $schema['salesforce_queue'] = array(
-    'description' => 'Queue Salesforce records for processing',
-    'fields' => array(
-      'sfid' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique Salesforce object ID.',
-      ),
-      'salesforce_object_type' => array(
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'description' => 'Salesforce object type',
-      ),
-    )
-  );
+  // Use Drupal 7 Queue API
 
-  return $schema;
+
 }
 
 /**
