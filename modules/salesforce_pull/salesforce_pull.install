@@ -5,26 +5,13 @@
  * Install/uninstall tasks for the Salesforce Pull module.
  */
 
-/*
- * Implements hook_schema()
- */
-
 /**
- * Implements hook_schema().
+ * Implements hook_uninstall().
  */
-function salesforce_pull_schema() {
-
-  // Salesforce queue table.
-  $schema['salesforce_queue'] = array(
-    'description' => 'Drupal to Salesforce mappings',
-    'fields' => array(
-      'sfid' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique Salesforce object ID.',
-      ),
-    )
-  );
-
-  return $schema;
+function salesforce_pull_uninstall() {
+  // Remove salesforce_pull_data_{object_type} variables
+  foreach (salesforce_mapping_get_mapped_objects() as $types) {
+    variable_del('salesforce_pull_data_' . $types);
+  }
 }
+

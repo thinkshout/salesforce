@@ -1,5 +1,16 @@
 <?php
 
+function salesforce_pull_menu() {
+  $items['admin/config/services/salesforce/testing'] = array(
+    'title' => 'Salesforce Testing Page',
+    'page callback' => 'salesforce_pull_page',
+    'access callback' => 'salesforce_mappings_access',
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
 /*
  * Implements hook_cron()
  */
@@ -12,15 +23,58 @@ function salesforce_pull_cron() {
  * Pull updated records and place them in the queue
  */
 function salesforce_pull_get_updated_records() {
+
   $sfapi = salesforce_get_api();
-  // @todo: Create filter for SOQL query
-  $sfapi->query();
+
+  foreach (salesforce_mapping_get_mapped_objects() as $type) {
+    $queue = DrupalQueue::get('sf_pull_' . $type);
+    $queue->deleteQueue();
+
+    $settings = array(
+      'lastUpdate' => time(),
+    );
+
+    $queryString = 'SELECT+id,+name,+LastModifiedDate+from+' . $type;
+    $sf_pull_data = variable_get('salesforce_pull_data_' . $type);
+
+    // If no lastupdate, get all records
+    if ($sf_pull_data) {
+      $last_pull = gmdate('Y-m-d\TH:i:s\Z', $sf_pull_data['lastUpdate']);
+      $queryString .= '+where+LastModifiedDate>' . $last_pull;
+    }
+
+    $results = $sfapi->query($queryString);
+
+    foreach ($results['records'] as $result) {
+      $queue->createItem($result);
+
+    }
+    variable_set('salesforce_pull_data_' . $type, $settings);
+
+  }
+
 }
 
 /*
  * Process records in the queue
  */
 function salesforce_pull_process_records() {
-  // @ todo: get Salesforce object data and update drupal entity
-  $sfapi->query();
+  $sfapi = salesforce_get_api();
+  $limit = variable_get('salesforce_pull_limit', 100);
+  foreach (salesforce_mapping_get_mapped_objects() as $type) {
+    $queue = DrupalQueue::get('sf_pull_' . $type);
+    for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
+      $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
+      $sf_object = $sfapi->apiCall($sf_object_url);
+      drupal_set_message('Processed' . $sf_object['Id']);
+    }
+    if($item) {
+      $queue->releaseItem($item);
+    }
+  }
+}
+
+function salesforce_pull_page() {
+
+  return '';
 }

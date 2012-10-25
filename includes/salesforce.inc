@@ -297,11 +297,11 @@ class Salesforce {
    *
    * @return
    */
-  public function query($conditions = NULL) {
+  public function query($query_string) {
     // @todo: handle query conditions to create SOQL query
-    $result = $this->apiCall('query');
+    $result = $this->apiCall('query?q=' . $query_string);
 
-    return '';
+    return $result;
   }
 
   /**
