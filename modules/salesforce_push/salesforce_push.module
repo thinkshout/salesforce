@@ -36,21 +36,26 @@ function salesforce_push_entity($entity, $sf_sync_trigger) {
       // Entity is not linked to an SF object.
       if (empty($mapped_objects)) {
         // Create SF Object
-        $params = array('recordType' => $mapping->salesforce_record_type);
+        $params = array('RecordTypeId' => $mapping->salesforce_record_type);
         foreach ($mapping->field_mappings as $fieldmap) {
           $items = field_get_items($entity_type, $entity, $fieldmap['drupal_field']);
           $params[$fieldmap['salesforce_field']] = $items[0]['value'];
         }
 
         $sfapi = salesforce_get_api();
-        $response = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
+        try {
+          $response = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
 
-        // Create mapping object, saved below.
-        $mapped_objects = entity_create('salesforce_mapping_object', array(
-          'entity_id' => $entity->internalIdentifier(),
-          'entity_type' => $entity_type,
-          'salesforce_id' => $response['id']
-        ));
+          // Create mapping object, saved below.
+          $mapped_objects = entity_create('salesforce_mapping_object', array(
+            'entity_id' => $entity->internalIdentifier(),
+            'entity_type' => $entity_type,
+            'salesforce_id' => $response['id']
+          ));
+        }
+        catch(SalesforceException $e) {
+          drupal_set_message($e->getMessage(), 'error');
+        }
       }
       // Existing object link, update.
       else {
