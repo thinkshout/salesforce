@@ -22,13 +22,36 @@ function salesforce_push_entity_delete($entity, $type) {
 }
 
 
-function salesforce_push_entity($entity, $op) {
+function salesforce_push_entity($entity, $sf_sync_trigger) {
   $mappings = salesforce_mapping_load_multiple(array(
     'drupal_entity_type' => $entity->entityType(),
     'drupal_bundle' => $entity->bundle()
   ));
 
-  if (!empty($mappings)) {
+  foreach ($mappings as $mapping) {
+    if ($mapping->sync_triggers & $sf_sync_trigger) {
+      $mapped_objects = salesforce_mapping_object_load_by_drupal($entity);
 
+      // Entity is not linked to an SF object.
+      if (empty($mapped_objects)) {
+        // Create SF Object
+
+        // Create mapping object, saved below.
+        $mapped_objects = entity_create('salesforce_mapping_object', array(
+          'entity_id' => $entity->internalIdentifier(),
+          'entity_type' => $entity->entityType(),
+          'salesforce_id' => 'PLACEHOLDER_ID'
+        ));
+      }
+      // Existing object link, update.
+      else {
+        // Update SF object.
+
+      }
+
+      // Note that last_sync time is updated automatically.
+      $mapped_objects->save();
+    }
   }
+
 }
