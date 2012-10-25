@@ -5,21 +5,6 @@
  * Install/uninstall tasks for the Salesforce Pull module.
  */
 
-/*
- * Implements hook_schema()
- */
-
-/**
- * Implements hook_schema().
- */
-function salesforce_pull_schema() {
-
-  // Salesforce queue table.
-  // Use Drupal 7 Queue API
-
-
-}
-
 /**
  * Implements hook_uninstall().
  */
