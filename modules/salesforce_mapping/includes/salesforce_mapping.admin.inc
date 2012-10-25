@@ -88,7 +88,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $sfapi = salesforce_get_api();
   $sfobjects = &$form_state['sf_objects'];
   if (!$sfobjects) {
-    $sfobjects = $sfapi->objects();
+    // Note that we're filtering SF object types to a reasonable subset.
+    $sfobjects = $sfapi->objects(array('updateable' => TRUE, 'triggerable' => TRUE));
     $form_state['sf_objects'] = $sfobjects;
   }
 
@@ -137,11 +138,6 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $sf_fields[$sf_field['name']] = $sf_field['label'];
     }
 
-    $form['salesforce_field_mappings'] = array(
-      '#theme' => 'salesforce_fieldmap_form_table',
-      '#tree' => TRUE
-    );
-
     $mappings_count = isset($form_state['salesforce_mappings_count']) ? $form_state['salesforce_mappings_count'] : 0;
     if (!$mappings_count && isset($mapping)) {
       $mappings_count = count($mapping->field_mappings);
@@ -157,8 +153,18 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 
     $drupal_fields = salesforce_mapping_drupal_fields($drupal_entity_type, $drupal_bundle);
 
+    $form['salesforce_field_mappings_wrapper'] = array(
+      '#title' => t('Salesforce field mappings wrapper'),
+      '#type' => 'fieldset',
+    );
+
+    $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'] = array(
+      '#theme' => 'salesforce_fieldmap_form_table',
+      '#tree' => TRUE
+    );
+
     for ($delta = 0; $delta <= $mappings_count; $delta++) {
-      $form['salesforce_field_mappings'][$delta] = array(
+      $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
           '#type' => 'select',
           '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
@@ -175,18 +181,34 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       );
     }
 
-    $form['salesforce_add_field'] = array(
+    $form['salesforce_field_mappings_wrapper']['salesforce_add_field'] = array(
       '#value' => t('Add another field mapping'),
       '#name' => 'salesforce_add_field',
       '#type' => 'button',
       '#description' => t('Add one or more field to configure a mapping for.'),
-      '#limit_validation_errors' => array(),
       '#ajax' => array(
         'callback' => 'salesforce_mapping_form_callback',
         'wrapper' => 'salesforce_mapping_form'
       )
     );
   }
+
+  $default_triggers = array();
+  if (isset($mapping)) {
+    foreach (salesforce_mapping_sync_trigger_options() as $key => $option) {
+      if ($key & $mapping->sync_triggers) {
+        $default_triggers[] = $key;
+      }
+    }
+  }
+
+  $form['sync_triggers'] = array(
+    '#title' => t('Action triggers'),
+    '#type' => 'checkboxes',
+    '#description' => t('Select which actions on Drupal entities and Salesforce objects should trigger a synchronization. These settings are used by the salesforce_push and salesforce_pull modules respectively.'),
+    '#default_value' => $default_triggers,
+    '#options' => salesforce_mapping_sync_trigger_options()
+  );
 
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
@@ -195,6 +217,22 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   );
 
   return $form;
+}
+
+/**
+ * Return form options for available sync triggers.
+ *
+ * @return array
+ */
+function salesforce_mapping_sync_trigger_options() {
+  return array(
+    SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE => t('Drupal entity create'),
+    SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE => t('Drupal entity update'),
+    SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE => t('Drupal entity delete'),
+    SALESFORCE_MAPPING_SYNC_SF_CREATE => t('Salesforce object create'),
+    SALESFORCE_MAPPING_SYNC_SF_UPDATE => t('Salesforce object update'),
+    SALESFORCE_MAPPING_SYNC_SF_DELETE => t('Salesforce object delete'),
+  );
 }
 
 /**
@@ -315,6 +353,12 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     }
   }
 
+  $sync_values = array_filter($values['sync_triggers']);
+  $sync_triggers = 0x0000;
+  foreach ($sync_values as $value) {
+    $sync_triggers = $sync_triggers | $value;
+  }
+
   $mapping = $form_state['salesforce_mapping'];
   if ($mapping) {
     $mapping->label = $values['label'];
@@ -324,6 +368,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     $mapping->drupal_bundle = $values['drupal_bundle'];
     $mapping->description = '';
     $mapping->field_mappings = $mappings;
+    $mapping->sync_triggers = $sync_triggers;
   }
   else {
     $mapping = entity_create('salesforce_mapping', array(
@@ -334,7 +379,8 @@ function salesforce_mapping_form_submit($form, &$form_state) {
       'drupal_entity_type' => $values['drupal_entity_type'],
       'drupal_bundle' => $values['drupal_bundle'],
       'description' => '',
-      'field_mappings' => $mappings
+      'field_mappings' => $mappings,
+      'sync_triggers' => $sync_triggers
     ));
   }
 

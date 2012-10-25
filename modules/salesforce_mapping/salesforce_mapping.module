@@ -1,11 +1,20 @@
 <?php
 
-define('SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE', 0x01);
-define('SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE', 0x02);
-define('SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE', 0x04);
-define('SALESFORCE_MAPPING_SYNC_SF_CREATE', 0x05);
-define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 0x06);
-define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 0x07);
+/**
+ * @file
+ * Manages Salesforce object and Drupal entity mappings.
+ */
+
+/**
+ * Bit flags defining when a data sync should take place for a given mapping.
+ */
+define('SALESFORCE_MAPPING_SYNC_OFF', 0x0000);
+define('SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE', 0x0001);
+define('SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE', 0x0002);
+define('SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE', 0x0004);
+define('SALESFORCE_MAPPING_SYNC_SF_CREATE', 0x0008);
+define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 0x0010);
+define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 0x0020);
 
 /**
  * Implements hook_menu().
@@ -14,7 +23,7 @@ function salesforce_mapping_menu() {
   $items['admin/config/services/salesforce/mappings'] = array(
     'title' => 'Salesforce Mappings',
     'page callback' => 'salesforce_mappings_page',
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'file' => 'includes/salesforce_mapping.pages.inc',
     'type' => MENU_LOCAL_TASK,
   );
@@ -23,7 +32,7 @@ function salesforce_mapping_menu() {
     'description' => 'Add a new Salesforce mapping.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_mapping_form'),
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'file' => 'includes/salesforce_mapping.admin.inc',
     'type' => MENU_LOCAL_ACTION,
   );
@@ -33,11 +42,24 @@ function salesforce_mapping_menu() {
     'description' => 'Edit an existing Salesforce mapping.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_mapping_form', 1),
-    'access arguments' => array('administer salesforce'),
+    'access callback' => 'salesforce_mappings_access',
     'file' => 'includes/salesforce_mapping.admin.inc',
   );
 
   return $items;
+}
+
+/**
+ * Access callback for managing salesforce mappings.
+ *
+ * @return bool
+ */
+function salesforce_mappings_access() {
+  if (user_access('administer salesforce')) {
+    $sfapi = salesforce_get_api();
+    return $sfapi->isAuthorized();
+  }
+  return FALSE;
 }
 
 /**

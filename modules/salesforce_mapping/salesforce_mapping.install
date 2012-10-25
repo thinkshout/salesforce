@@ -33,12 +33,12 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'sync_setting' => array(
+      'sync_triggers' => array(
         'description' => 'Indicates when the sync should take place.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
-        'default' => SALESFORCE_MAPPING_SYNC_OFF,
+        'default' => 0x0000,
         'size' => 'tiny',
       ),
       'salesforce_object_type' => array(
@@ -67,13 +67,6 @@ function salesforce_mapping_schema() {
         'type' => 'varchar',
         'length' => 128,
         'not null' => TRUE,
-        'default' => '',
-      ),
-      'description' => array(
-        'description' => 'Name or brief description of this mapping',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
         'default' => '',
       ),
       'field_mappings' => array(

@@ -11,7 +11,7 @@ function salesforce_push_entity_insert($entity, $type) {
  * Implements hook_entity_insert().
  */
 function salesforce_push_entity_update($entity, $type) {
-  salesforce_push_entity($entity, 'update');
+  salesforce_push_entity($entity, SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE);
 }
 
 /**
