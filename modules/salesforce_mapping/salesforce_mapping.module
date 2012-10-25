@@ -89,11 +89,23 @@ function salesforce_mapping_entity_info() {
         ),
       ),
     ),
+
+    'salesforce_mapping_object' => array(
+      'label' => t('Salesforce Object Mapping'),
+      'controller class' => 'EntityAPIController',
+      'entity class' => 'SalesforceMappingObject',
+      'base table' => 'salesforce_mapping_object',
+      'fieldable' => FALSE,
+      'exportable' => FALSE,
+      'module' => 'salesforce_mapping',
+      'entity keys' => array(
+        'id' => 'salesforce_mapping_object_id',
+      ),
+    )
   );
 
   return $return;
 }
-
 
 /**
  * Loads a single salesforce_mapping or all of them if no name provided.
@@ -140,37 +152,6 @@ function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE)
 }
 
 /**
- * Deletes multiple salesforce_mappings by ID.
- *
- * @param $salesforce_mapping_ids
- *   An array of mapping IDs to delete.
- *
- * @return
- *   TRUE on success, FALSE otherwise.
- */
-function salesforce_mapping_delete_multiple($salesforce_mapping_ids) {
-  return entity_get_controller('salesforce_mapping')->delete($salesforce_mapping_ids);
-}
-
-/**
- * Saves a saalesforce_mapping.
- *
- * @param $salesforce_mapping
- *   The full salesforce_mapping object to save.
- *
- * @return
- *   The saved salesforce_mapping object.
- */
-function salesforce_mapping_save(SalesforceMapping $salesforce_mapping) {
-  $salesforce_mapping->updated = REQUEST_TIME;
-  // Set the creation timestamp if not set.
-  if (!isset($salesforce_mapping->created) || empty($salesforce_mapping->created)) {
-    $salesforce_mapping->created = REQUEST_TIME;
-  }
-  return entity_get_controller('salesforce_mapping')->save($salesforce_mapping);
-}
-
-/**
 * Implements hook_theme().
 */
 function salesforce_mapping_theme($existing, $type, $theme, $path) {
@@ -180,4 +161,35 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
       'file' => 'includes/salesforce_mapping.admin.inc',
     ),
   );
+}
+
+/**
+ * Returns Salesforce object mappings for a given Drupal entity.
+ *
+ * @param $entity
+ * @param bool $reset
+ *
+ * @return array
+ */
+function salesforce_mapping_object_load_by_drupal($entity, $reset = FALSE) {
+  $conditions = array(
+    'entity_id' => $entity->internalIdentifier(),
+    'entity_type' => $entity->entityType()
+  );
+  return entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
+}
+
+/**
+ * Return Salesforce object mappings for a given Salesforce object.
+ *
+ * @param $salesforce_id
+ * @param bool $reset
+ *
+ * @return array
+ */
+function salesforce_mapping_object_load_by_sfid($salesforce_id, $reset = FALSE) {
+  $conditions = array(
+    'salesforce_id' => $salesforce_id,
+  );
+  return entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
 }
