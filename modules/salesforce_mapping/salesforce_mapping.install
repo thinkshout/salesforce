@@ -87,7 +87,6 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-
       // following fields are for supporting exportable status.
       'locked' => array(
         'description' => 'A boolean indicating whether the administrator may delete this mapping.',
@@ -115,8 +114,67 @@ function salesforce_mapping_schema() {
     'primary key' => array('salesforce_mapping_id'),
     'unique keys' => array(
       'name' => array('name'),
-      'name_sf_type_drupal_type' => array('drupal_entity_type', 'drupal_bundle', 'salesforce_object_type', 'salesforce_record_type'),
+      'name_sf_type_drupal_type' => array(
+        'drupal_entity_type',
+        'drupal_bundle',
+        'salesforce_object_type',
+        'salesforce_record_type'
+      ),
     ),
+  );
+
+  // Object mapping table.
+  $schema['salesforce_mapping_object'] = array(
+    'description' => 'Drupal to Salesforce object mappings',
+    'fields' => array(
+      'salesforce_mapping_object_id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique salesforce_mapping_object entity ID.',
+      ),
+      'salesforce_id' => array(
+        'description' => 'Salesforce object identifier',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'entity_id' => array(
+        'description' => 'Drupal entity Id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_type' => array(
+        'description' => 'Drupal entity type.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the object mapping was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'last_sync' => array(
+        'description' => 'The Unix timestamp when the record was last synced with Salesforce.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('salesforce_mapping_object_id'),
+    'indexes' => array(
+      'drupal_entity' => array('entity_type', 'entity_id'),
+      'salesforce_object' => array('salesforce_id')
+    ),
+    'unique keys' => array(
+      'salesforce' => array('salesforce_id'),
+      'salesforce_drupal' => array('entity_type', 'entity_id'),
+    )
   );
 
   return $schema;
