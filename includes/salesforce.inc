@@ -106,9 +106,11 @@ class Salesforce {
   private function apiHttpRequest($path, $params, $method) {
     $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
     $headers = array(
-      'Authorization:' => 'OAuth ' . $this->getAccessToken()
+      'Authorization' => 'OAuth ' . $this->getAccessToken(),
+      'Content-type' => 'application/json'
     );
-    return $this->httpRequest($url, $params, $headers, $method);
+    $data = drupal_json_encode($params);
+    return $this->httpRequest($url, $data, $headers, $method);
   }
 
   /**
@@ -120,12 +122,12 @@ class Salesforce {
    *
    * @return object response.
    */
-  private function httpRequest($url, $params, $headers = array(), $method = 'GET') {
+  private function httpRequest($url, $data, $headers = array(), $method = 'GET') {
     // Build the request, including path and headers. Internal use.
     $options = array(
       'method' => $method,
       'headers' => $headers,
-      'data' => drupal_http_build_query($params)
+      'data' => $data
     );
 
     return drupal_http_request($url, $options);
@@ -172,19 +174,19 @@ class Salesforce {
       throw new SalesforceException(t('There is no refresh token.'));
     }
 
-    $params = array(
+    $data = drupal_http_build_query(array(
       'grant_type' => 'refresh_token',
       'refresh_token' => $refresh_token,
       'client_id' => $this->consumer_key,
       'client_secret' => $this->consumer_secret,
-    );
+    ));
 
     $url = $this->login_url . '/services/oauth2/token';
     $headers = array(
       // this is an undocumented requirement on SF's end
       'Content-Type' => 'application/x-www-form-urlencoded'
     );
-    $response = $this->httpRequest($url, $params, $headers, 'POST');
+    $response = $this->httpRequest($url, $data, $headers, 'POST');
 
     if ($response->code != 200) {
       //@todo: deal with error better
@@ -223,20 +225,20 @@ class Salesforce {
    * @param $code
    */
   public function requestToken($code) {
-    $params = array(
+    $data = drupal_http_build_query(array(
       'code' => $code,
       'grant_type' => 'authorization_code',
       'client_id' => $this->consumer_key,
       'client_secret' => $this->consumer_secret,
       'redirect_uri' => $this->redirectUrl()
-    );
+    ));
 
     $url = $this->login_url . '/services/oauth2/token';
     $headers = array(
       // this is an undocumented requirement on SF's end
       'Content-Type' => 'application/x-www-form-urlencoded'
     );
-    $response = $this->httpRequest($url, $params, $headers, 'POST');
+    $response = $this->httpRequest($url, $data, $headers, 'POST');
 
     $data = drupal_json_decode($response->data);
 
@@ -317,6 +319,21 @@ class Salesforce {
       return array();
     }
     return $this->apiCall("sobjects/{$name}/describe");
+  }
+
+  /**
+   * Create a new object of the given type.
+   *
+   * @param $name
+   * @param $params
+   *
+   * @return array
+   *   "id" : "001D000000IqhSLIAZ",
+   *   "errors" : [ ],
+   *   "success" : true
+   */
+  public function objectCreate($name, $params) {
+    return $this->apiCall("sobjects/{$name}", $params, 'POST');
   }
 
   /**
