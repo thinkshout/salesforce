@@ -380,7 +380,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
       'drupal_bundle' => $values['drupal_bundle'],
       'description' => '',
       'field_mappings' => $mappings,
-      'sync_setting' => $sync_triggers
+      'sync_triggers' => $sync_triggers
     ));
   }
 
