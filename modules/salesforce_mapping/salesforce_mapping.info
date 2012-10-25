@@ -4,6 +4,7 @@ package = Salesforce
 core = 7.x
 
 files[] = includes/salesforce_mapping.entity.inc
+files[] = includes/salesforce_mapping_object.entity.inc
 
 dependencies[] = salesforce
 dependencies[] = entity
