@@ -245,14 +245,10 @@ function salesforce_mapping_sync_trigger_options() {
  */
 function salesforce_mapping_drupal_fields($entity_type, $bundle) {
   $options = array('' => t('-- Select --'));
-  $fields = field_info_instances($entity_type, $bundle);
-  foreach ($fields as $field_name => $field_info) {
-    $options['Fields'][$field_name] = $field_info['label'];
-  }
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    $options['Properties'][$key] = $property['label'];
+    $options[$key] = $property['label'];
   }
 
   return $options;
