@@ -176,7 +176,8 @@ function salesforce_mapping_object_load_by_drupal($entity, $reset = FALSE) {
     'entity_id' => $entity->internalIdentifier(),
     'entity_type' => $entity->entityType()
   );
-  return entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
+  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
+  return !empty($results) ? reset($results) : FALSE;
 }
 
 /**
