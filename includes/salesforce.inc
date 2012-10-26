@@ -335,6 +335,32 @@ class Salesforce {
   }
 
   /**
+   * Create new records or update existing records based on the value of the
+   * specified field. If the value is not unique, REST API returns a 300
+   * response with the list of matching records.
+   *
+   * @param $name
+   *   Object type name, E.g., Contact, Account.
+   * @param $id
+   *   Object id.
+   * @param $params
+   *   Fields to update.
+   *
+   * @return array
+   *   success:
+   *     "id" : "00190000001pPvHAAU",
+   *     "errors" : [ ],
+   *     "success" : true
+   *   error:
+   *     "message" : "The requested resource does not exist"
+   *     "errorCode" : "NOT_FOUND"
+   *
+   */
+  public function objectUpsert($name, $key, $value, $params) {
+    return $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
+  }
+
+  /**
    * Update an existing object.
    *
    * @param $name
