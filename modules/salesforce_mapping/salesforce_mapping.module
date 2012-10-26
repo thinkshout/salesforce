@@ -192,7 +192,8 @@ function salesforce_mapping_object_load_by_sfid($salesforce_id, $reset = FALSE) 
   $conditions = array(
     'salesforce_id' => $salesforce_id,
   );
-  return entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
+  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
+  return !empty($results) ? reset($results) : FALSE;
 }
 
 /*

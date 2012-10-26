@@ -21,7 +21,11 @@ function salesforce_push_entity_delete($entity, $type) {
   salesforce_push_sync_entity($entity, SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE);
 }
 
-
+/**
+ *
+ * @param $entity
+ * @param $sf_sync_trigger
+ */
 function salesforce_push_sync_entity($entity, $sf_sync_trigger) {
   $entity_type = $entity->entityType();
   $mappings = salesforce_mapping_load_multiple(array(
