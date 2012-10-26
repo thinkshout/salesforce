@@ -29,43 +29,56 @@ function salesforce_push_entity($entity, $sf_sync_trigger) {
     'drupal_bundle' => $entity->bundle()
   ));
 
+  $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
   foreach ($mappings as $mapping) {
     if ($mapping->sync_triggers & $sf_sync_trigger) {
       $mapped_objects = salesforce_mapping_object_load_by_drupal($entity);
 
-      // Entity is not linked to an SF object.
-      if (empty($mapped_objects)) {
-        // Create SF Object
-        $params = array('RecordTypeId' => $mapping->salesforce_record_type);
-        foreach ($mapping->field_mappings as $fieldmap) {
-          $items = field_get_items($entity_type, $entity, $fieldmap['drupal_field']);
-          $params[$fieldmap['salesforce_field']] = $items[0]['value'];
+      // Generate parameter array from field mappings.
+      $params = array();
+      foreach ($mapping->field_mappings as $fieldmap) {
+        $value = $wrapper->{$fieldmap['drupal_field']}->value();
+        if (is_array($value)) {
+          $value = $value[0];
         }
+        $params[$fieldmap['salesforce_field']] = $value;
+      }
 
-        $sfapi = salesforce_get_api();
+      $sfapi = salesforce_get_api();
+
+      // Entity is not linked to an SF object.
+      if (!$mapped_objects) {
+        // Setup SF record type
+        $params['RecordTypeId'] = $mapping->salesforce_record_type;
+
         try {
           $response = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
-
-          // Create mapping object, saved below.
-          $mapped_objects = entity_create('salesforce_mapping_object', array(
-            'entity_id' => $entity->internalIdentifier(),
-            'entity_type' => $entity_type,
-            'salesforce_id' => $response['id']
-          ));
         }
         catch(SalesforceException $e) {
           drupal_set_message($e->getMessage(), 'error');
         }
+
+        // Create mapping object, saved below.
+        $mapped_objects = entity_create('salesforce_mapping_object', array(
+          'entity_id' => $entity->internalIdentifier(),
+          'entity_type' => $entity_type,
+          'salesforce_id' => $response['id']
+        ));
       }
       // Existing object link, update.
       else {
         // Update SF object.
-
+        try {
+          $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
+        }
+        catch(SalesforceException $e) {
+          drupal_set_message($e->getMessage(), 'error');
+        }
       }
 
       // Note that last_sync time is updated automatically.
       $mapped_objects->save();
     }
   }
-
 }
