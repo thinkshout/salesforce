@@ -349,6 +349,18 @@ class Salesforce {
   }
 
   /**
+   * Delete a Salesforce objec.t
+   *
+   * @param $name
+   *   Object type name, E.g., Contact, Account.
+   * @param $id
+   *   Object id.
+   */
+  public function objectDelete($name, $id) {
+    $this->apiCall("sobjects/{$name}/{$id}", array(), 'DELETE');
+  }
+
+  /**
    * Return a list of available resources for the configured API version.
    *
    * @return array
