@@ -335,6 +335,20 @@ class Salesforce {
   }
 
   /**
+   * Update an existing object.
+   *
+   * @param $name
+   *   Object type name, E.g., Contact, Account.
+   * @param $id
+   *   Object id.
+   * @param $params
+   *   Fields to update.
+   */
+  public function objectUpdate($name, $id, $params) {
+    $this->apiCall("sobjects/{$name}/{$id}", $params, 'PATCH');
+  }
+
+  /**
    * Return a list of available resources for the configured API version.
    *
    * @return array
