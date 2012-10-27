@@ -54,6 +54,7 @@ function salesforce_pull_get_updated_records() {
     }
 
     variable_set('salesforce_pull_data_' . $type, $settings);
+    variable_del('salesforce_pull_data_' . $type);
 
   }
 
@@ -65,19 +66,55 @@ function salesforce_pull_get_updated_records() {
 function salesforce_pull_process_records() {
   $sfapi = salesforce_get_api();
   $limit = variable_get('salesforce_pull_limit', 50);
-  foreach (salesforce_mapping_get_mapped_objects() as $type) {
-    $queue = DrupalQueue::get('sf_pull');
-    for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
-      // Get object URL
-      $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
-      // Get Salesforce object
-      $sf_object = $sfapi->apiCall($sf_object_url);
-      drupal_set_message('Processed' . $sf_object['Id']);
+
+  $queue = DrupalQueue::get('sf_pull');
+  for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
+    // Get object URL
+    $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
+    // Get Salesforce object
+    $sf_object = $sfapi->apiCall($sf_object_url);
+    // Get Mapping
+    $sf_mappings = salesforce_mapping_load_multiple(
+      array('salesforce_object_type' => $sf_object['attributes']['type'])
+    );
+
+    foreach ($sf_mappings as $sf_mapping) {
+      $sf_create = $sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE;
+      $sf_update = $sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_UPDATE;
+      // Mapping object exists?
+      $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object['Id']);
+      if ($mapping_object) {
+        if ($sf_update !== 0) {
+          $entity = entity_load($mapping_object->entity_type, array($mapping_object->entity_id));
+          // @todo: Field Mapping
+          entity_save($mapping_object->entity_type, $entity[$mapping_object->entity_id]);
+        }
+      }
+      else {
+        if ($sf_create !== 0) {
+          $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
+          $entity = entity_create($sf_mapping->drupal_entity_type,
+            array($entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle)
+          );
+          // @todo: Field Mapping
+          entity_save($sf_mapping->drupal_entity_type, $entity);
+          list($entity_id) = entity_extract_ids($sf_mapping->drupal_entity_type, $entity);
+          $mapping_object = entity_create('salesforce_mapping_object', array(
+            'salesforce_id' => $sf_object['Id'],
+            'entity_type' => $sf_mapping->drupal_entity_type,
+            'entity_id' => $entity_id,
+          ));
+          $mapping_object->save();
+        }
+      }
     }
-    if($item) {
-      $queue->releaseItem($item);
-    }
+    watchdog('Salesforce Pull', 'Processed' . $sf_object['Id']);
+
   }
+  if($item) {
+    $queue->releaseItem($item);
+  }
+
 }
 
 function salesforce_pull_page() {
