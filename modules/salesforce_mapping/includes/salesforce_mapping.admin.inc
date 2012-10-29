@@ -182,7 +182,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#name' => 'key',
           '#return_value' => $delta,
           '#tree' => FALSE,
-          '#default_value' => (isset($mapping->field_mappings[$delta]['key']) && $mapping->field_mappings[$delta]['key']) ? $delta : 0,
+          '#default_value' => (isset($mapping->field_mappings[$delta]['key']) && $mapping->field_mappings[$delta]['key']) ? $delta : FALSE,
         ),
         'remove' => array()
       );
