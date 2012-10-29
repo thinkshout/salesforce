@@ -33,7 +33,7 @@ function salesforce_pull_get_updated_records() {
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
     $settings = array(
-      'lastUpdate' => time(),
+      'lastUpdate' => REQUEST_TIME,
     );
     $queryString = 'SELECT+id,+name,+LastModifiedDate+from+' . $type;
     $sf_pull_data = variable_get('salesforce_pull_data_' . $type);
