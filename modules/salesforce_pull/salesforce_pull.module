@@ -1,5 +1,6 @@
 <?php
 
+define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
 function salesforce_pull_menu() {
   $items['admin/config/services/salesforce/testing'] = array(
     'title' => 'Salesforce Testing Page',
@@ -24,7 +25,7 @@ function salesforce_pull_cron() {
  */
 function salesforce_pull_get_updated_records() {
   $sfapi = salesforce_get_api();
-  $queue = DrupalQueue::get('sf_pull');
+  $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
     $settings = array(
@@ -54,7 +55,7 @@ function salesforce_pull_process_records() {
   $sfapi = salesforce_get_api();
   $limit = variable_get('salesforce_pull_limit', 50);
 
-  $queue = DrupalQueue::get('sf_pull');
+  $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
   for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
     // Get object URL
     $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
