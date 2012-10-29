@@ -32,17 +32,44 @@ function salesforce_pull_get_updated_records() {
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
-    $queryString = 'SELECT+id,+name,+LastModifiedDate+from+' . $type;
+    // Get field list from mappings
+    foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
+      foreach ($mapping->field_mappings as $field_map) {
+        $mapped_fields[$field_map['salesforce_field']] = $field_map['salesforce_field'];
+      }
+    }
+    $fields = 'Id';
+    foreach ($mapped_fields as $field) {
+      $fields .= ',+' . $field;
+    }
+    $queryString = 'SELECT+'. $fields .'+from+' . $type;
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
     // If no lastupdate, get all records, else get records since last pull
     if ($sf_last_sync) {
-      $last_pull = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
-      $queryString .= '+where+LastModifiedDate>' . $last_pull;
+      $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
+      $queryString .= '+where+LastModifiedDate>' . $last_sync;
     }
 
     // SOQL Query
     // TODO: Handle error. Maybe try / catch.
     $results = $sfapi->query($queryString);
+
+
+    // Handle requests larger than the batch limit (usually 2000)
+//    // TODO: Don't hardcode version/URL. Consider pulling this out and let calling code handle the nextRecordsURL.
+//    $next_records_url = isset($new_result['nextRecordsUrl']) ?
+//      str_replace('/services/data/v25.0/', '', $results['nextRecordsUrl']) :
+//      FALSE;
+//    while($next_records_url) {
+//      $new_result = $this->apiCall($next_records_url);
+//      $result['records'] = array_merge($results['records'], $new_result['records']);
+//      $next_records_url = isset($new_result['nextRecordsUrl']) ?
+//        str_replace('/services/data/v25.0/', '', $new_result['nextRecordsUrl']) : FALSE;
+//    }
+//
+
+
+
     // Write items to the queue
     foreach ($results['records'] as $result) {
       $queue->createItem($result);
@@ -61,11 +88,8 @@ function salesforce_pull_process_records() {
 
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
   for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
-    // Get object URL
-    // TODO: This URL needs to be derived from the API class. Might require an additional method, or change privacy of existing.
-    $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
     // Get Salesforce object
-    $sf_object = $sfapi->apiCall($sf_object_url);
+    $sf_object = $item->data;//$sfapi->objectRead($item->data['attributes']['type'], $item->data['Id']);
 
     // Get Mapping
     $sf_mappings = salesforce_mapping_load_multiple(
@@ -105,8 +129,13 @@ function salesforce_pull_process_records() {
         $entity = entity_create($sf_mapping->drupal_entity_type, $values);
 
         entity_save($sf_mapping->drupal_entity_type, $entity);
-        // TODO: pass vars as translatable. See above.
-        watchdog('Salesforce Pull', 'Created entity associated with Salesforce Object ID: ' . $sf_object['Id']);
+        watchdog('Salesforce Pull',
+          'Created entity %label associated with Salesforce Object ID: %id',
+          array(
+            '%label' => $entity->label(),
+            '%id' => $sf_object['Id']
+          )
+        );
 
         $mapping_object = entity_create('salesforce_mapping_object', array(
           'salesforce_id' => $sf_object['Id'],
@@ -115,13 +144,12 @@ function salesforce_pull_process_records() {
         ));
         $mapping_object->save();
       }
-      // TODO: Can we ever end up in an else here? What do to, if anything?
     }
-
+    // Remove item from queue
     $queue->deleteItem($item);
   }
 
-  // TODO: What's this? Document.
+  // If we have reached the pull limit and an item is still claimed, release it
   if ($item) {
     $queue->releaseItem($item);
   }

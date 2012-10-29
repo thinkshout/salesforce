@@ -300,21 +300,7 @@ class Salesforce {
    * @return
    */
   public function query($query_string) {
-    // TODO: do we need to escape query string?
     $result = $this->apiCall('query?q=' . $query_string);
-
-    // Handle requests larger than the batch limit (usually 2000)
-    // TODO: Don't hardcode version/URL. Consider pulling this out and let calling code handle the nextRecordsURL.
-    $next_records_url = isset($new_result['nextRecordsUrl']) ?
-      str_replace('/services/data/v25.0/', '', $result['nextRecordsUrl']) :
-      FALSE;
-    while($next_records_url) {
-      $new_result = $this->apiCall($next_records_url);
-      $result['records'] = array_merge($result['records'], $new_result['records']);
-      $next_records_url = isset($new_result['nextRecordsUrl']) ?
-        str_replace('/services/data/v25.0/', '', $new_result['nextRecordsUrl']) : FALSE;
-    }
-
     return $result;
   }
 
@@ -401,7 +387,7 @@ class Salesforce {
     *   Object id.
     */
    public function objectRead($name, $id) {
-     $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
+     return $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
    }
 
   /**
