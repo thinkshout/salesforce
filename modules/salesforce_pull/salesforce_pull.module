@@ -23,41 +23,28 @@ function salesforce_pull_cron() {
  * Pull updated records and place them in the queue
  */
 function salesforce_pull_get_updated_records() {
-
   $sfapi = salesforce_get_api();
-
   $queue = DrupalQueue::get('sf_pull');
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
-
-    $queue->deleteQueue();
-
     $settings = array(
       'lastUpdate' => time(),
     );
-
     $queryString = 'SELECT+id,+name,+LastModifiedDate+from+' . $type;
     $sf_pull_data = variable_get('salesforce_pull_data_' . $type);
-
     // If no lastupdate, get all records, else get records since last pull
     if ($sf_pull_data) {
       $last_pull = gmdate('Y-m-d\TH:i:s\Z', $sf_pull_data['lastUpdate']);
       $queryString .= '+where+LastModifiedDate>' . $last_pull;
     }
-
     // SOQL Query
     $results = $sfapi->query($queryString);
-
     // Write items to the queue
     foreach ($results['records'] as $result) {
       $queue->createItem($result);
     }
-
     variable_set('salesforce_pull_data_' . $type, $settings);
-    variable_del('salesforce_pull_data_' . $type);
-
   }
-
 }
 
 /*
