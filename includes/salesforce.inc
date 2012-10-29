@@ -393,7 +393,19 @@ class Salesforce {
   }
 
   /**
-   * Delete a Salesforce objec.t
+    * Return a full loaded Salesforce object.
+    *
+    * @param $name
+    *   Object type name, E.g., Contact, Account.
+    * @param $id
+    *   Object id.
+    */
+   public function objectRead($name, $id) {
+     $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
+   }
+
+  /**
+   * Delete a Salesforce object.
    *
    * @param $name
    *   Object type name, E.g., Contact, Account.
