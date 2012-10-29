@@ -283,8 +283,8 @@ function theme_salesforce_fieldmap_form_table($variables) {
 
   // Build the header array.
   $header = array(
-    t('Salesforce field'),
     t('Drupal field'),
+    t('Salesforce field'),
     t('key'),
     t('Settings'),
   );
@@ -340,6 +340,8 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   if ($count > 0) {
     form_set_error('drupal_entity_type', t('This Drupal bundle has already been mapped to a Salesforce object.'));
   }
+
+  // TODO: Validate field mapping lengths and external key attributes.
 }
 
 /**
