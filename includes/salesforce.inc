@@ -292,7 +292,7 @@ class Salesforce {
   }
 
   /**
-   * Use SOQL to get objects based on conditions
+   * Use SOQL to get objects based on query string
    *
    * @param array $conditions
    *   Associative array of filters to apply to the SOQL query
@@ -301,6 +301,18 @@ class Salesforce {
    */
   public function query($query_string) {
     $result = $this->apiCall('query?q=' . $query_string);
+
+    // Handle requests larger than the batch limit (usually 2000)
+    $next_records_url = isset($new_result['nextRecordsUrl']) ?
+      str_replace('/services/data/v25.0/', '', $result['nextRecordsUrl']) :
+      FALSE;
+    while($next_records_url) {
+      $new_result = $this->apiCall($next_records_url);
+      $result['records'] = array_merge($result['records'],$new_result['records']);
+      $next_records_url = isset($new_result['nextRecordsUrl'])?
+        str_replace('/services/data/v25.0/', '', $new_result['nextRecordsUrl']) : FALSE;
+    }
+
     return $result;
   }
 
