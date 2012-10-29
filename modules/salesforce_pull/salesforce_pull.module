@@ -32,15 +32,11 @@ function salesforce_pull_get_updated_records() {
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
-    // TODO: Why an array? Will there be other data here? Is lastUpdate correct?
-    $settings = array(
-      'lastUpdate' => REQUEST_TIME,
-    );
     $queryString = 'SELECT+id,+name,+LastModifiedDate+from+' . $type;
-    $sf_pull_data = variable_get('salesforce_pull_data_' . $type);
+    $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
     // If no lastupdate, get all records, else get records since last pull
-    if ($sf_pull_data) {
-      $last_pull = gmdate('Y-m-d\TH:i:s\Z', $sf_pull_data['lastUpdate']);
+    if ($sf_last_sync) {
+      $last_pull = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
       $queryString .= '+where+LastModifiedDate>' . $last_pull;
     }
 
@@ -52,7 +48,7 @@ function salesforce_pull_get_updated_records() {
       $queue->createItem($result);
     }
 
-    variable_set('salesforce_pull_data_' . $type, $settings);
+    variable_set('salesforce_pull_last_sync_' . $type, REQUEST_TIME);
   }
 }
 
