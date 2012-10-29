@@ -86,8 +86,18 @@ function salesforce_pull_process_records() {
       if ($mapping_object) {
         if ($sf_update !== 0) {
           $entity = entity_load($mapping_object->entity_type, array($mapping_object->entity_id));
-          // @todo: Field Mapping
-          entity_save($mapping_object->entity_type, $entity[$mapping_object->entity_id]);
+          $entity_updated = $entity[$mapping_object->entity_id]->updated;
+          $sf_object_updated = strtotime($sf_object['LastModifiedDate']);
+            if ($sf_object_updated > $entity_updated) {
+            // Field Mapping
+              foreach ($sf_mapping->field_mappings as $field_map) {
+                $entity[$mapping_object->entity_id]->$field_map['drupal_field']
+                  = $sf_object[$field_map['salesforce_field']];
+              }
+              entity_save($mapping_object->entity_type, $entity[$mapping_object->entity_id]);
+              watchdog('Salesforce Pull',
+                t('Updated entity associated with Salesforce Object ID: ') . $sf_object['Id']);
+          }
         }
       }
       else {
@@ -96,8 +106,12 @@ function salesforce_pull_process_records() {
           $entity = entity_create($sf_mapping->drupal_entity_type,
             array($entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle)
           );
-          // @todo: Field Mapping
+          // Field Mapping
+          foreach ($sf_mapping->field_mappings as $field_map) {
+            $entity->$field_map['drupal_field'] = $sf_object[$field_map['salesforce_field']];
+          }
           entity_save($sf_mapping->drupal_entity_type, $entity);
+          watchdog('Salesforce Pull', 'Created entity associated with Salesforce Object ID: ' . $sf_object['Id']);
           list($entity_id) = entity_extract_ids($sf_mapping->drupal_entity_type, $entity);
           $mapping_object = entity_create('salesforce_mapping_object', array(
             'salesforce_id' => $sf_object['Id'],
@@ -108,7 +122,6 @@ function salesforce_pull_process_records() {
         }
       }
     }
-    watchdog('Salesforce Pull', 'Processed' . $sf_object['Id']);
 
   }
   if($item) {
@@ -118,6 +131,5 @@ function salesforce_pull_process_records() {
 }
 
 function salesforce_pull_page() {
-
   return '';
 }
