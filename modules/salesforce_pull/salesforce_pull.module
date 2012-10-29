@@ -85,7 +85,13 @@ function salesforce_pull_process_records() {
             $entity->$field_map['drupal_field'] = $sf_object[$field_map['salesforce_field']];
           }
           entity_save($mapping_object->entity_type, $entity);
-          watchdog('Salesforce Pull', 'Updated entity associated with Salesforce Object ID: ' . $sf_object['Id']);
+          watchdog('Salesforce Pull',
+            'Updated entity %label associated with Salesforce Object ID: %id',
+            array(
+              '%label' => $entity->label(),
+              '%id' => $sf_object['Id']
+            )
+          );
         }
       }
       else if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE) {
@@ -99,6 +105,7 @@ function salesforce_pull_process_records() {
         $entity = entity_create($sf_mapping->drupal_entity_type, $values);
 
         entity_save($sf_mapping->drupal_entity_type, $entity);
+        // TODO: pass vars as translatable. See above.
         watchdog('Salesforce Pull', 'Created entity associated with Salesforce Object ID: ' . $sf_object['Id']);
 
         $mapping_object = entity_create('salesforce_mapping_object', array(
@@ -114,7 +121,7 @@ function salesforce_pull_process_records() {
     $queue->deleteItem($item);
   }
 
-  // TODO: What's this?
+  // TODO: What's this? Document.
   if ($item) {
     $queue->releaseItem($item);
   }
