@@ -43,6 +43,7 @@ function salesforce_pull_get_updated_records() {
       $last_pull = gmdate('Y-m-d\TH:i:s\Z', $sf_pull_data['lastUpdate']);
       $queryString .= '+where+LastModifiedDate>' . $last_pull;
     }
+
     // SOQL Query
     // TODO: Handle error. Maybe try / catch.
     $results = $sfapi->query($queryString);
@@ -50,6 +51,7 @@ function salesforce_pull_get_updated_records() {
     foreach ($results['records'] as $result) {
       $queue->createItem($result);
     }
+
     variable_set('salesforce_pull_data_' . $type, $settings);
   }
 }
@@ -68,69 +70,58 @@ function salesforce_pull_process_records() {
     $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
     // Get Salesforce object
     $sf_object = $sfapi->apiCall($sf_object_url);
+
     // Get Mapping
     $sf_mappings = salesforce_mapping_load_multiple(
       array('salesforce_object_type' => $sf_object['attributes']['type'])
     );
 
     foreach ($sf_mappings as $sf_mapping) {
-      $sf_create = $sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE;
-      $sf_update = $sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_UPDATE;
       // Mapping object exists?
       $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object['Id']);
-      if ($mapping_object) {
-        if ($sf_update !== 0) {
-          $entity = entity_load($mapping_object->entity_type, array($mapping_object->entity_id));
-          $entity_updated = $entity[$mapping_object->entity_id]->updated;
-          $sf_object_updated = strtotime($sf_object['LastModifiedDate']);
-            if ($sf_object_updated > $entity_updated) {
-            // Field Mapping
-              foreach ($sf_mapping->field_mappings as $field_map) {
-                $entity[$mapping_object->entity_id]->$field_map['drupal_field']
-                  = $sf_object[$field_map['salesforce_field']];
-              }
-              entity_save($mapping_object->entity_type, $entity[$mapping_object->entity_id]);
-              watchdog('Salesforce Pull', 'Updated entity associated with Salesforce Object ID: ' . $sf_object['Id']);
-
-          }
-          $queue->deleteItem($item);
-        }
-        else {
-          $queue->deleteItem($item);
-        }
-      }
-      else {
-        if ($sf_create !== 0) {
-          $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
-          $entity = entity_create($sf_mapping->drupal_entity_type,
-            array($entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle)
-          );
+      if ($mapping_object && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_UPDATE)) {
+        $entity = entity_load_single($mapping_object->entity_type, array($mapping_object->entity_id));
+        $entity_updated = $entity->updated;
+        $sf_object_updated = strtotime($sf_object['LastModifiedDate']);
+        if ($sf_object_updated > $entity_updated) {
           // Field Mapping
           foreach ($sf_mapping->field_mappings as $field_map) {
             $entity->$field_map['drupal_field'] = $sf_object[$field_map['salesforce_field']];
           }
-          entity_save($sf_mapping->drupal_entity_type, $entity);
-          watchdog('Salesforce Pull', 'Created entity associated with Salesforce Object ID: ' . $sf_object['Id']);
-          list($entity_id) = entity_extract_ids($sf_mapping->drupal_entity_type, $entity);
-          $mapping_object = entity_create('salesforce_mapping_object', array(
-            'salesforce_id' => $sf_object['Id'],
-            'entity_type' => $sf_mapping->drupal_entity_type,
-            'entity_id' => $entity_id,
-          ));
-          $mapping_object->save();
-          $queue->deleteItem($item);
-        }
-        else {
-          $queue->deleteItem($item);
+          entity_save($mapping_object->entity_type, $entity);
+          watchdog('Salesforce Pull', 'Updated entity associated with Salesforce Object ID: ' . $sf_object['Id']);
         }
       }
+      else if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE) {
+        // Create entity from mapping object and field maps.
+        $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
+        $values = array($entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle);
+        foreach ($sf_mapping->field_mappings as $field_map) {
+          $values[$field_map['drupal_field']] = $sf_object[$field_map['salesforce_field']];
+        }
+
+        $entity = entity_create($sf_mapping->drupal_entity_type, $values);
+
+        entity_save($sf_mapping->drupal_entity_type, $entity);
+        watchdog('Salesforce Pull', 'Created entity associated with Salesforce Object ID: ' . $sf_object['Id']);
+
+        $mapping_object = entity_create('salesforce_mapping_object', array(
+          'salesforce_id' => $sf_object['Id'],
+          'entity_type' => $sf_mapping->drupal_entity_type,
+          'entity_id' => $entity->internalIdentifier(),
+        ));
+        $mapping_object->save();
+      }
+      // TODO: Can we ever end up in an else here? What do to, if anything?
     }
+
+    $queue->deleteItem($item);
   }
+
   // TODO: What's this?
   if ($item) {
     $queue->releaseItem($item);
   }
-
 }
 
 function salesforce_pull_page() {
