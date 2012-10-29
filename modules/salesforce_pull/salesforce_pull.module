@@ -97,7 +97,12 @@ function salesforce_pull_process_records() {
               entity_save($mapping_object->entity_type, $entity[$mapping_object->entity_id]);
               watchdog('Salesforce Pull',
                 t('Updated entity associated with Salesforce Object ID: ') . $sf_object['Id']);
+
           }
+          $queue->deleteItem($item);
+        }
+        else {
+          $queue->deleteItem($item);
         }
       }
       else {
@@ -119,10 +124,13 @@ function salesforce_pull_process_records() {
             'entity_id' => $entity_id,
           ));
           $mapping_object->save();
+          $queue->deleteItem($item);
+        }
+        else {
+          $queue->deleteItem($item);
         }
       }
     }
-
   }
   if($item) {
     $queue->releaseItem($item);
@@ -131,5 +139,6 @@ function salesforce_pull_process_records() {
 }
 
 function salesforce_pull_page() {
+
   return '';
 }
