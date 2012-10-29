@@ -177,6 +177,13 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#options' => $sf_fields,
           '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['salesforce_field'] : 0,
         ),
+        'key' => array(
+          '#type' => 'radio',
+          '#name' => 'key',
+          '#return_value' => $delta,
+          '#tree' => FALSE,
+          '#default_value' => (isset($mapping->field_mappings[$delta]['key']) && $mapping->field_mappings[$delta]['key']) ? $delta : 0,
+        ),
         'remove' => array()
       );
     }
@@ -278,6 +285,7 @@ function theme_salesforce_fieldmap_form_table($variables) {
   $header = array(
     t('Salesforce field'),
     t('Drupal field'),
+    t('key'),
     t('Settings'),
   );
 
@@ -291,6 +299,9 @@ function theme_salesforce_fieldmap_form_table($variables) {
       ),
       array(
         'data' => drupal_render($child['salesforce_field'])
+      ),
+      array(
+        'data' => drupal_render($child['key'])
       ),
       array(
        'data' => $child['remove'],
@@ -340,17 +351,19 @@ function salesforce_mapping_form_validate($form, &$form_state) {
 function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
-  foreach ($values['salesforce_field_mappings'] as $mapping) {
+  $key_delta = (int)$values['key'];
+  foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
       $mappings[] = array(
         'drupal_field' => $mapping['drupal_field'],
-        'salesforce_field' => $mapping['salesforce_field']
+        'salesforce_field' => $mapping['salesforce_field'],
+        'key' => ($key_delta === $key),
       );
     }
   }
 
   $sync_values = array_filter($values['sync_triggers']);
-  $sync_triggers = 0x0000;
+  $sync_triggers = SALESFORCE_MAPPING_SYNC_OFF;
   foreach ($sync_values as $value) {
     $sync_triggers = $sync_triggers | $value;
   }
