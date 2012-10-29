@@ -32,6 +32,7 @@ function salesforce_pull_get_updated_records() {
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
+    // TODO: Why an array? Will there be other data here? Is lastUpdate correct?
     $settings = array(
       'lastUpdate' => REQUEST_TIME,
     );
@@ -43,6 +44,7 @@ function salesforce_pull_get_updated_records() {
       $queryString .= '+where+LastModifiedDate>' . $last_pull;
     }
     // SOQL Query
+    // TODO: Handle error. Maybe try / catch.
     $results = $sfapi->query($queryString);
     // Write items to the queue
     foreach ($results['records'] as $result) {
@@ -62,6 +64,7 @@ function salesforce_pull_process_records() {
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
   for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
     // Get object URL
+    // TODO: This URL needs to be derived from the API class. Might require an additional method, or change privacy of existing.
     $sf_object_url = str_replace('/services/data/v25.0/', '', $item->data['attributes']['url']);
     // Get Salesforce object
     $sf_object = $sfapi->apiCall($sf_object_url);
@@ -123,6 +126,7 @@ function salesforce_pull_process_records() {
       }
     }
   }
+  // TODO: What's this?
   if ($item) {
     $queue->releaseItem($item);
   }
