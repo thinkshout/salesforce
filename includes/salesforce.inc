@@ -12,6 +12,7 @@ class Salesforce {
   public $consumer_key;
   public $consumer_secret;
   public $login_url = 'https://login.salesforce.com';
+  public $response;
 
   //@todo: does this need to be configurable?
   public $rest_api_version = array(
@@ -56,9 +57,9 @@ class Salesforce {
       $this->refreshToken();
     }
 
-    $response = $this->apiHttpRequest($path, $params, $method);
+    $this->response = $this->apiHttpRequest($path, $params, $method);
 
-    switch ($response->code) {
+    switch ($this->response->code) {
       // The session ID or OAuth token used has expired or is invalid
       case 401:
         // refresh token
@@ -75,17 +76,16 @@ class Salesforce {
         // all clear
         break;
       default:
-        // we have problem
-        $error = $response->error;
-        if (!empty($response->data)) {
-          $data = drupal_json_decode($response->data);
-          $error = isset($data[0]['message']) ? $data[0]['message'] : '';
+        // we have problem and no specific Salesforce error provided
+        if (empty($this->response->data)) {
+          throw new SalesforceException($this->response->error, $this->response->code);
         }
-
-        throw new SalesforceException($error, $response->code);
     }
 
-    $data = drupal_json_decode($response->data);
+    $data = drupal_json_decode($this->response->data);
+    if (!empty($data[0]) && count($data) == 1) {
+      $data = $data[0];
+    }
 
     if (isset($data['error'])) {
       throw new SalesforceException($data['error_description'], $data['error']);
@@ -369,7 +369,11 @@ class Salesforce {
    *
    */
   public function objectUpsert($name, $key, $value, $params) {
-    return $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
+    $data = $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
+    if ($this->response->code == 300) {
+      $data['message'] = t('The value provided is not unique.');
+    }
+    return $data;
   }
 
   /**

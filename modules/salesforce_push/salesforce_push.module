@@ -61,34 +61,57 @@ function salesforce_push_sync_entity($entity, $sf_sync_trigger) {
 
       // Generate parameter array from field mappings.
       $params = array();
+      $key_field = $key_value = '';
       foreach ($mapping->field_mappings as $fieldmap) {
         $value = $wrapper->{$fieldmap['drupal_field']}->value();
         if (is_array($value)) {
           $value = $value[0];
+        }
+        if ($fieldmap['key']) {
+          $key_field = $fieldmap['salesforce_field'];
+          $key_value = $value;
         }
         $params[$fieldmap['salesforce_field']] = $value;
       }
 
       // Entity is not linked to an SF object.
       if (!$mapped_objects) {
-        //TODO: User key fields to determine if an similar SF object exists.
-
         // Setup SF record type
         $params['RecordTypeId'] = $mapping->salesforce_record_type;
 
         try {
-          $response = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
+          // An external key has been specified, attempt an upsert().
+          if (!empty($key_field)) {
+            $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $key_value, $params);
+          }
+          // No key or mapping, create a new object in Salesforce.
+          else {
+            $data = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
+          }
         }
         catch(SalesforceException $e) {
           drupal_set_message($e->getMessage(), 'error');
+          return;
         }
 
-        // Create mapping object, saved below.
-        $mapped_objects = entity_create('salesforce_mapping_object', array(
-          'entity_id' => $entity->internalIdentifier(),
-          'entity_type' => $entity_type,
-          'salesforce_id' => $response['id']
-        ));
+        // Success.
+        if (empty($data['errorCode'])) {
+          // Create mapping object, saved below.
+          $mapped_objects = entity_create('salesforce_mapping_object', array(
+            'entity_id' => $entity->internalIdentifier(),
+            'entity_type' => $entity_type,
+            'salesforce_id' => $data['id']
+          ));
+        }
+        else {
+          drupal_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
+            '%label' => $entity->label(),
+            '@code' => $data['errorCode'],
+            '@message' => $data['message']
+          )), 'error');
+
+          return;
+        }
       }
       // Existing object link, update.
       else {
