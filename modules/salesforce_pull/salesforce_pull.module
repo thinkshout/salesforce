@@ -82,8 +82,7 @@ function salesforce_pull_process_records() {
                   = $sf_object[$field_map['salesforce_field']];
               }
               entity_save($mapping_object->entity_type, $entity[$mapping_object->entity_id]);
-              watchdog('Salesforce Pull',
-                t('Updated entity associated with Salesforce Object ID: ') . $sf_object['Id']);
+              watchdog('Salesforce Pull', 'Updated entity associated with Salesforce Object ID: ' . $sf_object['Id']);
 
           }
           $queue->deleteItem($item);
@@ -119,7 +118,7 @@ function salesforce_pull_process_records() {
       }
     }
   }
-  if($item) {
+  if ($item) {
     $queue->releaseItem($item);
   }
 
