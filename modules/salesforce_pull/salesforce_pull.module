@@ -1,6 +1,10 @@
 <?php
 
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
+
+/**
+ * Implements hook_menu().
+ */
 function salesforce_pull_menu() {
   $items['admin/config/services/salesforce/testing'] = array(
     'title' => 'Salesforce Testing Page',
@@ -21,7 +25,7 @@ function salesforce_pull_cron() {
 }
 
 /*
- * Pull updated records and place them in the queue
+ * Pull updated records and place them in the queue.
  */
 function salesforce_pull_get_updated_records() {
   $sfapi = salesforce_get_api();
@@ -49,7 +53,7 @@ function salesforce_pull_get_updated_records() {
 }
 
 /*
- * Process records in the queue
+ * Process records in the queue.
  */
 function salesforce_pull_process_records() {
   $sfapi = salesforce_get_api();
