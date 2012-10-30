@@ -94,6 +94,48 @@ class Salesforce {
     return $data;
   }
 
+  public function soapAPICall($xmlBody, $soapAction) {
+    if (!$this->getAccessToken()) {
+      $this->refreshToken();
+    }
+
+    $url = $this->getInstanceURL() . "/services/Soap/c" . $this->rest_api_version['url'];
+    $headers = array(
+      'Content-type' => 'text/xml',
+      'SOAPAction' => $soapAction
+    );
+    $response = $this->httpRequest($url, $this->soapXML($xmlBody), $headers, 'POST');
+
+    if (isset($response->error)) {
+      throw new SalesforceException($response->error, $response->code);
+    }
+
+    $simpleXml = simplexml_load_string($response->data);
+    // TODO: Process errors
+    return $simpleXml->children('soapenv', TRUE)->Body->children();
+  }
+
+  /**
+   * Generate a wrapper for SOAP API calls.
+   *
+   * @param $body
+   *
+   * @return string
+   */
+  private function soapXML($body) {
+    return '<?xml version="1.0" encoding="utf-8" ?>
+    <env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+      <env:Header>
+        <n1:SessionHeader xmlns:n1="urn:partner.soap.sforce.com">
+          <n1:sessionId>' . $this->getAccessToken() . '</n1:sessionId>
+        </n1:SessionHeader>
+      </env:Header>
+      <env:Body>' . $body . '</env:Body>
+    </env:Envelope>';
+  }
+
   /**
    * Private helper to issue an SF API request.
    *
@@ -426,6 +468,41 @@ class Salesforce {
       $items[$key] = $path;
     }
     return $items;
+  }
+
+  /**
+   * Get deleted Salesforce records matching a given object type and date range.
+   * This uses the SOAP rather than REST API due to limits on the latter. It
+   * still takes advantage of the OAUTH token. Dates must be in the format
+   * 2012-10-26T22:23:24.000Z.
+   *
+   * @param $name
+   *   Salesforce object type.
+   * @param $start
+   *   Date from which to select deleted objects.
+   * @param $end
+   *   Date through which to select deleted objects.
+   *
+   * @return array of deleted objects keyed by object ID with a value of the
+   * deleted date.
+   */
+  public function getDeleted($name, $start, $end) {
+    $soapBody =
+      "<n1:getDeleted xmlns:n1=\"urn:partner.soap.sforce.com\">
+          <n1:sObjectType>{$name}</n1:sObjectType>
+          <n1:startDate>{$start}</n1:startDate>
+          <n1:endDate>{$end}</n1:endDate>
+        </n1:getDeleted>";
+
+    $xmlResponse = $this->soapAPICall($soapBody, 'getDeleted');
+    if (!empty($xmlResponse->getDeletedResponse->result)) {
+      foreach ($xmlResponse->getDeletedResponse->result->deletedRecords as $deletedRecord) {
+        $records[$deletedRecord->id] = $deletedRecord->deletedDate;
+      }
+    }
+
+    return $records;
+
   }
 
 }
