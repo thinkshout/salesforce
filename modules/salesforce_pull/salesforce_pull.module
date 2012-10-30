@@ -22,6 +22,7 @@ function salesforce_pull_menu() {
 function salesforce_pull_cron() {
   salesforce_pull_get_updated_records();
   salesforce_pull_process_records();
+  salesforce_process_deleted_records();
 }
 
 /*
@@ -112,10 +113,10 @@ function salesforce_pull_process_records() {
           }
           entity_save($mapping_object->entity_type, $entity);
           watchdog('Salesforce Pull',
-            'Updated entity %label associated with Salesforce Object ID: %id',
+            'Updated entity %label associated with Salesforce Object ID: %sfid',
             array(
               '%label' => $entity->label(),
-              '%id' => $sf_object['Id']
+              '%sfid' => $sf_object['Id']
             )
           );
         }
@@ -132,10 +133,10 @@ function salesforce_pull_process_records() {
 
         entity_save($sf_mapping->drupal_entity_type, $entity);
         watchdog('Salesforce Pull',
-          'Created entity %label associated with Salesforce Object ID: %id',
+          'Created entity %label associated with Salesforce Object ID: %sfid',
           array(
             '%label' => $entity->label(),
-            '%id' => $sf_object['Id']
+            '%sfid' => $sf_object['Id']
           )
         );
 
@@ -155,6 +156,37 @@ function salesforce_pull_process_records() {
   if ($item) {
     $queue->releaseItem($item);
   }
+}
+
+/*
+ * Definition goes here
+ */
+function salesforce_process_deleted_records() {
+  $sfapi = salesforce_get_api();
+
+  foreach (salesforce_mapping_get_mapped_objects() as $type) {
+
+    module_load_include('inc', 'salesforce_soap');
+    $soap = new SalesforceSoapPartner($sfapi);
+    $last_delete_sync = variable_get('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
+    $now = time();
+    // SOAP getDeleted() restraint: startDate must be at least one minute greater than endDate
+    $now = $now > $last_delete_sync+60 ? $now : $now+60;
+    $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
+    $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
+    $deleted = $soap->getDeleted($type, $last_delete_sync_sf, $now_sf);
+    dpm($deleted);
+    // todo: check mapping and process deleted records
+    watchdog('Salesforce Pull',
+      'Deleted entity %label widh ID: %id associated with Salesforce Object ID: %sfid',
+      array(
+        '%label' => '',//$entity->label(),
+        '%sfid' => '',//$sf_object['Id']
+      )
+    );
+    variable_set('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
+  }
+
 }
 
 function salesforce_pull_page() {
