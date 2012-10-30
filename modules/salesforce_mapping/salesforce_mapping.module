@@ -17,6 +17,13 @@ define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 0x0010);
 define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 0x0020);
 
 /**
+ * Field mapping direction constants.
+ */
+define('SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF', 'drupal_sf');
+define('SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL', 'sf_drupal');
+define('SALESFORCE_MAPPING_DIRECTION_SYNC', 'sync');
+
+/**
  * Implements hook_menu().
  */
 function salesforce_mapping_menu() {
