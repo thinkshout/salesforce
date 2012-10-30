@@ -178,7 +178,7 @@ class Salesforce {
   /**
    * Getter and setter for SF API instance URL.
    */
-  private function getInstanceURL() {
+  public function getInstanceURL() {
     return variable_get('salesforce_instance_url', '');
   }
   private function setInstanceURL($url) {
@@ -188,7 +188,7 @@ class Salesforce {
   /**
    * Getter and setter for the access token. It's stored in session.
    */
-  private function getAccessToken() {
+  public function getAccessToken() {
     return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
   }
   private function setAccessToken($token) {
