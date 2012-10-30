@@ -23,7 +23,7 @@ REQUIREMENTS
   2) You will need to create a remote application to to authorize.
   https://help.salesforce.com/help/doc/en/remoteaccess_about.htm
 
-  3) Your site needs to be SSL enabled to authorize the remote applicaiton using
+  3) Your site needs to be SSL enabled to authorize the remote application using
   OAUTH.
 
   4) If using the SOAP API, PHP to have been compiled with SOAP web services and
