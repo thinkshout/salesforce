@@ -184,7 +184,16 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#tree' => FALSE,
           '#default_value' => (isset($mapping->field_mappings[$delta]['key']) && $mapping->field_mappings[$delta]['key']) ? $delta : FALSE,
         ),
-        'remove' => array()
+        'direction' => array(
+          '#type' => 'radios',
+          '#options' => array(
+            SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
+            SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL => t('SF to Drupal'),
+            SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
+          ),
+          '#required' => TRUE,
+          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['direction'] : SALESFORCE_MAPPING_DIRECTION_SYNC,
+        )
       );
     }
 
@@ -286,7 +295,7 @@ function theme_salesforce_fieldmap_form_table($variables) {
     t('Drupal field'),
     t('Salesforce field'),
     t('key'),
-    t('Settings'),
+    t('Direction'),
   );
 
   // Build the rows array.
@@ -304,7 +313,7 @@ function theme_salesforce_fieldmap_form_table($variables) {
         'data' => drupal_render($child['key'])
       ),
       array(
-       'data' => $child['remove'],
+       'data' => drupal_render($child['direction']),
       )
     );
   }
@@ -379,13 +388,14 @@ function salesforce_mapping_form_validate($form, &$form_state) {
 function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
-  $key_delta = (int)$values['key'];
+  $key_delta = $values['key'];
   foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
       $mappings[] = array(
         'drupal_field' => $mapping['drupal_field'],
         'salesforce_field' => $mapping['salesforce_field'],
-        'key' => ($key_delta === $key),
+        'key' => $key_delta && ($key === (int)$key_delta),
+        'direction' => $mapping['direction']
       );
     }
   }
