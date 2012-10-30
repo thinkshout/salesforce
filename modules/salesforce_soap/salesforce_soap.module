@@ -5,5 +5,5 @@
  */
 function salesforce_soap_init() {
   $path = libraries_get_path('salesforce');
-  require_once($path . '/soapclient/SforcePartnerCLient.php');
+  require_once($path . '/soapclient/SforcePartnerClient.php');
 }
