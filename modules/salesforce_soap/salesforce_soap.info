@@ -1,0 +1,8 @@
+name = Salesforce SOAP
+description = SOAP API client
+package = Salesforce
+core = 7.x
+
+files[] = salesforce_soap.inc
+
+dependencies[] = salesforce

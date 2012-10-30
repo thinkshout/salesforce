@@ -1,0 +1,8 @@
+<?php
+
+/**
+ * Implements hook_init().
+ */
+function salesforce_soap_init() {
+  require_once(DRUPAL_ROOT . '/profiles/ams_dev/libraries/salesforce/soapclient/SforcePartnerCLient.php');
+}
