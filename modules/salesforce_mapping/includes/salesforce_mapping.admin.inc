@@ -341,7 +341,33 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     form_set_error('drupal_entity_type', t('This Drupal bundle has already been mapped to a Salesforce object.'));
   }
 
-  // TODO: Validate field mapping lengths and external key attributes.
+  // Validate field mappings.
+  $properties = entity_get_all_property_info($values['drupal_entity_type']);
+  $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
+  $key_delta = $values['key'];
+  foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
+    if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
+      $drupal_field = $properties[$mapping['drupal_field']];
+      $sf_field = NULL;
+      foreach ($sf_fields as $field) {
+        if ($field['name'] == $mapping['salesforce_field']) {
+          $sf_field = $field;
+          break;
+        }
+      }
+
+      // ensure valid SF external ID field
+      if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
+        form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
+          array(
+            '%name' => $mapping['salesforce_field']
+          )
+        ));
+      }
+
+
+    }
+  }
 }
 
 /**
