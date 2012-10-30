@@ -42,40 +42,42 @@ function salesforce_pull_get_updated_records() {
     foreach ($mapped_fields as $field) {
       $fields .= ',+' . $field;
     }
+
+    // SOQL Query
     $queryString = 'SELECT+'. $fields .'+from+' . $type;
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
+
     // If no lastupdate, get all records, else get records since last pull
     if ($sf_last_sync) {
       $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
       $queryString .= '+where+LastModifiedDate>' . $last_sync;
     }
 
-    // SOQL Query
-    // TODO: Handle error. Maybe try / catch.
     $results = $sfapi->query($queryString);
+    $version_url = $sfapi->rest_api_version['url'];
 
+    if (!$results['errorCode']) {
+      // Handle requests larger than the batch limit (usually 2000)
+      $next_records_url = isset($results['nextRecordsUrl']) ?
+        str_replace($version_url, '', $results['nextRecordsUrl']) :
+        FALSE;
+      while($next_records_url) {
+        $new_result = $sfapi->apiCall($next_records_url);
+        $results['records'] = array_merge($results['records'], $new_result['records']);
+        $next_records_url = isset($new_result['nextRecordsUrl']) ?
+          str_replace($version_url, '', $new_result['nextRecordsUrl']) : FALSE;
+      }
 
-    // Handle requests larger than the batch limit (usually 2000)
-//    // TODO: Don't hardcode version/URL. Consider pulling this out and let calling code handle the nextRecordsURL.
-//    $next_records_url = isset($new_result['nextRecordsUrl']) ?
-//      str_replace('/services/data/v25.0/', '', $results['nextRecordsUrl']) :
-//      FALSE;
-//    while($next_records_url) {
-//      $new_result = $this->apiCall($next_records_url);
-//      $result['records'] = array_merge($results['records'], $new_result['records']);
-//      $next_records_url = isset($new_result['nextRecordsUrl']) ?
-//        str_replace('/services/data/v25.0/', '', $new_result['nextRecordsUrl']) : FALSE;
-//    }
-//
+      // Write items to the queue
+      foreach ($results['records'] as $result) {
+        $queue->createItem($result);
+      }
 
-
-
-    // Write items to the queue
-    foreach ($results['records'] as $result) {
-      $queue->createItem($result);
+      variable_set('salesforce_pull_last_sync_' . $type, REQUEST_TIME);
     }
-
-    variable_set('salesforce_pull_last_sync_' . $type, REQUEST_TIME);
+    else {
+      watchdog('Salesforce Pull', $results['errorCode'] . ':' . $results['message'], array(), WATCHDOG_ERROR);
+    }
   }
 }
 
@@ -89,7 +91,7 @@ function salesforce_pull_process_records() {
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
   for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
     // Get Salesforce object
-    $sf_object = $item->data;//$sfapi->objectRead($item->data['attributes']['type'], $item->data['Id']);
+    $sf_object = $item->data;
 
     // Get Mapping
     $sf_mappings = salesforce_mapping_load_multiple(
