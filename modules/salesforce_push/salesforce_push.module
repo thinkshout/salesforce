@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @file
+ * Push updates to Salesforce when a Drupal entity is updated.
+ */
+
+/**
  * Implements hook_entity_insert().
  */
 function salesforce_push_entity_insert($entity, $type) {
