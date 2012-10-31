@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Define pull queue name.
+ */
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
 
 /**
@@ -16,7 +19,7 @@ function salesforce_pull_menu() {
   return $items;
 }
 
-/*
+/**
  * Implements hook_cron()
  */
 function salesforce_pull_cron() {
@@ -25,7 +28,7 @@ function salesforce_pull_cron() {
   salesforce_process_deleted_records();
 }
 
-/*
+/**
  * Pull updated records and place them in the queue.
  */
 function salesforce_pull_get_updated_records() {
@@ -82,7 +85,7 @@ function salesforce_pull_get_updated_records() {
   }
 }
 
-/*
+/**
  * Process records in the queue.
  */
 function salesforce_pull_process_records() {
@@ -163,8 +166,9 @@ function salesforce_pull_process_records() {
   }
 }
 
-/*
+/**
  * Definition goes here
+ * TODO: Namespace violation. Should be salesforce_pull_process_deleted_records.
  */
 function salesforce_process_deleted_records() {
   $sfapi = salesforce_get_api();
@@ -180,31 +184,34 @@ function salesforce_process_deleted_records() {
     $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
     $deleted = $soap->getDeleted($type, $last_delete_sync_sf, $now_sf);
-    $sf_mappings = salesforce_mapping_load_multiple(
-      array('salesforce_object_type' => $type)
-    );
-    if (isset($deleted->deletedRecords)) {
+    if (!empty($deleted->deletedRecords)) {
+      $sf_mappings = salesforce_mapping_load_multiple(
+        array('salesforce_object_type' => $type)
+      );
       foreach ($deleted->deletedRecords as $record) {
         $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
-        foreach ($sf_mappings as $sf_mapping) {
-          if ($mapping_object && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
-            entity_delete('salesforce_mapping_object', $mapping_object->salesforce_mapping_object_id);
-            entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
-            watchdog('Salesforce Pull',
-              'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-              array(
-                '%label' => $sf_mapping->drupal_entity_type . ':' . $sf_mapping->drupal_bundle,
-                '%id' => $mapping_object->entity_id,
-                '%sfid' => $record->id
-              )
-            );
+        if ($mapping_object) {
+          $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+          foreach ($sf_mappings as $sf_mapping) {
+            if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
+              $label = $entity->label();
+              entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
+              watchdog('Salesforce Pull',
+                'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+                array(
+                  '%label' => $label,
+                  '%id' => $mapping_object->entity_id,
+                  '%sfid' => $record->id
+                )
+              );
+            }
           }
+          $mapping_object->delete();
         }
       }
     }
     variable_set('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
   }
-
 }
 
 function salesforce_pull_page() {
