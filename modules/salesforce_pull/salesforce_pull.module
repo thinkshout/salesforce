@@ -86,7 +86,6 @@ function salesforce_pull_get_updated_records() {
  * Process records in the queue.
  */
 function salesforce_pull_process_records() {
-  $sfapi = salesforce_get_api();
   $limit = variable_get('salesforce_pull_limit', 50);
 
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
