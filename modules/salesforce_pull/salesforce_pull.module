@@ -168,11 +168,11 @@ function salesforce_pull_process_records() {
  */
 function salesforce_process_deleted_records() {
   $sfapi = salesforce_get_api();
+  module_load_include('inc', 'salesforce_soap');
+  $soap = new SalesforceSoapPartner($sfapi);
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
 
-    module_load_include('inc', 'salesforce_soap');
-    $soap = new SalesforceSoapPartner($sfapi);
     $last_delete_sync = variable_get('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
     $now = time();
     // SOAP getDeleted() restraint: startDate must be at least one minute greater than endDate
@@ -180,15 +180,28 @@ function salesforce_process_deleted_records() {
     $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
     $deleted = $soap->getDeleted($type, $last_delete_sync_sf, $now_sf);
-    dpm($deleted);
-    // todo: check mapping and process deleted records
-    watchdog('Salesforce Pull',
-      'Deleted entity %label widh ID: %id associated with Salesforce Object ID: %sfid',
-      array(
-        '%label' => '',//$entity->label(),
-        '%sfid' => '',//$sf_object['Id']
-      )
+    $sf_mappings = salesforce_mapping_load_multiple(
+      array('salesforce_object_type' => $type)
     );
+    if (isset($deleted->deletedRecords)) {
+      foreach ($deleted->deletedRecords as $record) {
+        $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
+        foreach ($sf_mappings as $sf_mapping) {
+          if ($mapping_object && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
+            entity_delete('salesforce_mapping_object', $mapping_object->salesforce_mapping_object_id);
+            entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
+            watchdog('Salesforce Pull',
+              'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+              array(
+                '%label' => $sf_mapping->drupal_entity_type . ':' . $sf_mapping->drupal_bundle,
+                '%id' => $mapping_object->entity_id,
+                '%sfid' => $record->id
+              )
+            );
+          }
+        }
+      }
+    }
     variable_set('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
   }
 
