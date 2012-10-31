@@ -109,8 +109,11 @@ function salesforce_pull_process_records() {
         if ($sf_object_updated > $entity_updated) {
           // Field Mapping
           foreach ($sf_mapping->field_mappings as $field_map) {
-            $entity->$field_map['drupal_field'] = $sf_object[$field_map['salesforce_field']];
+            if ($field_map['direction'] == 'sync' || $field_map['direction'] == 'sf_drupal') {
+              $entity->$field_map['drupal_field'] = $sf_object[$field_map['salesforce_field']];
+            }
           }
+          // Update entity
           entity_save($mapping_object->entity_type, $entity);
           watchdog('Salesforce Pull',
             'Updated entity %label associated with Salesforce Object ID: %sfid',
@@ -126,11 +129,21 @@ function salesforce_pull_process_records() {
         $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
         $values = array($entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle);
         foreach ($sf_mapping->field_mappings as $field_map) {
+          if ($field_map['direction'] == 'sync' || $field_map['direction'] == 'sf_drupal') {
+            $values[$field_map['drupal_field']] = $sf_object[$field_map['salesforce_field']];
+          }
         }
-
+        // Create entity
         $entity = entity_create($sf_mapping->drupal_entity_type, $values);
-
         entity_save($sf_mapping->drupal_entity_type, $entity);
+        // Create mapping object
+        $mapping_object = entity_create('salesforce_mapping_object', array(
+          'salesforce_id' => $sf_object['Id'],
+          'entity_type' => $sf_mapping->drupal_entity_type,
+          'entity_id' => $entity->internalIdentifier(),
+        ));
+        $mapping_object->save();
+
         watchdog('Salesforce Pull',
           'Created entity %label associated with Salesforce Object ID: %sfid',
           array(
@@ -138,13 +151,6 @@ function salesforce_pull_process_records() {
             '%sfid' => $sf_object['Id']
           )
         );
-
-        $mapping_object = entity_create('salesforce_mapping_object', array(
-          'salesforce_id' => $sf_object['Id'],
-          'entity_type' => $sf_mapping->drupal_entity_type,
-          'entity_id' => $entity->internalIdentifier(),
-        ));
-        $mapping_object->save();
       }
     }
     // Remove item from queue
