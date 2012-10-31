@@ -27,11 +27,18 @@ function salesforce_push_entity_delete($entity, $type) {
 }
 
 /**
- *
+ * Push entities to Salesforce.
+ * 
  * @param $entity
  * @param $sf_sync_trigger
  */
 function salesforce_push_sync_entity($entity, $sf_sync_trigger) {
+  // avoid duplicate processing if this entity has just been updated by
+  // salesforce pull
+  if (isset($entity->salesforce_pull) && $entity->salesforce_pull) {
+    return;
+  }
+
   $entity_type = $entity->entityType();
   $mappings = salesforce_mapping_load_multiple(array(
     'drupal_entity_type' => $entity_type,
