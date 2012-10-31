@@ -68,6 +68,11 @@ function salesforce_push_sync_entity($entity, $sf_sync_trigger) {
       $params = array();
       $key_field = $key_value = '';
       foreach ($mapping->field_mappings as $fieldmap) {
+        // Skip fields that aren't being pushed to Salesforce.
+        if (!in_array($fieldmap['direction'], array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC))) {
+          continue;
+        }
+
         $value = $wrapper->{$fieldmap['drupal_field']}->value();
         if (is_array($value)) {
           $value = $value[0];
