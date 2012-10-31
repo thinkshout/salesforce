@@ -125,6 +125,13 @@ function salesforce_push_sync_entity($entity, $sf_sync_trigger) {
       }
       // Existing object link, update.
       else {
+        // Handle the case of mapped objects last sync being more recent than
+        // the entity's timestamp. Note we can't assume updated exists.
+        $updated = $wrapper->updated;
+        if (!empty($updated) && ($mapped_objects->last_sync > $wrapper->updated->value())) {
+          return;
+        }
+
         // Update SF object.
         try {
           $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
