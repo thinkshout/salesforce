@@ -39,15 +39,11 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#type' => 'fieldset',
   );
 
-  $types = array('' => t('-- Select --'));
-  foreach (entity_get_info() as $type => $info) {
-    $types[$type] = $info['label'];
-  }
   $form['drupal_entity']['drupal_entity_type'] = array(
     '#title' => t('Drupal Entity Type'),
     '#type' => 'select',
     '#description' => t('Select a Drupal entity type to map to a Salesforce object.'),
-    '#options' => $types,
+    '#options' => salesforce_mapping_drupal_entities(),
     '#default_value' => isset($mapping) ? $mapping->drupal_entity_type : 0,
     '#required' => TRUE,
     '#ajax' => array(
@@ -268,6 +264,21 @@ function salesforce_mapping_drupal_fields($entity_type, $bundle) {
   }
 
   return $options;
+}
+
+/**
+ * Return a list of Drupal entities that implement EntityAPIControllerInterface.
+ * 
+ * @return array
+ */
+function salesforce_mapping_drupal_entities() {
+  $types = array('' => t('-- Select --'));
+  foreach (entity_get_info() as $type => $info) {
+    if (in_array('EntityAPIControllerInterface', class_implements($info['controller class'])) ) {
+      $types[$type] = $info['label'];
+    }
+  }
+  return $types;
 }
 
 /**
