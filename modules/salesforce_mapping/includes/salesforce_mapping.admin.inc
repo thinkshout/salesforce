@@ -138,6 +138,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     if (!$mappings_count && isset($mapping)) {
       $mappings_count = count($mapping->field_mappings);
     }
+    $mappings_count = ($mappings_count)? 0 : 1;
 
     if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') {
       $mappings_count++;
@@ -159,7 +160,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#tree' => TRUE
     );
 
-    for ($delta = 0; $delta <= $mappings_count; $delta++) {
+    for ($delta = 0; $delta < $mappings_count; $delta++) {
       $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
           '#type' => 'select',
@@ -189,7 +190,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           ),
           '#required' => TRUE,
           '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['direction'] : SALESFORCE_MAPPING_DIRECTION_SYNC,
-        )
+        ),
+        'delete' => array(
+          '#type' => 'checkbox',
+        ),
       );
     }
 
@@ -269,7 +273,7 @@ function salesforce_mapping_drupal_fields($entity_type, $bundle) {
 
 /**
  * Return a list of Drupal entities that implement EntityAPIControllerInterface.
- * 
+ *
  * @return array
  */
 function salesforce_mapping_drupal_entities() {
@@ -308,6 +312,7 @@ function theme_salesforce_fieldmap_form_table($variables) {
     t('Salesforce field'),
     t('key'),
     t('Direction'),
+    t('Delete'),
   );
 
   // Build the rows array.
@@ -326,6 +331,9 @@ function theme_salesforce_fieldmap_form_table($variables) {
       ),
       array(
        'data' => drupal_render($child['direction']),
+      ),
+      array(
+       'data' => drupal_render($child['delete']),
       )
     );
   }
@@ -399,8 +407,16 @@ function salesforce_mapping_form_validate($form, &$form_state) {
           )
         ));
       }
+    }
+    elseif (!$mapping['delete']) {
+      form_set_error('mapping issue',
+        t('Field mappings must have a Drupal and Salesforce field selected.')
+      );
+    }
 
-
+    // Remove mapping
+    if ($mapping['delete']) {
+      unset($form_state['values']['salesforce_field_mappings'][$key]);
     }
   }
 }
