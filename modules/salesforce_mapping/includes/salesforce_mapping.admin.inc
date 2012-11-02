@@ -219,7 +219,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#type' => 'checkboxes',
     '#description' => t('Select which actions on Drupal entities and Salesforce objects should trigger a synchronization. These settings are used by the salesforce_push and salesforce_pull modules respectively.'),
     '#default_value' => $default_triggers,
-    '#options' => salesforce_mapping_sync_trigger_options()
+    '#options' => salesforce_mapping_sync_trigger_options(),
+    '#required' => TRUE,
   );
 
   $form['actions'] = array('#type' => 'actions');
