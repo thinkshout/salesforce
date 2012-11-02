@@ -362,6 +362,20 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     form_set_error('drupal_entity_type', t('This Drupal bundle has already been mapped to a Salesforce object.'));
   }
 
+  // If Salesforce Object Create is selected, ensure that at least one mapping is set to sync or SF to Drupal to prevent "empty" entities
+  if ($values['sync_triggers'][SALESFORCE_MAPPING_SYNC_SF_CREATE] && isset($values['salesforce_field_mappings'])) {
+    $valid_salesforce_create = FALSE;
+    foreach ($values['salesforce_field_mappings'] as $mapping) {
+      if ($mapping['direction'] ==  SALESFORCE_MAPPING_DIRECTION_SYNC || $mapping['direction'] == SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL) {
+        $valid_salesforce_create = TRUE;
+        break;
+      }
+    }
+    if (!$valid_salesforce_create) {
+      form_set_error('mapping issue', t('One mapping must be set to "Sync" or "SF to Drupal" when "Salesforce object create" is selected'));
+    }
+  }
+
   // Validate field mappings.
   $properties = entity_get_all_property_info($values['drupal_entity_type']);
   $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
