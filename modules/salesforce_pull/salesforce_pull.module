@@ -107,7 +107,7 @@ function salesforce_pull_process_records() {
       if ($mapping_object && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_UPDATE)) {
         $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
 
-        // Flat this entity as having been processed. This does not persist, but
+        // Flag this entity as having been processed. This does not persist, but
         // is used by salesforce_push to avoid duplicate processing.
         $entity->salesforce_pull = TRUE;
 
