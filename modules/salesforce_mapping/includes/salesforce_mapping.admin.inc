@@ -289,27 +289,26 @@ function salesforce_mapping_drupal_fields($entity_type, $bundle) {
  */
 function salesforce_mapping_drupal_entities() {
   $types = array('' => t('-- Select --'));
-  foreach (entity_get_info() as $type => $info) {
-    if (in_array('EntityAPIControllerInterface', class_implements($info['controller class'])) ) {
+  foreach (entity_entity_property_info() as $type => $value) {
+    if ($info = entity_get_info($type)) {
       $types[$type] = $info['label'];
     }
   }
+
   return $types;
 }
 
 /**
  * Ajax callback for salesforce_mapping_form().
- *
- * @param $form
- * @param $form_state
- *
- * @return mixed
  */
 function salesforce_mapping_form_callback($form, $form_state) {
   // @todo: This is lazy, we should only return appropriate child elements.
   return $form;
 }
 
+/**
+ * Ajax callback for deleting a field mapping row.
+ */
 function salesforce_mapping_form_delete_field_callback($form, $form_state) {
   return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'];
 }
