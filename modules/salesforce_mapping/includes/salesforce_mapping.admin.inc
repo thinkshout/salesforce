@@ -201,7 +201,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         'delete_field_mapping' => array(
           '#type' => 'checkbox',
           '#ajax' => array(
-            'callback' => 'salesforce_mapping_form_delete_field_callback',
+            'callback' => 'salesforce_mapping_form_field_callback',
             'wrapper' => 'salesforce_field_mappings'
           )
         ),
@@ -214,8 +214,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#type' => 'button',
       '#description' => t('Add one or more field to configure a mapping for.'),
       '#ajax' => array(
-        'callback' => 'salesforce_mapping_form_callback',
-        'wrapper' => 'salesforce_mapping_form'
+        'callback' => 'salesforce_mapping_form_field_callback',
+        'wrapper' => 'salesforce_field_mappings'
       )
     );
   }
@@ -309,7 +309,7 @@ function salesforce_mapping_form_callback($form, $form_state) {
 /**
  * Ajax callback for deleting a field mapping row.
  */
-function salesforce_mapping_form_delete_field_callback($form, $form_state) {
+function salesforce_mapping_form_field_callback($form, $form_state) {
   return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'];
 }
 
