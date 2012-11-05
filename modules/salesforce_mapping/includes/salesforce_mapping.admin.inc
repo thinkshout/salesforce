@@ -138,7 +138,6 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     if (!$mappings_count && isset($mapping)) {
       $mappings_count = count($mapping->field_mappings);
     }
-    $mappings_count = ($mappings_count)? 0 : 1;
 
     if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') {
       $mappings_count++;
@@ -157,10 +156,18 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 
     $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'] = array(
       '#theme' => 'salesforce_fieldmap_form_table',
-      '#tree' => TRUE
+      '#tree' => TRUE,
+      '#attributes' => array('id' => 'salesforce_field_mappings')
     );
 
-    for ($delta = 0; $delta < $mappings_count; $delta++) {
+    $field_mapping_rows = $mappings_count;
+    for ($delta = 0; $delta <= $field_mapping_rows; $delta++) {
+      $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
+      if ($delete) {
+        $mappings_count--;
+        $form_state['salesforce_mappings_count'] = $mappings_count;
+        continue;
+      }
       $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
           '#type' => 'select',
@@ -191,8 +198,12 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#required' => TRUE,
           '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['direction'] : SALESFORCE_MAPPING_DIRECTION_SYNC,
         ),
-        'delete' => array(
+        'delete_field_mapping' => array(
           '#type' => 'checkbox',
+          '#ajax' => array(
+            'callback' => 'salesforce_mapping_form_delete_field_callback',
+            'wrapper' => 'salesforce_field_mappings'
+          )
         ),
       );
     }
@@ -299,6 +310,9 @@ function salesforce_mapping_form_callback($form, $form_state) {
   return $form;
 }
 
+function salesforce_mapping_form_delete_field_callback($form, $form_state) {
+  return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'];
+}
 
 /**
  * Themes the field associations on a fieldmap edit form into a table.
@@ -333,12 +347,12 @@ function theme_salesforce_fieldmap_form_table($variables) {
        'data' => drupal_render($child['direction']),
       ),
       array(
-       'data' => drupal_render($child['delete']),
+       'data' => drupal_render($child['delete_field_mapping']),
       )
     );
   }
 
-  return theme('table', array('header' => $header, 'rows' => $rows));
+  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $elements['#attributes']));
 }
 
 /**
@@ -407,16 +421,6 @@ function salesforce_mapping_form_validate($form, &$form_state) {
           )
         ));
       }
-    }
-    elseif (!$mapping['delete']) {
-      form_set_error('mapping issue',
-        t('Field mappings must have a Drupal and Salesforce field selected.')
-      );
-    }
-
-    // Remove mapping
-    if ($mapping['delete']) {
-      unset($form_state['values']['salesforce_field_mappings'][$key]);
     }
   }
 }
