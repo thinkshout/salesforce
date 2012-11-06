@@ -29,6 +29,7 @@ function salesforce_push_entity_delete($entity, $type) {
 /**
  * Push entities to Salesforce.
  * 
+ * @param $entity_type
  * @param $entity
  * @param $sf_sync_trigger
  */
@@ -147,7 +148,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
       }
 
       drupal_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
-        '%name' => $entity->label(),
+        '%name' => entity_label($entity_type, $entity),
         '%sfid' => $mapped_objects->salesforce_id
       )));
 

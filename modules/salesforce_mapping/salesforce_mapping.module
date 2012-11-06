@@ -173,7 +173,8 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
 /**
  * Returns Salesforce object mappings for a given Drupal entity.
  *
- * @param $entity
+ * @param $entity_type
+ * @param $entity_id
  * @param bool $reset
  *
  * @return array
