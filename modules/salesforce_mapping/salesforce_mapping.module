@@ -178,10 +178,10 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
  *
  * @return array
  */
-function salesforce_mapping_object_load_by_drupal($entity, $reset = FALSE) {
+function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $reset = FALSE) {
   $conditions = array(
-    'entity_id' => $entity->internalIdentifier(),
-    'entity_type' => $entity->entityType()
+    'entity_id' => $entity_id,
+    'entity_type' => $entity_type
   );
   $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
   return !empty($results) ? reset($results) : FALSE;
