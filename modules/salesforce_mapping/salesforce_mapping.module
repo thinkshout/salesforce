@@ -204,8 +204,8 @@ function salesforce_mapping_object_load_by_sfid($salesforce_id, $reset = FALSE) 
   return !empty($results) ? reset($results) : FALSE;
 }
 
-/*
- *
+/**
+ * Return a unique list of mapped salesforce object types.
  */
 function salesforce_mapping_get_mapped_objects() {
   $object_types = array();
@@ -214,4 +214,16 @@ function salesforce_mapping_get_mapped_objects() {
     $object_types[$mapping->salesforce_object_type] = $mapping->salesforce_object_type;
   }
   return $object_types;
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function salesforce_mapping_entity_delete($entity, $type) {
+  // Delete any Salesforce object mappings with this entity
+  list($entity_id) = entity_extract_ids($type, $entity);
+  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  if ($mapping) {
+    $mapping->delete();
+  }
 }
