@@ -126,7 +126,7 @@ function salesforce_pull_process_records() {
           watchdog('Salesforce Pull',
             'Updated entity %label associated with Salesforce Object ID: %sfid',
             array(
-              '%label' => $entity->label(),
+              '%label' => entity_label($mapping_object->entity_type, $entity),
               '%sfid' => $sf_object['Id']
             )
           );
@@ -147,18 +147,20 @@ function salesforce_pull_process_records() {
         // Create entity
         $entity = entity_create($sf_mapping->drupal_entity_type, $values);
         entity_save($sf_mapping->drupal_entity_type, $entity);
+        list($entity_id) = entity_extract_ids($sf_mapping->drupal_entity_type, $entity);
+
         // Create mapping object
         $mapping_object = entity_create('salesforce_mapping_object', array(
           'salesforce_id' => $sf_object['Id'],
           'entity_type' => $sf_mapping->drupal_entity_type,
-          'entity_id' => $entity->internalIdentifier(),
+          'entity_id' => $entity_id
         ));
         $mapping_object->save();
 
         watchdog('Salesforce Pull',
           'Created entity %label associated with Salesforce Object ID: %sfid',
           array(
-            '%label' => $entity->label(),
+            '%label' => entity_label($sf_mapping->drupal_entity_type, $entity),
             '%sfid' => $sf_object['Id']
           )
         );
@@ -202,10 +204,11 @@ function salesforce_pull_process_deleted_records() {
           foreach ($sf_mappings as $sf_mapping) {
             if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
               entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
+
               watchdog('Salesforce Pull',
                 'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
                 array(
-                  '%label' => $entity->label(),
+                  '%label' => entity_label($sf_mapping->drupal_entity_type, $entity),
                   '%id' => $mapping_object->entity_id,
                   '%sfid' => $record->id
                 )
