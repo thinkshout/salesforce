@@ -167,6 +167,18 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
       'render element' => 'elements',
       'file' => 'includes/salesforce_mapping.admin.inc',
     ),
+    'salesforce_mapping_linked_object' => array(
+      'variables' => array(
+        'label_hidden' => FALSE,
+        'title_attributes' => NULL,
+        'label' => '',
+        'content_attributes' => NULL,
+        'items' => array(),
+        'item_attributes' => array(0 => ''),
+        'classes' => '',
+        'attributes' => '',
+      )
+    )
   );
 }
 
@@ -226,4 +238,84 @@ function salesforce_mapping_entity_delete($entity, $type) {
   if ($mapping) {
     $mapping->delete();
   }
+}
+
+/**
+ * Implements hook_entity_load().
+ */
+function salesforce_mapping_entity_load($entities, $type) {
+  // Load the linked Salesforce ID into an entity.
+  foreach ($entities as $entity) {
+    list($entity_id) = entity_extract_ids($type, $entity);
+    $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+    if ($mapping) {
+      $entity->salesforce_id = $mapping->salesforce_id;
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
+  // Render linked Salesforce data when viewing a mapped entity.
+  list($entity_id) = entity_extract_ids($type, $entity);
+  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  if ($mapping) {
+    $sfapi = salesforce_get_api();
+    $entity->content['salesforce_id'] = array(
+      '#theme' => 'salesforce_mapping_linked_object',
+      '#label' => t('Salesforce ID'),
+      '#items' => array(array(
+        '#markup' => l(
+          $mapping->salesforce_id,
+          $sfapi->getInstanceURL() . '/' . $mapping->salesforce_id,
+          array(
+            'attributes' => array('target' => '_blank')
+          )
+        )
+      )),
+      '#classes' => 'field field-label-inline clearfix',
+    );
+    $entity->content['salesforce_last_sync'] = array(
+      '#theme' => 'salesforce_mapping_linked_object',
+      '#label' => t('Salesforce last sync'),
+      '#items' => array(array('#markup' => format_date($mapping->last_sync))),
+      '#markup' => format_date($mapping->last_sync),
+      '#classes' => 'field field-label-inline clearfix',
+    );
+  }
+}
+
+/**
+ * Implements hook_field_extra_fields().
+ */
+function salesforce_mapping_field_extra_fields() {
+  // Include Salesforce data for mapped entities.
+  $mappings = salesforce_mapping_load();
+  foreach ($mappings as $mapping) {
+    $extra[$mapping->drupal_entity_type][$mapping->drupal_bundle] = array(
+      'display' => array(
+        'salesforce_id' => array(
+          'label' => t('Salesforce Id'),
+          'description' => t('ID of a linked Salesforce object.'),
+          'weight' => 0,
+        ),
+        'salesforce_last_sync' => array(
+          'label' => t('Salesforce last sync'),
+          'description' => t('Timestamp for the latest sync with Salesforce.'),
+          'weight' => 0,
+        ),
+      )
+    );
+  }
+
+  return $extra;
+}
+
+/**
+ * Wrapper around theme_field() to format linked Salesforce data.
+ */
+function theme_salesforce_mapping_linked_object($variables) {
+  return theme_field($variables);
 }
