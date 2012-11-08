@@ -319,3 +319,21 @@ function salesforce_mapping_field_extra_fields() {
 function theme_salesforce_mapping_linked_object($variables) {
   return theme_field($variables);
 }
+
+/*
+ * Implements hook_entity_update()
+ *
+ * Ensures drupal entity has an update timestamp
+ */
+function salesforce_mapping_entity_update($entity, $type) {
+  // Check if mapping exists
+  $sf_mappings = salesforce_mapping_load_multiple(array('drupal_entity_type' => $type));
+  if ($sf_mappings) {
+    $sf_mapping_object = salesforce_mapping_object_load_by_drupal($entity, $entity->internalIdentifier());
+    if ($sf_mapping_object) {
+      // Update sync via save
+      $sf_mapping_object->save();
+    }
+  }
+}
+
