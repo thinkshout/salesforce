@@ -20,7 +20,15 @@ REQUIREMENTS
   1) You need a Salesforce account. Developers can register here:
   http://www.developerforce.com/events/regular/registration.php
 
-  2) You will need to create a remote application to to authorize.
+  2) You will need to create a remote application/connected app for
+  authorization. In Salesforce go to Your Name > Setup > Create > Apps then
+  create a new Connected App. Set the callback URL to:
+  https://<your site>/salesforce/oauth_callback  (must use SSL)
+
+  Select at least 'Perform requests on your behalf at any time' for OAuth Scope
+  as well as the appropriate other scopes for your application.
+
+  Additional information:
   https://help.salesforce.com/help/doc/en/remoteaccess_about.htm
 
   3) Your site needs to be SSL enabled to authorize the remote application using
