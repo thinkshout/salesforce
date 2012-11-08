@@ -165,6 +165,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
         $mappings_count--;
+        unset($mapping->field_mappings[$delta]);
         $form_state['salesforce_mappings_count'] = $mappings_count;
         continue;
       }
