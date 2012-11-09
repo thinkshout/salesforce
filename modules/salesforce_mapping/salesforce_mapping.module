@@ -303,7 +303,7 @@ function salesforce_mapping_field_extra_fields() {
     );
   }
 
-  return $extra;
+  return isset($extra)? $extra : array();
 }
 
 /**
