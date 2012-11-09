@@ -6,20 +6,6 @@
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
 
 /**
- * Implements hook_menu().
- */
-function salesforce_pull_menu() {
-  $items['admin/config/services/salesforce/testing'] = array(
-    'title' => 'Salesforce Testing Page',
-    'page callback' => 'salesforce_pull_page',
-    'access callback' => 'salesforce_mappings_access',
-    'type' => MENU_LOCAL_TASK,
-  );
-
-  return $items;
-}
-
-/**
  * Implements hook_cron()
  */
 function salesforce_pull_cron() {
@@ -219,9 +205,4 @@ function salesforce_pull_process_deleted_records() {
     }
     variable_set('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
   }
-}
-
-function salesforce_pull_page() {
-
-  return '';
 }
