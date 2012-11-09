@@ -24,39 +24,6 @@ define('SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL', 'sf_drupal');
 define('SALESFORCE_MAPPING_DIRECTION_SYNC', 'sync');
 
 /**
- * Implements hook_menu().
- */
-function salesforce_mapping_menu() {
-  $items['admin/config/services/salesforce/mappings'] = array(
-    'title' => 'Salesforce Mappings',
-    'page callback' => 'salesforce_mappings_page',
-    'access callback' => 'salesforce_mappings_access',
-    'file' => 'includes/salesforce_mapping.pages.inc',
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['admin/config/services/salesforce/mappings/add'] = array(
-    'title' => 'Add Salesforce mapping',
-    'description' => 'Add a new Salesforce mapping.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_mapping_form'),
-    'access callback' => 'salesforce_mappings_access',
-    'file' => 'includes/salesforce_mapping.admin.inc',
-    'type' => MENU_LOCAL_ACTION,
-  );
-
-  $items['salesforce_mapping/%salesforce_mapping/edit'] = array(
-    'title' => 'Edit mapping',
-    'description' => 'Edit an existing Salesforce mapping.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_mapping_form', 1),
-    'access callback' => 'salesforce_mappings_access',
-    'file' => 'includes/salesforce_mapping.admin.inc',
-  );
-
-  return $items;
-}
-
-/**
  * Access callback for managing salesforce mappings.
  *
  * @return bool
@@ -86,6 +53,7 @@ function salesforce_mapping_entity_info() {
       'entity keys' => array(
         'id' => 'salesforce_mapping_id',
         'name' => 'name',
+        'label' => 'label'
       ),
       'bundle keys' => array(
         'bundle' => 'type',
@@ -95,6 +63,15 @@ function salesforce_mapping_entity_info() {
           'label' => 'Salesforce Mapping',
         ),
       ),
+      // Enable the entity API's admin UI.
+      'admin ui' => array(
+        'path' => 'admin/structure/salesforce/mappings',
+        'file' => 'salesforce_mapping.admin.inc',
+        'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
+        'controller class' => 'SalesforceMappingUIController',
+      ),
+      'access callback' => 'salesforce_mappings_access',
+      'label callback' => 'entity_class_label',
     ),
 
     'salesforce_mapping_object' => array(
@@ -234,9 +211,21 @@ function salesforce_mapping_get_mapped_objects() {
 function salesforce_mapping_entity_delete($entity, $type) {
   // Delete any Salesforce object mappings with this entity
   list($entity_id) = entity_extract_ids($type, $entity);
-  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-  if ($mapping) {
-    $mapping->delete();
+  $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  $entity_info = entity_get_info($type);
+  $bundle = $entity_info['entity keys']['bundle'];
+  $mapping = $bundle?entity_load('salesforce_mapping', FALSE, array(
+    'drupal_entity_type' => $type,
+    'drupal_bundle' => $entity->$bundle
+    )
+  ) : array();
+  $mapping = array_shift(array_values($mapping));
+  // If mapping is set, check for Drupal delete
+  if ($mapping){
+    $delete_trigger = $mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE;
+    if (!$delete_trigger && $mapping_object) {
+      $mapping_object->delete();
+    }
   }
 }
 
@@ -319,3 +308,21 @@ function salesforce_mapping_field_extra_fields() {
 function theme_salesforce_mapping_linked_object($variables) {
   return theme_field($variables);
 }
+
+/*
+ * Implements hook_entity_update()
+ *
+ * Ensures drupal entity has an update timestamp
+ */
+function salesforce_mapping_entity_update($entity, $type) {
+  // Check if mapping exists
+  $sf_mappings = salesforce_mapping_load_multiple(array('drupal_entity_type' => $type));
+  if ($sf_mappings) {
+    $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity->internalIdentifier());
+    if ($sf_mapping_object) {
+      // Update sync via save
+      $sf_mapping_object->save();
+    }
+  }
+}
+

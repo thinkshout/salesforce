@@ -26,6 +26,16 @@ function salesforce_menu() {
     'type' => MENU_CALLBACK,
   );
 
+
+  $items['admin/structure/salesforce'] = array(
+    'title' => 'Salesforce',
+    'description' => '',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('administer salesforce'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
   return $items;
 }
 
@@ -101,7 +111,7 @@ function salesforce_oauth_form() {
       drupal_set_message(t('Salesforce needs to authorized to connect to this website.'));
     }
   }
-  
+
   return $form;
 }
 

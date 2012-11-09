@@ -9,7 +9,11 @@
  *
  * @return mixed
  */
-function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL) {
+function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL, $op = 'edit') {
+  if ($op == 'clone') {
+    $mapping->label .= ' (cloned)';
+    $mapping->name = '';
+  }
   $form['#id'] = 'salesforce_mapping_form';
   $form_state['salesforce_mapping'] = $mapping;
 
@@ -165,6 +169,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
         $mappings_count--;
+        unset($mapping->field_mappings[$delta]);
         $form_state['salesforce_mappings_count'] = $mappings_count;
         continue;
       }
@@ -208,6 +213,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       );
     }
 
+    $form['salesforce_field_mappings_wrapper']['ajax_warning'] = array (
+      '#type' => 'container',
+    );
+
     $form['salesforce_field_mappings_wrapper']['salesforce_add_field'] = array(
       '#value' => t('Add another field mapping'),
       '#name' => 'salesforce_add_field',
@@ -243,6 +252,15 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#value' => t('Save mapping'),
     '#type' => 'submit',
   );
+
+  if (!empty($mapping->name)) {
+    $form['actions']['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete mapping'),
+      '#submit' => array('salesforce_mapping_delete'),
+      '#weight' => 45,
+    );
+  }
 
   return $form;
 }
@@ -310,7 +328,23 @@ function salesforce_mapping_form_callback($form, $form_state) {
  * Ajax callback for deleting a field mapping row.
  */
 function salesforce_mapping_form_field_callback($form, $form_state) {
-  return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'];
+  $ajax_warn = array (
+    '#type' => 'container',
+    '#attributes' => array(
+      'class' => array('messages', 'warning'),
+    ),
+    'message' => array(
+      '#type' => 'markup',
+      '#markup'=> 'Changes made in this list will not be saved until the form is submitted.'
+    ),
+  );
+  return array(
+    '#type' => 'ajax',
+    '#commands' => array(
+      ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
+      ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
+    )
+  );
 }
 
 /**
@@ -398,6 +432,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   }
 
   // Validate field mappings.
+  $info = entity_get_info($values['drupal_entity_type']);
   $properties = entity_get_all_property_info($values['drupal_entity_type']);
   $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
   $key_delta = $values['key'];
@@ -408,6 +443,20 @@ function salesforce_mapping_form_validate($form, &$form_state) {
       foreach ($sf_fields as $field) {
         if ($field['name'] == $mapping['salesforce_field']) {
           $sf_field = $field;
+          $drupal_field_info = field_info_instances($values['drupal_entity_type'], $values['drupal_bundle']);
+          $schema = drupal_get_schema($info['base table']);
+          if (!salesforce_mapping_field_validation($drupal_field, $sf_field, $mapping['direction'])) {
+            form_set_error('salesforce_field_mappings][0][salesforce_field', t('Drupal field %drupal_label is of type %drupal_type,
+              Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
+              array(
+                '%drupal_label' => $drupal_field['label'],
+                '%drupal_type' => $drupal_field['type'],
+                '%sf_label' => $sf_field['label'],
+                '%sf_type' => $sf_field['type'],
+                '%dir' =>$mapping['direction'],
+              )
+            ));
+          }
           break;
         }
       }
@@ -424,6 +473,54 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   }
 }
 
+/*
+ * Field validation
+ */
+function salesforce_mapping_field_validation($sf_field, $drupal_field, $direction) {
+  $valid = FALSE;
+  $length_valid = TRUE;
+
+  // todo: add length validation
+
+  // Type validation
+  /*
+   * Type validation array
+   * direction[array Drupal type][array Salesforce type]
+   */
+  $verify_array = array(
+    'sync' => array(
+      'string' => array('text'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+    'drupal_sf' => array(
+      'string' => array('text'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+    'sf_drupal' => array(
+      'string' => array('text', 'int'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+  );
+
+  $sf_type = $sf_field['type'];
+  $drupal_type_array = isset($verify_array[$direction][$drupal_field['type']])?$verify_array[$direction][$drupal_field['type']]:array();
+  if (empty($drupal_type_array)) {
+    // If type is not found in validation array, assume valid
+    return TRUE;
+  }
+  $type_valid = (array_search($sf_type, $drupal_type_array) === FALSE) ? FALSE : TRUE;
+  $valid = $type_valid && $length_valid;
+  return $valid;
+}
 /**
  * Submit handler for salesforce_mapping_form().
  *
@@ -451,8 +548,8 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     $sync_triggers = $sync_triggers | $value;
   }
 
-  $mapping = $form_state['salesforce_mapping'];
-  if ($mapping) {
+  if ($form_state['salesforce_mapping']->name) {
+    $mapping = $form_state['salesforce_mapping'];
     $mapping->label = $values['label'];
     $mapping->salesforce_object_type = $values['salesforce_object_type'];
     $mapping->salesforce_record_type = $values['salesforce_record_type'];
@@ -479,5 +576,37 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $mapping->save();
 
   drupal_set_message(t('Salesforce field mapping saved.'));
-  $form_state['redirect'] = 'admin/config/services/salesforce/mappings';
+  $form_state['redirect'] = 'admin/structure/salesforce/mappings';
+}
+
+function salesforce_mapping_delete(&$form, &$form_state) {
+  $mapping = $form_state['salesforce_mapping'];
+  $uri = $mapping->uri();
+  $form_state['redirect'] = $uri['path'] . '/delete';
+}
+
+function salesforce_mapping_delete_form($form, &$form_state, $mapping) {
+  $form_state['salesforce_mapping'] = $mapping;
+  $form['#submit'][] = 'salesforce_mapping_delete_form_submit';
+  $uri = $mapping->uri();
+  $form = confirm_form($form,
+    t('Are you sure you want to delete mapping %name?', array('%name' => $mapping->name)),
+    $uri['path'] . '/edit',
+    '<p>' . t('This action cannot be undone.') . '</p>',
+    t('Delete'),
+    t('Cancel'),
+    'confirm'
+  );
+
+  return $form;
+}
+
+function salesforce_mapping_delete_form_submit($form, &$form_state) {
+  $mapping = $form_state['salesforce_mapping'];
+
+  entity_delete($mapping->type, $mapping->internalIdentifier());
+  drupal_set_message(t('The mapping %name has been deleted.', array('%name' => $mapping->name)));
+  watchdog('Salesforce Mapping', 'Deleted mapping %name.', array('%name' => $mapping->name));
+
+  $form_state['redirect'] = 'admin/structure/salesforce/mappings';
 }
