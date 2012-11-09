@@ -329,15 +329,15 @@ function salesforce_mapping_form_callback($form, $form_state) {
  */
 function salesforce_mapping_form_field_callback($form, $form_state) {
   $ajax_warn = array (
-      '#type' => 'container',
-      '#attributes' => array(
-        'class' => array('messages', 'warning'),
-      ),
-      'message' => array(
-        '#type' => 'markup',
-        '#markup'=> 'Changes made in this list will not be saved until the form is submitted.'
-      ),
-    );
+    '#type' => 'container',
+    '#attributes' => array(
+      'class' => array('messages', 'warning'),
+    ),
+    'message' => array(
+      '#type' => 'markup',
+      '#markup'=> 'Changes made in this list will not be saved until the form is submitted.'
+    ),
+  );
   return array(
     '#type' => 'ajax',
     '#commands' => array(
