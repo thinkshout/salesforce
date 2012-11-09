@@ -96,7 +96,7 @@ function salesforce_pull_process_records() {
         // Flag this entity as having been processed. This does not persist, but
         // is used by salesforce_push to avoid duplicate processing.
         $entity->salesforce_pull = TRUE;
-        $entity_updated = isset($entity->updated)? $entity->updated : $mapping_object['last_sync'];
+        $entity_updated = isset($entity->updated)? $entity->updated : $mapping_object['entity_updated'];
         $sf_object_updated = strtotime($sf_object['LastModifiedDate']);
         if ($sf_object_updated > $entity_updated) {
           // Field Mapping

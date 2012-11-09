@@ -159,6 +159,12 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'entity_updated' => array(
+        'description' => 'The Unix timestamp when the object mapping was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'last_sync' => array(
         'description' => 'The Unix timestamp when the record was last synced with Salesforce.',
         'type' => 'int',
