@@ -32,7 +32,7 @@ class SalesforceMapping extends Entity {
   }
 
   protected function defaultUri() {
-    return array('path' => 'salesforce_mapping/' . $this->identifier());
+    return array('path' => 'admin/structure/salesforce/mappings/manage/' . $this->identifier());
   }
 }
 
