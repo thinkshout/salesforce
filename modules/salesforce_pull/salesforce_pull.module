@@ -164,6 +164,10 @@ function salesforce_pull_process_records() {
  * Process deleted records from salesforce
  */
 function salesforce_pull_process_deleted_records() {
+  if (!module_exists('salesforce_soap')) {
+    drupal_set_message('Enable Salesforce SOAP to process deleted records');
+    return;
+  }
   $sfapi = salesforce_get_api();
   module_load_include('inc', 'salesforce_soap');
   $soap = new SalesforceSoapPartner($sfapi);
