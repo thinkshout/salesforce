@@ -26,35 +26,44 @@ define('SALESFORCE_MAPPING_DIRECTION_SYNC', 'sync');
 /**
  * Implements hook_menu().
  */
-function salesforce_mapping_menu() {
-  $items['admin/config/services/salesforce/mappings'] = array(
-    'title' => 'Salesforce Mappings',
-    'page callback' => 'salesforce_mappings_page',
-    'access callback' => 'salesforce_mappings_access',
-    'file' => 'includes/salesforce_mapping.pages.inc',
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['admin/config/services/salesforce/mappings/add'] = array(
-    'title' => 'Add Salesforce mapping',
-    'description' => 'Add a new Salesforce mapping.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_mapping_form'),
-    'access callback' => 'salesforce_mappings_access',
-    'file' => 'includes/salesforce_mapping.admin.inc',
-    'type' => MENU_LOCAL_ACTION,
-  );
-
-  $items['salesforce_mapping/%salesforce_mapping/edit'] = array(
-    'title' => 'Edit mapping',
-    'description' => 'Edit an existing Salesforce mapping.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('salesforce_mapping_form', 1),
-    'access callback' => 'salesforce_mappings_access',
-    'file' => 'includes/salesforce_mapping.admin.inc',
-  );
-
-  return $items;
-}
+//function salesforce_mapping_menu() {
+//  $items['admin/config/services/salesforce/mappings'] = array(
+//    'title' => 'Salesforce Mappings',
+//    'page callback' => 'salesforce_mappings_page',
+//    'access callback' => 'salesforce_mappings_access',
+//    'file' => 'includes/salesforce_mapping.pages.inc',
+//    'type' => MENU_LOCAL_TASK,
+//  );
+//  $items['admin/config/services/salesforce/mappings/add'] = array(
+//    'title' => 'Add Salesforce mapping',
+//    'description' => 'Add a new Salesforce mapping.',
+//    'page callback' => 'drupal_get_form',
+//    'page arguments' => array('salesforce_mapping_form'),
+//    'access callback' => 'salesforce_mappings_access',
+//    'file' => 'includes/salesforce_mapping.admin.inc',
+//    'type' => MENU_LOCAL_ACTION,
+//  );
+//
+//  $items['salesforce_mapping/%salesforce_mapping/edit'] = array(
+//    'title' => 'Edit mapping',
+//    'description' => 'Edit an existing Salesforce mapping.',
+//    'page callback' => 'drupal_get_form',
+//    'page arguments' => array('salesforce_mapping_form', 1),
+//    'access callback' => 'salesforce_mappings_access',
+//    'file' => 'includes/salesforce_mapping.admin.inc',
+//  );
+//  $items['salesforce_mapping/%salesforce_mapping/delete'] = array(
+//    'title' => 'Delete mapping',
+//    'description' => 'Delete an existing Salesforce mapping.',
+//    'page callback' => 'drupal_get_form',
+//    'page arguments' => array('salesforce_mapping_delete_form', 1),
+//    'access callback' => 'salesforce_mappings_access',
+//    'file' => 'includes/salesforce_mapping.admin.inc',
+//  );
+//
+//
+//  return $items;
+//}
 
 /**
  * Access callback for managing salesforce mappings.
@@ -95,6 +104,14 @@ function salesforce_mapping_entity_info() {
           'label' => 'Salesforce Mapping',
         ),
       ),
+      // Enable the entity API's admin UI.
+      'admin ui' => array(
+        'path' => 'admin/structure/salesforce/mappings',
+        'file' => 'salesforce_mapping.admin.inc',
+        'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
+        'controller class' => 'SalesforceMappingUIController',
+      ),
+      'access callback' => 'salesforce_mappings_access'
     ),
 
     'salesforce_mapping_object' => array(

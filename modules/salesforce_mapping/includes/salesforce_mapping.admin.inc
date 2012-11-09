@@ -10,6 +10,11 @@
  * @return mixed
  */
 function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL) {
+function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL, $op = 'edit') {
+  if ($op == 'clone') {
+    $mapping->label .= ' (cloned)';
+    $mapping->name = '';
+  }
   $form['#id'] = 'salesforce_mapping_form';
   $form_state['salesforce_mapping'] = $mapping;
 
@@ -249,6 +254,15 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#type' => 'submit',
   );
 
+  if (!empty($mapping->name)) {
+    $form['actions']['delete'] = array(
+      '#type' => 'submit',
+      '#value' => t('Delete mapping'),
+      '#submit' => array('salesforce_mapping_delete'),
+      '#weight' => 45,
+    );
+  }
+
   return $form;
 }
 
@@ -474,6 +488,8 @@ function salesforce_mapping_form_submit($form, &$form_state) {
 
   $mapping = $form_state['salesforce_mapping'];
   if ($mapping) {
+  if ($form_state['salesforce_mapping']->name) {
+    $mapping = $form_state['salesforce_mapping'];
     $mapping->label = $values['label'];
     $mapping->salesforce_object_type = $values['salesforce_object_type'];
     $mapping->salesforce_record_type = $values['salesforce_record_type'];
@@ -501,4 +517,37 @@ function salesforce_mapping_form_submit($form, &$form_state) {
 
   drupal_set_message(t('Salesforce field mapping saved.'));
   $form_state['redirect'] = 'admin/config/services/salesforce/mappings';
+  $form_state['redirect'] = 'admin/structure/salesforce/mappings';
+}
+
+function salesforce_mapping_delete(&$form, &$form_state) {
+  $mapping = $form_state['salesforce_mapping'];
+  $uri = $mapping->uri();
+  $form_state['redirect'] = $uri['path'] . '/delete';
+}
+
+function salesforce_mapping_delete_form($form, &$form_state, $mapping) {
+  $form_state['salesforce_mapping'] = $mapping;
+  $form['#submit'][] = 'salesforce_mapping_delete_form_submit';
+  $uri = $mapping->uri();
+  $form = confirm_form($form,
+    t('Are you sure you want to delete mapping %name?', array('%name' => $mapping->name)),
+    $uri['path'] . '/edit',
+    '<p>' . t('This action cannot be undone.') . '</p>',
+    t('Delete'),
+    t('Cancel'),
+    'confirm'
+  );
+
+  return $form;
+}
+
+function salesforce_mapping_delete_form_submit($form, &$form_state) {
+  $mapping = $form_state['salesforce_mapping'];
+
+  entity_delete($mapping->type, $mapping->internalIdentifier());
+  drupal_set_message(t('The mapping %name has been deleted.', array('%name' => $mapping->name)));
+  watchdog('Salesforce Mapping', 'Deleted mapping %name.', array('%name' => $mapping->name));
+
+  $form_state['redirect'] = 'admin/structure/salesforce/mappings';
 }
