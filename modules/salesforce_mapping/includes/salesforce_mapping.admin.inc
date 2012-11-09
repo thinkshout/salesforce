@@ -9,7 +9,6 @@
  *
  * @return mixed
  */
-function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL) {
 function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping = NULL, $op = 'edit') {
   if ($op == 'clone') {
     $mapping->label .= ' (cloned)';
@@ -486,8 +485,6 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     $sync_triggers = $sync_triggers | $value;
   }
 
-  $mapping = $form_state['salesforce_mapping'];
-  if ($mapping) {
   if ($form_state['salesforce_mapping']->name) {
     $mapping = $form_state['salesforce_mapping'];
     $mapping->label = $values['label'];
@@ -516,7 +513,6 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $mapping->save();
 
   drupal_set_message(t('Salesforce field mapping saved.'));
-  $form_state['redirect'] = 'admin/config/services/salesforce/mappings';
   $form_state['redirect'] = 'admin/structure/salesforce/mappings';
 }
 
