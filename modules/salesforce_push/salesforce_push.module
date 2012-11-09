@@ -66,6 +66,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
         drupal_set_message(t('Salesforce object %sfid has been deleted.', array(
           '%sfid' => $mapped_objects->salesforce_id
         )));
+        $mapped_objects->delete();
 
         return;
       }

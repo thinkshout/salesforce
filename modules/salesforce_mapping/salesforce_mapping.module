@@ -251,9 +251,20 @@ function salesforce_mapping_get_mapped_objects() {
 function salesforce_mapping_entity_delete($entity, $type) {
   // Delete any Salesforce object mappings with this entity
   list($entity_id) = entity_extract_ids($type, $entity);
-  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-  if ($mapping) {
-    $mapping->delete();
+  $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  $entity_info = entity_get_info($type);
+  $bundle = $entity_info['entity keys']['bundle'];
+  $mapping = $bundle?entity_load('salesforce_mapping', FALSE, array(
+    'drupal_entity_type' => $type,
+    )
+  ) : array();
+  $mapping = array_shift(array_values($mapping));
+  // If mapping is set, check for Drupal delete
+  if ($mapping){
+    $delete_trigger = $mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE;
+    if (!$delete_trigger && $mapping_object) {
+      $mapping_object->delete();
+    }
   }
 }
 
