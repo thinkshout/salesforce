@@ -256,6 +256,7 @@ function salesforce_mapping_entity_delete($entity, $type) {
   $bundle = $entity_info['entity keys']['bundle'];
   $mapping = $bundle?entity_load('salesforce_mapping', FALSE, array(
     'drupal_entity_type' => $type,
+    'drupal_bundle' => $entity->$bundle
     )
   ) : array();
   $mapping = array_shift(array_values($mapping));
