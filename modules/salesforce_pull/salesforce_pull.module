@@ -185,6 +185,7 @@ function salesforce_pull_process_deleted_records() {
         $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
         if ($mapping_object) {
           $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+          $entity_label =  entity_label($mapping_object->entity_type, $entity);
           foreach ($sf_mappings as $sf_mapping) {
             if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
               entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
@@ -193,6 +194,7 @@ function salesforce_pull_process_deleted_records() {
                 'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
                 array(
                   '%label' => entity_label($sf_mapping->drupal_entity_type, $entity),
+                  '%label' => $entity_label,
                   '%id' => $mapping_object->entity_id,
                   '%sfid' => $record->id
                 )
