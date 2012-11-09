@@ -210,21 +210,25 @@ function salesforce_mapping_get_mapped_objects() {
  */
 function salesforce_mapping_entity_delete($entity, $type) {
   // Delete any Salesforce object mappings with this entity
-  list($entity_id) = entity_extract_ids($type, $entity);
+  list($entity_id,,$bundle) = entity_extract_ids($type, $entity);
   $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-  $entity_info = entity_get_info($type);
-  $bundle = $entity_info['entity keys']['bundle'];
-  $mapping = $bundle?entity_load('salesforce_mapping', FALSE, array(
+
+  // No mapping object for this entity, return.
+  if (!$mapping_object) {
+    return;
+  }
+
+  // Only delete mapping if it won't be handled by the delete trigger in the
+  // mapping. We're avoiding the issue of mapping deleting the
+  $mappings = salesforce_mapping_load_multiple(array(
     'drupal_entity_type' => $type,
-    'drupal_bundle' => $entity->$bundle
-    )
-  ) : array();
-  $mapping = array_shift(array_values($mapping));
-  // If mapping is set, check for Drupal delete
-  if ($mapping){
-    $delete_trigger = $mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE;
-    if (!$delete_trigger && $mapping_object) {
+    'drupal_bundle' => $bundle
+  ));
+
+  foreach ($mappings as $mapping) {
+    if (!$mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
       $mapping_object->delete();
+      return;
     }
   }
 }
