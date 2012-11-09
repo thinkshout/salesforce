@@ -193,7 +193,6 @@ function salesforce_pull_process_deleted_records() {
               watchdog('Salesforce Pull',
                 'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
                 array(
-                  '%label' => entity_label($sf_mapping->drupal_entity_type, $entity),
                   '%label' => $entity_label,
                   '%id' => $mapping_object->entity_id,
                   '%sfid' => $record->id
