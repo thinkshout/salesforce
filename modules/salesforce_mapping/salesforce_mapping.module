@@ -330,7 +330,8 @@ function salesforce_mapping_entity_update($entity, $type) {
     list($entity_id) = entity_extract_ids($type, $entity);
     $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
     if ($sf_mapping_object) {
-      // Update sync via save
+      // Update entity update property
+      $sf_mapping_object->entity_updated = REQUEST_TIME;
       $sf_mapping_object->save();
     }
   }

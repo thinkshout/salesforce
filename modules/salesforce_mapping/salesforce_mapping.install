@@ -160,7 +160,7 @@ function salesforce_mapping_schema() {
         'default' => 0,
       ),
       'entity_updated' => array(
-        'description' => 'The Unix timestamp when the object mapping was created.',
+        'description' => 'The Unix timestamp when the mapped Drupal entity was last updated.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,

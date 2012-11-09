@@ -108,6 +108,8 @@ function salesforce_pull_process_records() {
           }
           // Update entity
           entity_save($mapping_object->entity_type, $entity);
+          $mapping_object->last_sync = REQUEST_TIME;
+          $mapping_object->entity_update = REQUEST_TIME;
           watchdog('Salesforce Pull',
             'Updated entity %label associated with Salesforce Object ID: %sfid',
             array(
@@ -140,7 +142,6 @@ function salesforce_pull_process_records() {
           'entity_type' => $sf_mapping->drupal_entity_type,
           'entity_id' => $entity_id
         ));
-        $mapping_object->save();
 
         watchdog('Salesforce Pull',
           'Created entity %label associated with Salesforce Object ID: %sfid',
@@ -151,6 +152,10 @@ function salesforce_pull_process_records() {
         );
       }
     }
+
+    // Save our mapped objects.
+    $mapping_object->save();
+
     // Remove item from queue
     $queue->deleteItem($item);
   }
