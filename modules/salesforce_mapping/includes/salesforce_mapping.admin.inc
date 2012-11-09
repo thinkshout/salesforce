@@ -120,17 +120,23 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     if (!$sfobject) {
       $sfobject = $sfapi->objectDescribe($salesforce_object_type);
     }
+    $type_count = count($sfobject['recordTypeInfos']);
     $sf_types = array('' => t('-- Select --'));
     foreach ($sfobject['recordTypeInfos'] as $type) {
-      $sf_types[$type['recordTypeId']] = $type['name'];
+      if ($type['name'] != 'Master') {
+        $sf_types[$type['recordTypeId']] = $type['name'];
+      }
     }
+    // Check for custom record types
+    $default = $type_count > 1? 0 : SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE;
     $form['salesforce_object']['salesforce_record_type'] = array(
       '#title' => t('Salesforce record type'),
       '#type' => 'select',
       '#description' => t('Select a Salesforce record type to map.'),
-      '#default_value' => isset($mapping) ? $mapping->salesforce_record_type : 0,
+      '#default_value' => (isset($mapping->name) && $type_count > 1) ? $mapping->salesforce_record_type : $default,
       '#options' => $sf_types,
       '#required' => TRUE,
+      '#access' => $type_count > 1,
     );
 
     $sf_fields = array('' => t('-- Select --'));

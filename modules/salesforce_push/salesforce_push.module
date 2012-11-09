@@ -28,7 +28,7 @@ function salesforce_push_entity_delete($entity, $type) {
 
 /**
  * Push entities to Salesforce.
- * 
+ *
  * @param $entity_type
  * @param $entity
  * @param $sf_sync_trigger
@@ -94,7 +94,9 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
       // Entity is not linked to an SF object.
       if (!$mapped_objects) {
         // Setup SF record type
-        $params['RecordTypeId'] = $mapping->salesforce_record_type;
+        if($mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
+          $params['RecordTypeId'] = $mapping->salesforce_record_type;
+        }
 
         try {
           // An external key has been specified, attempt an upsert().

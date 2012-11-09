@@ -23,6 +23,11 @@ define('SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF', 'drupal_sf');
 define('SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL', 'sf_drupal');
 define('SALESFORCE_MAPPING_DIRECTION_SYNC', 'sync');
 
+/*
+ * Field mapping Master or no record type (default) constant
+ */
+define('SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE', 'default');
+
 /**
  * Access callback for managing salesforce mappings.
  *
