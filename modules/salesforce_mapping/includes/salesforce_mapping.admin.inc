@@ -432,6 +432,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   }
 
   // Validate field mappings.
+  $info = entity_get_info($values['drupal_entity_type']);
   $properties = entity_get_all_property_info($values['drupal_entity_type']);
   $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
   $key_delta = $values['key'];
@@ -442,6 +443,20 @@ function salesforce_mapping_form_validate($form, &$form_state) {
       foreach ($sf_fields as $field) {
         if ($field['name'] == $mapping['salesforce_field']) {
           $sf_field = $field;
+          $drupal_field_info = field_info_instances($values['drupal_entity_type'], $values['drupal_bundle']);
+          $schema = drupal_get_schema($info['base table']);
+          if (!salesforce_mapping_field_validation($drupal_field, $sf_field, $mapping['direction'])) {
+            form_set_error('salesforce_field_mappings][0][salesforce_field', t('Drupal field %drupal_label is of type %drupal_type,
+              Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
+              array(
+                '%drupal_label' => $drupal_field['label'],
+                '%drupal_type' => $drupal_field['type'],
+                '%sf_label' => $sf_field['label'],
+                '%sf_type' => $sf_field['type'],
+                '%dir' =>$mapping['direction'],
+              )
+            ));
+          }
           break;
         }
       }
@@ -458,6 +473,54 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   }
 }
 
+/*
+ * Field validation
+ */
+function salesforce_mapping_field_validation($sf_field, $drupal_field, $direction) {
+  $valid = FALSE;
+  $length_valid = TRUE;
+
+  // todo: add length validation
+
+  // Type validation
+  /*
+   * Type validation array
+   * direction[array Drupal type][array Salesforce type]
+   */
+  $verify_array = array(
+    'sync' => array(
+      'string' => array('text'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+    'drupal_sf' => array(
+      'string' => array('text'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+    'sf_drupal' => array(
+      'string' => array('text', 'int'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+  );
+
+  $sf_type = $sf_field['type'];
+  $drupal_type_array = isset($verify_array[$direction][$drupal_field['type']])?$verify_array[$direction][$drupal_field['type']]:array();
+  if (empty($drupal_type_array)) {
+    // If type is not found in validation array, assume valid
+    return TRUE;
+  }
+  $type_valid = (array_search($sf_type, $drupal_type_array) === FALSE) ? FALSE : TRUE;
+  $valid = $type_valid && $length_valid;
+  return $valid;
+}
 /**
  * Submit handler for salesforce_mapping_form().
  *
