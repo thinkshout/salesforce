@@ -322,7 +322,8 @@ function salesforce_mapping_entity_update($entity, $type) {
   // Check if mapping exists
   $sf_mappings = salesforce_mapping_load_multiple(array('drupal_entity_type' => $type));
   if ($sf_mappings) {
-    $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity->internalIdentifier());
+    list($entity_id) = entity_extract_ids($type, $entity);
+    $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
     if ($sf_mapping_object) {
       // Update sync via save
       $sf_mapping_object->save();
