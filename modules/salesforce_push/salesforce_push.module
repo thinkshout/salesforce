@@ -80,7 +80,14 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           continue;
         }
 
-        $value = $wrapper->{$fieldmap['drupal_field']}->value();
+        $drupal_fields_array = explode(':', $fieldmap['drupal_field']);
+        $parent = $wrapper;
+        foreach ($drupal_fields_array as $drupal_field) {
+          $child_wrapper = $parent->{$drupal_field};
+          $parent = $child_wrapper;
+        }
+        $value = $child_wrapper->value();
+
         if (is_array($value)) {
           $value = $value[0];
         }

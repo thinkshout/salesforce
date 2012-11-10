@@ -291,7 +291,16 @@ function salesforce_mapping_drupal_fields($entity_type, $bundle) {
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    $options[$key] = $property['label'];
+    if (isset($property['field']) && $property['field']) {
+      if (!empty($property['property info'])) {
+        foreach ($property['property info'] as $sub_key => $sub_prop) {
+          $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
+        }
+      }
+    }
+    else {
+      $options[$key] = $property['label'];
+    }
   }
 
   return $options;
@@ -434,16 +443,16 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   $key_delta = $values['key'];
   foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
-      $drupal_field = $properties[$mapping['drupal_field']];
+      $field_array = explode(':', $mapping['drupal_field']);
+      $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
       $sf_field = NULL;
       foreach ($sf_fields as $field) {
         if ($field['name'] == $mapping['salesforce_field']) {
           $sf_field = $field;
-          $drupal_field_info = field_info_instances($values['drupal_entity_type'], $values['drupal_bundle']);
-          $schema = drupal_get_schema($info['base table']);
           if (!salesforce_mapping_field_validation($drupal_field, $sf_field, $mapping['direction'])) {
-            form_set_error('salesforce_field_mappings][0][salesforce_field', t('Drupal field %drupal_label is of type %drupal_type,
-              Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
+            form_set_error(
+              "salesforce_field_mappings][{$key}][salesforce_field",
+              t('Drupal field %drupal_label is of type %drupal_type, Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
               array(
                 '%drupal_label' => $drupal_field['label'],
                 '%drupal_type' => $drupal_field['type'],
