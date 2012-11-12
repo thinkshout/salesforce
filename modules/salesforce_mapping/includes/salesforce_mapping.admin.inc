@@ -291,11 +291,9 @@ function salesforce_mapping_drupal_fields($entity_type, $bundle) {
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    if (isset($property['field']) && $property['field']) {
-      if (!empty($property['property info'])) {
-        foreach ($property['property info'] as $sub_key => $sub_prop) {
-          $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
-        }
+    if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
+      foreach ($property['property info'] as $sub_key => $sub_prop) {
+        $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
       }
     }
     else {
