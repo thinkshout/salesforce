@@ -91,6 +91,13 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
         if (is_array($value)) {
           $value = $value[0];
         }
+
+        // Field type specific handling
+        if ($child_wrapper->type() == 'date') {
+          // Drupal provides a timestamp, Salesforce wants ISO 8601 formatted date/time,
+          $value = format_date($value, 'custom', 'c');
+        }
+
         if ($fieldmap['key']) {
           $key_field = $fieldmap['salesforce_field'];
           $key_value = $value;

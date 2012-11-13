@@ -221,7 +221,18 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
         $child_wrapper = $parent->{$drupal_field};
         $parent = $child_wrapper;
       }
-      $parent->set($sf_object[$field_map['salesforce_field']]);
+
+      // Some values need to be converted before saving.
+      // @todo: an alter hook would allow tweaking values during a pull
+      switch ($parent->type()) {
+        case 'date':
+          // Salesforce provides YYYY-MM-DD, Drupal wants a timestamp
+          $value = strtotime($sf_object[$field_map['salesforce_field']]);
+          break;
+        default:
+          $value = $sf_object[$field_map['salesforce_field']];
+      }
+      $parent->set($value);
     }
   }
 }
