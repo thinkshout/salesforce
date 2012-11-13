@@ -144,14 +144,14 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $sf_fields[$sf_field['name']] = $sf_field['label'];
     }
 
-    $mappings_count = isset($form_state['salesforce_mappings_count']) ? $form_state['salesforce_mappings_count'] : 0;
-    if (!$mappings_count && isset($mapping)) {
-      $mappings_count = count($mapping->field_mappings);
-    }
-
-    if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') {
-      $mappings_count++;
-      $form_state['salesforce_mappings_count'] = $mappings_count;
+    if ((isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') ||
+    !isset($mapping->field_mappings)) {
+      $mapping->field_mappings[] = array(
+        'drupal_field' => '',
+        'salesforce_field' => '',
+        'key' => '',
+        'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
+      );
     }
 
     $drupal_entity_type = isset($form_state['values']['drupal_entity_type']) ? $form_state['values']['drupal_entity_type'] : $mapping->drupal_entity_type;
@@ -170,13 +170,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#attributes' => array('id' => 'salesforce_field_mappings')
     );
 
-    $field_mapping_rows = $mappings_count;
-    for ($delta = 0; $delta <= $field_mapping_rows; $delta++) {
+    foreach ($mapping->field_mappings as $delta => $value) {
       $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
-        $mappings_count--;
         unset($mapping->field_mappings[$delta]);
-        $form_state['salesforce_mappings_count'] = $mappings_count;
         continue;
       }
       $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
