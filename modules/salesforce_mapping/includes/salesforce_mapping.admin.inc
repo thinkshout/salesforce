@@ -176,6 +176,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $drupal_type_options[$key] = $fieldmap_type['label'];
     }
 
+    $has_token_type = FALSE;
     foreach ($mapping->field_mappings as $delta => $value) {
       $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
@@ -186,6 +187,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $fieldmap_type_name = &$form_state['values']['salesforce_field_mappings'][$delta]['drupal_field']['fieldmap_type'];
       if (!$fieldmap_type_name && isset($mapping)) {
         $fieldmap_type_name = $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'];
+      }
+
+      if ($fieldmap_type_name == 'token') {
+        $has_token_type = TRUE;
       }
 
       $fieldmap_value_element = array(
@@ -212,8 +217,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
             '#options' => $drupal_type_options,
             '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'] : 0,
             '#ajax' => array(
-              'wrapper' => "drupal_fieldmap_value_wrapper{$delta}",
-              'callback' => 'salesforce_mapping_fieldmap_type_callback'
+              'wrapper' => "salesforce_field_mappings",
+              'callback' => 'salesforce_mapping_form_field_callback'
             )
           ),
           'fieldmap_value' => $fieldmap_value_element
@@ -254,6 +259,14 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     $form['salesforce_field_mappings_wrapper']['ajax_warning'] = array (
       '#type' => 'container',
     );
+
+    if ($has_token_type) {
+      $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
+        '#theme' => 'token_tree',
+        '#token_types' => array($drupal_entity_type),
+        '#global_types' => TRUE
+      );
+    }
 
     $form['salesforce_field_mappings_wrapper']['salesforce_add_field'] = array(
       '#value' => t('Add another field mapping'),
@@ -361,14 +374,6 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
     '#type' => 'ajax',
     '#commands' => $commands
   );
-}
-
-/**
- * Ajax callback for changing the fieldmap type.
- */
-function salesforce_mapping_fieldmap_type_callback($form, $form_state) {
-  $mapping_delta = $form_state['triggering_element']['#parents'][1];
-  return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$mapping_delta]['drupal_field']['fieldmap_value'];
 }
 
 /**
