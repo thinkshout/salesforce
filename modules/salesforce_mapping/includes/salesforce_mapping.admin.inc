@@ -456,13 +456,14 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   $key_delta = $values['key'];
   foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
-      $field_array = explode(':', $mapping['drupal_field']);
+      $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
+      $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
       $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
       $sf_field = NULL;
       foreach ($sf_fields as $field) {
         if ($field['name'] == $mapping['salesforce_field']) {
           $sf_field = $field;
-          if (!salesforce_mapping_field_validation($drupal_field, $sf_field, $mapping['direction'])) {
+          if (!salesforce_mapping_field_validation($drupal_field, $drupal_field_type, $sf_field, $mapping['direction'])) {
             form_set_error(
               "salesforce_field_mappings][{$key}][salesforce_field",
               t('Drupal field %drupal_label is of type %drupal_type, Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
@@ -494,7 +495,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
 /*
  * Field validation
  */
-function salesforce_mapping_field_validation($sf_field, $drupal_field, $direction) {
+function salesforce_mapping_field_validation($drupal_field, $drupal_field_type, $sf_field, $direction) {
   $valid = FALSE;
   $length_valid = TRUE;
 
@@ -528,13 +529,19 @@ function salesforce_mapping_field_validation($sf_field, $drupal_field, $directio
       'email' => array('text'),
     ),
   );
-
-  $sf_type = $sf_field['type'];
-  $drupal_type_array = isset($verify_array[$direction][$drupal_field['type']])?$verify_array[$direction][$drupal_field['type']]:array();
-  if (empty($drupal_type_array)) {
-    // If type is not found in validation array, assume valid
+  if ($drupal_field_type == 'property') {
+    $sf_type = $sf_field['type'];
+    $drupal_type_array = isset($verify_array[$direction][$drupal_field['type']])?$verify_array[$direction][$drupal_field['type']]:array();
+    if (empty($drupal_type_array)) {
+      // If type is not found in validation array, assume valid
+      return TRUE;
+    }
+  }
+  else {
+    // Todo: validate other field types (should this be a case)?
     return TRUE;
   }
+
   $type_valid = (array_search($sf_type, $drupal_type_array) === FALSE) ? FALSE : TRUE;
   $valid = $type_valid && $length_valid;
   return $valid;
