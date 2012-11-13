@@ -5,6 +5,8 @@
  * Manages Salesforce object and Drupal entity mappings.
  */
 
+module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping.fieldmap_type');
+
 /**
  * Bit flags defining when a data sync should take place for a given mapping.
  */
@@ -337,3 +339,41 @@ function salesforce_mapping_entity_update($entity, $type) {
   }
 }
 
+/**
+ * Get the Salesforce fieldmap types array.
+ *
+ * @see hook_salesforce_mapping_fieldmap_type()
+ * @see hook_salesforce_mapping_fieldmap_type_alter()
+ *
+ * @param $fieldmap_type
+ *   The fieldmap type, e.g. property, for which the info shall be returned, or
+ *   NULL to return an array with info about all types.
+ */
+function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
+  // Use the advanced drupal_static() pattern, since this is called very often.
+  static $drupal_static_fast;
+  if (!isset($drupal_static_fast)) {
+    $drupal_static_fast['salesforce_fieldmap_type'] = &drupal_static(__FUNCTION__);
+  }
+  $salesforce_fieldmap_type = &$drupal_static_fast['salesforce_fieldmap_type'];
+
+  if (empty($salesforce_fieldmap_type)) {
+    if ($cache = cache_get('salesforce_fieldmap_type')) {
+      $salesforce_fieldmap_type = $cache->data;
+    }
+    else {
+      $salesforce_fieldmap_type = module_invoke_all('salesforce_mapping_fieldmap_type');
+
+      // Let other modules alter the fieldmap type.
+      drupal_alter('salesforce_fieldmap_type', $salesforce_fieldmap_type);
+      cache_set('salesforce_fieldmap_type', $salesforce_fieldmap_type);
+    }
+  }
+
+  if (empty($fieldmap_type)) {
+    return $salesforce_fieldmap_type;
+  }
+  elseif (isset($salesforce_fieldmap_type[$fieldmap_type])) {
+    return $salesforce_fieldmap_type[$fieldmap_type];
+  }
+}
