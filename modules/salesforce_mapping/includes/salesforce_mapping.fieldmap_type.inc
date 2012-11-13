@@ -59,3 +59,25 @@ function salesforce_mapping_property_fieldmap_options($entity_type) {
 
   return $options;
 }
+
+function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) {
+  $drupal_fields_array = explode(':', $fieldmap['drupal_field']['fieldmap_value']);
+  $parent = $entity_wrapper;
+  foreach ($drupal_fields_array as $drupal_field) {
+    $child_wrapper = $parent->{$drupal_field};
+    $parent = $child_wrapper;
+  }
+  $value = $child_wrapper->value();
+
+  if (is_array($value)) {
+    $value = $value[0];
+  }
+
+  // Field type specific handling
+  if ($child_wrapper->type() == 'date') {
+    // Drupal provides a timestamp, Salesforce wants ISO 8601 formatted date/time,
+    $value = format_date($value, 'custom', 'c');
+  }
+
+  return $value;
+}
