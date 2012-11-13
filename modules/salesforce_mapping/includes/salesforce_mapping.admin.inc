@@ -134,7 +134,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       }
     }
     // Check for custom record types
-    $default = $type_count > 1? 0 : SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE;
+    $default = $type_count > 1 ? 0 : SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE;
     $form['salesforce_object']['salesforce_record_type'] = array(
       '#title' => t('Salesforce record type'),
       '#type' => 'select',
