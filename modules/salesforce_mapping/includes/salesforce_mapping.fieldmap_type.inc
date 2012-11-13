@@ -77,6 +77,7 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
   }
   $value = $child_wrapper->value();
 
+  // TODO: Handle entities that are linked to other SF Objects.
   if (is_array($value)) {
     $value = $value[0];
   }
