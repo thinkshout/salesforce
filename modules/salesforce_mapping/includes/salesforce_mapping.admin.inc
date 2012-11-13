@@ -327,6 +327,7 @@ function salesforce_mapping_form_callback($form, $form_state) {
  * Ajax callback for deleting a field mapping row.
  */
 function salesforce_mapping_form_field_callback($form, $form_state) {
+  $errors = array('#theme' => 'status_messages');
   $ajax_warn = array (
     '#type' => 'container',
     '#attributes' => array(
@@ -337,12 +338,18 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
       '#markup'=> 'Changes made in this list will not be saved until the form is submitted.'
     ),
   );
+  $commands = array(
+    ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
+    ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
+    // Set message.
+    ajax_command_remove('.messages'),
+    ajax_command_after('#page-title', render($errors)),
+    ajax_command_replace('fieldset[id*="edit-salesforce-object"]', render($form['salesforce_object'])),
+    ajax_command_replace('fieldset[id*="edit-drupal-entity"]', render($form['drupal_entity'])),
+  );
   return array(
     '#type' => 'ajax',
-    '#commands' => array(
-      ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
-      ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
-    )
+    '#commands' => $commands
   );
 }
 
