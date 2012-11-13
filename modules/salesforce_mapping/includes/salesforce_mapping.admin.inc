@@ -178,6 +178,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       }
 
       $fieldmap_type_name = &$form_state['values']['salesforce_field_mappings'][$delta]['drupal_field']['fieldmap_type'];
+      if (!$fieldmap_type_name && isset($mapping)) {
+        $fieldmap_type_name = $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'];
+      }
+
       $fieldmap_value_element = array(
         '#prefix' => '<div id="drupal_fieldmap_value_wrapper' . $delta .'">',
         '#suffix' => '</div>',
@@ -187,7 +191,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         $fieldmap_value_element += array(
           '#type' => $fieldmap_type['field_type'],
           '#description' => $fieldmap_type['description'],
-          '#size' => !empty($fieldmap_type['description']) ? $fieldmap_type['description'] : 30
+          '#size' => !empty($fieldmap_type['description']) ? $fieldmap_type['description'] : 30,
+          '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_value'] : NULL,
         );
         if (!empty($fieldmap_type['options_callback'])) {
           $fieldmap_value_element['#options'] = call_user_func($fieldmap_type['options_callback'], $form_state['values']['drupal_entity_type']);
@@ -199,6 +204,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           'fieldmap_type' => array(
             '#type' => 'select',
             '#options' => $drupal_type_options,
+            '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'] : 0,
             '#ajax' => array(
               'wrapper' => "drupal_fieldmap_value_wrapper{$delta}",
               'callback' => 'salesforce_mapping_fieldmap_type_callback'
@@ -351,6 +357,9 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
   );
 }
 
+/**
+ * Ajax callback for changing the fieldmap type.
+ */
 function salesforce_mapping_fieldmap_type_callback($form, $form_state) {
   $mapping_delta = $form_state['triggering_element']['#parents'][1];
   return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$mapping_delta]['drupal_field']['fieldmap_value'];
