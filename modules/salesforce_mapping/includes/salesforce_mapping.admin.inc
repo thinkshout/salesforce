@@ -144,14 +144,14 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $sf_fields[$sf_field['name']] = $sf_field['label'];
     }
 
-    $mappings_count = isset($form_state['salesforce_mappings_count']) ? $form_state['salesforce_mappings_count'] : 0;
-    if (!$mappings_count && isset($mapping)) {
-      $mappings_count = count($mapping->field_mappings);
-    }
-
-    if (isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') {
-      $mappings_count++;
-      $form_state['salesforce_mappings_count'] = $mappings_count;
+    if ((isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') ||
+    !isset($mapping->field_mappings)) {
+      $mapping->field_mappings[] = array(
+        'drupal_field' => '',
+        'salesforce_field' => '',
+        'key' => '',
+        'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
+      );
     }
 
     $form['salesforce_field_mappings_wrapper'] = array(
@@ -169,13 +169,11 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     foreach (salesforce_mapping_get_fieldmap_types() as $key => $fieldmap_type) {
       $drupal_type_options[$key] = $fieldmap_type['label'];
     }
-    $field_mapping_rows = $mappings_count;
-    for ($delta = 0; $delta <= $field_mapping_rows; $delta++) {
+
+    foreach ($mapping->field_mappings as $delta => $value) {
       $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
-        $mappings_count--;
         unset($mapping->field_mappings[$delta]);
-        $form_state['salesforce_mappings_count'] = $mappings_count;
         continue;
       }
 
@@ -327,6 +325,7 @@ function salesforce_mapping_form_callback($form, $form_state) {
  * Ajax callback for deleting a field mapping row.
  */
 function salesforce_mapping_form_field_callback($form, $form_state) {
+  $errors = array('#theme' => 'status_messages');
   $ajax_warn = array (
     '#type' => 'container',
     '#attributes' => array(
@@ -337,12 +336,18 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
       '#markup'=> 'Changes made in this list will not be saved until the form is submitted.'
     ),
   );
+  $commands = array(
+    ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
+    ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
+    // Set message.
+    ajax_command_remove('.messages'),
+    ajax_command_after('#page-title', render($errors)),
+    ajax_command_replace('fieldset[id*="edit-salesforce-object"]', render($form['salesforce_object'])),
+    ajax_command_replace('fieldset[id*="edit-drupal-entity"]', render($form['drupal_entity'])),
+  );
   return array(
     '#type' => 'ajax',
-    '#commands' => array(
-      ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
-      ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
-    )
+    '#commands' => $commands
   );
 }
 
