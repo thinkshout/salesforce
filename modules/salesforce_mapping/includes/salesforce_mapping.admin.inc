@@ -41,6 +41,9 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $form['drupal_entity'] = array(
     '#title' => t('Drupal entity'),
     '#type' => 'fieldset',
+    '#attributes' => array(
+      'id' => array('edit-drupal-entity'),
+    ),
   );
 
   $form['drupal_entity']['drupal_entity_type'] = array(
@@ -83,6 +86,9 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $form['salesforce_object'] = array(
     '#title' => t('Salesforce object'),
     '#type' => 'fieldset',
+    '#attributes' => array(
+      'id' => array('edit-salesforce-object'),
+    ),
   );
 
   $sfapi = salesforce_get_api();
@@ -342,8 +348,8 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
     // Set message.
     ajax_command_remove('.messages'),
     ajax_command_after('#page-title', render($errors)),
-    ajax_command_replace('fieldset[id*="edit-salesforce-object"]', render($form['salesforce_object'])),
-    ajax_command_replace('fieldset[id*="edit-drupal-entity"]', render($form['drupal_entity'])),
+    ajax_command_replace('#edit-salesforce-object', render($form['salesforce_object'])),
+    ajax_command_replace('#edit-drupal-entity', render($form['drupal_entity'])),
   );
   return array(
     '#type' => 'ajax',
