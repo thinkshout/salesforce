@@ -154,11 +154,6 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       );
     }
 
-    $drupal_entity_type = isset($form_state['values']['drupal_entity_type']) ? $form_state['values']['drupal_entity_type'] : $mapping->drupal_entity_type;
-    $drupal_bundle = isset($form_state['values']['drupal_bundle']) ? $form_state['values']['drupal_bundle'] : $mapping->drupal_bundle;
-
-    $drupal_fields = salesforce_mapping_drupal_fields($drupal_entity_type, $drupal_bundle);
-
     $form['salesforce_field_mappings_wrapper'] = array(
       '#title' => t('Salesforce field mappings wrapper'),
       '#type' => 'fieldset',
@@ -170,18 +165,52 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#attributes' => array('id' => 'salesforce_field_mappings')
     );
 
+    $drupal_type_options = array('' => t('-- Select --'));
+    foreach (salesforce_mapping_get_fieldmap_types() as $key => $fieldmap_type) {
+      $drupal_type_options[$key] = $fieldmap_type['label'];
+    }
+
     foreach ($mapping->field_mappings as $delta => $value) {
       $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
         unset($mapping->field_mappings[$delta]);
         continue;
       }
+
+      $fieldmap_type_name = &$form_state['values']['salesforce_field_mappings'][$delta]['drupal_field']['fieldmap_type'];
+      if (!$fieldmap_type_name && isset($mapping)) {
+        $fieldmap_type_name = $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'];
+      }
+
+      $fieldmap_value_element = array(
+        '#prefix' => '<div id="drupal_fieldmap_value_wrapper' . $delta .'">',
+        '#suffix' => '</div>',
+      );
+      if ($fieldmap_type_name) {
+        $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap_type_name);
+        $fieldmap_value_element += array(
+          '#type' => $fieldmap_type['field_type'],
+          '#description' => $fieldmap_type['description'],
+          '#size' => !empty($fieldmap_type['description']) ? $fieldmap_type['description'] : 30,
+          '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_value'] : NULL,
+        );
+        if (!empty($fieldmap_type['options_callback'])) {
+          $fieldmap_value_element['#options'] = call_user_func($fieldmap_type['options_callback'], $form_state['values']['drupal_entity_type']);
+        }
+      }
+
       $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
-          '#type' => 'select',
-          '#description' => t('Select a Drupal field or property to map to a Salesforce field.'),
-          '#options' => $drupal_fields,
-          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['drupal_field'] : 0,
+          'fieldmap_type' => array(
+            '#type' => 'select',
+            '#options' => $drupal_type_options,
+            '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'] : 0,
+            '#ajax' => array(
+              'wrapper' => "drupal_fieldmap_value_wrapper{$delta}",
+              'callback' => 'salesforce_mapping_fieldmap_type_callback'
+            )
+          ),
+          'fieldmap_value' => $fieldmap_value_element
         ),
         'salesforce_field' => array(
           '#type' => 'select',
@@ -276,32 +305,6 @@ function salesforce_mapping_sync_trigger_options() {
 }
 
 /**
- * Return all possible Drupal entity field mappings.
- *
- * @param $entity_type
- * @param $bundle
- *
- * @return array
- */
-function salesforce_mapping_drupal_fields($entity_type, $bundle) {
-  $options = array('' => t('-- Select --'));
-
-  $properties = entity_get_all_property_info($entity_type);
-  foreach ($properties as $key => $property) {
-    if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
-      foreach ($property['property info'] as $sub_key => $sub_prop) {
-        $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
-      }
-    }
-    else {
-      $options[$key] = $property['label'];
-    }
-  }
-
-  return $options;
-}
-
-/**
  * Return a list of Drupal entities that implement EntityAPIControllerInterface.
  *
  * @return array
@@ -352,6 +355,14 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
     '#type' => 'ajax',
     '#commands' => $commands
   );
+}
+
+/**
+ * Ajax callback for changing the fieldmap type.
+ */
+function salesforce_mapping_fieldmap_type_callback($form, $form_state) {
+  $mapping_delta = $form_state['triggering_element']['#parents'][1];
+  return $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$mapping_delta]['drupal_field']['fieldmap_value'];
 }
 
 /**
