@@ -60,6 +60,14 @@ function salesforce_mapping_property_fieldmap_options($entity_type) {
   return $options;
 }
 
+/**
+ * Value callback for property fieldmap type.
+ *
+ * @param $fieldmap
+ * @param $entity_wrapper
+ *
+ * @return mixed
+ */
 function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) {
   $drupal_fields_array = explode(':', $fieldmap['drupal_field']['fieldmap_value']);
   $parent = $entity_wrapper;
@@ -80,4 +88,32 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
   }
 
   return $value;
+}
+
+/**
+ * Value callback for token fieldmap type.
+ *
+ * @param $fieldmap
+ * @param $entity_wrapper
+ *
+ * @return mixed
+ */
+function salesforce_mapping_token_fieldmap_value($fieldmap, $entity_wrapper) {
+  $token = $fieldmap['drupal_field']['fieldmap_value'];
+  $value = token_replace($token, array(
+    $entity_wrapper->type() => $entity_wrapper->value()
+  ));
+  return $value;
+}
+
+/**
+ * Value callback for constant fieldmap type.
+ *
+ * @param $fieldmap
+ * @param $entity_wrapper
+ *
+ * @return mixed
+ */
+function salesforce_mapping_constant_fieldmap_value($fieldmap, $entity_wrapper) {
+  return $fieldmap['drupal_field']['fieldmap_value'];
 }
