@@ -13,7 +13,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
     'property' => array(
       'label' => t('Properties'),
       'field_type' => 'select',
-      'description' => t('Select a Drupal field or property to map to a Salesforce field.'),
+      'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
       'value_callback' => 'salesforce_mapping_property_fieldmap_value',
     ),
@@ -47,13 +47,17 @@ function salesforce_mapping_property_fieldmap_options($entity_type) {
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
-      foreach ($property['property info'] as $sub_key => $sub_prop) {
-        $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
+    $type = entity_property_extract_innermost_type($property['type']);
+    // Leave entities out of this.
+    if (!entity_get_info($type)) {
+      if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
+        foreach ($property['property info'] as $sub_key => $sub_prop) {
+          $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
+        }
       }
-    }
-    else {
-      $options[$key] = $property['label'];
+      else {
+        $options[$key] = $property['label'];
+      }
     }
   }
 
