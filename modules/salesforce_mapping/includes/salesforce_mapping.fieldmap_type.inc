@@ -28,28 +28,36 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'description' => t('Enter a constant value to map to a Salesforce field.'),
       'field_type' => 'textfield',
       'value_callback' => 'salesforce_mapping_constant_fieldmap_value',
-    )
+    ),
+    'related_entity' => array(
+      'label' => t('Related entities'),
+      'field_type' => 'select',
+      'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
+      'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
+      'value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
+    ),
   );
 
   return $types;
 }
 
 /**
- * Return all possible Drupal entity field mappings.
+ * Return all possible Drupal properties for a given entity type.
  *
  * @param $entity_type
- * @param $bundle
+ * @param $include_entities
  *
  * @return array
  */
-function salesforce_mapping_property_fieldmap_options($entity_type) {
+function salesforce_mapping_property_fieldmap_options($entity_type, $include_entities = FALSE) {
   $options = array('' => t('-- Select --'));
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
     $type = entity_property_extract_innermost_type($property['type']);
+    $is_entity = (bool)entity_get_info($type);
     // Leave entities out of this.
-    if (!entity_get_info($type)) {
+    if (($is_entity && $include_entities) || (!$is_entity && !$include_entities)) {
       if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
         foreach ($property['property info'] as $sub_key => $sub_prop) {
           $options[$property['label']][$key . ':' . $sub_key] = $sub_prop['label'];
@@ -62,6 +70,38 @@ function salesforce_mapping_property_fieldmap_options($entity_type) {
   }
 
   return $options;
+}
+
+/**
+ * Return all possible Drupal properties of type entity for a given entity type.
+ *
+ * @param $entity_type
+ *
+ * @return array
+ */
+function salesforce_mapping_related_entity_fieldmap_options($entity_type) {
+  return salesforce_mapping_property_fieldmap_options($entity_type, TRUE);
+}
+
+/**
+ * Value callback for related entity fieldmap type.
+ *
+ * @param $fieldmap
+ * @param $entity_wrapper
+ *
+ * @return mixed
+ */
+function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wrapper) {
+  $value = NULL;
+  $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
+  $mapped_objects = salesforce_mapping_object_load_by_drupal(
+    $related_wrapper->type(),
+    $related_wrapper->getIdentifier()
+  );
+  if ($mapped_objects) {
+    $value = $mapped_objects->salesforce_id;
+  }
+  return $value;
 }
 
 /**
