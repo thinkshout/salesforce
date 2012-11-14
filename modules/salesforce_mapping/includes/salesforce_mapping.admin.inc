@@ -465,31 +465,18 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   $properties = entity_get_all_property_info($values['drupal_entity_type']);
   $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
   $key_delta = $values['key'];
+
   foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
-    if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
+    $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
+    $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
+    if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
+      $filter = salesforce_field_filter($mapping['salesforce_field']);
+      $sf_field = array_values(array_filter($sf_fields, $filter));
       $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
-      $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
       $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
-      $sf_field = NULL;
-      foreach ($sf_fields as $field) {
-        if ($field['name'] == $mapping['salesforce_field']) {
-          $sf_field = $field;
-          if (!salesforce_mapping_field_validation($drupal_field, $drupal_field_type, $sf_field, $mapping['direction'])) {
-            form_set_error(
-              "salesforce_field_mappings][{$key}][salesforce_field",
-              t('Drupal field %drupal_label is of type %drupal_type, Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
-              array(
-                '%drupal_label' => $drupal_field['label'],
-                '%drupal_type' => $drupal_field['type'],
-                '%sf_label' => $sf_field['label'],
-                '%sf_type' => $sf_field['type'],
-                '%dir' =>$mapping['direction'],
-              )
-            ));
-          }
-          break;
-        }
-      }
+
+      // todo: Are drupal_field, sf_field, direction and key always used in validation?
+      call_user_func($field_map['validation_callback'], $drupal_field, $sf_field[0], $mapping['direction'], $key);
 
       // ensure valid SF external ID field
       if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
@@ -504,59 +491,18 @@ function salesforce_mapping_form_validate($form, &$form_state) {
 }
 
 /*
- * Field validation
+ * Closure used sf_field filter
  */
-function salesforce_mapping_field_validation($drupal_field, $drupal_field_type, $sf_field, $direction) {
-  $valid = FALSE;
-  $length_valid = TRUE;
-
-  // todo: add length validation
-
-  // Type validation
-  /*
-   * Type validation array
-   * direction[array Drupal type][array Salesforce type]
-   */
-  $verify_array = array(
-    'sync' => array(
-      'string' => array('text'),
-      'int' => array('integer'),
-      'id' => array('integer'),
-      'datetime' => array('date'),
-      'email' => array('text'),
-    ),
-    'drupal_sf' => array(
-      'string' => array('text'),
-      'int' => array('integer'),
-      'id' => array('integer'),
-      'datetime' => array('date'),
-      'email' => array('text'),
-    ),
-    'sf_drupal' => array(
-      'string' => array('text', 'int'),
-      'int' => array('integer'),
-      'id' => array('integer'),
-      'datetime' => array('date'),
-      'email' => array('text'),
-    ),
-  );
-  if ($drupal_field_type == 'property') {
-    $sf_type = $sf_field['type'];
-    $drupal_type_array = isset($verify_array[$direction][$drupal_field['type']])?$verify_array[$direction][$drupal_field['type']]:array();
-    if (empty($drupal_type_array)) {
-      // If type is not found in validation array, assume valid
-      return TRUE;
+function salesforce_field_filter($sf_mapping_field) {
+  return function($sf_field) use ($sf_mapping_field) {
+    $pass = FALSE;
+    if ($sf_mapping_field == $sf_field['name']) {
+      $pass = TRUE;
     }
-  }
-  else {
-    // Todo: validate other field types (should this be a case)?
-    return TRUE;
-  }
-
-  $type_valid = (array_search($sf_type, $drupal_type_array) === FALSE) ? FALSE : TRUE;
-  $valid = $type_valid && $length_valid;
-  return $valid;
+    return $pass;
+  };
 }
+
 /**
  * Submit handler for salesforce_mapping_form().
  *

@@ -16,6 +16,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
       'value_callback' => 'salesforce_mapping_property_fieldmap_value',
+      'validation_callback' => 'salesforce_mapping_property_validation',
     ),
     'token' => array(
       'label' => t('Token'),
@@ -135,6 +136,68 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
   return $value;
 }
 
+
+/*
+ * Property field validation callback
+ */
+function salesforce_mapping_property_validation($drupal_field, $sf_field, $direction, $key) {
+  $valid = FALSE;
+  $length_valid = TRUE;
+
+  // todo: add length validation
+
+  // Type validation
+  /*
+   * Type validation array
+   * direction[array Drupal type][array Salesforce type]
+   */
+  $verify_array = array(
+    'sync' => array(
+      'string' => array('text'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+    'drupal_sf' => array(
+      'string' => array('text'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+    'sf_drupal' => array(
+      'string' => array('text', 'int'),
+      'int' => array('integer'),
+      'id' => array('integer'),
+      'datetime' => array('date'),
+      'email' => array('text'),
+    ),
+  );
+
+  $drupal_type = $drupal_field['type'];
+  $sf_type_array = isset($verify_array[$direction][$sf_field['type']]) ? $verify_array[$direction][$sf_field['type']] : array();
+  if (empty($sf_type_array)) {
+    // If type is not found in validation array, assume valid
+    return TRUE;
+  }
+
+  $type_valid = (array_search($drupal_type, $sf_type_array) === FALSE) ? FALSE : TRUE;
+  $valid = $type_valid && $length_valid;
+  if (!$valid) {
+    form_set_error(
+      "salesforce_field_mappings][{$key}][salesforce_field",
+      t('Drupal field %drupal_label is of type %drupal_type, Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
+      array(
+        '%drupal_label' => $drupal_field['label'],
+        '%drupal_type' => $drupal_field['type'],
+        '%sf_label' => $sf_field['label'],
+        '%sf_type' => $sf_field['type'],
+        '%dir' =>$direction,
+      )
+    ));
+  }
+}
 /**
  * Value callback for token fieldmap type.
  *
