@@ -65,9 +65,12 @@ class Salesforce {
         // refresh token
         $this->refreshToken();
 
-        // rebuild our request and repeat request
+        // Rebuild our request and repeat request.
         $response = $this->apiHttpRequest($path, $params, $method);
-        //@todo: test response code, don't get caught in a loop
+        // Throw an error if we still have bad response.
+        if (!in_array($response->code, array(200,201,204))) {
+          throw new SalesforceException($this->response->error, $this->response->code);
+        }
 
         break;
       case 200:
