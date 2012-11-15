@@ -123,8 +123,6 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     return $entity;
   }
   // Handle relations
-  // todo: dont delete and add if its the same
-  // todo: dont delete other relations
   else {
     $type =  $info['parent']->type();
     $id =  $info['parent']->getIdentifier();
@@ -134,20 +132,36 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     if ($results) {
       $relations = relation_load_multiple(array_keys($results));
     }
+    // todo: Loop and delete all of same org type
     if (isset($relations)) {
       $rid = array_keys($relations);
-      // Delete relation
-      relation_delete($rid[0]);
+      $match = TRUE;
+      // Check if same as existing
+      $current_endpoints = $relations[$rid[0]]->endpoints;
+      if (
+        ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
+        ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
+        ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
+        ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
+      )
+      {
+        // Delete relation
+        relation_delete($rid[0]);
+        $match = FALSE;
+      }
     }
 
     // Create new relation and endpoints
-    $relation_type = $info['relation_type'];
-    $endpoints = array(
-      array('entity_type' => $type, 'entity_id' => $id),
-      array('entity_type' => $mapped_objects->entity_type, 'entity_id' => $mapped_objects->entity_id),
-    );
-    $relation_new = relation_create($relation_type, $endpoints);
-    relation_save($relation_new);
+    if ($mapped_objects && !$match) {
+      $relation_type = $info['relation_type'];
+      $endpoints = array(
+        array('entity_type' => $type, 'entity_id' => $id),
+        array('entity_type' => $mapped_objects->entity_type, 'entity_id' => $mapped_objects->entity_id),
+      );
+      $relation_new = relation_create($relation_type, $endpoints);
+      relation_save($relation_new);
+    }
+
   }
 }
 
