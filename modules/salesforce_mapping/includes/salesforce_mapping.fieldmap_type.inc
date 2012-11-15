@@ -177,7 +177,12 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
   $drupal_fields_array = explode(':', $fieldmap['drupal_field']['fieldmap_value']);
   $parent = $entity_wrapper;
   foreach ($drupal_fields_array as $drupal_field) {
-    $child_wrapper = $parent->{$drupal_field};
+    if ($parent instanceof EntityListWrapper) {
+      $child_wrapper = $parent->get(0)->{$drupal_field};
+    }
+    else {
+      $child_wrapper = $parent->{$drupal_field};
+    }
     $parent = $child_wrapper;
   }
   $value = $child_wrapper->value();
