@@ -215,13 +215,16 @@ function salesforce_pull_process_deleted_records() {
 function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
   foreach ($field_maps as $field_map) {
     if ($field_map['direction'] == 'sync' || $field_map['direction'] == 'sf_drupal') {
-      $drupal_fields_array = explode(':', $field_map['drupal_field']);
+
+      $drupal_fields_array = explode(':', $field_map['drupal_field']['fieldmap_value']);
       $parent = $entity_wrapper;
       foreach ($drupal_fields_array as $drupal_field) {
         $child_wrapper = $parent->{$drupal_field};
         $parent = $child_wrapper;
       }
-      $parent->set($sf_object[$field_map['salesforce_field']]);
+      $fieldmap_type = salesforce_mapping_get_fieldmap_types($field_map['drupal_field']['fieldmap_type']);
+      $value = call_user_func($fieldmap_type['pull_value_callback'], $parent, $sf_object, $field_map);
+      $parent->set($value);
     }
   }
 }
