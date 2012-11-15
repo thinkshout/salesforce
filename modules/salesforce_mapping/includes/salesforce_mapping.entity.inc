@@ -17,7 +17,8 @@ class SalesforceMapping extends Entity {
     $field_mappings,
     $sync_triggers,
     $created,
-    $updated;
+    $updated,
+    $weight;
 
   public function __construct(array $values = array()) {
     parent::__construct($values, 'salesforce_mapping');
