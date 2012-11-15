@@ -15,7 +15,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_property_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_property_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_property_fieldmap_pull_value',
       'validation_callback' => 'salesforce_mapping_property_validation',
     ),
@@ -36,7 +36,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_related_entity_fieldmap_pull_value',
     ),
   );
@@ -94,7 +94,7 @@ function salesforce_mapping_related_entity_fieldmap_options($entity_type) {
  *
  * @return mixed
  */
-function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wrapper) {
+function salesforce_mapping_related_entity_fieldmap_push_value($fieldmap, $entity_wrapper) {
   $value = NULL;
   if (property_exists($entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'], 'isEntityList')) {
     $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
@@ -131,26 +131,32 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     $results = $query->execute();
     if ($results) {
       $relations = relation_load_multiple(array_keys($results));
-    }
-    // todo: Loop and delete all of same org type
-    if (isset($relations)) {
-      $rid = array_keys($relations);
       $match = TRUE;
-      // Check if same as existing
-      $current_endpoints = $relations[$rid[0]]->endpoints;
-      if (
-        ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
-        ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
-        ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
-        ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
-      )
-      {
-        // Delete relation
-        relation_delete($rid[0]);
-        $match = FALSE;
-      }
+    }
+    else {
+      $match = FALSE;
     }
 
+    if (isset($relations)) {
+      foreach ($relations as $rid => $relation) {
+        $match = TRUE;
+        // Check if matches existing
+        $current_endpoints = $relations[$rid]->endpoints;
+        if (
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
+          ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
+          ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
+        )
+        {
+          $match = FALSE;
+        }
+        // If same type and not a match delete relation
+        if ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] == $mapped_objects->entity_type && !$match) {
+          relation_delete($rid);
+        }
+      }
+    }
     // Create new relation and endpoints
     if ($mapped_objects && !$match) {
       $relation_type = $info['relation_type'];
@@ -173,7 +179,7 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
  *
  * @return mixed
  */
-function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) {
+function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrapper) {
   $drupal_fields_array = explode(':', $fieldmap['drupal_field']['fieldmap_value']);
   $parent = $entity_wrapper;
   foreach ($drupal_fields_array as $drupal_field) {
