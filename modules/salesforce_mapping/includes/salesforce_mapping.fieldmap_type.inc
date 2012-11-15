@@ -186,7 +186,11 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  return $sf_object[$field_map['salesforce_field']];
+  $value = $sf_object[$field_map['salesforce_field']];
+  if ($entity_wrapper->type() == 'date' && isset($value))  {
+    $value = strtotime($value);
+  }
+  return $value;
 }
 
 /*
