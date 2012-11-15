@@ -219,7 +219,12 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       $drupal_fields_array = explode(':', $field_map['drupal_field']['fieldmap_value']);
       $parent = $entity_wrapper;
       foreach ($drupal_fields_array as $drupal_field) {
-        $child_wrapper = $parent->{$drupal_field};
+        if ($parent instanceof EntityListWrapper) {
+         $child_wrapper = $parent->get(0)->{$drupal_field};
+        }
+        else {
+          $child_wrapper = $parent->{$drupal_field};
+        }
         $parent = $child_wrapper;
       }
       $fieldmap_type = salesforce_mapping_get_fieldmap_types($field_map['drupal_field']['fieldmap_type']);
