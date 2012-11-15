@@ -23,6 +23,7 @@ function salesforce_pull_get_updated_records() {
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
     // Get field list from mappings
+    $mapped_fields = array();
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
         $mapped_fields[$field_map['salesforce_field']] = $field_map['salesforce_field'];
