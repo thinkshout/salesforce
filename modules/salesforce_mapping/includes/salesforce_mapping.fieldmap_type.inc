@@ -16,6 +16,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
       'push_value_callback' => 'salesforce_mapping_property_fieldmap_value',
+      'pull_value_callback' => 'salesforce_mapping_property_fieldmap_pull_value',
       'validation_callback' => 'salesforce_mapping_property_validation',
     ),
     'token' => array(
@@ -36,6 +37,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
       'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
+      'pull_value_callback' => 'salesforce_mapping_related_entity_fieldmap_pull_value',
     ),
   );
 
@@ -94,7 +96,12 @@ function salesforce_mapping_related_entity_fieldmap_options($entity_type) {
  */
 function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wrapper) {
   $value = NULL;
-  $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
+  if (property_exists($entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'], 'isEntityList')) {
+    $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
+  }
+  else {
+    $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'];
+  }
   $mapped_objects = salesforce_mapping_object_load_by_drupal(
     $related_wrapper->type(),
     $related_wrapper->getIdentifier()
@@ -103,6 +110,45 @@ function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wra
     $value = $mapped_objects->salesforce_id;
   }
   return $value;
+}
+
+/**
+ * Pull value callback for property fieldmap type.
+ */
+function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
+  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']]);
+  $info = $entity_wrapper->info();
+  if ($mapped_objects && !isset($info['relation_type'])) {
+    $entity = entity_load($mapped_objects->entity_type, array($mapped_objects->entity_id));
+    return $entity;
+  }
+  // Handle relations
+  // todo: dont delete and add if its the same
+  // todo: dont delete other relations
+  else {
+    $type =  $info['parent']->type();
+    $id =  $info['parent']->getIdentifier();
+    $query = relation_query($type, $id);
+    $query->propertyCondition('relation_type', $info['relation_type']);
+    $results = $query->execute();
+    if ($results) {
+      $relations = relation_load_multiple(array_keys($results));
+    }
+    if (isset($relations)) {
+      $rid = array_keys($relations);
+      // Delete relation
+      relation_delete($rid[0]);
+    }
+
+    // Create new relation and endpoints
+    $relation_type = $info['relation_type'];
+    $endpoints = array(
+      array('entity_type' => $type, 'entity_id' => $id),
+      array('entity_type' => $mapped_objects->entity_type, 'entity_id' => $mapped_objects->entity_id),
+    );
+    $relation_new = relation_create($relation_type, $endpoints);
+    relation_save($relation_new);
+  }
 }
 
 /**
@@ -136,6 +182,12 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
   return $value;
 }
 
+/**
+ * Pull value callback for property fieldmap type.
+ */
+function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
+  return $sf_object[$field_map['salesforce_field']];
+}
 
 /*
  * Property field validation callback
