@@ -15,7 +15,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_property_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_property_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_property_fieldmap_pull_value',
       'validation_callback' => 'salesforce_mapping_property_validation',
     ),
@@ -36,7 +36,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_related_entity_fieldmap_pull_value',
     ),
   );
@@ -94,7 +94,7 @@ function salesforce_mapping_related_entity_fieldmap_options($entity_type) {
  *
  * @return mixed
  */
-function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wrapper) {
+function salesforce_mapping_related_entity_fieldmap_push_value($fieldmap, $entity_wrapper) {
   $value = NULL;
   if (property_exists($entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'], 'isEntityList')) {
     $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
@@ -179,7 +179,7 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
  *
  * @return mixed
  */
-function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) {
+function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrapper) {
   $drupal_fields_array = explode(':', $fieldmap['drupal_field']['fieldmap_value']);
   $parent = $entity_wrapper;
   foreach ($drupal_fields_array as $drupal_field) {
