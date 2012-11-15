@@ -15,27 +15,27 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
-      'value_callback' => 'salesforce_mapping_property_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_property_fieldmap_value',
       'validation_callback' => 'salesforce_mapping_property_validation',
     ),
     'token' => array(
       'label' => t('Token'),
       'description' => t('Enter a token to map a Salesforce field..'),
       'field_type' => 'textfield',
-      'value_callback' => 'salesforce_mapping_token_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_token_fieldmap_value',
     ),
     'constant' => array(
       'label' => t('Constant'),
       'description' => t('Enter a constant value to map to a Salesforce field.'),
       'field_type' => 'textfield',
-      'value_callback' => 'salesforce_mapping_constant_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_constant_fieldmap_value',
     ),
     'related_entity' => array(
       'label' => t('Related entities'),
       'field_type' => 'select',
       'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
-      'value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
     ),
   );
 

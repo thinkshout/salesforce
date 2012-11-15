@@ -86,7 +86,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           $key_value = $value;
         }
         $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
-        $value = call_user_func($fieldmap_type['value_callback'], $fieldmap, $wrapper);
+        $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $wrapper);
         $params[$fieldmap['salesforce_field']] = $value;
       }
 
