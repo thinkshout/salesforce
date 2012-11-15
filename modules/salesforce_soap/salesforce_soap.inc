@@ -24,7 +24,7 @@ class SalesforceSoapPartner extends SforcePartnerClient {
    * @return string
    */
   private function endPoint() {
-    return $this->SalesforceApi->getInstanceURL() . "/services/Soap/c" . $this->SalesforceApi->rest_api_version['url'];
+    return $this->SalesforceApi->getInstanceURL() . "/services/Soap/u" . $this->SalesforceApi->rest_api_version['url'];
   }
 
 }
