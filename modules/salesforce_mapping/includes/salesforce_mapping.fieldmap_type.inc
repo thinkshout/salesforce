@@ -116,7 +116,7 @@ function salesforce_mapping_related_entity_fieldmap_push_value($fieldmap, $entit
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']]);
+  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']['name']]);
   $info = $entity_wrapper->info();
   if ($mapped_objects && !isset($info['relation_type'])) {
     $entity = entity_load($mapped_objects->entity_type, array($mapped_objects->entity_id));
@@ -167,8 +167,9 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
       $relation_new = relation_create($relation_type, $endpoints);
       relation_save($relation_new);
     }
-
   }
+
+  return FALSE;
 }
 
 /**
@@ -193,7 +194,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   }
   $value = $child_wrapper->value();
 
-  // TODO: Handle entities that are linked to other SF Objects.
+  // Always the take the first value when cardinality is > 0.
   if (is_array($value)) {
     $value = $value[0];
   }
@@ -211,7 +212,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  $value = $sf_object[$field_map['salesforce_field']];
+  $value = $sf_object[$field_map['salesforce_field']['name']];
   if ($entity_wrapper->type() == 'date' && isset($value))  {
     $value = strtotime($value);
   }
@@ -283,6 +284,7 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
     ));
   }
 }
+
 /**
  * Value callback for token fieldmap type.
  *
