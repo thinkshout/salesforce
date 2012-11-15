@@ -20,5 +20,6 @@ function salesforce_pull_uninstall() {
   foreach (salesforce_mapping_get_mapped_objects() as $types) {
     variable_del('salesforce_pull_data_' . $types);
   }
+  variable_set('salesforce_pull_limit');
 }
 
