@@ -213,6 +213,13 @@ function salesforce_pull_process_deleted_records() {
   }
 }
 
+/**
+ * Map field values.
+ * 
+ * @param $field_maps
+ * @param $entity_wrapper
+ * @param $sf_object
+ */
 function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
   foreach ($field_maps as $field_map) {
     if ($field_map['direction'] == 'sync' || $field_map['direction'] == 'sf_drupal') {
@@ -230,7 +237,10 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       }
       $fieldmap_type = salesforce_mapping_get_fieldmap_types($field_map['drupal_field']['fieldmap_type']);
       $value = call_user_func($fieldmap_type['pull_value_callback'], $parent, $sf_object, $field_map);
-      if (isset($value)) $parent->set($value);
+
+      if ($value) {
+        $parent->set($value);
+      }
     }
   }
 }

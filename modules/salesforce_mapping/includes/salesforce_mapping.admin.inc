@@ -227,7 +227,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#type' => 'select',
           '#description' => t('Select a Salesforce field to map.'),
           '#options' => $sf_fields,
-          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['salesforce_field'] : 0,
+          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['salesforce_field']['name'] : 0,
         ),
         'key' => array(
           '#type' => 'radio',
@@ -513,11 +513,13 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
   $key_delta = $values['key'];
+  $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
   foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
+      $sf_field = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
       $mappings[] = array(
         'drupal_field' => $mapping['drupal_field'],
-        'salesforce_field' => $mapping['salesforce_field'],
+        'salesforce_field' => reset($sf_field),
         'key' => $key_delta && ($key === (int)$key_delta),
         'direction' => $mapping['direction']
       );
