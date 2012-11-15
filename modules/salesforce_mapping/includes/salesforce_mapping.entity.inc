@@ -17,7 +17,8 @@ class SalesforceMapping extends Entity {
     $field_mappings,
     $sync_triggers,
     $created,
-    $updated;
+    $updated,
+    $weight;
 
   public function __construct(array $values = array()) {
     parent::__construct($values, 'salesforce_mapping');
@@ -33,21 +34,6 @@ class SalesforceMapping extends Entity {
 
   protected function defaultUri() {
     return array('path' => 'admin/structure/salesforce/mappings/manage/' . $this->identifier());
-  }
-}
-
-/**
- * Salesforce Mapping UI controller.
- */
-class SalesforceMappingUIController extends EntityDefaultUIController {
-
-  /**
-   * Overrides hook_menu() defaults.
-   */
-  public function hook_menu() {
-    $items = parent::hook_menu();
-    $items[$this->path]['description'] = 'Manage Salesforce mappings';
-    return $items;
   }
 
 }

@@ -87,6 +87,13 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny',
+        'description' => 'The weight of this salesforce_mapping type in relation to others.',
+      ),
       // following fields are for supporting exportable status.
       'locked' => array(
         'description' => 'A boolean indicating whether the administrator may delete this mapping.',
