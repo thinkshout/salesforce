@@ -129,6 +129,7 @@ function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE)
   foreach ($properties as $key => $value) {
     $efq->propertyCondition($key, $value);
   }
+  $efq->propertyOrderBy('weight');
 
   $results = $efq->execute();
   if (!empty($results)) {
