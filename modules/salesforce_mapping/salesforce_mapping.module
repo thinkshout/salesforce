@@ -73,7 +73,7 @@ function salesforce_mapping_entity_info() {
       // Enable the entity API's admin UI.
       'admin ui' => array(
         'path' => 'admin/structure/salesforce/mappings',
-        'file' => 'salesforce_mapping.admin.inc',
+        'file' => 'salesforce_mapping.ui_controller.inc',
         'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
         'controller class' => 'SalesforceMappingUIController',
       ),
@@ -162,7 +162,11 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
         'classes' => '',
         'attributes' => '',
       )
-    )
+    ),
+    'salesforce_mapping_overview_tabledrag_form' => array(
+      'render element' => 'form',
+      'file' => 'includes/salesforce_mapping.ui_controller.inc',
+    ),
   );
 }
 
