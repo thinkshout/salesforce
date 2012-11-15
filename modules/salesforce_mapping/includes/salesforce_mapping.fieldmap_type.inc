@@ -209,6 +209,10 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
   if ($entity_wrapper->type() == 'date' && isset($value))  {
     $value = strtotime($value);
   }
+  if ($entity_wrapper->type() == 'boolean' && isset($value))  {
+    $value = (int) $value;
+  }
+
   return $value;
 }
 
