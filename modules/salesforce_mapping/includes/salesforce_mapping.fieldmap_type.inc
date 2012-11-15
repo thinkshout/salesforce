@@ -131,26 +131,32 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     $results = $query->execute();
     if ($results) {
       $relations = relation_load_multiple(array_keys($results));
-    }
-    // todo: Loop and delete all of same org type
-    if (isset($relations)) {
-      $rid = array_keys($relations);
       $match = TRUE;
-      // Check if same as existing
-      $current_endpoints = $relations[$rid[0]]->endpoints;
-      if (
-        ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
-        ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
-        ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
-        ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
-      )
-      {
-        // Delete relation
-        relation_delete($rid[0]);
-        $match = FALSE;
-      }
+    }
+    else {
+      $match = FALSE;
     }
 
+    if (isset($relations)) {
+      foreach ($relations as $rid => $relation) {
+        $match = TRUE;
+        // Check if matches existing
+        $current_endpoints = $relations[$rid]->endpoints;
+        if (
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
+          ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
+          ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
+        )
+        {
+          $match = FALSE;
+        }
+        // If same type and not a match delete relation
+        if ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] == $mapped_objects->entity_type && !$match) {
+          relation_delete($rid);
+        }
+      }
+    }
     // Create new relation and endpoints
     if ($mapped_objects && !$match) {
       $relation_type = $info['relation_type'];
