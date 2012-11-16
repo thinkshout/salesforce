@@ -25,3 +25,19 @@ function hook_salesforce_mapping_fieldmap_type() {
 function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
 
 }
+
+/**
+ * Alter the parameters being mapped to a Salesforce object before it is synced
+ * to Salesforce.
+ *
+ * @param $params
+ *   Associative array of key value pairs.
+ * @param $mapping
+ *   Salesforce mapping object.
+ * @param $entity
+ *   Drupal entity being mapped.
+ */
+function hook_salesforce_push_params_alter(&$params, $mapping, $entity) {
+
+}
+
