@@ -57,7 +57,7 @@ function salesforce_mapping_property_fieldmap_options($entity_type, $include_ent
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    $type = entity_property_extract_innermost_type($property['type']);
+    $type = isset($property['type']) ? entity_property_extract_innermost_type($property['type']) : 'text';
     $is_entity = (bool)entity_get_info($type);
     // Leave entities out of this.
     if (($is_entity && $include_entities) || (!$is_entity && !$include_entities)) {
@@ -262,7 +262,7 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
     ),
   );
 
-  $drupal_type = $drupal_field['type'];
+  $drupal_type = isset($drupal_field['type']) ? $drupal_field['type'] : 'text';
   $sf_type_array = isset($verify_array[$direction][$sf_field['type']]) ? $verify_array[$direction][$sf_field['type']] : array();
   if (empty($sf_type_array)) {
     // If type is not found in validation array, assume valid

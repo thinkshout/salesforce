@@ -260,11 +260,18 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#type' => 'container',
     );
 
+    $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => array('edit-token-tree'),
+      ),
+    );
+
     if ($has_token_type) {
-      $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
+      $form['salesforce_field_mappings_wrapper']['token_tree']['tree'] = array(
         '#theme' => 'token_tree',
         '#token_types' => array($drupal_entity_type),
-        '#global_types' => TRUE
+        '#global_types' => TRUE,
       );
     }
 
@@ -363,6 +370,7 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
   );
   $commands = array(
     ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
+    ajax_command_replace("#edit-token-tree", render($form['salesforce_field_mappings_wrapper']['token_tree'])),
     ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
     // Set message.
     ajax_command_remove('.messages'),

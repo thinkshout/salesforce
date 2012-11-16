@@ -90,7 +90,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
         $params[$fieldmap['salesforce_field']['name']] = $value;
       }
 
-      drupal_alter('salesforce_mapping_value_alter', $params, $mapping, $entity);
+      drupal_alter('salesforce_push_params_alter', $params, $mapping, $entity);
 
       // Entity is not linked to an SF object.
       if (!$mapped_objects) {
