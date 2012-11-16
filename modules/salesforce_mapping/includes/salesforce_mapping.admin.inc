@@ -473,10 +473,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
       $sf_field = array_values(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
       $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
       $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
-
-      // todo: Are drupal_field, sf_field, direction and key always used in validation?
       call_user_func($field_map['validation_callback'], $drupal_field, $sf_field[0], $mapping['direction'], $key);
-
       // ensure valid SF external ID field
       if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
         form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
