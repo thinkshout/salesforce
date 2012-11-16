@@ -470,8 +470,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
     $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
-      $filter = salesforce_field_filter($mapping['salesforce_field']);
-      $sf_field = array_values(array_filter($sf_fields, $filter));
+      $sf_field = array_values(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
       $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
       $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
 
