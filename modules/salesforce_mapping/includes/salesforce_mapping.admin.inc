@@ -468,27 +468,29 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     }
   }
 
-  // Validate field mappings.
-  $info = entity_get_info($values['drupal_entity_type']);
-  $properties = entity_get_all_property_info($values['drupal_entity_type']);
-  $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
-  $key_delta = $values['key'];
+  if (isset($values['salesforce_field_mappings'])) {
+    // Validate field mappings.
+    $info = entity_get_info($values['drupal_entity_type']);
+    $properties = entity_get_all_property_info($values['drupal_entity_type']);
+    $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
+    $key_delta = $values['key'];
 
-  foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
-    $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
-    $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
-    if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
-      $sf_field = array_values(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
-      $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
-      $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
-      call_user_func($field_map['validation_callback'], $drupal_field, $sf_field[0], $mapping['direction'], $key);
-      // ensure valid SF external ID field
-      if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
-        form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
-          array(
-            '%name' => $mapping['salesforce_field']['name']
-          )
-        ));
+    foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
+      $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
+      $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
+      if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
+        $sf_field = array_values(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+        $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
+        $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
+        call_user_func($field_map['validation_callback'], $drupal_field, $sf_field[0], $mapping['direction'], $key);
+        // ensure valid SF external ID field
+        if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
+          form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
+            array(
+              '%name' => $mapping['salesforce_field']['name']
+            )
+          ));
+        }
       }
     }
   }
@@ -516,17 +518,19 @@ function salesforce_field_filter($sf_mapping_field) {
 function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
-  $key_delta = $values['key'];
-  $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
-  foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
-    if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
-      $sf_field = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
-      $mappings[] = array(
-        'drupal_field' => $mapping['drupal_field'],
-        'salesforce_field' => reset($sf_field),
-        'key' => $key_delta && ($key === (int)$key_delta),
-        'direction' => $mapping['direction']
-      );
+  if (isset($values['key'])) {
+    $key_delta = $values['key'];
+    $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
+    foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
+      if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
+        $sf_field = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
+        $mappings[] = array(
+          'drupal_field' => $mapping['drupal_field'],
+          'salesforce_field' => reset($sf_field),
+          'key' => $key_delta && ($key === (int)$key_delta),
+          'direction' => $mapping['direction']
+        );
+      }
     }
   }
 
