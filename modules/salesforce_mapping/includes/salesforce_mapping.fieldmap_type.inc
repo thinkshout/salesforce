@@ -214,11 +214,20 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
   $value = $sf_object[$field_map['salesforce_field']['name']];
-  if ($entity_wrapper->type() == 'date' && isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
-    $value = strtotime($value);
-  }
-  if ($entity_wrapper->type() == 'boolean' && isset($value)) {
-    $value = (int) $value;
+
+  switch ($entity_wrapper->type()) {
+    case 'date':
+      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
+        $value = strtotime($value);
+      }
+      break;
+    case 'boolean':
+      if (isset($value)) {
+        $value = (int) $value;
+      }
+      break;
+    case 'text':
+      $value = (string) $value;
   }
 
   return $value;
