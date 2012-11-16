@@ -60,6 +60,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           $sfapi->objectDelete($mapping->salesforce_object_type, $mapped_objects->salesforce_id);
         }
         catch(SalesforceException $e) {
+          watchdog_exception('salesforce_push', $e);
           drupal_set_message($e->getMessage(), 'error');
         }
 
@@ -82,15 +83,15 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
 
 
         if ($fieldmap['key']) {
-          $key_field = $fieldmap['salesforce_field'];
+          $key_field = $fieldmap['salesforce_field']['name'];
           $key_value = $value;
         }
         $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
         $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $wrapper);
-        $params[$fieldmap['salesforce_field']] = $value;
+        $params[$fieldmap['salesforce_field']['name']] = $value;
       }
 
-      drupal_alter('salesforce_mapping_value_alter', $params, $mapping, $entity);
+      drupal_alter('salesforce_push_params', $params, $mapping, $entity);
 
       // Entity is not linked to an SF object.
       if (!$mapped_objects) {
@@ -110,6 +111,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           }
         }
         catch(SalesforceException $e) {
+          watchdog_exception('salesforce_push', $e);
           drupal_set_message($e->getMessage(), 'error');
           return;
         }
@@ -146,6 +148,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
         }
         catch(SalesforceException $e) {
+          watchdog_exception('salesforce_push', $e);
           drupal_set_message($e->getMessage(), 'error');
         }
 

@@ -227,7 +227,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#type' => 'select',
           '#description' => t('Select a Salesforce field to map.'),
           '#options' => $sf_fields,
-          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['salesforce_field'] : 0,
+          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['salesforce_field']['name'] : 0,
         ),
         'key' => array(
           '#type' => 'radio',
@@ -260,11 +260,18 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#type' => 'container',
     );
 
+    $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
+      '#type' => 'container',
+      '#attributes' => array(
+        'id' => array('edit-token-tree'),
+      ),
+    );
+
     if ($has_token_type) {
-      $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
+      $form['salesforce_field_mappings_wrapper']['token_tree']['tree'] = array(
         '#theme' => 'token_tree',
         '#token_types' => array($drupal_entity_type),
-        '#global_types' => TRUE
+        '#global_types' => TRUE,
       );
     }
 
@@ -363,6 +370,7 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
   );
   $commands = array(
     ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
+    ajax_command_replace("#edit-token-tree", render($form['salesforce_field_mappings_wrapper']['token_tree'])),
     ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
     // Set message.
     ajax_command_remove('.messages'),
@@ -470,19 +478,15 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
     $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
-      $filter = salesforce_field_filter($mapping['salesforce_field']);
-      $sf_field = array_values(array_filter($sf_fields, $filter));
+      $sf_field = array_values(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
       $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
       $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
-
-      // todo: Are drupal_field, sf_field, direction and key always used in validation?
       call_user_func($field_map['validation_callback'], $drupal_field, $sf_field[0], $mapping['direction'], $key);
-
       // ensure valid SF external ID field
       if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
         form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
           array(
-            '%name' => $mapping['salesforce_field']
+            '%name' => $mapping['salesforce_field']['name']
           )
         ));
       }
@@ -513,11 +517,13 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
   $key_delta = $values['key'];
+  $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
   foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
     if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
+      $sf_field = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
       $mappings[] = array(
         'drupal_field' => $mapping['drupal_field'],
-        'salesforce_field' => $mapping['salesforce_field'],
+        'salesforce_field' => reset($sf_field),
         'key' => $key_delta && ($key === (int)$key_delta),
         'direction' => $mapping['direction']
       );

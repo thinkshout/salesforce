@@ -15,7 +15,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('Select a Drupal field or property to map to a Salesforce field. Related are left out and should be handled using another fieldmap type like tokens.'),
       'options_callback' => 'salesforce_mapping_property_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_property_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_property_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_property_fieldmap_pull_value',
       'validation_callback' => 'salesforce_mapping_property_validation',
     ),
@@ -36,7 +36,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_value',
+      'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_related_entity_fieldmap_pull_value',
     ),
   );
@@ -57,7 +57,7 @@ function salesforce_mapping_property_fieldmap_options($entity_type, $include_ent
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    $type = entity_property_extract_innermost_type($property['type']);
+    $type = isset($property['type']) ? entity_property_extract_innermost_type($property['type']) : 'text';
     $is_entity = (bool)entity_get_info($type);
     // Leave entities out of this.
     if (($is_entity && $include_entities) || (!$is_entity && !$include_entities)) {
@@ -94,7 +94,7 @@ function salesforce_mapping_related_entity_fieldmap_options($entity_type) {
  *
  * @return mixed
  */
-function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wrapper) {
+function salesforce_mapping_related_entity_fieldmap_push_value($fieldmap, $entity_wrapper) {
   $value = NULL;
   if (property_exists($entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'], 'isEntityList')) {
     $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
@@ -116,15 +116,13 @@ function salesforce_mapping_related_entity_fieldmap_value($fieldmap, $entity_wra
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']]);
+  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']['name']]);
   $info = $entity_wrapper->info();
   if ($mapped_objects && !isset($info['relation_type'])) {
     $entity = entity_load($mapped_objects->entity_type, array($mapped_objects->entity_id));
     return $entity;
   }
   // Handle relations
-  // todo: dont delete and add if its the same
-  // todo: dont delete other relations
   else {
     $type =  $info['parent']->type();
     $id =  $info['parent']->getIdentifier();
@@ -133,22 +131,45 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     $results = $query->execute();
     if ($results) {
       $relations = relation_load_multiple(array_keys($results));
+      $match = TRUE;
     }
-    if (isset($relations)) {
-      $rid = array_keys($relations);
-      // Delete relation
-      relation_delete($rid[0]);
+    else {
+      $match = FALSE;
     }
 
+    if (isset($relations)) {
+      foreach ($relations as $rid => $relation) {
+        $match = TRUE;
+        // Check if matches existing
+        $current_endpoints = $relations[$rid]->endpoints;
+        if (
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
+          ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
+          ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
+        )
+        {
+          $match = FALSE;
+        }
+        // If same type and not a match delete relation
+        if ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] == $mapped_objects->entity_type && !$match) {
+          relation_delete($rid);
+        }
+      }
+    }
     // Create new relation and endpoints
-    $relation_type = $info['relation_type'];
-    $endpoints = array(
-      array('entity_type' => $type, 'entity_id' => $id),
-      array('entity_type' => $mapped_objects->entity_type, 'entity_id' => $mapped_objects->entity_id),
-    );
-    $relation_new = relation_create($relation_type, $endpoints);
-    relation_save($relation_new);
+    if ($mapped_objects && !$match) {
+      $relation_type = $info['relation_type'];
+      $endpoints = array(
+        array('entity_type' => $type, 'entity_id' => $id),
+        array('entity_type' => $mapped_objects->entity_type, 'entity_id' => $mapped_objects->entity_id),
+      );
+      $relation_new = relation_create($relation_type, $endpoints);
+      relation_save($relation_new);
+    }
   }
+
+  return FALSE;
 }
 
 /**
@@ -159,22 +180,28 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
  *
  * @return mixed
  */
-function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) {
+function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrapper) {
   $drupal_fields_array = explode(':', $fieldmap['drupal_field']['fieldmap_value']);
   $parent = $entity_wrapper;
   foreach ($drupal_fields_array as $drupal_field) {
-    $child_wrapper = $parent->{$drupal_field};
+    if ($parent instanceof EntityListWrapper) {
+      // First list<> types, get the property from the first item
+      $child_wrapper = $parent->get(0)->{$drupal_field};
+    }
+    else {
+      $child_wrapper = $parent->{$drupal_field};
+    }
     $parent = $child_wrapper;
   }
   $value = $child_wrapper->value();
 
-  // TODO: Handle entities that are linked to other SF Objects.
+  // Always the take the first value when cardinality is > 0.
   if (is_array($value)) {
     $value = $value[0];
   }
 
   // Field type specific handling
-  if ($child_wrapper->type() == 'date') {
+  if ($child_wrapper->type() == 'date' && ($fieldmap['salesforce_field']['type'] == 'date' || $fieldmap['salesforce_field']['type'] == 'dateTime')) {
     // Drupal provides a timestamp, Salesforce wants ISO 8601 formatted date/time,
     $value = format_date($value, 'custom', 'c');
   }
@@ -186,7 +213,15 @@ function salesforce_mapping_property_fieldmap_value($fieldmap, $entity_wrapper) 
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  return $sf_object[$field_map['salesforce_field']];
+  $value = $sf_object[$field_map['salesforce_field']['name']];
+  if ($entity_wrapper->type() == 'date' && isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
+    $value = strtotime($value);
+  }
+  if ($entity_wrapper->type() == 'boolean' && isset($value)) {
+    $value = (int) $value;
+  }
+
+  return $value;
 }
 
 /*
@@ -201,25 +236,25 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
   // Type validation
   /*
    * Type validation array
-   * direction[array Drupal type][array Salesforce type]
+   * direction[array Salesforce type][array Drupal type]
    */
   $verify_array = array(
     'sync' => array(
-      'string' => array('text'),
+      'string' => array('text', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'drupal_sf' => array(
-      'string' => array('text'),
+      'string' => array('text', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'sf_drupal' => array(
-      'string' => array('text', 'int'),
+      'string' => array('text', 'int', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
@@ -227,7 +262,7 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
     ),
   );
 
-  $drupal_type = $drupal_field['type'];
+  $drupal_type = isset($drupal_field['type']) ? $drupal_field['type'] : 'text';
   $sf_type_array = isset($verify_array[$direction][$sf_field['type']]) ? $verify_array[$direction][$sf_field['type']] : array();
   if (empty($sf_type_array)) {
     // If type is not found in validation array, assume valid
@@ -250,6 +285,7 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
     ));
   }
 }
+
 /**
  * Value callback for token fieldmap type.
  *
