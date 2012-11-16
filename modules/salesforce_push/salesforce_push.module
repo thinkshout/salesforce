@@ -62,12 +62,22 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
         continue;
       }
 
-      saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger);
+      salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger);
     }
   }
 }
 
-function saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger) {
+/**
+ * Sync Drupal entities and Salesforce objects using the REST API
+ *
+ * @param $entity_type
+ * @param $entity_id
+ * @param $mapping
+ *   Salesforce mapping object.
+ * @param $sf_sync_trigger
+ *   Trigger for this sync.
+ */
+function salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger) {
   $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
   $entity_wrapper = entity_metadata_wrapper($entity_type, entity_load_single($entity_type, $entity_id));
   $sfapi = salesforce_get_api();
@@ -164,6 +174,9 @@ function saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_t
   $mapped_objects->save();
 }
 
+/**
+ * Implements hook_cron().
+ */
 function salesforce_push_cron() {
   $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
   $limit = variable_get('salesforce_pull_limit', 50);
@@ -185,11 +198,22 @@ function salesforce_push_cron() {
       }
     }
     else {
-      saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $item->data['trigger']);
+      salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $item->data['trigger']);
     }
   }
 }
 
+/**
+ * Map Drupal values to a Salesforce object.
+ *
+ * @param $mapping
+ * @param $entity_wrapper
+ * @param $key_field
+ * @param $key_value
+ *
+ * @return array
+ *   Associative array of key value pairs.
+ */
 function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value) {
   foreach ($mapping->field_mappings as $fieldmap) {
     // Skip fields that aren't being pushed to Salesforce.
