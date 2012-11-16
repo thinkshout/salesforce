@@ -57,7 +57,9 @@ function salesforce_mapping_property_fieldmap_options($entity_type, $include_ent
 
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
-    $type = entity_property_extract_innermost_type($property['type']);
+    if (isset($property['type'])) {
+      $type = entity_property_extract_innermost_type($property['type']);
+    }
     $is_entity = (bool)entity_get_info($type);
     // Leave entities out of this.
     if (($is_entity && $include_entities) || (!$is_entity && !$include_entities)) {
