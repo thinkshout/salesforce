@@ -5,25 +5,27 @@
  * Push updates to Salesforce when a Drupal entity is updated.
  */
 
+define('SALESFORCE_PUSH_QUEUE', 'salesforce_push');
+
 /**
  * Implements hook_entity_insert().
  */
 function salesforce_push_entity_insert($entity, $type) {
-  salesforce_push_sync_entity($type, $entity, SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE);
+  salesforce_push_entity_crud($type, $entity, SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE);
 }
 
 /**
  * Implements hook_entity_update().
  */
 function salesforce_push_entity_update($entity, $type) {
-  salesforce_push_sync_entity($type, $entity, SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE);
+  salesforce_push_entity_crud($type, $entity, SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE);
 }
 
 /**
  * Implements hook_entity_delete().
  */
 function salesforce_push_entity_delete($entity, $type) {
-  salesforce_push_sync_entity($type, $entity, SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE);
+  salesforce_push_entity_crud($type, $entity, SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE);
 }
 
 /**
@@ -33,7 +35,7 @@ function salesforce_push_entity_delete($entity, $type) {
  * @param $entity
  * @param $sf_sync_trigger
  */
-function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
+function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
   // avoid duplicate processing if this entity has just been updated by
   // salesforce pull
   if (isset($entity->salesforce_pull) && $entity->salesforce_pull) {
@@ -47,121 +49,165 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
     'drupal_bundle' => $bundle
   ));
 
-  $wrapper = entity_metadata_wrapper($entity_type, $entity);
-
   foreach ($mappings as $mapping) {
     if ($mapping->sync_triggers & $sf_sync_trigger) {
-      $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
-      $sfapi = salesforce_get_api();
-
-      // Delete SF object
-      if ($mapped_objects && $sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
-        try {
-          $sfapi->objectDelete($mapping->salesforce_object_type, $mapped_objects->salesforce_id);
-        }
-        catch(SalesforceException $e) {
-          watchdog_exception('salesforce_push', $e);
-          drupal_set_message($e->getMessage(), 'error');
-        }
-
-        drupal_set_message(t('Salesforce object %sfid has been deleted.', array(
-          '%sfid' => $mapped_objects->salesforce_id
-        )));
-        $mapped_objects->delete();
-
-        return;
+      if (isset($mapping->batch_push) && $mapping->batch_push) {
+        $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
+        $queue->createItem(array(
+          'entity_type' => $entity_type,
+          'entity_id' => $entity_id,
+          'mapping' => $mapping,
+          'trigger' => $sf_sync_trigger
+        ));
+        continue;
       }
 
-      // Generate parameter array from field mappings.
-      $params = array();
-      $key_field = $key_value = '';
-      foreach ($mapping->field_mappings as $fieldmap) {
-        // Skip fields that aren't being pushed to Salesforce.
-        if (!in_array($fieldmap['direction'], array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC))) {
-          continue;
-        }
-
-
-        if ($fieldmap['key']) {
-          $key_field = $fieldmap['salesforce_field']['name'];
-          $key_value = $value;
-        }
-        $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
-        $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $wrapper);
-        $params[$fieldmap['salesforce_field']['name']] = $value;
-      }
-
-      drupal_alter('salesforce_push_params_alter', $params, $mapping, $entity);
-
-      // Entity is not linked to an SF object.
-      if (!$mapped_objects) {
-        // Setup SF record type
-        if($mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
-          $params['RecordTypeId'] = $mapping->salesforce_record_type;
-        }
-
-        try {
-          // An external key has been specified, attempt an upsert().
-          if (!empty($key_field)) {
-            $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $key_value, $params);
-          }
-          // No key or mapping, create a new object in Salesforce.
-          else {
-            $data = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
-          }
-        }
-        catch(SalesforceException $e) {
-          watchdog_exception('salesforce_push', $e);
-          drupal_set_message($e->getMessage(), 'error');
-          return;
-        }
-
-        // Success.
-        if (empty($data['errorCode'])) {
-          // Create mapping object, saved below.
-          $mapped_objects = entity_create('salesforce_mapping_object', array(
-            'entity_id' => $entity_id,
-            'entity_type' => $entity_type,
-            'salesforce_id' => $data['id']
-          ));
-        }
-        else {
-          drupal_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
-            '%label' => entity_label($entity_type, $entity),
-            '@code' => $data['errorCode'],
-            '@message' => $data['message']
-          )), 'error');
-
-          return;
-        }
-      }
-      // Existing object link, update.
-      else {
-        // Handle the case of mapped objects last sync being more recent than
-        // the entity's timestamp, which is set by salesforce_mapping.
-        if ($mapped_objects->last_sync > $mapped_objects->entity_updated) {
-          return;
-        }
-
-        // Update SF object.
-        try {
-          $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
-        }
-        catch(SalesforceException $e) {
-          watchdog_exception('salesforce_push', $e);
-          drupal_set_message($e->getMessage(), 'error');
-        }
-
-        $mapped_objects->last_sync = REQUEST_TIME;
-      }
-
-      drupal_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
-        '%name' => entity_label($entity_type, $entity),
-        '%sfid' => $mapped_objects->salesforce_id
-      )));
-
-      // Note that last_sync time is updated automatically.
-      $mapped_objects->save();
+      saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger);
     }
   }
+}
+
+function saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger) {
+  $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
+  $entity_wrapper = entity_metadata_wrapper($entity_type, entity_load_single($entity_type, $entity_id));
+  $sfapi = salesforce_get_api();
+
+  // Delete SF object
+  if ($mapped_objects && $sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
+    try {
+      $sfapi->objectDelete($mapping->salesforce_object_type, $mapped_objects->salesforce_id);
+    }
+    catch(SalesforceException $e) {
+      watchdog_exception('salesforce_push', $e);
+      drupal_set_message($e->getMessage(), 'error');
+    }
+
+    drupal_set_message(t('Salesforce object %sfid has been deleted.', array(
+      '%sfid' => $mapped_objects->salesforce_id
+    )));
+    $mapped_objects->delete();
+
+    return;
+  }
+
+  // Generate parameter array from field mappings.
+  $params = salesforce_push_map_params($mapping, $entity_wrapper, $key_field, $key_value);
+
+  // Entity is not linked to an SF object.
+  if (!$mapped_objects) {
+    // Setup SF record type
+    if($mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
+      $params['RecordTypeId'] = $mapping->salesforce_record_type;
+    }
+
+    try {
+      // An external key has been specified, attempt an upsert().
+      if (!empty($key_field)) {
+        $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $key_value, $params);
+      }
+      // No key or mapping, create a new object in Salesforce.
+      else {
+        $data = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
+      }
+    }
+    catch(SalesforceException $e) {
+      watchdog_exception('salesforce_push', $e);
+      drupal_set_message($e->getMessage(), 'error');
+      return;
+    }
+
+    // Success.
+    if (empty($data['errorCode'])) {
+      // Create mapping object, saved below.
+      $mapped_objects = entity_create('salesforce_mapping_object', array(
+        'entity_id' => $entity_id,
+        'entity_type' => $entity_type,
+        'salesforce_id' => $data['id']
+      ));
+    }
+    else {
+      drupal_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
+        '%label' => entity_label($entity_type, $entity),
+        '@code' => $data['errorCode'],
+        '@message' => $data['message']
+      )), 'error');
+
+      return;
+    }
+  }
+  // Existing object link, update.
+  else {
+    // Handle the case of mapped objects last sync being more recent than
+    // the entity's timestamp, which is set by salesforce_mapping.
+    if ($mapped_objects->last_sync > $mapped_objects->entity_updated) {
+      return;
+    }
+
+    // Update SF object.
+    try {
+      $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
+    }
+    catch(SalesforceException $e) {
+      watchdog_exception('salesforce_push', $e);
+      drupal_set_message($e->getMessage(), 'error');
+    }
+
+    $mapped_objects->last_sync = REQUEST_TIME;
+  }
+
+  drupal_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
+    '%name' => $entity_wrapper->label(),
+    '%sfid' => $mapped_objects->salesforce_id
+  )));
+
+  // Note that last_sync time is updated automatically.
+  $mapped_objects->save();
+}
+
+function salesforce_push_cron() {
+  $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
+  $limit = variable_get('salesforce_pull_limit', 50);
+  $use_soap = module_exists('salesforce_soap');
+  for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
+    $mapping = $item->data['mapping'];
+    $entity_type = $item->data['entity_type'];
+    $entity_id = $item->data['entity_id'];
+    $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
+    if ($use_soap) {
+      if ($item->trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapped_objects) {
+        $delete_list[] = $mapped_objects->salesforce_id;
+      }
+      else {
+        $entity = entity_load_single($item->data['entity_type'], $item->data['entity_id']);
+        $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
+        $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value);
+
+      }
+    }
+    else {
+      saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $item->data['trigger']);
+    }
+  }
+}
+
+function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value) {
+  foreach ($mapping->field_mappings as $fieldmap) {
+    // Skip fields that aren't being pushed to Salesforce.
+    if (!in_array($fieldmap['direction'], array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC))) {
+      continue;
+    }
+
+    $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
+    $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $entity_wrapper);
+    $params[$fieldmap['salesforce_field']['name']] = $value;
+
+    if ($fieldmap['key']) {
+      $key_field = $fieldmap['salesforce_field']['name'];
+      $key_value = $value;
+    }
+  }
+
+  drupal_alter('salesforce_push_params_alter', $params, $mapping, $entity);
+
+  return $params;
 }
