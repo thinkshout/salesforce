@@ -60,6 +60,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           $sfapi->objectDelete($mapping->salesforce_object_type, $mapped_objects->salesforce_id);
         }
         catch(SalesforceException $e) {
+          watchdog_exception('salesforce_push', $e);
           drupal_set_message($e->getMessage(), 'error');
         }
 
@@ -110,6 +111,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           }
         }
         catch(SalesforceException $e) {
+          watchdog_exception('salesforce_push', $e);
           drupal_set_message($e->getMessage(), 'error');
           return;
         }
@@ -146,6 +148,7 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
           $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
         }
         catch(SalesforceException $e) {
+          watchdog_exception('salesforce_push', $e);
           drupal_set_message($e->getMessage(), 'error');
         }
 
