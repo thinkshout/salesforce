@@ -194,11 +194,75 @@ function salesforce_push_cron() {
         $entity = entity_load_single($item->data['entity_type'], $item->data['entity_id']);
         $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
         $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value);
-
+        $sobject = new SObject();
+        $sobject->type = $mapping->salesforce_object_type;
+        $sobject->fields = $params;
+        if ($mapped_objects) {
+          if ($key_field && $key_value) {
+            $upsert_list[$key_field][] = $sobject;
+          }
+          else {
+            $create_list[] = $sobject;
+          }
+        }
+        else {
+          $update_list[] = $sobject;
+        }
       }
     }
     else {
       salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $item->data['trigger']);
+    }
+  }
+
+  // Use soap API to batch process records.
+  $soap = new SalesforceSoapPartner(salesforce_get_api());
+  if (!empty($delete_list)) {
+    $results = $soap->delete($delete_list);
+    salesforce_push_watchdog('Delete', $results);
+  }
+
+  if (!empty($create_list)) {
+    $results = $soap->create($create_list);
+    salesforce_push_watchdog('Create', $results);
+  }
+
+  if (!empty($update_list)) {
+    $results = $soap->update($update_list);
+    salesforce_push_watchdog('Update', $results);
+  }
+
+  if (!empty($upsert_list)) {
+    foreach ($upsert_list as $key => $upsert_item) {
+      $results = $soap->upsert($key, $upsert_list);
+      salesforce_push_watchdog('Upsert', $results);
+    }
+  }
+}
+
+/**
+ * Record SOAP API batch API calls to watchdog.
+ *
+ * @param $op
+ * @param $results
+ */
+function salesforce_push_watchdog($op, $results) {
+  foreach ($results as $result) {
+    if ($result->success) {
+      watchdog('salesforce_push', '%op: Salesforce object %id',
+        array('%id' => $result->id, '%op' => $op));
+    }
+    else {
+      foreach ($result->errors() as $error) {
+        watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
+          array(
+            '%id' => $result->id,
+            '@code' => $error->statusCode,
+            '@message' => $error->message,
+            '%op' => $op
+          ),
+          WATCHDOG_ERROR);
+      }
     }
   }
 }
