@@ -266,9 +266,14 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       $value = call_user_func($fieldmap_type['pull_value_callback'], $parent, $sf_object, $field_map);
 
       // Allow this value to be altered before assigning to the entity.
-      drupal_alter('salesforce_pull_entity_value_alter', $value, $field_map, $sf_object);
-      if ($value) {
-        $parent->set($value);
+      drupal_alter('salesforce_pull_entity_value', $value, $field_map, $sf_object);
+      if (isset($value)) {
+        if ($parent instanceof EntityListWrapper) {
+          $parent->offsetSet(0, $value);
+        }
+        else {
+          $parent->set($value);
+        }
       }
     }
   }

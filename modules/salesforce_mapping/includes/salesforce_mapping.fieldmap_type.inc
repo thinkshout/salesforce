@@ -185,6 +185,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   $parent = $entity_wrapper;
   foreach ($drupal_fields_array as $drupal_field) {
     if ($parent instanceof EntityListWrapper) {
+      // First list<> types, get the property from the first item
       $child_wrapper = $parent->get(0)->{$drupal_field};
     }
     else {
@@ -200,7 +201,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   }
 
   // Field type specific handling
-  if ($child_wrapper->type() == 'date') {
+  if ($child_wrapper->type() == 'date' && isset($value) && ($fieldmap['salesforce_field']['type'] == 'date' || $fieldmap['salesforce_field']['type'] == 'dateTime')) {
     // Drupal provides a timestamp, Salesforce wants ISO 8601 formatted date/time,
     $value = format_date($value, 'custom', 'c');
   }
@@ -213,11 +214,20 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
   $value = $sf_object[$field_map['salesforce_field']['name']];
-  if ($entity_wrapper->type() == 'date' && isset($value))  {
-    $value = strtotime($value);
-  }
-  if ($entity_wrapper->type() == 'boolean' && isset($value))  {
-    $value = (int) $value;
+
+  switch ($entity_wrapper->type()) {
+    case 'date':
+      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
+        $value = strtotime($value);
+      }
+      break;
+    case 'boolean':
+      if (isset($value)) {
+        $value = (int) $value;
+      }
+      break;
+    case 'text':
+      $value = (string) $value;
   }
 
   return $value;
@@ -235,25 +245,25 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
   // Type validation
   /*
    * Type validation array
-   * direction[array Drupal type][array Salesforce type]
+   * direction[array Salesforce type][array Drupal type]
    */
   $verify_array = array(
     'sync' => array(
-      'string' => array('text'),
+      'string' => array('text', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'drupal_sf' => array(
-      'string' => array('text'),
+      'string' => array('text', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'sf_drupal' => array(
-      'string' => array('text', 'int'),
+      'string' => array('text', 'int', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),

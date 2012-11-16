@@ -127,7 +127,7 @@ function saleforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_t
     }
     else {
       drupal_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
-        '%label' => entity_label($entity_type, $entity),
+        '%label' => $entity_wrapper->label(),
         '@code' => $data['errorCode'],
         '@message' => $data['message']
       )), 'error');
@@ -207,7 +207,7 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     }
   }
 
-  drupal_alter('salesforce_push_params_alter', $params, $mapping, $entity);
+  drupal_alter('salesforce_push_params', $params, $mapping, $entity);
 
   return $params;
 }
