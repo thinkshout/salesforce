@@ -217,7 +217,7 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
   if ($entity_wrapper->type() == 'date' && isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
     $value = strtotime($value);
   }
-  if ($entity_wrapper->type() == 'boolean' && isset($value))  {
+  if ($entity_wrapper->type() == 'boolean' && isset($value)) {
     $value = (int) $value;
   }
 
@@ -236,25 +236,25 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
   // Type validation
   /*
    * Type validation array
-   * direction[array Drupal type][array Salesforce type]
+   * direction[array Salesforce type][array Drupal type]
    */
   $verify_array = array(
     'sync' => array(
-      'string' => array('text'),
+      'string' => array('text', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'drupal_sf' => array(
-      'string' => array('text'),
+      'string' => array('text', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'sf_drupal' => array(
-      'string' => array('text', 'int'),
+      'string' => array('text', 'int', 'list<text>'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),

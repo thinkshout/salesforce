@@ -268,7 +268,13 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       // Allow this value to be altered before assigning to the entity.
       drupal_alter('salesforce_pull_entity_value_alter', $value, $field_map, $sf_object);
       if ($value) {
-        $parent->set($value);
+        if ($parent instanceof EntityListWrapper && isset($value)) {
+          $parent->offsetSet(0, $value);
+        }
+        else {
+          $parent->set($value);
+        }
+
       }
     }
   }
