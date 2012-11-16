@@ -82,12 +82,12 @@ function salesforce_push_sync_entity($entity_type, $entity, $sf_sync_trigger) {
 
 
         if ($fieldmap['key']) {
-          $key_field = $fieldmap['salesforce_field'];
+          $key_field = $fieldmap['salesforce_field']['name'];
           $key_value = $value;
         }
         $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
         $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $wrapper);
-        $params[$fieldmap['salesforce_field']] = $value;
+        $params[$fieldmap['salesforce_field']['name']] = $value;
       }
 
       drupal_alter('salesforce_mapping_value_alter', $params, $mapping, $entity);
