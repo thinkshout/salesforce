@@ -185,6 +185,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   $parent = $entity_wrapper;
   foreach ($drupal_fields_array as $drupal_field) {
     if ($parent instanceof EntityListWrapper) {
+      // First list<> types, get the property from the first item
       $child_wrapper = $parent->get(0)->{$drupal_field};
     }
     else {
@@ -200,7 +201,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   }
 
   // Field type specific handling
-  if ($child_wrapper->type() == 'date') {
+  if ($child_wrapper->type() == 'date' && ($fieldmap['salesforce_field']['type'] == 'date' || $fieldmap['salesforce_field']['type'] == 'dateTime')) {
     // Drupal provides a timestamp, Salesforce wants ISO 8601 formatted date/time,
     $value = format_date($value, 'custom', 'c');
   }
@@ -213,7 +214,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
   $value = $sf_object[$field_map['salesforce_field']['name']];
-  if ($entity_wrapper->type() == 'date' && isset($value))  {
+  if ($entity_wrapper->type() == 'date' && isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
     $value = strtotime($value);
   }
   if ($entity_wrapper->type() == 'boolean' && isset($value))  {
