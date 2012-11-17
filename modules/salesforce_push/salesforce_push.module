@@ -219,23 +219,23 @@ function salesforce_push_cron() {
   $soap = new SalesforceSoapPartner(salesforce_get_api());
   if (!empty($delete_list)) {
     $results = $soap->delete($delete_list);
-    salesforce_push_watchdog('Delete', $results);
+    salesforce_push_log('Delete', $results);
   }
 
   if (!empty($create_list)) {
     $results = $soap->create($create_list);
-    salesforce_push_watchdog('Create', $results);
+    salesforce_push_log('Create', $results);
   }
 
   if (!empty($update_list)) {
     $results = $soap->update($update_list);
-    salesforce_push_watchdog('Update', $results);
+    salesforce_push_log('Update', $results);
   }
 
   if (!empty($upsert_list)) {
     foreach ($upsert_list as $key => $upsert_item) {
       $results = $soap->upsert($key, $upsert_list);
-      salesforce_push_watchdog('Upsert', $results);
+      salesforce_push_log('Upsert', $results);
     }
   }
 }
@@ -246,7 +246,7 @@ function salesforce_push_cron() {
  * @param $op
  * @param $results
  */
-function salesforce_push_watchdog($op, $results) {
+function salesforce_push_log($op, $results) {
   foreach ($results as $result) {
     if ($result->success) {
       watchdog('salesforce_push', '%op: Salesforce object %id',
