@@ -75,6 +75,20 @@ function salesforce_mapping_schema() {
         'size' => 'big',
         'description' => 'A serialized object that stores the field mappings.',
       ),
+      'push_async' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Indicates this mapping should be processed asynchronously.',
+      ),
+      'push_batch' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Indicates if SOAP API batch processing should be used during async processing.',
+      ),
       'created' => array(
         'description' => 'The Unix timestamp when the salesforce_mapping was created.',
         'type' => 'int',
