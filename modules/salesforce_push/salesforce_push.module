@@ -51,7 +51,7 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
 
   foreach ($mappings as $mapping) {
     if ($mapping->sync_triggers & $sf_sync_trigger) {
-      if (isset($mapping->batch_push) && $mapping->batch_push) {
+      if (isset($mapping->push_async) && $mapping->push_async) {
         $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
         $queue->createItem(array(
           'entity_type' => $entity_type,
@@ -187,7 +187,7 @@ function salesforce_push_cron() {
     $entity_id = $item->data['entity_id'];
     $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
     if ($use_soap) {
-      if ($item->trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapped_objects) {
+      if ($item->data['trigger'] == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapped_objects) {
         $delete_list[] = $mapped_objects->salesforce_id;
       }
       else {
@@ -198,15 +198,15 @@ function salesforce_push_cron() {
         $sobject->type = $mapping->salesforce_object_type;
         $sobject->fields = $params;
         if ($mapped_objects) {
+          $update_list[] = $sobject;
+        }
+        else {
           if ($key_field && $key_value) {
             $upsert_list[$key_field][] = $sobject;
           }
           else {
             $create_list[] = $sobject;
           }
-        }
-        else {
-          $update_list[] = $sobject;
         }
       }
     }
@@ -216,26 +216,29 @@ function salesforce_push_cron() {
   }
 
   // Use soap API to batch process records.
-  $soap = new SalesforceSoapPartner(salesforce_get_api());
-  if (!empty($delete_list)) {
-    $results = $soap->delete($delete_list);
-    salesforce_push_log('Delete', $results);
-  }
+  if ($use_soap) {
+    module_load_include('inc', 'salesforce_soap');
+    $soap = new SalesforceSoapPartner(salesforce_get_api(), 'sites/default/files/salesforce_wsdl.xml');
+    if (!empty($delete_list)) {
+      $results = $soap->delete($delete_list);
+      salesforce_push_log('Delete', $results);
+    }
 
-  if (!empty($create_list)) {
-    $results = $soap->create($create_list);
-    salesforce_push_log('Create', $results);
-  }
+    if (!empty($create_list)) {
+      $results = $soap->create($create_list);
+      salesforce_push_log('Create', $results);
+    }
 
-  if (!empty($update_list)) {
-    $results = $soap->update($update_list);
-    salesforce_push_log('Update', $results);
-  }
+    if (!empty($update_list)) {
+      $results = $soap->update($update_list);
+      salesforce_push_log('Update', $results);
+    }
 
-  if (!empty($upsert_list)) {
-    foreach ($upsert_list as $key => $upsert_item) {
-      $results = $soap->upsert($key, $upsert_list);
-      salesforce_push_log('Upsert', $results);
+    if (!empty($upsert_list)) {
+      foreach ($upsert_list as $key => $upsert_item) {
+        $results = $soap->upsert($key, $upsert_list);
+        salesforce_push_log('Upsert', $results);
+      }
     }
   }
 }
