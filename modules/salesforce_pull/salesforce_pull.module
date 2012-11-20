@@ -173,10 +173,12 @@ function salesforce_pull_process_records() {
           drupal_set_message('There were failures processing data from SalesForce. Please check the error logs.', 'error', FALSE);
         }
       }
-    }
 
-    // Save our mapped objects.
-    $mapping_object->save();
+      // Save our mapped objects.
+      if ($mapping_object) {
+        $mapping_object->save();
+      }
+    }
 
     // Remove item from queue
     $queue->deleteItem($item);
