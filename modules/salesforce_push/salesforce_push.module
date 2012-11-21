@@ -181,7 +181,7 @@ function salesforce_push_cron() {
   $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
   $limit = variable_get('salesforce_pull_limit', 50);
   $use_soap = module_exists('salesforce_soap');
-  for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
+  for ($delta = 0; ($item = $queue->claimItem()) && $delta < $limit; $delta++) {
     $mapping = $item->data['mapping'];
 
     // duplicate entity in the queue
@@ -195,12 +195,17 @@ function salesforce_push_cron() {
     $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
     if ($use_soap) {
       if ($item->data['trigger'] == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapped_objects) {
-        $delete_list[] = $mapped_objects->salesforce_id;
+        $delete_list[$delta] = $mapped_objects->salesforce_id;
       }
       else {
         $entity = entity_load_single($item->data['entity_type'], $item->data['entity_id']);
         $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
         $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value);
+
+        $synced_entities[$delta] = array(
+          'entity_wrapper' => $wrapper,
+          'mapped_objects' => $mapped_objects
+        );
 
         $sobject = new stdClass();
         $sobject->type = $mapping->salesforce_object_type;
@@ -210,13 +215,14 @@ function salesforce_push_cron() {
 
         if ($mapped_objects) {
           $sobject->Id = $mapped_objects->salesforce_id;
+          $update_list[$delta] = $sobject;
         }
         else {
           if ($key_field && $key_value) {
-            $upsert_list[$key_field][] = $sobject;
+            $upsert_list[$key_field][$delta] = $sobject;
           }
           else {
-            $create_list[] = $sobject;
+            $create_list[$delta] = $sobject;
           }
         }
       }
@@ -235,23 +241,23 @@ function salesforce_push_cron() {
     $soap = new SalesforceSoapPartner(salesforce_get_api(), 'sites/default/files/salesforce_wsdl.xml');
     if (!empty($delete_list)) {
       $results = $soap->delete($delete_list);
-      salesforce_push_log('Delete', $results);
+      salesforce_push_process_soap_results('Delete', $results, $synced_entities);
     }
 
     if (!empty($create_list)) {
       $results = $soap->create($create_list);
-      salesforce_push_log('Create', $results);
+      salesforce_push_process_soap_results('Create', $results, $synced_entities);
     }
 
     if (!empty($update_list)) {
       $results = $soap->update($update_list);
-      salesforce_push_log('Update', $results);
+      salesforce_push_process_soap_results('Update', $results, $synced_entities);
     }
 
     if (!empty($upsert_list)) {
       foreach ($upsert_list as $key => $upsert_item) {
         $results = $soap->upsert($key, $upsert_list);
-        salesforce_push_log('Upsert', $results);
+        salesforce_push_process_soap_results('Upsert', $results, $synced_entities);
       }
     }
   }
@@ -263,14 +269,34 @@ function salesforce_push_cron() {
  * @param $op
  * @param $results
  */
-function salesforce_push_log($op, $results) {
-  foreach ($results as $result) {
+function salesforce_push_process_soap_results($op, $results, $synced_entities) {
+  foreach ($results as $key => $result) {
     if ($result->success) {
+      $mapped_objects = $synced_entities[$key]['mapped_objects'];
+      if (drupal_strtolower($op) == 'delete' && $mapped_objects) {
+        $mapped_objects->delete();
+      }
+      else if ($mapped_objects) {
+        $mapped_objects->last_sync = REQUEST_TIME;
+        $mapped_objects->save();
+      }
+      else {
+        // Create mapping object, saved below.
+        $wrapper = $synced_entities[$key]['entity_wrapper'];
+        $mapped_objects = entity_create('salesforce_mapping_object', array(
+          'entity_id' => $wrapper->getIdentifier(),
+          'entity_type' => $wrapper->type(),
+          'salesforce_id' => $result->id
+        ));
+        $mapped_objects->save();
+      }
+
       watchdog('salesforce_push', '%op: Salesforce object %id',
-        array('%id' => $result->id, '%op' => $op));
+        array('%id' => $result->id, '%op' => $op)
+      );
     }
     else {
-      foreach ($result->errors() as $error) {
+      foreach ($result->errors as $error) {
         watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
           array(
             '%id' => $result->id,
@@ -278,7 +304,8 @@ function salesforce_push_log($op, $results) {
             '@message' => $error->message,
             '%op' => $op
           ),
-          WATCHDOG_ERROR);
+          WATCHDOG_ERROR
+        );
       }
     }
   }
