@@ -194,9 +194,13 @@ function salesforce_push_cron() {
         $entity = entity_load_single($item->data['entity_type'], $item->data['entity_id']);
         $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
         $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value);
-        $sobject = new SObject();
+
+        $sobject = new stdClass();
         $sobject->type = $mapping->salesforce_object_type;
-        $sobject->fields = $params;
+        foreach ($params as $key => $value) {
+          $sobject->fields[$key] = $value;
+        }
+
         if ($mapped_objects) {
           $update_list[] = $sobject;
         }
