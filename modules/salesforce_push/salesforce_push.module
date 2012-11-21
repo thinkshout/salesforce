@@ -183,6 +183,13 @@ function salesforce_push_cron() {
   $use_soap = module_exists('salesforce_soap');
   for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
     $mapping = $item->data['mapping'];
+
+    // duplicate entity in the queue
+    if ($item->data['entity_type'] == $entity_type && $item->data['entity_id'] == $entity_id) {
+      $queue->deleteItem($item);
+      continue;
+    }
+
     $entity_type = $item->data['entity_type'];
     $entity_id = $item->data['entity_id'];
     $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
