@@ -224,6 +224,9 @@ function salesforce_push_cron() {
     else {
       salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $item->data['trigger']);
     }
+
+    // Remove item from queue
+    $queue->deleteItem($item);
   }
 
   // Use soap API to batch process records.
