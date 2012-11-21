@@ -305,6 +305,25 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#required' => TRUE,
   );
 
+  $form['push_async'] = array(
+    '#title' => t('Process asynchronously'),
+    '#type' => 'checkbox',
+    '#description' => t('If selected, push data will be queued for processing and synchronized when cron is run. This may increase site performance, but changes will not be reflected in real time.'),
+    '#default_value' => isset($mapping) ? $mapping->push_async : 0
+  );
+  $form['push_batch'] = array(
+    '#title' => t('Batch records'),
+    '#type' => 'checkbox',
+    '#description' => t('Push items will be processed in a single batch to the Salesforce API rather than one at a time. This may be preferable if API limits are of concern, although changes are not reflected immediately in Salesforce. Requires the salesforce_soap module and asynchronous processing to be enabled.'),
+    '#default_value' => isset($mapping) ? $mapping->push_batch : 0,
+    '#disabled' => module_exists('salesforce_soap'),
+    '#states' => array(
+      'enabled' => array(
+        ':input[name="push_async"]' => array('checked' => TRUE),
+      )
+    )
+  );
+
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
     '#value' => t('Save mapping'),
@@ -540,29 +559,28 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     $sync_triggers = $sync_triggers | $value;
   }
 
+  $params = array(
+    'label' => $values['label'],
+    'salesforce_object_type' => $values['salesforce_object_type'],
+    'salesforce_record_type' => $values['salesforce_record_type'],
+    'drupal_entity_type' => $values['drupal_entity_type'],
+    'drupal_bundle' => $values['drupal_bundle'],
+    'description' => '',
+    'field_mappings' => $mappings,
+    'sync_triggers' => $sync_triggers,
+    'push_async' => $values['push_async'],
+    'push_batch' => $values['push_batch'],
+  );
+
   if ($form_state['salesforce_mapping']->name) {
     $mapping = $form_state['salesforce_mapping'];
-    $mapping->label = $values['label'];
-    $mapping->salesforce_object_type = $values['salesforce_object_type'];
-    $mapping->salesforce_record_type = $values['salesforce_record_type'];
-    $mapping->drupal_entity_type = $values['drupal_entity_type'];
-    $mapping->drupal_bundle = $values['drupal_bundle'];
-    $mapping->description = '';
-    $mapping->field_mappings = $mappings;
-    $mapping->sync_triggers = $sync_triggers;
+    foreach ($params as $key => $value) {
+      $mapping->{$key} = $value;
+    }
   }
   else {
-    $mapping = entity_create('salesforce_mapping', array(
-      'name' => $values['name'],
-      'label' => $values['label'],
-      'salesforce_object_type' => $values['salesforce_object_type'],
-      'salesforce_record_type' => $values['salesforce_record_type'],
-      'drupal_entity_type' => $values['drupal_entity_type'],
-      'drupal_bundle' => $values['drupal_bundle'],
-      'description' => '',
-      'field_mappings' => $mappings,
-      'sync_triggers' => $sync_triggers
-    ));
+    $params['name'] = $values['name'];
+    $mapping = entity_create('salesforce_mapping', $params);
   }
 
   $mapping->save();
