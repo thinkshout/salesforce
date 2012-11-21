@@ -209,7 +209,7 @@ function salesforce_push_cron() {
         }
 
         if ($mapped_objects) {
-          $update_list[] = $sobject;
+          $sobject->Id = $mapped_objects->salesforce_id;
         }
         else {
           if ($key_field && $key_value) {
