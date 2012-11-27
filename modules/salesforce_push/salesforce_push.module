@@ -62,7 +62,7 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
         continue;
       }
 
-      salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger);
+      salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_trigger);
     }
   }
 }
@@ -77,9 +77,9 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
  * @param $sf_sync_trigger
  *   Trigger for this sync.
  */
-function salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $sf_sync_trigger) {
-  $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
-  $entity_wrapper = entity_metadata_wrapper($entity_type, entity_load_single($entity_type, $entity_id));
+function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_trigger) {
+  $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+  $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_wrapper->getIdentifier());
   $sfapi = salesforce_get_api();
 
   // Delete SF object
@@ -193,12 +193,12 @@ function salesforce_push_cron() {
     $entity_type = $item->data['entity_type'];
     $entity_id = $item->data['entity_id'];
     $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
+    $entity = entity_load_single($entity_type, $entity_id);
     if ($use_soap) {
       if ($item->data['trigger'] == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapped_objects) {
         $delete_list[$delta] = $mapped_objects->salesforce_id;
       }
       else {
-        $entity = entity_load_single($item->data['entity_type'], $item->data['entity_id']);
         $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
         $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value);
 
@@ -228,7 +228,7 @@ function salesforce_push_cron() {
       }
     }
     else {
-      salesforce_push_sync_rest($entity_type, $entity_id, $mapping, $item->data['trigger']);
+      salesforce_push_sync_rest($entity_type, $entity, $mapping, $item->data['trigger']);
     }
 
     // Remove item from queue
