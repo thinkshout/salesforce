@@ -169,7 +169,7 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     }
   }
 
-  return FALSE;
+  return NULL;
 }
 
 /**
