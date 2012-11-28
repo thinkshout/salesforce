@@ -82,7 +82,9 @@ class SalesforceMappingUIController extends EntityDefaultUIController {
    * Overrides EntityDefaultUIController::overviewTableHeaders().
    */
   protected function overviewTableHeaders($conditions, $rows, $additional_header = array()) {
-    return parent::overviewTableHeaders($conditions, $rows, array(t('Weight')));
+    $header = parent::overviewTableHeaders($conditions, $rows, $additional_header);
+    $header[] = t('Weight');
+    return $header;
   }
 
 }
