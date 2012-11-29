@@ -130,7 +130,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     if (empty($data['errorCode'])) {
       // Create mapping object, saved below.
       $mapped_objects = entity_create('salesforce_mapping_object', array(
-        'entity_id' => $entity_id,
+        'entity_id' => $entity_wrapper->getIdentifier(),
         'entity_type' => $entity_type,
         'salesforce_id' => $data['id']
       ));
