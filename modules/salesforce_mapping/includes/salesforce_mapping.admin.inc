@@ -1,5 +1,7 @@
 <?php
 
+define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
+
 /**
  * Return a form for a salesforce mapping entity.
  *
@@ -23,6 +25,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#default_value' => isset($mapping) ? $mapping->label : '',
     '#description' => t('The human-readable name of this field mapping.'),
     '#required' => TRUE,
+    '#maxlength' => SALESFORCE_MAPPING_NAME_LENGTH,
     '#size' => 30,
   );
 
@@ -453,6 +456,14 @@ function theme_salesforce_fieldmap_form_table($variables) {
 function salesforce_mapping_form_validate($form, &$form_state) {
   $values = $form_state['values'];
   $mapping = $form_state['salesforce_mapping'];
+
+  // validate label and name length
+  if (strlen($values['label']) > SALESFORCE_MAPPING_NAME_LENGTH) {
+    form_set_error('label', t('Label must not exceed @max characters.', array('@max' => SALESFORCE_MAPPING_NAME_LENGTH)));
+  }
+  if (strlen($values['name']) > SALESFORCE_MAPPING_NAME_LENGTH) {
+    form_set_error('name', t('Name must not exceed @max characters.', array('@max' => SALESFORCE_MAPPING_NAME_LENGTH)));
+  }
 
   $efq = new EntityFieldQuery();
   $efq

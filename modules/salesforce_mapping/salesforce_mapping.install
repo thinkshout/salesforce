@@ -17,13 +17,13 @@ function salesforce_mapping_schema() {
       'name' => array(
         'description' => 'The machine-readable name of this salesforce_mapping type.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 128,
         'not null' => TRUE,
       ),
       'label' => array(
         'description' => 'The human-readable name of this salesforce_mapping type.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 128,
         'not null' => TRUE,
       ),
       'type' => array(
