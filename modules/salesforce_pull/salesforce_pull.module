@@ -147,11 +147,17 @@ function salesforce_pull_process_records() {
           salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
           $wrapper->save();
 
+          // If no id exists, the insert failed
+          $entity_id = $wrapper->getIdentifier();
+          if (!$entity_id) {
+            throw new Exception('Entity ID not returned, insert failed.');
+          }
+
           // Create mapping object
           $mapping_object = entity_create('salesforce_mapping_object', array(
             'salesforce_id' => $sf_object['Id'],
             'entity_type' => $sf_mapping->drupal_entity_type,
-            'entity_id' => $wrapper->getIdentifier()
+            'entity_id' => $entity_id
           ));
 
           watchdog('Salesforce Pull',
