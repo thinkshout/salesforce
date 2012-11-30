@@ -196,7 +196,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   $value = $child_wrapper->value();
 
   // Always the take the first value when cardinality is > 0.
-  if (is_array($value)) {
+  if (is_array($value) && isset($value[0])) {
     $value = $value[0];
   }
 
