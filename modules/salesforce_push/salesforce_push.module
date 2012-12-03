@@ -159,7 +159,11 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
-      drupal_set_message($e->getMessage(), 'error');
+      $mapped_objects->delete();
+      drupal_set_message(t('Error message: "@msg".  The Salesforce link has been removed.', array(
+        '@msg' => $e->getMessage()
+      )), 'error');
+      return;
     }
 
     $mapped_objects->last_sync = REQUEST_TIME;

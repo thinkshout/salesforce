@@ -94,6 +94,10 @@ class Salesforce {
       throw new SalesforceException($data['error_description'], $data['error']);
     }
 
+    if (!empty($data['errorCode'])) {
+      throw new SalesforceException($data['message'], $this->response->code);
+    }
+
     return $data;
   }
 
@@ -379,6 +383,11 @@ class Salesforce {
    */
   public function objectUpdate($name, $id, $params) {
     $this->apiCall("sobjects/{$name}/{$id}", $params, 'PATCH');
+
+    // attempting to update an object that doesn't exist
+    if ($this->response->code == 204) {
+      throw new SalesforceException(t('Update failed, Salesforce object does not exist.'), 204);
+    }
   }
 
   /**
