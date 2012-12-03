@@ -213,21 +213,33 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  $value = $sf_object[$field_map['salesforce_field']['name']];
+  if (sizeof($field_map['salesforce_field']) == 2) {
+    $contact_mapping_obj = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field'][0]['name']]);
+    $org_mapping_obj = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field'][1]['name']]);
+    $contact = entity_load_single('redhen_contact', $contact_mapping_obj->entity_id);
+    $org = entity_load_single('redhen_org', $org_mapping_obj->entity_id);
+    $value = array(
+      entity_metadata_wrapper('redhen_contact', $contact),
+      entity_metadata_wrapper('redhen_org', $org)
+    );
+  }
+  else {
+    $value = $sf_object[$field_map['salesforce_field']['name']];
 
-  switch ($entity_wrapper->type()) {
-    case 'date':
-      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
-        $value = strtotime($value);
-      }
-      break;
-    case 'boolean':
-      if (isset($value)) {
-        $value = (int) $value;
-      }
-      break;
-    case 'text':
-      $value = (string) $value;
+    switch ($entity_wrapper->type()) {
+      case 'date':
+	if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
+	  $value = strtotime($value);
+	}
+	break;
+      case 'boolean':
+	if (isset($value)) {
+	  $value = (int) $value;
+	}
+	break;
+      case 'text':
+	$value = (string) $value;
+    }
   }
 
   return $value;
