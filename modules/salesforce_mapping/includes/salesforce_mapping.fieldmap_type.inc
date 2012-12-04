@@ -218,10 +218,12 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
     $org_mapping_obj = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field'][1]['name']]);
     $contact = entity_load_single('redhen_contact', $contact_mapping_obj->entity_id);
     $org = entity_load_single('redhen_org', $org_mapping_obj->entity_id);
-    $value = array(
-      entity_metadata_wrapper('redhen_contact', $contact),
-      entity_metadata_wrapper('redhen_org', $org)
-    );
+    if ($org and $contact) {
+      $value = array(
+	entity_metadata_wrapper('redhen_contact', $contact),
+	entity_metadata_wrapper('redhen_org', $org)
+      );
+    }
   }
   else {
     $value = $sf_object[$field_map['salesforce_field']['name']];
