@@ -26,10 +26,9 @@ function salesforce_menu() {
     'type' => MENU_CALLBACK,
   );
 
-
   $items['admin/structure/salesforce'] = array(
     'title' => 'Salesforce',
-    'description' => '',
+    'description' => 'Configuration for Salesforce integration.',
     'page callback' => 'system_admin_menu_block_page',
     'access arguments' => array('administer salesforce'),
     'file' => 'system.admin.inc',
