@@ -1129,11 +1129,15 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       $value = $drupal_data->$drupal_fieldname;
     }
 
-    // Ignore null values for non-nillable fields
+    // Ignore null values for non-nillable fields. We also explicitly set all 
+    // empty strings to NULL so they too can be subject to these checks.
+    if ($value === "") {
+      $value = NULL;
+    }
     if (is_null($value) && !$nillable) {
       continue;
     }
-    elseif (!$value && $nillable && !empty($map->fields[$sf_fieldname])) {
+    elseif (is_null($value) && $nillable && !empty($map->fields[$sf_fieldname])) {
       $fieldsToNull[] = $sf_fieldname;
       continue;
     }
