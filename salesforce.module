@@ -10,6 +10,7 @@ function salesforce_menu() {
 
   $items['admin/config/services/salesforce'] = array(
     'title' => 'Salesforce',
+    'description' => 'Authorize this website to communicate with Salesforce.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_oauth_form'),
     'access arguments' => array('administer salesforce'),
