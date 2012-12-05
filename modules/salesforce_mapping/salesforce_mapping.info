@@ -7,5 +7,7 @@ files[] = includes/salesforce_mapping.entity.inc
 files[] = includes/salesforce_mapping.ui_controller.inc
 files[] = includes/salesforce_mapping_object.entity.inc
 
+configure = admin/structure/salesforce/mappings
+
 dependencies[] = salesforce
 dependencies[] = entity
