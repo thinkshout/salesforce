@@ -143,6 +143,11 @@ function salesforce_pull_process_records() {
           );
           // Create entity
           $entity = entity_create($sf_mapping->drupal_entity_type, $values);
+
+          // Flag this entity as having been processed. This does not persist, but
+          // is used by salesforce_push to avoid duplicate processing.
+          $entity->salesforce_pull = TRUE;
+
           $wrapper = entity_metadata_wrapper($sf_mapping->drupal_entity_type, $entity);
           salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
           $wrapper->save();
