@@ -41,6 +41,18 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
     ),
   );
 
+  if (module_exists('relation_endpoint')) {
+    $types['relation_endpoints'] = array(
+      'label' => t('Relation endpoints'),
+      'field_type' => 'select',
+      'description' => t('Allows multiple Salesforce fields to be selected as endpoint values.'),
+      'options_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_options',
+      'push_value_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_push_value',
+      'pull_value_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_pull_value',
+      'salesforce_multiple_fields' => TRUE,
+    );
+  }
+
   return $types;
 }
 
@@ -171,6 +183,64 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
 
   return NULL;
 }
+
+/**
+ * Return relation endpoint property as an option.
+ *
+ * @param $entity_type
+ *
+ * @return array
+ */
+function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type) {
+  $properties = salesforce_mapping_property_fieldmap_options($entity_type);
+  if (isset($properties['endpoints'])) {
+    return array('endpoints' => $properties['endpoints']);
+  } else {
+    return FALSE;
+  }
+}
+
+/**
+ * Value callback for relation endpoint fieldmap type.
+ *
+ * @param $fieldmap
+ * @param $entity_wrapper
+ *
+ * @return mixed
+ */
+function salesforce_mapping_relation_endpoints_fieldmap_push_value($fieldmap, $entity_wrapper) {
+  $value = NULL;
+  if (property_exists($entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'], 'isEntityList')) {
+    $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
+  }
+  else {
+    $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'];
+  }
+  $mapped_objects = salesforce_mapping_object_load_by_drupal(
+    $related_wrapper->type(),
+    $related_wrapper->getIdentifier()
+  );
+  if ($mapped_objects) {
+    $value = $mapped_objects->salesforce_id;
+  }
+  return $value;
+}
+
+/**
+ * Pull value callback for relation endpoint fieldmap type.
+ */
+function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
+  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']['name']]);
+  $info = $entity_wrapper->info();
+  if ($mapped_objects && !isset($info['relation_type'])) {
+    $entity = entity_load($mapped_objects->entity_type, array($mapped_objects->entity_id));
+    return $entity;
+  }
+
+
+  return NULL;
+}
+
 
 /**
  * Value callback for property fieldmap type.

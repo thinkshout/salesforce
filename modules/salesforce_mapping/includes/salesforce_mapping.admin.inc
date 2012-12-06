@@ -213,6 +213,19 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         }
       }
 
+      $sf_field_default = 0;
+      if (isset($mapping->field_mappings[$delta])) {
+        if (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) {
+          $sf_field_default = array();
+          foreach ($mapping->field_mappings[$delta]['salesforce_field'] as $field) {
+            $sf_field_default[] = $field['name'];
+          }
+        }
+        else {
+          $sf_field_default = $mapping->field_mappings[$delta]['salesforce_field']['name'];
+        }
+      }
+
       $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
         'drupal_field' => array(
           'fieldmap_type' => array(
@@ -229,11 +242,9 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         'salesforce_field' => array(
           '#type' => 'select',
           '#description' => t('Select a Salesforce field to map.'),
-          // @todo: in special cases only, allow multiple
-          '#multiple' => TRUE,
+          '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
           '#options' => $sf_fields,
-          // @todo: handle when $mapping->field_mappings[$delta] is an array of mappings
-          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['salesforce_field']['name'] : 0,
+          '#default_value' => $sf_field_default,
         ),
         'key' => array(
           '#type' => 'radio',
@@ -513,16 +524,14 @@ function salesforce_mapping_form_validate($form, &$form_state) {
       $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
       $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
       if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
-        if (sizeof($mapping['salesforce_field']) == 1) {
-          reset($mapping['salesforce_field']);
-          $mapping['salesforce_field'] = key($mapping['salesforce_field']);
-          $sf_field = array_values(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+        if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
+          $sf_field = array();
+          foreach ($mapping['salesforce_field'] as $field) {
+            $sf_field[] = reset(array_values(array_filter($sf_fields, salesforce_field_filter($field))));
+          }
         }
         else {
-          $sf_field = array(
-            $sf_fields[10],
-            $sf_fields[9],
-          );
+          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
         }
 
         $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
@@ -567,18 +576,19 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     $key_delta = $values['key'];
     $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
     foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
+      $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
+      $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
       if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
-        if (sizeof($mapping['salesforce_field']) == 1) {
-          reset($mapping['salesforce_field']);
-          $mapping['salesforce_field'] = key($mapping['salesforce_field']);
-          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+        if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
+          $sf_field = array();
+          foreach ($mapping['salesforce_field'] as $field) {
+            $sf_field[] = reset(array_filter($sf_fields, salesforce_field_filter($field)));
+          }
         }
         else {
-          $sf_field = array(
-            $sf_fields[10],
-            $sf_fields[9],
-          );
+          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
         }
+
         $mappings[] = array(
           'drupal_field' => $mapping['drupal_field'],
           'salesforce_field' => $sf_field,
