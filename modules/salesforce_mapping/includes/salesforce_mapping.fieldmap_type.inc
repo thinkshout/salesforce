@@ -47,7 +47,6 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'select',
       'description' => t('Allows multiple Salesforce fields to be selected as endpoint values.'),
       'options_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_options',
-      'push_value_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_pull_value',
       'salesforce_multiple_fields' => TRUE,
     );
@@ -201,44 +200,19 @@ function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type) {
 }
 
 /**
- * Value callback for relation endpoint fieldmap type.
- *
- * @param $fieldmap
- * @param $entity_wrapper
- *
- * @return mixed
- */
-function salesforce_mapping_relation_endpoints_fieldmap_push_value($fieldmap, $entity_wrapper) {
-  $value = NULL;
-  if (property_exists($entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'], 'isEntityList')) {
-    $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value']->get(0);
-  }
-  else {
-    $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'];
-  }
-  $mapped_objects = salesforce_mapping_object_load_by_drupal(
-    $related_wrapper->type(),
-    $related_wrapper->getIdentifier()
-  );
-  if ($mapped_objects) {
-    $value = $mapped_objects->salesforce_id;
-  }
-  return $value;
-}
-
-/**
  * Pull value callback for relation endpoint fieldmap type.
  */
 function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']['name']]);
-  $info = $entity_wrapper->info();
-  if ($mapped_objects && !isset($info['relation_type'])) {
-    $entity = entity_load($mapped_objects->entity_type, array($mapped_objects->entity_id));
-    return $entity;
+
+  $values = array();
+
+  foreach($field_map['salesforce_field'] as $sf_field) {
+    $mapped_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
+    $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
+    $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
   }
 
-
-  return NULL;
+  return $values;
 }
 
 
@@ -283,35 +257,21 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  if (sizeof($field_map['salesforce_field']) == 2) {
-    $contact_mapping_obj = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field'][0]['name']]);
-    $org_mapping_obj = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field'][1]['name']]);
-    $contact = entity_load_single('redhen_contact', $contact_mapping_obj->entity_id);
-    $org = entity_load_single('redhen_org', $org_mapping_obj->entity_id);
-    if ($org and $contact) {
-      $value = array(
-	entity_metadata_wrapper('redhen_contact', $contact),
-	entity_metadata_wrapper('redhen_org', $org)
-      );
-    }
-  }
-  else {
-    $value = $sf_object[$field_map['salesforce_field']['name']];
+  $value = $sf_object[$field_map['salesforce_field']['name']];
 
-    switch ($entity_wrapper->type()) {
-      case 'date':
-	if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
-	  $value = strtotime($value);
-	}
-	break;
-      case 'boolean':
-	if (isset($value)) {
-	  $value = (int) $value;
-	}
-	break;
-      case 'text':
-	$value = (string) $value;
-    }
+  switch ($entity_wrapper->type()) {
+    case 'date':
+      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
+	$value = strtotime($value);
+      }
+      break;
+    case 'boolean':
+      if (isset($value)) {
+	$value = (int) $value;
+      }
+      break;
+    case 'text':
+      $value = (string) $value;
   }
 
   return $value;

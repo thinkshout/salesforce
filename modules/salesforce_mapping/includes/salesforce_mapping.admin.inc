@@ -540,11 +540,18 @@ function salesforce_mapping_form_validate($form, &$form_state) {
 	}
 
 	$field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
-        $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
-        call_user_func($field_map['validation_callback'], $drupal_field, $sf_field[0], $mapping['direction'], $key);
-        // ensure valid SF external ID field
-        if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
-          form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
+	$drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
+	if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
+	  foreach ($sf_field as $field) {
+	    call_user_func($field_map['validation_callback'], $drupal_field, $field, $mapping['direction'], $key);
+	  }
+	}
+	else {
+	  call_user_func($field_map['validation_callback'], $drupal_field, $sf_field, $mapping['direction'], $key);
+	}
+	// ensure valid SF external ID field
+	if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
+	  form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
             array(
               '%name' => $mapping['salesforce_field']['name']
             )
