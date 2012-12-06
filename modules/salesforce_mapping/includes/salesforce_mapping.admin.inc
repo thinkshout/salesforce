@@ -358,6 +358,7 @@ function salesforce_mapping_sync_trigger_options() {
  * @return array
  */
 function salesforce_mapping_drupal_entities() {
+  module_load_include('inc', 'entity', 'entity.info');
   $types = array('' => t('-- Select --'));
   foreach (entity_entity_property_info() as $type => $value) {
     if ($info = entity_get_info($type)) {
