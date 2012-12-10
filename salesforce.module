@@ -140,6 +140,10 @@ function salesforce_oauth_callback() {
   $salesforce->requestToken($_GET['code']);
 
   drupal_set_message('Salesforce OAUTH2 authorization successful.');
+
+  // Clear the menu cache as we can now configure our mappings.
+  menu_cache_clear_all();
+
   drupal_goto('admin/config/services/salesforce');
 }
 
