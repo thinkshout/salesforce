@@ -362,6 +362,11 @@ function salesforce_mapping_drupal_entities() {
   $types = array('' => t('-- Select --'));
   foreach (entity_entity_property_info() as $type => $value) {
     if ($info = entity_get_info($type)) {
+      // Exclude Salesforce Mapping and Salesforce Object Mapping entities as
+      // these will never sync with Salesforce.
+      if (in_array($type, array('salesforce_mapping', 'salesforce_mapping_object'))) {
+        continue;
+      }
       $types[$type] = $info['label'];
     }
   }
