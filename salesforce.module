@@ -141,8 +141,8 @@ function salesforce_oauth_callback() {
 
   drupal_set_message('Salesforce OAUTH2 authorization successful.');
 
-  // Clear the menu cache as we can now configure our mappings.
-  menu_cache_clear_all();
+  // Rebuild the menu so the mappings links are now available.
+  menu_rebuild();
 
   drupal_goto('admin/config/services/salesforce');
 }
