@@ -480,14 +480,14 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     ->propertyCondition('drupal_bundle', $values['drupal_bundle'])
     ->count();
 
-  // existing mapping, ensure not using any other unique combo
-  if ($mapping) {
+  // Existing mapping, ensure not using any other unique combo.
+  if ($mapping->name) {
     $efq->propertyCondition('name', $mapping->name, '<>');
   }
 
   $count = $efq->execute();
   if ($count > 0) {
-    form_set_error('drupal_entity_type', t('This Drupal bundle has already been mapped to a Salesforce object.'));
+    form_set_error('drupal_bundle', t('This Drupal bundle has already been mapped to a Salesforce object.'));
   }
 
   // If Salesforce Object Create is selected, ensure that at least one mapping is set to sync or SF to Drupal to prevent "empty" entities
