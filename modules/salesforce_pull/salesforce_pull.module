@@ -26,13 +26,13 @@ function salesforce_pull_get_updated_records() {
     $mapped_fields = array();
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
-	if (sizeof($field_map['salesforce_field']) == 2) {
-	  $mapped_fields[$field_map['salesforce_field'][0]['name']] = $field_map['salesforce_field'][0]['name'];
-	  $mapped_fields[$field_map['salesforce_field'][1]['name']] = $field_map['salesforce_field'][1]['name'];
-	}
-	else {
-	  $mapped_fields[$field_map['salesforce_field']['name']] = $field_map['salesforce_field']['name'];
-	}
+        if (sizeof($field_map['salesforce_field']) == 2) {
+          $mapped_fields[$field_map['salesforce_field'][0]['name']] = $field_map['salesforce_field'][0]['name'];
+          $mapped_fields[$field_map['salesforce_field'][1]['name']] = $field_map['salesforce_field'][1]['name'];
+        }
+        else {
+          $mapped_fields[$field_map['salesforce_field']['name']] = $field_map['salesforce_field']['name'];
+        }
       }
     }
     $fields = 'Id,+LastModifiedDate';
@@ -41,7 +41,7 @@ function salesforce_pull_get_updated_records() {
     }
 
     // SOQL Query
-    $queryString = 'SELECT+'. $fields .'+from+' . $type;
+    $queryString = 'SELECT+' . $fields . '+from+' . $type;
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
 
     // If no lastupdate, get all records, else get records since last pull
@@ -58,7 +58,7 @@ function salesforce_pull_get_updated_records() {
       $next_records_url = isset($results['nextRecordsUrl']) ?
         str_replace($version_url, '', $results['nextRecordsUrl']) :
         FALSE;
-      while($next_records_url) {
+      while ($next_records_url) {
         $new_result = $sfapi->apiCall($next_records_url);
         $results['records'] = array_merge($results['records'], $new_result['records']);
         $next_records_url = isset($new_result['nextRecordsUrl']) ?
@@ -129,68 +129,68 @@ function salesforce_pull_process_records() {
             );
 
           }
-        }
-        catch(Exception $e) {
-          $message =  t('Failed to update entity %label from Salesforce object sfobjectid. Error: @msg',
+        } catch (Exception $e) {
+          $message = t('Failed to update entity %label from Salesforce object sfobjectid. Error: @msg',
             array(
               '%label' => $wrapper->label(),
               '%sfobjectid' => $sf_object['Id'],
               '@msg' => $e->getMessage()
             )
           );
-          watchdog('Salesforce Pull', $message , array(), WATCHDOG_ERROR);
+          watchdog('Salesforce Pull', $message, array(), WATCHDOG_ERROR);
           drupal_set_message($message, 'error', FALSE);
         }
       }
-      else if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE) {
-        try {
-          // Create entity from mapping object and field maps.
-          $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
-          $values = array(
-            $entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle,
-            'salesforce_pull' => TRUE // see note above about flag
-          );
-          // Create entity
-          $entity = entity_create($sf_mapping->drupal_entity_type, $values);
+      else {
+        if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE) {
+          try {
+            // Create entity from mapping object and field maps.
+            $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
+            $values = array(
+              $entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle,
+              'salesforce_pull' => TRUE // see note above about flag
+            );
+            // Create entity
+            $entity = entity_create($sf_mapping->drupal_entity_type, $values);
 
-          // Flag this entity as having been processed. This does not persist, but
-          // is used by salesforce_push to avoid duplicate processing.
-          $entity->salesforce_pull = TRUE;
+            // Flag this entity as having been processed. This does not persist, but
+            // is used by salesforce_push to avoid duplicate processing.
+            $entity->salesforce_pull = TRUE;
 
-          $wrapper = entity_metadata_wrapper($sf_mapping->drupal_entity_type, $entity);
-          salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
-          $wrapper->save();
+            $wrapper = entity_metadata_wrapper($sf_mapping->drupal_entity_type, $entity);
+            salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
+            $wrapper->save();
 
-          // If no id exists, the insert failed
-          $entity_id = $wrapper->getIdentifier();
-          if (!$entity_id) {
-            throw new Exception('Entity ID not returned, insert failed.');
+            // If no id exists, the insert failed
+            $entity_id = $wrapper->getIdentifier();
+            if (!$entity_id) {
+              throw new Exception('Entity ID not returned, insert failed.');
+            }
+
+            // Create mapping object
+            $mapping_object = entity_create('salesforce_mapping_object', array(
+              'salesforce_id' => $sf_object['Id'],
+              'entity_type' => $sf_mapping->drupal_entity_type,
+              'entity_id' => $entity_id
+            ));
+
+            watchdog('Salesforce Pull',
+              'Created entity %label associated with Salesforce Object ID: %sfid',
+              array(
+                '%label' => $wrapper->label(),
+                '%sfid' => $sf_object['Id']
+              )
+            );
+          } catch (Exception $e) {
+            $message = $e->getMessage() . ' ' . t('Processing failed for entity %label associated with Salesforce Object ID: %sfobjectid',
+              array(
+                '%label' => $wrapper->label(),
+                '%sfobjectid' => $sf_object['Id']
+              )
+            );
+            watchdog('Salesforce Pull', $message, array(), WATCHDOG_ERROR);
+            drupal_set_message('There were failures processing data from SalesForce. Please check the error logs.', 'error', FALSE);
           }
-
-          // Create mapping object
-          $mapping_object = entity_create('salesforce_mapping_object', array(
-            'salesforce_id' => $sf_object['Id'],
-            'entity_type' => $sf_mapping->drupal_entity_type,
-            'entity_id' => $entity_id
-          ));
-
-          watchdog('Salesforce Pull',
-            'Created entity %label associated with Salesforce Object ID: %sfid',
-            array(
-              '%label' => $wrapper->label(),
-              '%sfid' => $sf_object['Id']
-            )
-          );
-        }
-        catch(Exception $e) {
-          $message = $e->getMessage() . ' ' . t('Processing failed for entity %label associated with Salesforce Object ID: %sfobjectid',
-            array(
-              '%label' => $wrapper->label(),
-              '%sfobjectid' => $sf_object['Id']
-            )
-          );
-          watchdog('Salesforce Pull', $message , array(), WATCHDOG_ERROR);
-          drupal_set_message('There were failures processing data from SalesForce. Please check the error logs.', 'error', FALSE);
         }
       }
 
@@ -227,7 +227,7 @@ function salesforce_pull_process_deleted_records() {
     $last_delete_sync = variable_get('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
     $now = time();
     // SOAP getDeleted() restraint: startDate must be at least one minute greater than endDate
-    $now = $now > $last_delete_sync+60 ? $now : $now+60;
+    $now = $now > $last_delete_sync + 60 ? $now : $now + 60;
     $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
     $deleted = $soap->getDeleted($type, $last_delete_sync_sf, $now_sf);
@@ -239,7 +239,7 @@ function salesforce_pull_process_deleted_records() {
         $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
         if ($mapping_object) {
           $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
-          $entity_label =  entity_label($mapping_object->entity_type, $entity);
+          $entity_label = entity_label($mapping_object->entity_type, $entity);
           foreach ($sf_mappings as $sf_mapping) {
             if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
               entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
@@ -277,7 +277,7 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       $parent = $entity_wrapper;
       foreach ($drupal_fields_array as $drupal_field) {
         if ($parent instanceof EntityListWrapper) {
-         $child_wrapper = $parent->get(0)->{$drupal_field};
+          $child_wrapper = $parent->get(0)->{$drupal_field};
         }
         else {
           $child_wrapper = $parent->{$drupal_field};
@@ -290,13 +290,13 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       // Allow this value to be altered before assigning to the entity.
       drupal_alter('salesforce_pull_entity_value', $value, $field_map, $sf_object);
       if (isset($value)) {
-	// @todo: might wrongly assumes an individual value wouldn't be an array
-	if ($parent instanceof EntityListWrapper && !is_array($value)) {
-	  $parent->offsetSet(0, $value);
-	}
-	else {
-	  $parent->set($value);
-	}
+        // @todo: might wrongly assumes an individual value wouldn't be an array
+        if ($parent instanceof EntityListWrapper && !is_array($value)) {
+          $parent->offsetSet(0, $value);
+        }
+        else {
+          $parent->set($value);
+        }
       }
     }
   }

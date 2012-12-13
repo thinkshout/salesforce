@@ -69,7 +69,7 @@ function salesforce_mapping_property_fieldmap_options($entity_type, $include_ent
   $properties = entity_get_all_property_info($entity_type);
   foreach ($properties as $key => $property) {
     $type = isset($property['type']) ? entity_property_extract_innermost_type($property['type']) : 'text';
-    $is_entity = (bool)entity_get_info($type);
+    $is_entity = (bool) entity_get_info($type);
     // Leave entities out of this.
     if (($is_entity && $include_entities) || (!$is_entity && !$include_entities)) {
       if (isset($property['field']) && $property['field'] && !empty($property['property info'])) {
@@ -135,8 +135,8 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
   }
   // Handle relations
   else {
-    $type =  $info['parent']->type();
-    $id =  $info['parent']->getIdentifier();
+    $type = $info['parent']->type();
+    $id = $info['parent']->getIdentifier();
     $query = relation_query($type, $id);
     $query->propertyCondition('relation_type', $info['relation_type']);
     $results = $query->execute();
@@ -158,8 +158,7 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
           ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
           ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
           ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
-        )
-        {
+        ) {
           $match = FALSE;
         }
         // If same type and not a match delete relation
@@ -173,7 +172,10 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
       $relation_type = $info['relation_type'];
       $endpoints = array(
         array('entity_type' => $type, 'entity_id' => $id),
-        array('entity_type' => $mapped_objects->entity_type, 'entity_id' => $mapped_objects->entity_id),
+        array(
+          'entity_type' => $mapped_objects->entity_type,
+          'entity_id' => $mapped_objects->entity_id
+        ),
       );
       $relation_new = relation_create($relation_type, $endpoints);
       relation_save($relation_new);
@@ -194,7 +196,8 @@ function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type) {
   $properties = salesforce_mapping_property_fieldmap_options($entity_type);
   if (isset($properties['endpoints'])) {
     return array('endpoints' => $properties['endpoints']);
-  } else {
+  }
+  else {
     return FALSE;
   }
 }
@@ -206,7 +209,7 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
 
   $values = array();
 
-  foreach($field_map['salesforce_field'] as $sf_field) {
+  foreach ($field_map['salesforce_field'] as $sf_field) {
     $mapped_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
     $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
     $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
@@ -261,13 +264,13 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
 
   switch ($entity_wrapper->type()) {
     case 'date':
-      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime'))  {
-	$value = strtotime($value);
+      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime')) {
+        $value = strtotime($value);
       }
       break;
     case 'boolean':
       if (isset($value)) {
-	$value = (int) $value;
+        $value = (int) $value;
       }
       break;
     case 'text':
@@ -328,14 +331,14 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
     form_set_error(
       "salesforce_field_mappings][{$key}][salesforce_field",
       t('Drupal field %drupal_label is of type %drupal_type, Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
-      array(
-        '%drupal_label' => $drupal_field['label'],
-        '%drupal_type' => $drupal_field['type'],
-        '%sf_label' => $sf_field['label'],
-        '%sf_type' => $sf_field['type'],
-        '%dir' =>$direction,
-      )
-    ));
+        array(
+          '%drupal_label' => $drupal_field['label'],
+          '%drupal_type' => $drupal_field['type'],
+          '%sf_label' => $sf_field['label'],
+          '%sf_type' => $sf_field['type'],
+          '%dir' => $direction,
+        )
+      ));
   }
 }
 

@@ -38,7 +38,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#machine_name' => array(
       'exists' => 'salesforce_mapping_load',
       'source' => array('label')
-     ),
+    ),
   );
 
   $form['drupal_entity'] = array(
@@ -68,7 +68,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   }
   if ($drupal_entity_type) {
     $bundles = array('' => t('-- Select --'));
-    $info  = entity_get_info($drupal_entity_type);
+    $info = entity_get_info($drupal_entity_type);
     foreach ($info['bundles'] as $key => $bundle) {
       $bundles[$key] = $bundle['label'];
     }
@@ -98,7 +98,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $sfobjects = &$form_state['sf_objects'];
   if (!$sfobjects) {
     // Note that we're filtering SF object types to a reasonable subset.
-    $sfobjects = $sfapi->objects(array('updateable' => TRUE, 'triggerable' => TRUE));
+    $sfobjects = $sfapi->objects(array(
+      'updateable' => TRUE,
+      'triggerable' => TRUE
+    ));
     $form_state['sf_objects'] = $sfobjects;
   }
 
@@ -154,7 +157,8 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     }
 
     if ((isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') ||
-    !isset($mapping->field_mappings)) {
+      !isset($mapping->field_mappings)
+    ) {
       $mapping->field_mappings[] = array(
         'drupal_field' => '',
         'salesforce_field' => '',
@@ -197,7 +201,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       }
 
       $fieldmap_value_element = array(
-        '#prefix' => '<div id="drupal_fieldmap_value_wrapper' . $delta .'">',
+        '#prefix' => '<div id="drupal_fieldmap_value_wrapper' . $delta . '">',
         '#suffix' => '</div>',
       );
       if ($fieldmap_type_name) {
@@ -215,15 +219,15 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 
       $sf_field_default = 0;
       if (isset($mapping->field_mappings[$delta])) {
-	if (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) {
-	  $sf_field_default = array();
-	  foreach ($mapping->field_mappings[$delta]['salesforce_field'] as $field) {
-	    $sf_field_default[] = $field['name'];
-	  }
-	}
-	else {
-	  $sf_field_default = $mapping->field_mappings[$delta]['salesforce_field']['name'];
-	}
+        if (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) {
+          $sf_field_default = array();
+          foreach ($mapping->field_mappings[$delta]['salesforce_field'] as $field) {
+            $sf_field_default[] = $field['name'];
+          }
+        }
+        else {
+          $sf_field_default = $mapping->field_mappings[$delta]['salesforce_field']['name'];
+        }
       }
 
       $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
@@ -239,15 +243,15 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           ),
           'fieldmap_value' => $fieldmap_value_element
         ),
-	'salesforce_field' => array(
-	  '#type' => 'select',
-	  '#description' => t('Select a Salesforce field to map.'),
-	  '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
-	  '#options' => $sf_fields,
-	  '#default_value' => $sf_field_default,
-	),
-	'key' => array(
-	  '#type' => 'radio',
+        'salesforce_field' => array(
+          '#type' => 'select',
+          '#description' => t('Select a Salesforce field to map.'),
+          '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
+          '#options' => $sf_fields,
+          '#default_value' => $sf_field_default,
+        ),
+        'key' => array(
+          '#type' => 'radio',
           '#name' => 'key',
           '#return_value' => $delta,
           '#tree' => FALSE,
@@ -273,7 +277,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       );
     }
 
-    $form['salesforce_field_mappings_wrapper']['ajax_warning'] = array (
+    $form['salesforce_field_mappings_wrapper']['ajax_warning'] = array(
       '#type' => 'container',
     );
 
@@ -400,14 +404,14 @@ function salesforce_mapping_form_callback($form, $form_state) {
  */
 function salesforce_mapping_form_field_callback($form, $form_state) {
   $errors = array('#theme' => 'status_messages');
-  $ajax_warn = array (
+  $ajax_warn = array(
     '#type' => 'container',
     '#attributes' => array(
       'class' => array('messages', 'warning'),
     ),
     'message' => array(
       '#type' => 'markup',
-      '#markup'=> 'Changes made in this list will not be saved until the form is submitted.'
+      '#markup' => 'Changes made in this list will not be saved until the form is submitted.'
     ),
   );
   $commands = array(
@@ -456,15 +460,19 @@ function theme_salesforce_fieldmap_form_table($variables) {
         'data' => drupal_render($child['key'])
       ),
       array(
-       'data' => drupal_render($child['direction']),
+        'data' => drupal_render($child['direction']),
       ),
       array(
-       'data' => drupal_render($child['delete_field_mapping']),
+        'data' => drupal_render($child['delete_field_mapping']),
       )
     );
   }
 
-  return theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => $elements['#attributes']));
+  return theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => $elements['#attributes']
+  ));
 }
 
 /**
@@ -508,7 +516,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   if ($values['sync_triggers'][SALESFORCE_MAPPING_SYNC_SF_CREATE] && isset($values['salesforce_field_mappings'])) {
     $valid_salesforce_create = FALSE;
     foreach ($values['salesforce_field_mappings'] as $mapping) {
-      if ($mapping['direction'] ==  SALESFORCE_MAPPING_DIRECTION_SYNC || $mapping['direction'] == SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL) {
+      if ($mapping['direction'] == SALESFORCE_MAPPING_DIRECTION_SYNC || $mapping['direction'] == SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL) {
         $valid_salesforce_create = TRUE;
         break;
       }
@@ -529,29 +537,29 @@ function salesforce_mapping_form_validate($form, &$form_state) {
       $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
       $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
       if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field']) && isset($field_map['validation_callback'])) {
-	if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
-	  $sf_field = array();
-	  foreach ($mapping['salesforce_field'] as $field) {
-	    $sf_field[] = reset(array_values(array_filter($sf_fields, salesforce_field_filter($field))));
-	  }
-	}
-	else {
-	  $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
-	}
+        if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
+          $sf_field = array();
+          foreach ($mapping['salesforce_field'] as $field) {
+            $sf_field[] = reset(array_values(array_filter($sf_fields, salesforce_field_filter($field))));
+          }
+        }
+        else {
+          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+        }
 
-	$field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
-	$drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
-	if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
-	  foreach ($sf_field as $field) {
-	    call_user_func($field_map['validation_callback'], $drupal_field, $field, $mapping['direction'], $key);
-	  }
-	}
-	else {
-	  call_user_func($field_map['validation_callback'], $drupal_field, $sf_field, $mapping['direction'], $key);
-	}
-	// ensure valid SF external ID field
-	if ($key_delta && $key === (int)$key_delta && !$sf_field['externalId']) {
-	  form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
+        $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
+        $drupal_field = count($field_array) === 1 ? $properties[$field_array[0]] : $properties[$field_array[0]]['property info'][$field_array[1]];
+        if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
+          foreach ($sf_field as $field) {
+            call_user_func($field_map['validation_callback'], $drupal_field, $field, $mapping['direction'], $key);
+          }
+        }
+        else {
+          call_user_func($field_map['validation_callback'], $drupal_field, $sf_field, $mapping['direction'], $key);
+        }
+        // ensure valid SF external ID field
+        if ($key_delta && $key === (int) $key_delta && !$sf_field['externalId']) {
+          form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
             array(
               '%name' => $mapping['salesforce_field']['name']
             )
@@ -566,7 +574,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
  * Closure used sf_field filter
  */
 function salesforce_field_filter($sf_mapping_field) {
-  return function($sf_field) use ($sf_mapping_field) {
+  return function ($sf_field) use ($sf_mapping_field) {
     $pass = FALSE;
     if ($sf_mapping_field == $sf_field['name']) {
       $pass = TRUE;
@@ -591,20 +599,20 @@ function salesforce_mapping_form_submit($form, &$form_state) {
       $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
       $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
       if (!empty($mapping['drupal_field']) && !empty($mapping['salesforce_field'])) {
-	if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
-	  $sf_field = array();
-	  foreach ($mapping['salesforce_field'] as $field) {
-	    $sf_field[] = reset(array_filter($sf_fields, salesforce_field_filter($field)));
-	  }
-	}
-	else {
-	  $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
-	}
+        if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
+          $sf_field = array();
+          foreach ($mapping['salesforce_field'] as $field) {
+            $sf_field[] = reset(array_filter($sf_fields, salesforce_field_filter($field)));
+          }
+        }
+        else {
+          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+        }
 
-	$mappings[] = array(
-	  'drupal_field' => $mapping['drupal_field'],
-	  'salesforce_field' => $sf_field,
-          'key' => $key_delta && ($key === (int)$key_delta),
+        $mappings[] = array(
+          'drupal_field' => $mapping['drupal_field'],
+          'salesforce_field' => $sf_field,
+          'key' => $key_delta && ($key === (int) $key_delta),
           'direction' => $mapping['direction']
         );
       }
