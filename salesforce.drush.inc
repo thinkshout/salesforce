@@ -100,7 +100,10 @@ function drush_salesforce_sf_describe_object($object_name = NULL) {
       }
     }
     if (!$field_data) {
-      drush_log(dt('Could not load data for field !field on !object object', array('!field' => $fieldname, '!object' => $object_name)), 'error');
+      drush_log(dt('Could not load data for field !field on !object object', array(
+        '!field' => $fieldname,
+        '!object' => $object_name
+      )), 'error');
     }
     else {
       drush_print_r($field);
@@ -113,9 +116,18 @@ function drush_salesforce_sf_describe_object($object_name = NULL) {
   // @TODO add remaining field objects?
   $rows = array();
   $rows[] = array('Name', $object['name']);
-  $rows[] = array('Fields', isset($object['fields']) ? count($object['fields']) : 0);
-  $rows[] = array('Child Relationships', isset($object['childRelationships']) ? count($object['childRelationships']) : 0);
-  $rows[] = array('Searchable', ($object['searchable'] == 1) ? 'TRUE' : 'FALSE');
+  $rows[] = array(
+    'Fields',
+    isset($object['fields']) ? count($object['fields']) : 0
+  );
+  $rows[] = array(
+    'Child Relationships',
+    isset($object['childRelationships']) ? count($object['childRelationships']) : 0
+  );
+  $rows[] = array(
+    'Searchable',
+    ($object['searchable'] == 1) ? 'TRUE' : 'FALSE'
+  );
   $rows[] = array('Creatable', ($object['createable'] == 1) ? 'TRUE' : 'FALSE');
   $rows[] = array('Deletable', ($object['deletable'] == 1) ? 'TRUE' : 'FALSE');
   $rows[] = array('Mergeable', ($object['mergeable'] == 1) ? 'TRUE' : 'FALSE');
@@ -168,7 +180,11 @@ function drush_salesforce_sf_list_objects() {
     drush_print('The following objects are available in your organization and available to the logged-in user.');
     $rows[] = array('Name', 'Label', 'Label Plural');
     foreach ($objects as $object) {
-      $rows[] = array($object['name'], $object['label'], $object['labelPlural']);
+      $rows[] = array(
+        $object['name'],
+        $object['label'],
+        $object['labelPlural']
+      );
     }
     drush_print_table($rows, TRUE);
   }

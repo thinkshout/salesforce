@@ -42,7 +42,7 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
     return;
   }
 
-  list($entity_id,,$bundle) = entity_extract_ids($entity_type, $entity);
+  list($entity_id, , $bundle) = entity_extract_ids($entity_type, $entity);
 
   $mappings = salesforce_mapping_load_multiple(array(
     'drupal_entity_type' => $entity_type,
@@ -106,7 +106,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   // Entity is not linked to an SF object.
   if (!$mapped_objects) {
     // Setup SF record type
-    if($mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
+    if ($mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
       $params['RecordTypeId'] = $mapping->salesforce_record_type;
     }
 
@@ -279,10 +279,6 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
       $mapped_objects = $synced_entities[$key]['mapped_objects'];
       if (drupal_strtolower($op) == 'delete' && $mapped_objects) {
         $mapped_objects->delete();
-      }
-      else if ($mapped_objects) {
-        $mapped_objects->last_sync = REQUEST_TIME;
-        $mapped_objects->save();
       }
       else {
         // Create mapping object, saved below.

@@ -92,7 +92,7 @@ function salesforce_oauth_form() {
     $sfapi = new Salesforce($consumer_key, $consumer_secret);
     // if fully configured, attempt to connect to SF and return a list of resources
     if ($sfapi->isAuthorized()) {
-      try{
+      try {
         $resources = $sfapi->listResources();
         foreach ($resources as $key => $path) {
           $items[] = $key . ': ' . $path;
@@ -136,7 +136,7 @@ function salesforce_oauth_form_submit($form, &$form_state) {
  * access token.
  */
 function salesforce_oauth_callback() {
-  $salesforce =salesforce_get_api();
+  $salesforce = salesforce_get_api();
   $salesforce->requestToken($_GET['code']);
 
   drupal_set_message('Salesforce OAUTH2 authorization successful.');

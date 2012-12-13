@@ -62,7 +62,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     )
   );
 
-  $drupal_entity_type = &$form_state['values']['drupal_entity_type'];
+  $drupal_entity_type = & $form_state['values']['drupal_entity_type'];
   if (!$drupal_entity_type && isset($mapping)) {
     $drupal_entity_type = $mapping->drupal_entity_type;
   }
@@ -95,7 +95,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   );
 
   $sfapi = salesforce_get_api();
-  $sfobjects = &$form_state['sf_objects'];
+  $sfobjects = & $form_state['sf_objects'];
   if (!$sfobjects) {
     // Note that we're filtering SF object types to a reasonable subset.
     $sfobjects = $sfapi->objects(array(
@@ -123,12 +123,12 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#required' => TRUE
   );
 
-  $salesforce_object_type = &$form_state['values']['salesforce_object_type'];
+  $salesforce_object_type = & $form_state['values']['salesforce_object_type'];
   if (!$salesforce_object_type && isset($mapping)) {
     $salesforce_object_type = $mapping->salesforce_object_type;
   }
   if (!empty($salesforce_object_type)) {
-    $sfobject = &$form_state['salesforce_mapping_object_' . $salesforce_object_type];
+    $sfobject = & $form_state['salesforce_mapping_object_' . $salesforce_object_type];
     if (!$sfobject) {
       $sfobject = $sfapi->objectDescribe($salesforce_object_type);
     }
@@ -185,13 +185,13 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 
     $has_token_type = FALSE;
     foreach ($mapping->field_mappings as $delta => $value) {
-      $delete = &$form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
+      $delete = & $form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
       if ($delete) {
         unset($mapping->field_mappings[$delta]);
         continue;
       }
 
-      $fieldmap_type_name = &$form_state['values']['salesforce_field_mappings'][$delta]['drupal_field']['fieldmap_type'];
+      $fieldmap_type_name = & $form_state['values']['salesforce_field_mappings'][$delta]['drupal_field']['fieldmap_type'];
       if (!$fieldmap_type_name && isset($mapping)) {
         $fieldmap_type_name = $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'];
       }
@@ -448,7 +448,7 @@ function theme_salesforce_fieldmap_form_table($variables) {
   // Build the rows array.
   $rows = array();
   foreach (element_children($elements) as $child_key) {
-    $child = &$elements[$child_key];
+    $child = & $elements[$child_key];
     $rows[] = array(
       array(
         'data' => drupal_render($child['drupal_field'])

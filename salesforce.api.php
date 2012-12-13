@@ -10,7 +10,7 @@
 
 /**
  * Define fieldmap types.
- * 
+ *
  * TODO: Document me.
  */
 function hook_salesforce_mapping_fieldmap_type() {

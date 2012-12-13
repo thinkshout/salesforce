@@ -80,7 +80,6 @@ function salesforce_mapping_entity_info() {
       'access callback' => 'salesforce_mappings_access',
       'label callback' => 'entity_class_label',
     ),
-
     'salesforce_mapping_object' => array(
       'label' => t('Salesforce Object Mapping'),
       'controller class' => 'EntityAPIController',
@@ -144,8 +143,8 @@ function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE)
 }
 
 /**
-* Implements hook_theme().
-*/
+ * Implements hook_theme().
+ */
 function salesforce_mapping_theme($existing, $type, $theme, $path) {
   return array(
     'salesforce_fieldmap_form_table' => array(
@@ -223,7 +222,7 @@ function salesforce_mapping_get_mapped_objects() {
  */
 function salesforce_mapping_sort($mapping_a, $mapping_b) {
   if ($mapping_a->weight == $mapping_b->weight) {
-      return 0;
+    return 0;
   }
   return ($mapping_a->weight < $mapping_b->weight) ? -1 : 1;
 }
@@ -234,7 +233,7 @@ function salesforce_mapping_sort($mapping_a, $mapping_b) {
  */
 function salesforce_mapping_entity_delete($entity, $type) {
   // Delete any Salesforce object mappings with this entity
-  list($entity_id,,$bundle) = entity_extract_ids($type, $entity);
+  list($entity_id, , $bundle) = entity_extract_ids($type, $entity);
   $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
 
   // No mapping object for this entity, return.
@@ -309,7 +308,7 @@ function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
             'attributes' => array('target' => '_blank')
           )
         )
-      )),
+      ),
       '#classes' => 'field field-label-inline clearfix',
     );
     $entity->content['salesforce_last_sync'] = array(
@@ -345,7 +344,7 @@ function salesforce_mapping_field_extra_fields() {
     );
   }
 
-  return isset($extra)? $extra : array();
+  return isset($extra) ? $extra : array();
 }
 
 /**
@@ -388,9 +387,9 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
   // Use the advanced drupal_static() pattern, since this is called very often.
   static $drupal_static_fast;
   if (!isset($drupal_static_fast)) {
-    $drupal_static_fast['salesforce_fieldmap_type'] = &drupal_static(__FUNCTION__);
+    $drupal_static_fast['salesforce_fieldmap_type'] = & drupal_static(__FUNCTION__);
   }
-  $salesforce_fieldmap_type = &$drupal_static_fast['salesforce_fieldmap_type'];
+  $salesforce_fieldmap_type = & $drupal_static_fast['salesforce_fieldmap_type'];
 
   if (empty($salesforce_fieldmap_type)) {
     if ($cache = cache_get('salesforce_fieldmap_type')) {

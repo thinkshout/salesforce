@@ -68,7 +68,7 @@ class Salesforce {
         // Rebuild our request and repeat request.
         $this->response = $this->apiHttpRequest($path, $params, $method);
         // Throw an error if we still have bad response.
-        if (!in_array($this->response->code, array(200,201,204))) {
+        if (!in_array($this->response->code, array(200, 201, 204))) {
           throw new SalesforceException($this->response->error, $this->response->code);
         }
 
@@ -146,6 +146,7 @@ class Salesforce {
   public function getInstanceURL() {
     return variable_get('salesforce_instance_url', '');
   }
+
   private function setInstanceURL($url) {
     variable_set('salesforce_instance_url', $url);
   }
@@ -156,6 +157,7 @@ class Salesforce {
   public function getAccessToken() {
     return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
   }
+
   private function setAccessToken($token) {
     $_SESSION['salesforce_access_token'] = $token;
   }
@@ -166,6 +168,7 @@ class Salesforce {
   private function getRefreshToken() {
     return variable_get('salesforce_refresh_token', '');
   }
+
   private function setRefreshToken($token) {
     variable_set('salesforce_refresh_token', $token);
   }
@@ -386,16 +389,16 @@ class Salesforce {
   }
 
   /**
-    * Return a full loaded Salesforce object.
-    *
-    * @param $name
-    *   Object type name, E.g., Contact, Account.
-    * @param $id
-    *   Object id.
-    */
-   public function objectRead($name, $id) {
-     return $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
-   }
+   * Return a full loaded Salesforce object.
+   *
+   * @param $name
+   *   Object type name, E.g., Contact, Account.
+   * @param $id
+   *   Object id.
+   */
+  public function objectRead($name, $id) {
+    return $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
+  }
 
   /**
    * Delete a Salesforce object.
@@ -425,4 +428,5 @@ class Salesforce {
 
 }
 
-class SalesforceException extends Exception {}
+class SalesforceException extends Exception {
+}
