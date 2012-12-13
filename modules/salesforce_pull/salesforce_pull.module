@@ -109,16 +109,18 @@ function salesforce_pull_process_records() {
 
           $sf_object_updated = strtotime($sf_object['LastModifiedDate']);
           if ($sf_object_updated > $entity_updated) {
-
             $wrapper = entity_metadata_wrapper($sf_mapping->drupal_entity_type, $entity);
 
+            // Set fields values on the Drupal entity.
             salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
 
             // Update entity
             $wrapper->save();
 
+            // Update mapping object.
             $mapping_object->last_sync = REQUEST_TIME;
             $mapping_object->entity_update = REQUEST_TIME;
+
             watchdog('Salesforce Pull',
               'Updated entity %label associated with Salesforce Object ID: %sfid',
               array(
@@ -130,14 +132,15 @@ function salesforce_pull_process_records() {
           }
         }
         catch(Exception $e) {
-          $message = $e->getMessage() . ' ' . t('Processing failed for entity %label associated with Salesforce Object ID: %sfobjectid',
+          $message =  t('Failed to update entity %label from Salesforce object sfobjectid. Error: @msg',
             array(
               '%label' => $wrapper->label(),
-              '%sfobjectid' => $sf_object['Id']
+              '%sfobjectid' => $sf_object['Id'],
+              '@msg' => $e->getMessage()
             )
           );
           watchdog('Salesforce Pull', $message , array(), WATCHDOG_ERROR);
-          drupal_set_message('There were failures processing data from SalesForce. Please check the error logs.', 'error', FALSE);
+          drupal_set_message($message, 'error', FALSE);
         }
       }
       else if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_CREATE) {

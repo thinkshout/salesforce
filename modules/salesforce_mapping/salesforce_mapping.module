@@ -36,7 +36,7 @@ define('SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE', 'default');
  * @return bool
  */
 function salesforce_mappings_access() {
-  if (user_access('administer salesforce')) {
+  if (user_access('administer salesforce mapping')) {
     $sfapi = salesforce_get_api();
     return $sfapi->isAuthorized();
   }
@@ -272,13 +272,31 @@ function salesforce_mapping_entity_load($entities, $type) {
 }
 
 /**
+ * Implements hook_permission().
+ */
+function salesforce_mapping_permission() {
+  return array(
+    'administer salesforce mapping' => array(
+      'title' => t('Administer salesforce mapping'),
+      'description' => t('Administer Salesforce field maps.'),
+      'restrict access' => TRUE,
+    ),
+    'view salesforce mapping' => array(
+      'title' => t('View salesforce mapping'),
+      'description' => t('View Salesforce mapping data.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
  * Implements hook_entity_view().
  */
 function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
   // Render linked Salesforce data when viewing a mapped entity.
   list($entity_id) = entity_extract_ids($type, $entity);
   $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-  if ($mapping) {
+  if ($mapping && user_access('view salesforce mapping')) {
     $sfapi = salesforce_get_api();
     $entity->content['salesforce_id'] = array(
       '#theme' => 'salesforce_mapping_linked_object',

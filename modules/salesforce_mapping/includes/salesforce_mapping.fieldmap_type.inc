@@ -34,7 +34,7 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
     'related_entity' => array(
       'label' => t('Related entities'),
       'field_type' => 'select',
-      'description' => t('If a existing connection is found with the selected entity, the linked identifiers will be used..'),
+      'description' => t('If an existing connection is found with the selected entity, the linked identifiers will be used.'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
       'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_related_entity_fieldmap_pull_value',
