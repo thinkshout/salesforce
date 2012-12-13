@@ -9,9 +9,12 @@ define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
  * Implements hook_cron()
  */
 function salesforce_pull_cron() {
-  salesforce_pull_get_updated_records();
-  salesforce_pull_process_records();
-  salesforce_pull_process_deleted_records();
+  $sfapi = salesforce_get_api();
+  if ($sfapi->isAuthorized()) {
+    salesforce_pull_get_updated_records();
+    salesforce_pull_process_records();
+    salesforce_pull_process_deleted_records();
+  }
 }
 
 /**

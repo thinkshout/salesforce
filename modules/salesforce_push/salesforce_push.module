@@ -182,6 +182,11 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
  * Implements hook_cron().
  */
 function salesforce_push_cron() {
+  $sfapi = salesforce_get_api();
+  if (!$sfapi->isAuthorized()) {
+    return;
+  }
+
   $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
   $limit = variable_get('salesforce_pull_limit', 50);
   $use_soap = module_exists('salesforce_soap');
@@ -242,7 +247,7 @@ function salesforce_push_cron() {
   // Use soap API to batch process records.
   if ($use_soap) {
     module_load_include('inc', 'salesforce_soap');
-    $soap = new SalesforceSoapPartner(salesforce_get_api());
+    $soap = new SalesforceSoapPartner($sfapi);
     if (!empty($delete_list)) {
       $results = $soap->delete($delete_list);
       salesforce_push_process_soap_results('Delete', $results, $synced_entities);
