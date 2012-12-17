@@ -27,6 +27,8 @@ function salesforce_pull_get_updated_records() {
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
     // Get field list from mappings
     $mapped_fields = array();
+    $mapped_record_types = array();
+
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
         if ( is_array($field_map['salesforce_field']) && !isset($field_map['salesforce_field']['name'])) {
@@ -38,6 +40,12 @@ function salesforce_pull_get_updated_records() {
           $mapped_fields[$field_map['salesforce_field']['name']] = $field_map['salesforce_field']['name'];
         }
       }
+      if (isset($mapping->salesforce_record_type)) {
+        $mapped_record_types[$mapping->salesforce_record_type] = $mapping->salesforce_record_type;
+        // Add the RecordTypeId field so we can use it when processing the queued SF objects
+        $mapped_fields['RecordTypeId'] = 'RecordTypeId';
+      }
+
     }
     $fields = 'Id,+LastModifiedDate';
     foreach ($mapped_fields as $field) {
@@ -52,6 +60,10 @@ function salesforce_pull_get_updated_records() {
     if ($sf_last_sync) {
       $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
       $queryString .= '+where+LastModifiedDate>' . $last_sync;
+
+      if (sizeof($mapped_record_types > 0)) {
+        $queryString .= '+AND+RecordTypeId+IN+(\'' . implode('\',\'', $mapped_record_types) . '\')';
+      }
     }
 
     $results = $sfapi->query($queryString);
@@ -94,9 +106,14 @@ function salesforce_pull_process_records() {
     $sf_object = $item->data;
 
     // Get Mapping
-    $sf_mappings = salesforce_mapping_load_multiple(
-      array('salesforce_object_type' => $sf_object['attributes']['type'])
+    $mapping_conditions = array(
+      'salesforce_object_type' => $sf_object['attributes']['type']
     );
+    if (isset($sf_object['RecordTypeId'])) {
+      $mapping_conditions['salesforce_record_type'] = $sf_object['RecordTypeId'];
+    }
+
+    $sf_mappings = salesforce_mapping_load_multiple($mapping_conditions);
 
     foreach ($sf_mappings as $sf_mapping) {
       // Mapping object exists?
