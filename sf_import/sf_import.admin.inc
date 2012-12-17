@@ -202,10 +202,10 @@ function sf_import_settings_form_submit($form, &$form_state) {
       $processed = _sf_import_process_records();
       if (user_access('administer salesforce')) {
         if ($updates) {
-          drupal_set_message(t('@updates record(s) imported from Salesforce.'), array('@updates' => count($updates)));
+          drupal_set_message(t('@updates record(s) imported from Salesforce.', array('@updates' => count($updates))));
         }
         if ($processed) {
-          drupal_set_message(t('@processed imported record(s) processed.'), array('@processed' => count($processed)));
+          drupal_set_message(t('@processed imported record(s) processed.', array('@processed' => count($processed))));
         }
         drupal_set_message(t('Please allow one minute to refresh this page for accurate information about newly updated records in Salesforce.'));
       }
