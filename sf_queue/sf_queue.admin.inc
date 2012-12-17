@@ -156,7 +156,7 @@ function sf_queue_admin_delete_confirm_submit($form, &$form_state) {
 
 
 function _sf_queue_admin_mapinfo() {
-  $sf_maps_items = db_query("SELECT name,description FROM {salesforce_field_map}");
+  $sf_maps_items = db_query("SELECT name,description FROM {salesforce_fieldmap}");
   foreach($sf_maps_items as $sf_map) {
     $name = $sf_map->name;
     $description = $sf_map->description;
