@@ -20,12 +20,20 @@ function sf_entity_menu() {
       continue;
     }
 
-    // entity uses Entity API
+    // Entity uses Entity API.
     if (in_array('EntityAPIControllerInterface', class_implements($info['controller class']))) {
-      $stub = entity_create($entity, array(
-        $info['entity keys']['id'] => 0,
-        $info['bundle keys']['bundle'] => '__ENTITY_BUNDLE__'
-      ));
+      // Entity defines bundles.
+      if (!empty($info['bundle keys']['bundle'])) {
+        $stub = entity_create($entity, array(
+          $info['entity keys']['id'] => 0,
+          $info['bundle keys']['bundle'] => '__ENTITY_BUNDLE__',
+        ));
+      }
+      else {
+        $stub = entity_create($entity, array(
+          $info['entity keys']['id'] => 0,
+        ));
+      }
     }
     else {
       $fake_ids = array(0, '__ENTITY_VID__', '__ENTITY_BUNDLE__');
