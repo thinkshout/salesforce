@@ -146,6 +146,10 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     $record = get_object_vars($record);
   }
   $created = !isset($existing[$record['Id']]);
+  $record_id = NULL;
+  if (!$created) {
+    $record_id = $existing[$record['Id']];
+  }
   $type = $map->drupal_entity;
   // Check to see if the fieldmap matches a Drupal entity.
   // If so, use the entity import function.
@@ -156,7 +160,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   $function = 'sf_' . $type . '_import';
 
   if (function_exists($function)) {
-    $oid = $function($record, $map->name, $existing[$record['Id']], $extra);
+    $oid = $function($record, $map->name, $record_id, $extra);
   }
   else {
     $context['finished'] = TRUE;
