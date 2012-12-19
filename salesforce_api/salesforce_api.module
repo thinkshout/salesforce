@@ -970,7 +970,7 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
       $value = $drupal_data->$drupal_fieldname;
     }
 
-    // Ignore null values for non-nillable fields. We also explicitly set all 
+    // Ignore null values for non-nillable fields. We also explicitly set all
     // empty strings to NULL so they too can be subject to these checks.
     if ($value === "") {
       $value = NULL;
@@ -1018,6 +1018,8 @@ function salesforce_api_fieldmap_export_create($name, $drupal_data = NULL) {
         break;
 
       case 'email':
+        // Remove spaces.
+        $value = trim($value);
         if (salesforce_api_valid_email_address($value)) {
           $object->$sf_fieldname  = $value;
         }
