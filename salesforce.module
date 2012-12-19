@@ -3,6 +3,67 @@
 module_load_include('inc', 'salesforce', 'includes/salesforce');
 
 /**
+ * Implements hook_help().
+ */
+function salesforce_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#salesforce':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('This module suite implements a mapping functionality between Salesforce
+  objects and Drupal entities. In other words, for each of your supported Drupal
+  entities (e.g. node, user, or entities supported by extensions), you can
+  assign Salesforce objects that will be created / updated when the entity is
+  saved. For each such assignment, you choose which Drupal and Salesforce fields
+  should be mapped to one another.') . '</p>';
+      $output .= '<p>' . t('This suite also includes an API architecture which allows for additional
+  modules to be easily plugged in (e.g. for webforms, contact form submits,
+  etc).') . '</p>';
+
+      $output .= '<p>' . t('For a more detailed description of each component module, see below.') . '</p>';
+      $output .= '<h3>' . t('Requirements') . '</h3>';
+      $output .= '<ol>';
+      $output .= '<li>' . t('You need a Salesforce account. Developers can !register_here.', array('!register_here' => l(t('register here'), 'http://www.developerforce.com/events/regular/registration.php'))) . '</li>';
+      $output .= '<li>' . t('You will need to create a remote application/connected app for authorization.') . '</li>';
+      $output .= '<ul>';
+      $output .= '<li>' . t('In Salesforce go to Your Name > Setup > Create > Apps then create a new Connected App.') . '</li>';
+      $output .= '<li>' . t('Set the callback URL to: !url (must use SSL)', array('!url' => '<code>' . $_SERVER['HTTP_REFERER'] . 'salesforce/oauth_callback' . '</code>')) . '</li>';
+      $output .= '<li>' . t('Select at least "Perform requests on your behalf at any time" for OAuth Scope
+  as well as the appropriate other scopes for your application. !info.', array('!info' => l(t('Additional information'), 'https://help.salesforce.com/help/doc/en/remoteaccess_about.htm'))) . '</li>';
+      $output .= '<li>' . t('For more help see !salesforce.', array('!salesforce' => l(t('the salesforce.com documentation'), 'https://www.salesforce.com/us/developer/docs/api_rest/Content/quickstart_oauth.htm'))) . '</li>';
+      $output .= '</ul>';
+      $output .= '<li>' . t('Your site needs to be SSL enabled to authorize the remote application using OAUTH.') . '</li>';
+      $output .= '<li>' . t('If using the SOAP API, PHP must be compiled with !SOAP and !SSL.',
+        array(
+          '!SOAP' => l(t('SOAP web services'), 'http://php.net/soap'),
+          '!SSL' => l(t('OpenSSL support'), 'http://php.net/openssl'))
+        ) . '</li>';
+      $output .= '</ol>';
+      $output .= '<h4>' . t('Required modules') . '</h4>';
+      $output .= '<ul>';
+      $output .= '<li>' . l(t('Entity API'), 'http://drupal.org/project/entity') . '</li>';
+      $output .= '<li>' . l(t('Libraries, only for SOAP API'), 'http://drupal.org/project/libraries') . '</li>';
+      $output .= '</ul>';
+      $output .= '<h3>' . t('Modules') . '</h3>';
+      $output .= '<h4>' . t('Salesforce (salesforce)') . '</h4>';
+      $output .= '<p>' . t('OAUTH2 authorization and wrapper around the Salesforce REST API.') . '</p>';
+      $output .= '<h4>' . t('Salesforce Mapping (salesforce_mapping)') . '</h4>';
+      $output .= '<p>' . t('Map Drupal entities to Salesforce fields, including field level mapping.') . '</p>';
+      $output .= '<h4>' . t('Salesforce Push (salesforce_push)') . '</h4>';
+      $output .= '<p>' . t('Push Drupal entity updates into Salesforce.') . '</p>';
+      $output .= '<h4>' . t('Salesforce Pull (salesforce_pull)') . '</h4>';
+      $output .= '<p>' . t('Pull Salesforce object updates into Drupal.') . '</p>';
+      $output .= '<h4>' . t('Salesforce Soap (salesforce_soap)') . '</h4>';
+      $output .= '<p>' . t('Lightweight wrapper around the SOAP API, using the OAUTH access token, to fill in functional gaps missing in the REST API. Requires the Salesforce PHP Toolkit.') . '</p>';
+      $output .= '<p>' . t('Example installation of the Salesforce PHP Toolkit using the provided Drush Make file:') . ' <code>drush make /path/to/salesforce/modules/salesforce_soap/salesforce_soap.make.example --no-core -y</code>' . '</p>';
+      return $output;
+
+    case 'admin/config/services/salesforce':
+      return '<p>' . t('Visit !help if you need help obtaining a consumer key and secret.', array('!help' => l(t('the Salesforce module help page'), '/admin/help#salesforce'))) . '</p>';
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function salesforce_menu() {
