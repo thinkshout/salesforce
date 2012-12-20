@@ -59,7 +59,7 @@ function salesforce_help($path, $arg) {
       return $output;
 
     case 'admin/config/services/salesforce':
-      return '<p>' . t('Visit !help if you need help obtaining a consumer key and secret.', array('!help' => l(t('the Salesforce module help page'), '/admin/help#salesforce'))) . '</p>';
+      return '<p>' . t('Visit !help if you need help obtaining a consumer key and secret.', array('!help' => l(t('the Salesforce module help page'), 'admin/help/salesforce'))) . '</p>';
   }
 }
 
