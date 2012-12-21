@@ -130,8 +130,8 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
   $mapped_objects = salesforce_mapping_object_load_by_sfid($sf_object[$field_map['salesforce_field']['name']]);
   $info = $entity_wrapper->info();
   if ($mapped_objects && !isset($info['relation_type'])) {
-    $entity = entity_load($mapped_objects->entity_type, array($mapped_objects->entity_id));
-    return $entity;
+    $entity = entity_load_single($mapped_objects->entity_type, $mapped_objects->entity_id);
+    return entity_metadata_wrapper($mapped_objects->entity_type, $entity);
   }
   // Handle relations
   else {
