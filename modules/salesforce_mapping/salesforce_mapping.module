@@ -308,9 +308,9 @@ function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
             'attributes' => array('target' => '_blank')
           )
         )
-      ),
+      )),
       '#classes' => 'field field-label-inline clearfix',
-    ));
+    );
     $entity->content['salesforce_last_sync'] = array(
       '#theme' => 'salesforce_mapping_linked_object',
       '#label' => t('Salesforce last sync'),
