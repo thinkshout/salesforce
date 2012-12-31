@@ -544,7 +544,8 @@ function salesforce_mapping_form_validate($form, &$form_state) {
           }
         }
         else {
-          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+          $filtered = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
+          $sf_field = reset($filtered);
         }
 
         $field_array = explode(':', $mapping['drupal_field']['fieldmap_value']);
@@ -606,7 +607,8 @@ function salesforce_mapping_form_submit($form, &$form_state) {
           }
         }
         else {
-          $sf_field = reset(array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field'])));
+          $filtered = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
+          $sf_field = reset($filtered);
         }
 
         $mappings[] = array(
