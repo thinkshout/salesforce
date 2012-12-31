@@ -245,7 +245,7 @@ function salesforce_pull_process_deleted_records() {
 
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
 
-    $last_delete_sync = variable_get('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
+    $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
     $now = time();
     // SOAP getDeleted() restraint: startDate must be at least one minute greater than endDate
     $now = $now > $last_delete_sync + 60 ? $now : $now + 60;
@@ -279,7 +279,7 @@ function salesforce_pull_process_deleted_records() {
         }
       }
     }
-    variable_set('salesforce_delete_last_sync_' . $type, REQUEST_TIME);
+    variable_set('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
   }
 }
 
