@@ -208,7 +208,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap_type_name);
         $fieldmap_value_element += array(
           '#type' => $fieldmap_type['field_type'],
-          '#description' => $fieldmap_type['description'],
+          '#description' => check_plain($fieldmap_type['description']),
           '#size' => !empty($fieldmap_type['description']) ? $fieldmap_type['description'] : 30,
           '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_value'] : NULL,
         );
