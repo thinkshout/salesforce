@@ -296,14 +296,14 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
    */
   $verify_array = array(
     'sync' => array(
-      'string' => array('text', 'list<text>'),
+      'string' => array('text', 'list<text>', 'uri'),
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'drupal_sf' => array(
-      'string' => array('text', 'list<text>'),
+      'string' => array(), // allow any source field type
       'int' => array('integer'),
       'id' => array('integer'),
       'datetime' => array('date'),
