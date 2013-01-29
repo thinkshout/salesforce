@@ -202,8 +202,10 @@ function sf_entity_save($entity, $type, $op) {
   // Finally, export the entity to Salesforce.
   try {
     sf_entity_export($entity, $salesforce->name, $salesforce->sfid);
-  } catch (Exception $e) {
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to export entity: ' . $e->getMessage(), array(), WATCHDOG_ERROR, l('view', entity_uri($type, $entity)));
+  }
+  catch (Exception $e) {
+    $uri = entity_uri($type, $entity);
+    salesforce_api_log(SALESFORCE_LOG_SOME, t('Exception while attempting to export entity: <pre>%e</pre>'), array('%e' => $e->getMessage()), WATCHDOG_ERROR, l('view', $uri['path']));
   }
 }
 
@@ -465,7 +467,8 @@ function sf_entity_salesforce_form($form, &$form_state, $entity_type, $entity) {
       '#type' => 'value',
       '#value' => $entity_type,
     );
-    return confirm_form($form, 'Are you sure you want to unlink this entity from Salesforce?', entity_uri($entity_type, $entity), 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will <strong>not</strong> delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel');
+    $uri = entity_uri($entity_type, $entity);
+    return confirm_form($form, 'Are you sure you want to unlink this entity from Salesforce?', $uri['path'], 'Unlinking this object will remove the connection between the Drupal object and the Salesforce record. This action will <strong>not</strong> delete the Drupal object or the Salesforce record. This cannot be undone.', 'Unlink', 'Cancel');
   }
 
 
@@ -812,7 +815,8 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
     $response = $sf->client->upsert('Id', array($object), $map->salesforce);
   }
   catch (Exception $e) {
-    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to upsert entity: %msg <pre>%e</pre>', array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('view', entity_uri($map->drupal_entity, $entity)));
+    $uri = entity_uri($map->drupal_entity, $entity);
+    salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to upsert entity: %msg <pre>%e</pre>', array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('view', $uri['path']));
   }
 
   // Check to see if response is an array of objects
@@ -843,15 +847,15 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
         $sfid = reset($matches);
         $entity->salesforce->sfid = $sfid;
       }
-
+      $uri = entity_uri($map->drupal_entity, $entity);
       salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce record deleted. Attempting to unlink and upsert. <pre>%response</pre>',
-        array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('view', entity_uri($map->drupal_entity, $entity)));
+        array('%response' => print_r($response, 1)), WATCHDOG_ERROR, l('view', $uri['path']));
       try {
         $response = $sf->client->upsert('Id', array($object), $map->salesforce);
       }
       catch (Exception $e) {
         salesforce_api_log(SALESFORCE_LOG_SOME, 'Exception while attempting to upsert entity: %msg <pre>%e</pre>',
-          array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('view', entity_uri($map->drupal_entity, $entity)));
+          array('%msg' => $e->getMessage(), '%e' => print_r($e, TRUE)), WATCHDOG_ERROR, l('view', $uri['path']));
       }
     }
   }
@@ -866,8 +870,9 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
     if (user_access('administer salesforce')) {
       sf_dpm($response);
     }
+    $uri = entity_uri($map->drupal_entity, $entity);
     salesforce_api_log(SALESFORCE_LOG_SOME, 'Salesforce returned an unsuccessful response: ' . print_r($response, 1), array(),
-      WATCHDOG_ERROR, l('entity ' . $id, entity_uri($map->drupal_entity, $entity)));
+      WATCHDOG_ERROR, l('entity ' . $id, $uri['path']));
   }
   // Allow other modules to respond after an export.
   module_invoke_all('salesforce_api_post_export', $object, $map, $id, $response);
