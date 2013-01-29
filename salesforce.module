@@ -52,7 +52,7 @@ function salesforce_help($path, $arg) {
       $output .= '<h4>' . t('Salesforce Push (salesforce_push)') . '</h4>';
       $output .= '<p>' . t('Push Drupal entity updates into Salesforce.') . '</p>';
       $output .= '<h4>' . t('Salesforce Pull (salesforce_pull)') . '</h4>';
-      $output .= '<p>' . t('Pull Salesforce object updates into Drupal.') . '</p>';
+      $output .= '<p>' . t('Pull Salesforce object updates into Drupal on cron run. (Salesforce Outbound Notifications are not supported.)') . '</p>';
       $output .= '<h4>' . t('Salesforce Soap (salesforce_soap)') . '</h4>';
       $output .= '<p>' . t('Lightweight wrapper around the SOAP API, using the OAUTH access token, to fill in functional gaps missing in the REST API. Requires the Salesforce PHP Toolkit.') . '</p>';
       $output .= '<p>' . t('Example installation of the Salesforce PHP Toolkit using the provided Drush Make file:') . ' <code>drush make /path/to/salesforce/modules/salesforce_soap/salesforce_soap.make.example --no-core -y</code>' . '</p>';
