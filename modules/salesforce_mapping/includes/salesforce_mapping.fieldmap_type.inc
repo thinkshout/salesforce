@@ -242,9 +242,9 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   }
   $value = $child_wrapper->value();
 
-  // Always the take the first value when cardinality is > 0.
-  if (is_array($value) && isset($value[0])) {
-    $value = $value[0];
+  // Salesforce wants arrays to be imploded strings
+  if (is_array($value)) {
+    $value = implode(SALESFORCE_MAPPING_ARRAY_DELIMITER, $value);
   }
 
   // Field type specific handling
@@ -261,6 +261,12 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
   $value = $sf_object[$field_map['salesforce_field']['name']];
+
+  // Salesforce provides multipicklist values as a delimited string. If the
+  // destination field in Drupal accepts multiple values, explode the string into an array.
+  if ($entity_wrapper instanceof EntityListWrapper) {
+    $value = explode(SALESFORCE_MAPPING_ARRAY_DELIMITER, $value);
+  }
 
   switch ($entity_wrapper->type()) {
     case 'date':
