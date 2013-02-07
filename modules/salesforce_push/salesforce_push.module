@@ -42,6 +42,13 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
     return;
   }
 
+  // Trigger a hook to allow other modules to prevent this entity/operation from triggering a sync with Salesforce
+  foreach (module_implements('salesforce_push_entity_allowed') as $module) {
+    if (module_invoke($module, 'salesforce_push_entity_allowed', $entity_type, $entity, $sf_sync_trigger) === FALSE) {
+      return;
+    }
+  }
+
   list($entity_id, , $bundle) = entity_extract_ids($entity_type, $entity);
 
   $mappings = salesforce_mapping_load_multiple(array(

@@ -42,6 +42,23 @@ function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) 
 }
 
 /**
+ * Prevent push to SF for an entity.
+ *
+ * @param $entity_type
+ *   The type of entity the push is for.
+ * @param $entity
+ *   The entity object the push is for.
+ * @param $sf_sync_trigger
+ *   Constant for the Drupal operation that triggered the sync
+ *
+ * @return bool
+ *   FALSE if the entity should not be synced to Salesforce for the $sf_sync_trigger operation
+ */
+function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_trigger) {
+
+}
+
+/**
  * Alter the value being mapped to an entity property from a Salesforce object.
  *
  * @param $value
