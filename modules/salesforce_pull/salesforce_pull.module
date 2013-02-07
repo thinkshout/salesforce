@@ -56,14 +56,21 @@ function salesforce_pull_get_updated_records() {
     $queryString = 'SELECT+' . $fields . '+from+' . $type;
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
 
+    $where = array();
+
     // If no lastupdate, get all records, else get records since last pull
     if ($sf_last_sync) {
       $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
-      $queryString .= '+where+LastModifiedDate>' . $last_sync;
+      $where[] = 'LastModifiedDate>' . $last_sync;
+    }
 
-      if (sizeof($mapped_record_types > 0)) {
-        $queryString .= '+AND+RecordTypeId+IN+(\'' . implode('\',\'', $mapped_record_types) . '\')';
-      }
+    // If Record Type is specified, restrict query
+    if (count($mapped_record_types) > 0) {
+      $where[] = 'RecordTypeId+IN+(\'' . implode('\',\'', $mapped_record_types) . '\')';
+    }
+
+    if (count($where) > 0) {
+      $queryString .= '+WHERE+' . implode('+AND+', $where);
     }
 
     $results = $sfapi->query($queryString);
