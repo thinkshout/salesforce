@@ -350,7 +350,7 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     }
   }
 
-  drupal_alter('salesforce_push_params', $params, $mapping, $entity);
+  drupal_alter('salesforce_push_params', $params, $mapping, $entity_wrapper);
 
   return $params;
 }

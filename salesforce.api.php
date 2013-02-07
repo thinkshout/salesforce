@@ -34,10 +34,10 @@ function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
  *   Associative array of key value pairs.
  * @param $mapping
  *   Salesforce mapping object.
- * @param $entity
- *   Drupal entity being mapped.
+ * @param $entity_wrapper
+ *   EntityMetadataWrapper of entity being mapped.
  */
-function hook_salesforce_push_params_alter(&$params, $mapping, $entity) {
+function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) {
 
 }
 
