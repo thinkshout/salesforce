@@ -240,7 +240,13 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
     }
     $parent = $child_wrapper;
   }
-  $value = $child_wrapper->value();
+  try {
+    $value = $child_wrapper->value();
+  }
+  catch (EntityMetadataWrapperException $e) {
+    // Don't throw an exception, if we can't get the value, it probably means the field is empty.
+    // @todo: Find a better way to check the validity of child wrappers
+  }
 
   // Salesforce wants arrays to be imploded strings
   if (is_array($value)) {
