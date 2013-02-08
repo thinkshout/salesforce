@@ -653,6 +653,6 @@ function salesforce_mapping_form_submit($form, &$form_state) {
 
   $mapping->save();
 
-  drupal_set_message(t('Salesforce field mapping saved.'));
+  salesforce_set_message(t('Salesforce field mapping saved.'));
   $form_state['redirect'] = 'admin/structure/salesforce/mappings';
 }
