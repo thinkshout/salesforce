@@ -211,8 +211,10 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
 
   foreach ($field_map['salesforce_field'] as $sf_field) {
     $mapped_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
-    $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
-    $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
+    if ($mapped_object) {
+      $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
+      $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
+    }
   }
 
   return $values;
