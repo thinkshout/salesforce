@@ -211,8 +211,10 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
 
   foreach ($field_map['salesforce_field'] as $sf_field) {
     $mapped_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
-    $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
-    $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
+    if ($mapped_object) {
+      $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
+      $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
+    }
   }
 
   return $values;
@@ -240,11 +242,17 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
     }
     $parent = $child_wrapper;
   }
-  $value = $child_wrapper->value();
+  try {
+    $value = $child_wrapper->value();
+  }
+  catch (EntityMetadataWrapperException $e) {
+    // Don't throw an exception, if we can't get the value, it probably means the field is empty.
+    // @todo: Find a better way to check the validity of child wrappers
+  }
 
-  // Always the take the first value when cardinality is > 0.
-  if (is_array($value) && isset($value[0])) {
-    $value = $value[0];
+  // Salesforce wants arrays to be imploded strings
+  if (is_array($value)) {
+    $value = implode(SALESFORCE_MAPPING_ARRAY_DELIMITER, $value);
   }
 
   // Field type specific handling
@@ -261,6 +269,12 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
   $value = $sf_object[$field_map['salesforce_field']['name']];
+
+  // Salesforce provides multipicklist values as a delimited string. If the
+  // destination field in Drupal accepts multiple values, explode the string into an array.
+  if ($entity_wrapper instanceof EntityListWrapper) {
+    $value = explode(SALESFORCE_MAPPING_ARRAY_DELIMITER, $value);
+  }
 
   switch ($entity_wrapper->type()) {
     case 'date':

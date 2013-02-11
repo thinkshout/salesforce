@@ -34,10 +34,27 @@ function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
  *   Associative array of key value pairs.
  * @param $mapping
  *   Salesforce mapping object.
- * @param $entity
- *   Drupal entity being mapped.
+ * @param $entity_wrapper
+ *   EntityMetadataWrapper of entity being mapped.
  */
-function hook_salesforce_push_params_alter(&$params, $mapping, $entity) {
+function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) {
+
+}
+
+/**
+ * Prevent push to SF for an entity.
+ *
+ * @param $entity_type
+ *   The type of entity the push is for.
+ * @param $entity
+ *   The entity object the push is for.
+ * @param $sf_sync_trigger
+ *   Constant for the Drupal operation that triggered the sync
+ *
+ * @return bool
+ *   FALSE if the entity should not be synced to Salesforce for the $sf_sync_trigger operation
+ */
+function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_trigger) {
 
 }
 

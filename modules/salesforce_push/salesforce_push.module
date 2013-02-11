@@ -42,6 +42,13 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
     return;
   }
 
+  // Trigger a hook to allow other modules to prevent this entity/operation from triggering a sync with Salesforce
+  foreach (module_implements('salesforce_push_entity_allowed') as $module) {
+    if (module_invoke($module, 'salesforce_push_entity_allowed', $entity_type, $entity, $sf_sync_trigger) === FALSE) {
+      return;
+    }
+  }
+
   list($entity_id, , $bundle) = entity_extract_ids($entity_type, $entity);
 
   $mappings = salesforce_mapping_load_multiple(array(
@@ -95,10 +102,10 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
-      drupal_set_message($e->getMessage(), 'error');
+      salesforce_set_message($e->getMessage(), 'error');
     }
 
-    drupal_set_message(t('Salesforce object %sfid has been deleted.', array(
+    salesforce_set_message(t('Salesforce object %sfid has been deleted.', array(
       '%sfid' => $mapped_objects->salesforce_id
     )));
     $mapped_objects->delete();
@@ -113,7 +120,9 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   if (!$mapped_objects) {
     // Setup SF record type
     if ($mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
-      $params['RecordTypeId'] = $mapping->salesforce_record_type;
+      if ($mapping->salesforce_object_type != 'CampaignMember') {
+        $params['RecordTypeId'] = $mapping->salesforce_record_type;
+      }
     }
 
     try {
@@ -128,7 +137,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
-      drupal_set_message($e->getMessage(), 'error');
+      salesforce_set_message($e->getMessage(), 'error');
       return;
     }
 
@@ -142,7 +151,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       ));
     }
     else {
-      drupal_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
+      salesforce_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
         '%label' => $entity_wrapper->label(),
         '@code' => $data['errorCode'],
         '@message' => $data['message']
@@ -166,7 +175,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
       $mapped_objects->delete();
-      drupal_set_message(t('Error message: "@msg".  The Salesforce link has been removed.', array(
+      salesforce_set_message(t('Error message: "@msg".  The Salesforce link has been removed.', array(
         '@msg' => $e->getMessage()
       )), 'error');
       return;
@@ -175,7 +184,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     $mapped_objects->last_sync = REQUEST_TIME;
   }
 
-  drupal_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
+  salesforce_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
     '%name' => $entity_wrapper->label(),
     '%sfid' => $mapped_objects->salesforce_id
   )));
@@ -350,7 +359,7 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     }
   }
 
-  drupal_alter('salesforce_push_params', $params, $mapping, $entity);
+  drupal_alter('salesforce_push_params', $params, $mapping, $entity_wrapper);
 
   return $params;
 }

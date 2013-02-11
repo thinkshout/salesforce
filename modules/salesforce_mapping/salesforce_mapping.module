@@ -30,6 +30,11 @@ define('SALESFORCE_MAPPING_DIRECTION_SYNC', 'sync');
  */
 define('SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE', 'default');
 
+/*
+ * Delimiter used in Salesforce multipicklists
+ */
+define('SALESFORCE_MAPPING_ARRAY_DELIMITER', ';');
+
 /**
  * Access callback for managing salesforce mappings.
  *
