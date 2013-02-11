@@ -6,3 +6,5 @@ core = 7.x
 configure = admin/config/services/salesforce
 
 files[] = includes/salesforce.inc
+
+php = 5.3
