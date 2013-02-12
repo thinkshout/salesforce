@@ -83,7 +83,6 @@ function salesforce_mapping_entity_info() {
         'controller class' => 'SalesforceMappingUIController',
       ),
       'access callback' => 'salesforce_mappings_access',
-      'label callback' => 'entity_class_label',
     ),
     'salesforce_mapping_object' => array(
       'label' => t('Salesforce Object Mapping'),
