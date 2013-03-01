@@ -96,20 +96,22 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_wrapper->getIdentifier());
 
   // Delete SF object
-  if ($mapped_objects && $sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
-    try {
-      $sfapi->objectDelete($mapping->salesforce_object_type, $mapped_objects->salesforce_id);
-    }
-    catch(SalesforceException $e) {
-      watchdog_exception('salesforce_push', $e);
-      salesforce_set_message($e->getMessage(), 'error');
-    }
+  if ($sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
+    if ($mapped_objects) {
+      try {
+        $sfapi->objectDelete($mapping->salesforce_object_type, $mapped_objects->salesforce_id);
+      }
+      catch(SalesforceException $e) {
+        watchdog_exception('salesforce_push', $e);
+        salesforce_set_message($e->getMessage(), 'error');
+      }
 
-    salesforce_set_message(t('Salesforce object %sfid has been deleted.', array(
-      '%sfid' => $mapped_objects->salesforce_id
-    )));
-    $mapped_objects->delete();
-
+      salesforce_set_message(t('Salesforce object %sfid has been deleted.', array(
+        '%sfid' => $mapped_objects->salesforce_id
+      )));
+      $mapped_objects->delete();
+    }
+    // No mapped object or object was deleted
     return;
   }
 
