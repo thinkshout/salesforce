@@ -135,50 +135,52 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
   }
   // Handle relations
   else {
-    $type = $info['parent']->type();
-    $id = $info['parent']->getIdentifier();
-    $query = relation_query($type, $id);
-    $query->propertyCondition('relation_type', $info['relation_type']);
-    $results = $query->execute();
-    if ($results) {
-      $relations = relation_load_multiple(array_keys($results));
-      $match = TRUE;
-    }
-    else {
-      $match = FALSE;
-    }
-
-    if (isset($relations)) {
-      foreach ($relations as $rid => $relation) {
+    if (module_exists('relation')) {
+      $type = $info['parent']->type();
+      $id = $info['parent']->getIdentifier();
+      $query = relation_query($type, $id);
+      $query->propertyCondition('relation_type', $info['relation_type']);
+      $results = $query->execute();
+      if ($results) {
+        $relations = relation_load_multiple(array_keys($results));
         $match = TRUE;
-        // Check if matches existing
-        $current_endpoints = $relations[$rid]->endpoints;
-        if (
-          ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
-          ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
-          ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
-          ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
-        ) {
-          $match = FALSE;
-        }
-        // If same type and not a match delete relation
-        if ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] == $mapped_objects->entity_type && !$match) {
-          relation_delete($rid);
+      }
+      else {
+        $match = FALSE;
+      }
+
+      if (isset($relations)) {
+        foreach ($relations as $rid => $relation) {
+          $match = TRUE;
+          // Check if matches existing
+          $current_endpoints = $relations[$rid]->endpoints;
+          if (
+            ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
+            ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
+            ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
+            ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
+          ) {
+            $match = FALSE;
+          }
+          // If same type and not a match delete relation
+          if ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] == $mapped_objects->entity_type && !$match) {
+            relation_delete($rid);
+          }
         }
       }
-    }
-    // Create new relation and endpoints
-    if ($mapped_objects && !$match) {
-      $relation_type = $info['relation_type'];
-      $endpoints = array(
-        array('entity_type' => $type, 'entity_id' => $id),
-        array(
-          'entity_type' => $mapped_objects->entity_type,
-          'entity_id' => $mapped_objects->entity_id
-        ),
-      );
-      $relation_new = relation_create($relation_type, $endpoints);
-      relation_save($relation_new);
+      // Create new relation and endpoints
+      if ($mapped_objects && !$match) {
+        $relation_type = $info['relation_type'];
+        $endpoints = array(
+          array('entity_type' => $type, 'entity_id' => $id),
+          array(
+            'entity_type' => $mapped_objects->entity_type,
+            'entity_id' => $mapped_objects->entity_id
+          ),
+        );
+        $relation_new = relation_create($relation_type, $endpoints);
+        relation_save($relation_new);
+      }
     }
   }
 
