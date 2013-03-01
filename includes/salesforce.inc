@@ -150,7 +150,7 @@ class Salesforce {
    *   Complete URL endpoint for API access.
    */
   public function getInstanceURL($api_type = 'rest') {
-    $url = &drupal_static(__FUNCTION__ + $api_type);
+    $url = &drupal_static(__FUNCTION__ . $api_type);
     if (!isset($url)) {
       $identity = $this->getIdentity();
       $url = str_replace('{version}', $this->rest_api_version['version'], $identity['urls'][$api_type]);
