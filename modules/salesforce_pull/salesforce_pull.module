@@ -32,6 +32,7 @@ function salesforce_pull_get_updated_records() {
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
         if ( is_array($field_map['salesforce_field']) && !isset($field_map['salesforce_field']['name'])) {
+          // @TODO: check field direction: http://drupal.org/node/1915668
           foreach ($field_map['salesforce_field'] as $sf_field) {
             $mapped_fields[$sf_field['name']] = $sf_field['name'];
           }
