@@ -16,7 +16,7 @@ class Salesforce {
 
   //@todo: does this need to be configurable?
   public $rest_api_version = array(
-    "label" => "Summer '12",
+    "label" => "Spring '13",
     "url" => "/services/data/v27.0/",
     "version" => "27.0"
   );
