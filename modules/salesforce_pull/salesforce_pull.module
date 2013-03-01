@@ -75,7 +75,7 @@ function salesforce_pull_get_updated_records() {
     }
 
     $results = $sfapi->query($queryString);
-    $version_url = $sfapi->rest_api_version['url'];
+    $version_url = $sfapi->getInstanceURL();
 
     if (!isset($results['errorCode'])) {
       // Handle requests larger than the batch limit (usually 2000)

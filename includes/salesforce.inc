@@ -16,9 +16,9 @@ class Salesforce {
 
   //@todo: does this need to be configurable?
   public $rest_api_version = array(
-    "label" => "Summer '12",
-    "url" => "/services/data/v25.0/",
-    "version" => "25.0"
+    "label" => "Spring '13",
+    "url" => "/services/data/v27.0/",
+    "version" => "27.0"
   );
 
   /**
@@ -111,7 +111,7 @@ class Salesforce {
    * @return object
    */
   private function apiHttpRequest($path, $params, $method) {
-    $url = $this->getInstanceURL() . $this->rest_api_version['url'] . $path;
+    $url = $this->getInstanceURL() . $path;
     $headers = array(
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
       'Content-type' => 'application/json'
@@ -141,14 +141,21 @@ class Salesforce {
   }
 
   /**
-   * Getter and setter for SF API instance URL.
+   * Get the API end point for a given type of the API.
+   *
+   * @param string $api_type
+   *   E.g., rest, partner, enterprise.
+   *
+   * @return string
+   *   Complete URL endpoint for API access.
    */
-  public function getInstanceURL() {
-    return variable_get('salesforce_instance_url', '');
-  }
-
-  private function setInstanceURL($url) {
-    variable_set('salesforce_instance_url', $url);
+  public function getInstanceURL($api_type = 'rest') {
+    $url = &drupal_static(__FUNCTION__ . $api_type);
+    if (!isset($url)) {
+      $identity = $this->getIdentity();
+      $url = str_replace('{version}', $this->rest_api_version['version'], $identity['urls'][$api_type]);
+    }
+    return $url;
   }
 
   /**
@@ -209,8 +216,39 @@ class Salesforce {
       throw new SalesforceException($data['error_description'], $data['error']);
     }
 
-    $this->setInstanceURL($data['instance_url']);
     $this->setAccessToken($data['access_token']);
+    $this->setIdentity($data['id']);
+  }
+
+  /**
+   * Retrieve and store the Salesforce identity given an ID url.
+   *
+   * @param $id
+   *   Identity URL.
+   *
+   * @throws SalesforceException
+   */
+  private function setIdentity($id) {
+    $headers = array(
+      'Authorization' => 'OAuth ' . $this->getAccessToken(),
+      'Content-type' => 'application/json'
+    );
+    $response = $this->httpRequest($id, NULL, $headers);
+    if ($response->code != 200) {
+      throw new SalesforceException(t('Unable to access identity service.'), $response->code);
+    }
+    $data = drupal_json_decode($response->data);
+    variable_set('salesforce_identity', $data);
+  }
+
+  /**
+   * Return the Salesforce identity, which is stored in a variable.
+   *
+   * @return array
+   *   Returns FALSE is no identity has been stored.
+   */
+  public function getIdentity() {
+    return variable_get('salesforce_identity', FALSE);
   }
 
   /**
@@ -258,8 +296,8 @@ class Salesforce {
     }
 
     $this->setRefreshToken($data['refresh_token']);
-    $this->setInstanceURL($data['instance_url']);
     $this->setAccessToken($data['access_token']);
+    $this->setIdentity($data['id']);
   }
 
   /**
