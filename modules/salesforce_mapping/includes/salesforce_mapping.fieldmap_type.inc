@@ -31,21 +31,24 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
       'field_type' => 'textfield',
       'push_value_callback' => 'salesforce_mapping_constant_fieldmap_value',
     ),
-    'related_entity' => array(
+  );
+
+  if (module_exists('relation')) {
+    $types['related_entity'] = array(
       'label' => t('Related entities'),
       'field_type' => 'select',
-      'description' => t('If an existing connection is found with the selected entity, the linked identifiers will be used.'),
+      'description' => t('If an existing relationship via the Relation module is found with the selected entity, the linked identifiers will be used.'),
       'options_callback' => 'salesforce_mapping_related_entity_fieldmap_options',
       'push_value_callback' => 'salesforce_mapping_related_entity_fieldmap_push_value',
       'pull_value_callback' => 'salesforce_mapping_related_entity_fieldmap_pull_value',
-    ),
-  );
+    );
+  }
 
   if (module_exists('relation_endpoint')) {
     $types['relation_endpoints'] = array(
       'label' => t('Relation endpoints'),
       'field_type' => 'select',
-      'description' => t('Allows multiple Salesforce fields to be selected as endpoint values.'),
+      'description' => t('Allows multiple Salesforce fields to be selected as Relation endpoint values.'),
       'options_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_options',
       'pull_value_callback' => 'salesforce_mapping_relation_endpoints_fieldmap_pull_value',
       'salesforce_multiple_fields' => TRUE,
