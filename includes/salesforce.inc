@@ -111,7 +111,7 @@ class Salesforce {
    * @return object
    */
   private function apiHttpRequest($path, $params, $method) {
-    $url = $this->getInstanceURL() . $path;
+    $url = $this->getApiEndPoint() . $path;
     $headers = array(
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
       'Content-type' => 'application/json'
@@ -149,13 +149,29 @@ class Salesforce {
    * @return string
    *   Complete URL endpoint for API access.
    */
-  public function getInstanceURL($api_type = 'rest') {
+  public function getApiEndPoint($api_type = 'rest') {
     $url = &drupal_static(__FUNCTION__ . $api_type);
     if (!isset($url)) {
       $identity = $this->getIdentity();
       $url = str_replace('{version}', $this->rest_api_version['version'], $identity['urls'][$api_type]);
     }
     return $url;
+  }
+
+  /**
+   * Getter the SF instance URL. Useful for linking to objects.
+   */
+  public function getInstanceUrl() {
+    return variable_get('salesforce_instance_url', '');
+  }
+
+  /**
+   * Set the SF instanc URL.
+   *
+   * @param $url
+   */
+  private function setInstanceUrl($url) {
+    variable_set('salesforce_instance_url', $url);
   }
 
   /**
@@ -218,6 +234,7 @@ class Salesforce {
 
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);
+    $this->setInstanceUrl($data['instance_url']);
   }
 
   /**
@@ -298,6 +315,7 @@ class Salesforce {
     $this->setRefreshToken($data['refresh_token']);
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);
+    $this->setInstanceUrl($data['instance_url']);
   }
 
   /**

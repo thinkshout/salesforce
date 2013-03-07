@@ -308,7 +308,7 @@ function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
       '#items' => array(array(
         '#markup' => l(
           $mapping->salesforce_id,
-          $sfapi->getInstanceURL() . '/' . $mapping->salesforce_id,
+          $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
           array(
             'attributes' => array('target' => '_blank')
           )

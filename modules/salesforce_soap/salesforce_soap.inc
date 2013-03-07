@@ -15,7 +15,7 @@ class SalesforceSoapPartner extends SforcePartnerClient {
     $this->createConnection($wsdl);
     $this->SalesforceApi = $SalesforceApi;
     $this->setSessionHeader($this->SalesforceApi->getAccessToken());
-    $this->setEndPoint($this->SalesforceApi->getInstanceURL('partner'));
+    $this->setEndPoint($this->SalesforceApi->getApiEndPoint('partner'));
   }
 
 }
