@@ -20,6 +20,8 @@ function hook_salesforce_mapping_fieldmap_type() {
 /**
  * Alter existing fieldmap types.
  *
+ * @TODO This is currently not implemented. @see https://drupal.org/node/1942884
+ *
  * @param $fieldmap_type
  */
 function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
@@ -29,6 +31,8 @@ function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
 /**
  * Alter the parameters being mapped to a Salesforce object before it is synced
  * to Salesforce.
+ *
+ * @TODO This is currently not implemented. @see https://drupal.org/node/1942884
  *
  * @param $params
  *   Associative array of key value pairs.
@@ -60,6 +64,8 @@ function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_tri
 
 /**
  * Alter the value being mapped to an entity property from a Salesforce object.
+ *
+ * @TODO This is currently not implemented. @see https://drupal.org/node/1942884
  *
  * @param $value
  *   Salesforce field value.
