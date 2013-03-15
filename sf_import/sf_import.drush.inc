@@ -46,6 +46,7 @@ function sf_import_drush_command() {
     ),
     'options' => array(
       '--where' => 'Enter any additional SOQL "Where" conditions',
+      '--order-by' => 'Enter any additional SOQL "ORDER BY" argument',
       '--start' => 'Start importing at given row',
       '--count' => 'Only import the given number of rows',
       '--no-new' => 'Don\'t import new rows (if we have linking information)',
@@ -108,7 +109,7 @@ function _drush_sf_import_show_fieldmaps() {
   foreach ($fieldmaps as $k => $map) {
     $name = salesforce_api_fieldmap_object_label('salesforce', $map->salesforce)
             . ' => '
-            . salesforce_api_fieldmap_object_label('drupal', $map->drupal);
+            . salesforce_api_fieldmap_object_label('drupal', $map->drupal_entity);
 
     $table[] = array($k, $name, $map->description);
   }
@@ -134,7 +135,7 @@ function drush_sf_import_sf_fieldmap($fieldmap_key = NULL) {
   // Display field mapping
   $out[] = array('Name', $map->name);
   $out[] = array('Description', $map->description);
-  $out[] = array('Drupal type', $map->drupal);
+  $out[] = array('Drupal type', $map->drupal_entity);
   $out[] = array('Salesforce type', $map->salesforce);
 
   // Read the number of existing linked entries
@@ -176,7 +177,7 @@ function drush_sf_import_sf_fieldmap($fieldmap_key = NULL) {
   drush_print("\nMap information:");
   $out = array(array('Salesforce', '', 'Drupal'));
   /*
-   $dr_def = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
+   $dr_def = salesforce_api_fieldmap_objects_load('drupal', $map->drupal_entity);
    $sf_def = salesforce_api_fieldmap_objects_load('salesforce', $map->salesforce);
    */
   foreach ($map->fields as $sf_fieldname => $dr_fieldname) {
@@ -208,6 +209,7 @@ function drush_sf_import($fieldmap_key) {
 
   // Read options
   $where  = drush_get_option('where', FALSE);
+  $orderby  = drush_get_option('order-by', FALSE);
   $start  = intval(drush_get_option('start', 0));
   $count  = intval(drush_get_option('count', -1));
   $no_new = drush_get_option('no-new', FALSE);
@@ -215,12 +217,13 @@ function drush_sf_import($fieldmap_key) {
   $check_date = drush_get_option('check-date', FALSE);
 
   // Read existing entries
-  $result = db_query("
-    SELECT oid, sfid
-    FROM   {salesforce_object_map}
-    WHERE  name = '%s'", $map->name);
+  $query = db_select('salesforce_object_map', 's')
+    ->fields('s', array('oid', 'sfid'))
+    ->condition('s.name', $map->name);
 
-  while ($row = db_fetch_array($result)) {
+  $result = $query->execute();
+
+  while($row = $result->fetchAssoc()) {
     $existing[$row['sfid']] = $row['oid'];
   }
 
@@ -239,6 +242,9 @@ function drush_sf_import($fieldmap_key) {
   if ($where) {
     $soql .= " WHERE " . $where;
   }
+  if ($orderby) {
+    $soql .= " ORDER BY " . $orderby;
+  }
   try {
     $sf = salesforce_api_connect();
     $query = $sf->client->query($soql);
@@ -248,16 +254,20 @@ function drush_sf_import($fieldmap_key) {
   }
 
   // Prepare for import
-  $type = $map->drupal;
-  if (strpos($type, 'node_') === 0) {
-    $type = 'node';
+  $type = $map->drupal_entity;
+  // Check to see if the fieldmap matches a Drupal entity.
+  // If so, use the entity import function.
+  if ($entity_info = entity_get_info($type)) {
+    $type = 'entity';
   }
+
   $function = 'sf_' . $type . '_import';
   if (!function_exists($function)) {
     drush_die("Could not find import function for type " . $type);
   }
 
-  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
+/*
+  $drupal_object = salesforce_api_fieldmap_objects_load('drupal', $map->drupal_entity);
   if ($count == -1) {
     $count = count($query->records) - $start;
   }
@@ -265,7 +275,7 @@ function drush_sf_import($fieldmap_key) {
         || ($start + $count) > count($query->records)) {
     drush_die("Start/count exceed possible rows. Number of rows in Salesfoce : " . count($query->records));
   }
-
+*/
   // Run the import
   $created = 0;
   $updated = 0;
@@ -273,66 +283,80 @@ function drush_sf_import($fieldmap_key) {
   $failed  = 0;
   $imported  = 0;
 
-  for ($i = $start; $i < $start + $count; $i++) {
-    $record = $query->records[$i];
-
-    // Check if we know this record
-    $exists = isset($existing[$record->Id]);
-    if ($exists && $no_update) {
-      drush_print("Record Id $record->Id already exists, skipping");
-      $skipped++;
-      continue;
-    }
-    if (!$exists && $no_new) {
-      drush_print("Record Id $record->Id does not exist, skipping");
-      $skipped++;
-      continue;
-    }
-    if ($type == 'node' && $exists && $check_date) {
-      $changed = db_query("
-        SELECT changed
-        FROM   {node}
-        WHERE  nid = %d", $existing[$record->Id])->fetchField();
-      if ($changed >= strtotime($record->LastModifiedDate)) {
-        drush_print("Record Id $record->Id has not been modified (date check)");
+  while (!$query->done || count($query->records) > 0) { 
+    foreach ($query->records as $record) {
+      // Check if we know this record
+      $exists = isset($existing[$record->Id]);
+      if ($exists && $no_update) {
+        drush_print("Record Id $record->Id already exists, skipping");
         $skipped++;
         continue;
       }
-    }
-
-    $oid = FALSE;
-    if (isset($existing[$record->Id])) {
-      try {
-        $oid = $function($record->Id, $map->name, $existing[$record->Id]);
+      if (!$exists && $no_new) {
+        drush_print("Record Id $record->Id does not exist, skipping");
+        $skipped++;
+        continue;
       }
-      catch (Exception $e) {
+      if ($type == 'node' && $exists && $check_date) {
+        $changed = db_query("
+          SELECT changed
+          FROM   {node}
+          WHERE  nid = %d", $existing[$record->Id])->fetchField();
+        if ($changed >= strtotime($record->LastModifiedDate)) {
+          drush_print("Record Id $record->Id has not been modified (date check)");
+          $skipped++;
+          continue;
+        }
+      }
+
+      if ($exists) {
+        $existing_oid = $existing[$record->Id];
+      } else {
+        $existing_oid = NULL;
+      }
+  
+      $oid = FALSE;
+      try {
+        $oid = $function($record->Id, $map->name, $existing_oid);
+      } catch (Exception $e) {
         drush_log("Error importing record $record->Id : " . $e->getMessage(), 'error');
       }
-    }
-
-    if (!$oid) {
-      drush_log("Error importing record $record->Id", 'error');
-      $failed++;
-    }
-    else {
-      if (!$exists) {
-        drush_print("Created object $oid");
-        $created++;
+  
+      if (!$oid) {
+        drush_log("Error importing record $record->Id", 'error');
+        $failed++;
       }
       else {
-        drush_print("Updated object $oid");
-        $updated++;
+        if (!$exists) {
+          drush_print("Created object $oid");
+          $created++;
+        }
+        else {
+          drush_print("Updated object $oid");
+          $updated++;
+        }
+
+        $imported++;
       }
-
-      $imported++;
     }
+    unset($query->records);
+    // get the next set of results
+    if (!empty($query->queryLocator)) {
+      try {
+        $sf = salesforce_api_connect();
+        $query = $sf->client->queryMore($query->queryLocator);
+      }
+      catch (Exception $e) {
+        drush_print('Error: ' . $e->getMessage());
+        exit();
+      }
+    }
+    // Report
+    drush_print("Number of created objects : " . $created);
+    drush_print("Number of updated objects : " . $updated);
+    drush_print("Number of skipped objects : " . $skipped);
+    drush_print("Number of failed imports : " . $failed);
   }
-
-  // Report
-  drush_print("Number of created objects : " . $created);
-  drush_print("Number of updated objects : " . $updated);
-  drush_print("Number of skipped objects : " . $skipped);
-  drush_print("Number of failed imports : " . $failed);
 }
 
 /**
