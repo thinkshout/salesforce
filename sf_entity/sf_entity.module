@@ -1236,8 +1236,9 @@ function sf_entity_export_field_default($entity, $fieldkey, $drupal_field_defini
   if (empty($column)) {
     $column = 'value';
   }
-  if (isset($entity->$fieldname[$lang])) {
-    $data = $entity->$fieldname[$lang];
+  $field = $entity->$fieldname;
+  if (isset($field[$lang])) {
+    $data = $field[$lang];
   }
   elseif (!empty($entity->$fieldname) && is_array($entity->$fieldname)) {
     $data = current($entity->$fieldname);
@@ -1258,7 +1259,12 @@ function sf_entity_export_field_default($entity, $fieldkey, $drupal_field_defini
       break;
     default:
       // Unless handled above, use only the first value.
-      $result = $data[0][$column];
+      if (isset($data[0][$column])) {
+        $result = $data[0][$column];
+      }
+      else {
+        $result = '';
+      }
       break;
   }
   return $result;
