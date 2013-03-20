@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @file
+ * API and module for Salesforce integration.
+ */
+
 module_load_include('inc', 'salesforce', 'includes/salesforce');
 
 /**
@@ -117,6 +122,7 @@ function salesforce_permission() {
  * Generate the Salesforce authorization form.
  *
  * @return array
+ *   The Salesforce authorization form.
  */
 function salesforce_oauth_form() {
   $form = array();
@@ -134,24 +140,25 @@ function salesforce_oauth_form() {
     '#type' => 'textfield',
     '#description' => t('Consumer key of the Salesforce remote application you want to grant access to'),
     '#required' => TRUE,
-    '#default_value' => $consumer_key
+    '#default_value' => $consumer_key,
   );
   $form['salesforce_consumer_secret'] = array(
     '#title' => t('Salesforce consumer secret'),
     '#type' => 'textfield',
     '#description' => t('Consumer secret of the Salesforce remote application you want to grant access to'),
     '#required' => TRUE,
-    '#default_value' => $consumer_secret
+    '#default_value' => $consumer_secret,
   );
   $form['submit'] = array(
     '#value' => t('Authorize'),
     '#type' => 'submit',
   );
 
-  // if we're authenticated, show a list of available REST resources
+  // If we're authenticated, show a list of available REST resources.
   if ($consumer_key && $consumer_secret) {
     $sfapi = new Salesforce($consumer_key, $consumer_secret);
-    // if fully configured, attempt to connect to SF and return a list of resources
+    // If fully configured, attempt to connect to Salesforce and return a list
+    // of resources.
     if ($sfapi->isAuthorized()) {
       try {
         $resources = $sfapi->listResources();
@@ -179,8 +186,10 @@ function salesforce_oauth_form() {
 /**
  * Submit handler for salesforce_oauth_form().
  *
- * @param $form
- * @param $form_state
+ * @param array $form
+ *   The form array.
+ * @param array $form_state
+ *   The form state array.
  */
 function salesforce_oauth_form_submit($form, &$form_state) {
   $consumer_key = $form_state['values']['salesforce_consumer_key'];
@@ -193,8 +202,9 @@ function salesforce_oauth_form_submit($form, &$form_state) {
 }
 
 /**
- * Callback for the oauth redirect URI. Exchanges an authorization code for an
- * access token.
+ * Callback for the oauth redirect URI.
+ *
+ * Exchanges an authorization code for an access token.
  */
 function salesforce_oauth_callback() {
   $salesforce = salesforce_get_api();
@@ -212,6 +222,7 @@ function salesforce_oauth_callback() {
  * Wrapper around the API constructor passing consume key and secret.
  *
  * @return Salesforce
+ *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
   return new Salesforce(
@@ -221,11 +232,13 @@ function salesforce_get_api() {
 }
 
 /**
- * Salesforce set message
+ * Salesforce set message.
+ *
+ * Wrapper around drupal_set_message(), checks for proper permissions.
  */
 function salesforce_set_message($message = NULL, $type = 'status', $repeat = TRUE) {
   global $user;
-  if ($user->uid ==1 || user_access('administer salesforce', $user)) {
+  if ($user->uid == 1 || user_access('administer salesforce', $user)) {
     drupal_set_message($message, $type, $repeat);
   }
 }
