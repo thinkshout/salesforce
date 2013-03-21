@@ -109,7 +109,13 @@ function salesforce_pull_process_records() {
   $limit = variable_get('salesforce_pull_limit', 50);
 
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
-  for ($stop = 0; ($item = $queue->claimItem()) && $stop < $limit; $stop++) {
+  for ($stop = 0; $stop < $limit; $stop++) {
+    $item = $queue->claimItem();
+    // We do this after the "for()" so that when we reach the limit, we don't
+    // incidentally claim a queue license on an item we aren't going to process
+    if (!$item) {
+      break;
+    }
     // Get Salesforce object
     $sf_object = $item->data;
 

@@ -207,7 +207,13 @@ function salesforce_push_cron() {
   $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
   $limit = variable_get('salesforce_pull_limit', 50);
   $use_soap = module_exists('salesforce_soap');
-  for ($delta = 0; ($item = $queue->claimItem()) && $delta < $limit; $delta++) {
+  for ($delta = 0; $delta < $limit; $delta++) {
+    $item = $queue->claimItem();
+    // We do this after the "for()" so that when we reach the limit, we don't
+    // incidentally claim a queue license on an item we aren't going to process
+    if (!$item) {
+      break;
+    }
     $mapping = $item->data['mapping'];
 
     // duplicate entity in the queue
