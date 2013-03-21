@@ -75,18 +75,18 @@ function salesforce_pull_get_updated_records() {
     }
 
     $results = $sfapi->query($queryString);
-    $version_url = $sfapi->getApiEndPoint();
+    $version_path = parse_url($sfapi->getApiEndPoint(), PHP_URL_PATH);
 
     if (!isset($results['errorCode'])) {
       // Handle requests larger than the batch limit (usually 2000)
       $next_records_url = isset($results['nextRecordsUrl']) ?
-        str_replace($version_url, '', $results['nextRecordsUrl']) :
+        str_replace($version_path, '', $results['nextRecordsUrl']) :
         FALSE;
       while ($next_records_url) {
         $new_result = $sfapi->apiCall($next_records_url);
         $results['records'] = array_merge($results['records'], $new_result['records']);
         $next_records_url = isset($new_result['nextRecordsUrl']) ?
-          str_replace($version_url, '', $new_result['nextRecordsUrl']) : FALSE;
+          str_replace($version_path, '', $new_result['nextRecordsUrl']) : FALSE;
       }
 
       // Write items to the queue
