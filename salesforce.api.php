@@ -9,9 +9,12 @@
  */
 
 /**
- * Define fieldmap types.
- *
- * TODO: Document me.
+ * @defgroup salesforce_hooks Hooks provided by Salesforce API
+ * @{
+ */
+
+/**
+ * Trigger action when first building the list of fieldmap types.
  */
 function hook_salesforce_mapping_fieldmap_type() {
 
@@ -22,23 +25,23 @@ function hook_salesforce_mapping_fieldmap_type() {
  *
  * @TODO This is currently not implemented. @see https://drupal.org/node/1942884
  *
- * @param $fieldmap_type
+ * @param array $fieldmap_type
+ *   Array of fieldmap Salesforce types
  */
 function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
 
 }
 
 /**
- * Alter the parameters being mapped to a Salesforce object before it is synced
- * to Salesforce.
+ * Alter parameters mapped to a Salesforce object before syncing to Salesforce.
  *
  * @TODO This is currently not implemented. @see https://drupal.org/node/1942884
  *
- * @param $params
+ * @param array $params
  *   Associative array of key value pairs.
- * @param $mapping
+ * @param object $mapping
  *   Salesforce mapping object.
- * @param $entity_wrapper
+ * @param object $entity_wrapper
  *   EntityMetadataWrapper of entity being mapped.
  */
 function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) {
@@ -48,15 +51,16 @@ function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) 
 /**
  * Prevent push to SF for an entity.
  *
- * @param $entity_type
+ * @param string $entity_type
  *   The type of entity the push is for.
- * @param $entity
+ * @param object $entity
  *   The entity object the push is for.
- * @param $sf_sync_trigger
- *   Constant for the Drupal operation that triggered the sync
+ * @param ing $sf_sync_trigger
+ *   Constant for the Drupal operation that triggered the sync.
  *
  * @return bool
- *   FALSE if the entity should not be synced to Salesforce for the $sf_sync_trigger operation
+ *   FALSE if the entity should not be synced to Salesforce for the
+ *   $sf_sync_trigger operation.
  */
 function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_trigger) {
 
@@ -67,9 +71,9 @@ function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_tri
  *
  * @TODO This is currently not implemented. @see https://drupal.org/node/1942884
  *
- * @param $value
+ * @param string $value
  *   Salesforce field value.
- * @param $field_map
+ * @param array $field_map
  *   Associative array containing the field mapping in the form
  *   <code>
  *   'fieldmap_name' => array(
@@ -80,9 +84,13 @@ function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_tri
  *      'salesforce_field' => array()
  *   )
  *   </code>
- * @param $sf_object
+ * @param object $sf_object
  *   Fully loaded Salesforce object
  */
 function hook_salesforce_pull_entity_value_alter(&$value, $field_map, $sf_object) {
 
 }
+
+/**
+ * @} salesforce_hooks
+ */

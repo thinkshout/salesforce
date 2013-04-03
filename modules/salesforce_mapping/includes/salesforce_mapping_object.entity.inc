@@ -1,30 +1,39 @@
 <?php
 
 /**
+ * @file
+ * Contains SalesforceMappingObject.
+ */
+
+/**
  * Entity class for Salesforce Mapping Objects
  */
 class SalesforceMappingObject extends Entity {
 
-  public
-    $salesforce_id,
-    $entity_type,
-    $entity_id,
-    $created,
-    $entity_updated,
-    $last_sync;
-
+  /**
+   * Constructor for SalesforceMappingObject.
+   *
+   * @param array $values
+   *   Associated array of values this entity should start with.
+   */
   public function __construct(array $values = array()) {
     parent::__construct($values, 'salesforce_mapping_object');
   }
 
+  /**
+   * Save the entity.
+   *
+   * @return object
+   *   The newly saved version of the entity.
+   */
   public function save() {
     if (isset($this->is_new) && $this->is_new) {
       $this->created = REQUEST_TIME;
     }
-    if (!$this->entity_updated) {
+    if (!isset($this->entity_updated) || !$this->entity_updated) {
       $this->entity_updated = REQUEST_TIME;
     }
-    if (!$this->last_sync) {
+    if (!isset($this->last_sync) || !$this->last_sync) {
       $this->last_sync = REQUEST_TIME;
     }
     return parent::save();

@@ -1,18 +1,27 @@
 <?php
 
 /**
+ * @file
+ * Contains SalesforceMappingUIController.
+ */
+
+/**
  * Salesforce Mapping UI controller.
  */
 class SalesforceMappingUIController extends EntityDefaultUIController {
 
   /**
    * Overrides hook_menu() defaults.
+   *
+   * Ignore that code sniffer wants hook_menu() to be in lowerCamelCase.
    */
+  // @codingStandardsIgnoreStart
   public function hook_menu() {
     $items = parent::hook_menu();
     $items[$this->path]['description'] = 'Manage Salesforce mappings';
     return $items;
   }
+  // @codingStandardsIgnoreEnd
 
   /**
    * Overrides EntityDefaultUIController::overviewForm().

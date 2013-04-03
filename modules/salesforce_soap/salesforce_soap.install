@@ -10,7 +10,7 @@
  */
 function salesforce_soap_requirements($phase) {
   $requirements = array();
-  // Ensure translations don't break at install time
+  // Ensure translations don't break at install time.
   $t = get_t();
 
   if ($phase == 'runtime' && !libraries_get_path('salesforce')) {
@@ -18,9 +18,9 @@ function salesforce_soap_requirements($phase) {
       'title' => $t('Salesforce PHP Toolkit'),
       'description' => $t(
         'The Salesforce SOAP module requires the !toolkit in a valid library location. Consider installing it using the included make file.',
-        array('!toolkit' => l('Salesforce PHP Toolkit', 'http://wiki.developerforce.com/page/Force.com_Toolkit_for_PHP'))
+        array('!toolkit' => l($t('Salesforce PHP Toolkit'), 'http://wiki.developerforce.com/page/Force.com_Toolkit_for_PHP'))
       ),
-      'severity' => REQUIREMENT_ERROR
+      'severity' => REQUIREMENT_ERROR,
     );
   }
 

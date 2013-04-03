@@ -1,31 +1,34 @@
 <?php
 
 /**
+ * @file
+ * Contains SalesforceMapping.
+ */
+
+/**
  * Entity class for Salesforce Mappings
  */
 class SalesforceMapping extends Entity {
 
-  public
-    $salesforce_mapping_id,
-    $name,
-    $label,
-    $type = 'salesforce_mapping', // only one bundle type for now
-    $salesforce_object_type,
-    $salesforce_record_type,
-    $drupal_entity_type,
-    $drupal_bundle,
-    $field_mappings,
-    $sync_triggers,
-    $created,
-    $updated,
-    $weight,
-    $push_async,
-    $push_batch;
+  // Only one bundle type for now.
+  public $type = 'salesforce_mapping';
 
+  /**
+   * Constructor for SalesforceMapping.
+   *
+   * @param array $values
+   *   Associated array of values for the fields the entity should start with.
+   */
   public function __construct(array $values = array()) {
     parent::__construct($values, 'salesforce_mapping');
   }
 
+  /**
+   * Save the entity.
+   *
+   * @return object
+   *   The newly saved version of the entity.
+   */
   public function save() {
     $this->updated = REQUEST_TIME;
     if (isset($this->is_new) && $this->is_new) {
@@ -34,6 +37,12 @@ class SalesforceMapping extends Entity {
     return parent::save();
   }
 
+  /**
+   * Retreive the default URI.
+   *
+   * @return array
+   *   Associated array with the default URI on the 'path' key.
+   */
   protected function defaultUri() {
     return array('path' => 'admin/structure/salesforce/mappings/manage/' . $this->identifier());
   }

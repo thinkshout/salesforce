@@ -9,34 +9,33 @@
  */
 class Salesforce {
 
-  public $consumer_key;
-  public $consumer_secret;
-  public $login_url = 'https://login.salesforce.com';
   public $response;
-
-  //@todo: does this need to be configurable?
-  public $rest_api_version = array(
-    "label" => "Spring '13",
-    "url" => "/services/data/v27.0/",
-    "version" => "27.0"
-  );
 
   /**
    * Constructor which initializes the consumer.
    *
-   * @param $consumer_key
+   * @param string $consumer_key
+   *   Salesforce key to connect to your Salesforce instance.
    * @param string $consumer_secret
+   *   Salesforce secret to connect to your Salesforce instance.
    */
   public function __construct($consumer_key, $consumer_secret = '') {
     $this->consumer_key = $consumer_key;
     $this->consumer_secret = $consumer_secret;
+    $this->login_url = 'https://login.salesforce.com';
+
+    // @TODO: Does this need to be configurable?
+    $this->rest_api_version = array(
+      "label" => "Spring '13",
+      "url" => "/services/data/v27.0/",
+      "version" => "27.0",
+    );
   }
 
   /**
    * Determine if this SF instance is fully configured.
-   * TODO: Consider making a test API call.
    *
-   * @return bool
+   * @TODO: Consider making a test API call.
    */
   public function isAuthorized() {
     return !empty($this->consumer_key) && !empty($this->consumer_secret) && $this->getRefreshToken();
@@ -45,11 +44,16 @@ class Salesforce {
   /**
    * Make a call to the Salesforce REST API.
    *
-   * @param $path
+   * @param string $path
+   *   Path to resource.
    * @param array $params
+   *   Parameters to provide.
    * @param string $method
+   *   Method to initiate the call, such as GET or POST.  Defaults to GET.
    *
    * @return mixed
+   *   The requested response.
+   *
    * @throws SalesforceException
    */
   public function apiCall($path, $params = array(), $method = 'GET') {
@@ -60,9 +64,9 @@ class Salesforce {
     $this->response = $this->apiHttpRequest($path, $params, $method);
 
     switch ($this->response->code) {
-      // The session ID or OAuth token used has expired or is invalid
+      // The session ID or OAuth token used has expired or is invalid.
       case 401:
-        // refresh token
+        // Refresh token.
         $this->refreshToken();
 
         // Rebuild our request and repeat request.
@@ -73,13 +77,15 @@ class Salesforce {
         }
 
         break;
+
       case 200:
       case 201:
       case 204:
-        // all clear
+        // All clear.
         break;
+
       default:
-        // we have problem and no specific Salesforce error provided
+        // We have problem and no specific Salesforce error provided.
         if (empty($this->response->data)) {
           throw new SalesforceException($this->response->error, $this->response->code);
         }
@@ -104,17 +110,21 @@ class Salesforce {
   /**
    * Private helper to issue an SF API request.
    *
-   * @param $path
-   * @param $params
-   * @param $method
+   * @param string $path
+   *   Path to resource.
+   * @param array $params
+   *   Parameters to provide.
+   * @param string $method
+   *   Method to initiate the call, such as GET or POST.  Defaults to GET.
    *
    * @return object
+   *   The requested data.
    */
-  private function apiHttpRequest($path, $params, $method) {
+  protected function apiHttpRequest($path, $params, $method) {
     $url = $this->getApiEndPoint() . $path;
     $headers = array(
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
-      'Content-type' => 'application/json'
+      'Content-type' => 'application/json',
     );
     $data = drupal_json_encode($params);
     return $this->httpRequest($url, $data, $headers, $method);
@@ -123,18 +133,24 @@ class Salesforce {
   /**
    * Make the HTTP request. Wrapper around drupal_http_request().
    *
-   * @param $path
-   * @param $params
-   * @param $method
+   * @param string $url
+   *   Path to make request from.
+   * @param array $data
+   *   The request body.
+   * @param array $headers
+   *   Request headers to send as name => value.
+   * @param string $method
+   *   Method to initiate the call, such as GET or POST.  Defaults to GET.
    *
-   * @return object response.
+   * @return object
+   *   Salesforce response object.
    */
-  private function httpRequest($url, $data, $headers = array(), $method = 'GET') {
+  protected function httpRequest($url, $data, $headers = array(), $method = 'GET') {
     // Build the request, including path and headers. Internal use.
     $options = array(
       'method' => $method,
       'headers' => $headers,
-      'data' => $data
+      'data' => $data,
     );
 
     return drupal_http_request($url, $options);
@@ -159,7 +175,7 @@ class Salesforce {
   }
 
   /**
-   * Getter the SF instance URL. Useful for linking to objects.
+   * Get the SF instance URL. Useful for linking to objects.
    */
   public function getInstanceUrl() {
     return variable_get('salesforce_instance_url', '');
@@ -168,31 +184,46 @@ class Salesforce {
   /**
    * Set the SF instanc URL.
    *
-   * @param $url
+   * @param string $url
+   *   URL to set.
    */
-  private function setInstanceUrl($url) {
+  protected function setInstanceUrl($url) {
     variable_set('salesforce_instance_url', $url);
   }
 
   /**
-   * Getter and setter for the access token. It's stored in session.
+   * Get the access token.
    */
   public function getAccessToken() {
     return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
   }
 
-  private function setAccessToken($token) {
+  /**
+   * Set the access token.
+   *
+   * It is stored in session.
+   *
+   * @param string $token
+   *   Access token from Salesforce.
+   */
+  protected function setAccessToken($token) {
     $_SESSION['salesforce_access_token'] = $token;
   }
 
   /**
-   * Getter and setter for refresh token.
+   * Get refresh token.
    */
-  private function getRefreshToken() {
+  protected function getRefreshToken() {
     return variable_get('salesforce_refresh_token', '');
   }
 
-  private function setRefreshToken($token) {
+  /**
+   * Set refresh token.
+   *
+   * @param string $token
+   *   Refresh token from Salesforce.
+   */
+  protected function setRefreshToken($token) {
     variable_set('salesforce_refresh_token', $token);
   }
 
@@ -201,7 +232,7 @@ class Salesforce {
    *
    * @throws SalesforceException
    */
-  private function refreshToken() {
+  protected function refreshToken() {
     $refresh_token = $this->getRefreshToken();
     if (empty($refresh_token)) {
       throw new SalesforceException(t('There is no refresh token.'));
@@ -216,13 +247,13 @@ class Salesforce {
 
     $url = $this->login_url . '/services/oauth2/token';
     $headers = array(
-      // this is an undocumented requirement on SF's end
-      'Content-Type' => 'application/x-www-form-urlencoded'
+      // This is an undocumented requirement on Salesforce's end.
+      'Content-Type' => 'application/x-www-form-urlencoded',
     );
     $response = $this->httpRequest($url, $data, $headers, 'POST');
 
     if ($response->code != 200) {
-      //@todo: deal with error better
+      // @TODO: Deal with error better.
       throw new SalesforceException(t('Unable to get a Salesforce access token.'), $response->code);
     }
 
@@ -240,15 +271,15 @@ class Salesforce {
   /**
    * Retrieve and store the Salesforce identity given an ID url.
    *
-   * @param $id
+   * @param string $id
    *   Identity URL.
    *
    * @throws SalesforceException
    */
-  private function setIdentity($id) {
+  protected function setIdentity($id) {
     $headers = array(
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
-      'Content-type' => 'application/json'
+      'Content-type' => 'application/json',
     );
     $response = $this->httpRequest($id, NULL, $headers);
     if ($response->code != 200) {
@@ -269,8 +300,7 @@ class Salesforce {
   }
 
   /**
-   * OAuth step 1
-   * Used to redirect to Salesforce and request and authorization code.
+   * OAuth step 1: Redirect to Salesforce and request and authorization code.
    */
   public function getAuthorizationCode() {
     $url = $this->login_url . '/services/oauth2/authorize';
@@ -284,10 +314,10 @@ class Salesforce {
   }
 
   /**
-   * OAuth step 2
-   * Exchange an authorization code for an access token.
+   * OAuth step 2: Exchange an authorization code for an access token.
    *
-   * @param $code
+   * @param string $code
+   *   Code from Salesforce.
    */
   public function requestToken($code) {
     $data = drupal_http_build_query(array(
@@ -295,13 +325,13 @@ class Salesforce {
       'grant_type' => 'authorization_code',
       'client_id' => $this->consumer_key,
       'client_secret' => $this->consumer_secret,
-      'redirect_uri' => $this->redirectUrl()
+      'redirect_uri' => $this->redirectUrl(),
     ));
 
     $url = $this->login_url . '/services/oauth2/token';
     $headers = array(
-      // this is an undocumented requirement on SF's end
-      'Content-Type' => 'application/x-www-form-urlencoded'
+      // This is an undocumented requirement on SF's end.
+      'Content-Type' => 'application/x-www-form-urlencoded',
     );
     $response = $this->httpRequest($url, $data, $headers, 'POST');
 
@@ -322,15 +352,18 @@ class Salesforce {
    * Helper to build the redirect URL for OAUTH workflow.
    *
    * @return string
+   *   Redirect URL.
    */
-  private function redirectUrl() {
+  protected function redirectUrl() {
     return url('salesforce/oauth_callback', array(
       'absolute' => TRUE,
-      'https' => TRUE
+      'https' => TRUE,
     ));
   }
 
-  // wrapper calls around core apiCall() follow.
+  /**
+   * @defgroup salesforce_apicalls Wrapper calls around core apiCall()
+   */
 
   /**
    * Available objects and their metadata for your organization's data.
@@ -340,6 +373,9 @@ class Salesforce {
    *   are applied after the list is returned from Salesforce.
    *
    * @return array
+   *   Available objects and metadata.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function objects($conditions = array('updateable' => TRUE)) {
     $result = $this->apiCall('sobjects');
@@ -358,12 +394,15 @@ class Salesforce {
   }
 
   /**
-   * Use SOQL to get objects based on query string
+   * Use SOQL to get objects based on query string.
    *
-   * @param array $conditions
-   *   Associative array of filters to apply to the SOQL query
+   * @param string $query_string
+   *   The constructed SOQL query.
    *
-   * @return
+   * @return array
+   *   Array of Salesforce objects that match the query.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function query($query_string) {
     $result = $this->apiCall('query?q=' . $query_string);
@@ -371,12 +410,16 @@ class Salesforce {
   }
 
   /**
-   * Retrieve all the metadata for an object, including information about each
-   * field, URLs, and child relationships.
+   * Retreieve all the metadata for an object.
    *
-   * @param $name object name
+   * @param string $name
+   *   Object type name, E.g., Contact, Account, etc.
    *
    * @return array
+   *   All the metadata for an object, including information about each field,
+   *   URLs, and child relationships.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function objectDescribe($name) {
     if (empty($name)) {
@@ -388,29 +431,37 @@ class Salesforce {
   /**
    * Create a new object of the given type.
    *
-   * @param $name
-   * @param $params
+   * @param string $name
+   *   Object type name, E.g., Contact, Account, etc.
+   * @param array $params
+   *   Values of the fields to set for the object.
    *
    * @return array
    *   "id" : "001D000000IqhSLIAZ",
    *   "errors" : [ ],
    *   "success" : true
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function objectCreate($name, $params) {
     return $this->apiCall("sobjects/{$name}", $params, 'POST');
   }
 
   /**
-   * Create new records or update existing records based on the value of the
-   * specified field. If the value is not unique, REST API returns a 300
-   * response with the list of matching records.
+   * Create new records or update existing records.
    *
-   * @param $name
+   * The new records or updated records are based on the value of the specified
+   * field.  If the value is not unique, REST API returns a 300 response with
+   * the list of matching records.
+   *
+   * @param string $name
    *   Object type name, E.g., Contact, Account.
-   * @param $id
-   *   Object id.
-   * @param $params
-   *   Fields to update.
+   * @param string $key
+   *   The field to check if this record should be created or updated.
+   * @param string $value
+   *   The value for this record of the field specified for $key.
+   * @param array $params
+   *   Values of the fields to set for the object.
    *
    * @return array
    *   success:
@@ -421,6 +472,7 @@ class Salesforce {
    *     "message" : "The requested resource does not exist"
    *     "errorCode" : "NOT_FOUND"
    *
+   * @addtogroup salesforce_apicalls
    */
   public function objectUpsert($name, $key, $value, $params) {
     $data = $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
@@ -433,12 +485,14 @@ class Salesforce {
   /**
    * Update an existing object.
    *
-   * @param $name
+   * @param string $name
    *   Object type name, E.g., Contact, Account.
-   * @param $id
-   *   Object id.
-   * @param $params
-   *   Fields to update.
+   * @param string $id
+   *   Salesforce id of the object.
+   * @param array $params
+   *   Values of the fields to set for the object.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function objectUpdate($name, $id, $params) {
     $this->apiCall("sobjects/{$name}/{$id}", $params, 'PATCH');
@@ -447,10 +501,15 @@ class Salesforce {
   /**
    * Return a full loaded Salesforce object.
    *
-   * @param $name
+   * @param string $name
    *   Object type name, E.g., Contact, Account.
-   * @param $id
-   *   Object id.
+   * @param string $id
+   *   Salesforce id of the object.
+   *
+   * @return object
+   *   Object of the requested Salesforce object.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function objectRead($name, $id) {
     return $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
@@ -459,10 +518,12 @@ class Salesforce {
   /**
    * Delete a Salesforce object.
    *
-   * @param $name
+   * @param string $name
    *   Object type name, E.g., Contact, Account.
-   * @param $id
-   *   Object id.
+   * @param string $id
+   *   Salesforce id of the object.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function objectDelete($name, $id) {
     $this->apiCall("sobjects/{$name}/{$id}", array(), 'DELETE');
@@ -473,6 +534,8 @@ class Salesforce {
    *
    * @return array
    *   Associative array keyed by name with a URI value.
+   *
+   * @addtogroup salesforce_apicalls
    */
   public function listResources() {
     $resources = $this->apiCall('');
@@ -481,7 +544,6 @@ class Salesforce {
     }
     return $items;
   }
-
 }
 
 class SalesforceException extends Exception {

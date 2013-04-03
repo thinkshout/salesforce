@@ -1,9 +1,14 @@
 <?php
 
 /**
+ * @file
+ * Initialize SOAP client.
+ */
+
+/**
  * Implements hook_init().
  */
 function salesforce_soap_init() {
   $path = libraries_get_path('salesforce');
-  require_once($path . '/soapclient/SforcePartnerClient.php');
+  require_once $path . '/soapclient/SforcePartnerClient.php';
 }
