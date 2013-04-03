@@ -524,7 +524,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     $info = entity_get_info($values['drupal_entity_type']);
     $properties = entity_get_all_property_info($values['drupal_entity_type']);
     $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
-    $key_delta = $values['key'];
+    $key_delta = isset($values['key']) ? $values['key'] : NULL;
 
     foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
       $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
@@ -552,7 +552,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
           call_user_func($field_map['validation_callback'], $drupal_field, $sf_field, $mapping['direction'], $key);
         }
         // Ensure valid SF external ID field.
-        if ($key_delta && $key === (int) $key_delta && !$sf_field['externalId']) {
+        if (!is_null($key_delta) && $key === (int) $key_delta && !$sf_field['externalId']) {
           form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
             array(
               '%name' => $mapping['salesforce_field']['name'],
