@@ -56,6 +56,10 @@ function salesforce_pull_get_updated_records() {
     }
     $fields = 'Id,+LastModifiedDate';
     foreach ($mapped_fields as $field) {
+      // Don't add the Id field to the SOQL query.
+      if ($field == 'Id') {
+        continue;
+      }
       $fields .= ',+' . $field;
     }
 
