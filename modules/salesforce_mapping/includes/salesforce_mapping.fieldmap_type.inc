@@ -331,7 +331,7 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
     'sync' => array(
       'string' => array('text', 'list<text>', 'uri'),
       'int' => array('integer'),
-      'id' => array('integer'),
+      'id' => array('text'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
@@ -339,14 +339,14 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
       // Allow any source field for string type.
       'string' => array(),
       'int' => array('integer'),
-      'id' => array('integer'),
+      'id' => array('text'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
     'sf_drupal' => array(
       'string' => array('text', 'int', 'list<text>'),
       'int' => array('integer'),
-      'id' => array('integer'),
+      'id' => array('text'),
       'datetime' => array('date'),
       'email' => array('text'),
     ),
