@@ -3,7 +3,7 @@ description = Defines an API that enables modules to interact with the Salesforc
 package = Salesforce
 core = 7.x
 
-configure = admin/config/services/salesforce
+configure = admin/config/salesforce
 
 files[] = includes/salesforce.inc
 

@@ -63,7 +63,8 @@ function salesforce_help($path, $arg) {
       $output .= '<p>' . t('Example installation of the Salesforce PHP Toolkit using the provided Drush Make file:') . ' <code>drush make /path/to/salesforce/modules/salesforce_soap/salesforce_soap.make.example --no-core -y</code>' . '</p>';
       return $output;
 
-    case 'admin/config/services/salesforce':
+    case 'admin/config/salesforce':
+    case 'admin/config/salesforce/authorize':
       return '<p>' . t('Visit !help if you need help obtaining a consumer key and secret.', array('!help' => l(t('the Salesforce module help page'), 'admin/help/salesforce'))) . '</p>';
   }
 }
@@ -74,17 +75,22 @@ function salesforce_help($path, $arg) {
 function salesforce_menu() {
   $items = array();
 
-  $items['admin/config/services/salesforce'] = array(
+  $items['admin/config/salesforce'] = array(
     'title' => 'Salesforce',
+    'description' => 'Salesforce settings.',
+    'position' => 'right',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('access administration pages'),
+    'file path' => drupal_get_path('module', 'system'),
+    'file' => 'system.admin.inc',
+  );
+  $items['admin/config/salesforce/authorize'] = array(
+    'title' => 'Authorize',
     'description' => 'Authorize this website to communicate with Salesforce.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('salesforce_oauth_form'),
     'access arguments' => array('administer salesforce'),
     'type' => MENU_NORMAL_ITEM,
-  );
-  $items['admin/config/services/salesforce/authorize'] = array(
-    'title' => 'Authorize',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   $items['salesforce/oauth_callback'] = array(
     'title' => 'Salesforce oauth callback',
@@ -215,7 +221,7 @@ function salesforce_oauth_callback() {
   // Rebuild the menu so the mappings links are now available.
   menu_rebuild();
 
-  drupal_goto('admin/config/services/salesforce');
+  drupal_goto('admin/config/salesforce/salesforce');
 }
 
 /**
