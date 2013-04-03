@@ -36,6 +36,11 @@ define('SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE', 'default');
 define('SALESFORCE_MAPPING_ARRAY_DELIMITER', ';');
 
 /**
+ * Field mapping maximum name length.
+ */
+define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
+
+/**
  * Access callback for managing Salesforce mappings.
  */
 function salesforce_mappings_access() {

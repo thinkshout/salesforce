@@ -5,8 +5,6 @@
  * Configuration page for creating and modifying a mapping.
  */
 
-define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
-
 /**
  * Return a form for a Salesforce mapping entity.
  */
