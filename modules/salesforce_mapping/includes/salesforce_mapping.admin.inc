@@ -337,15 +337,22 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $form['push_batch'] = array(
     '#title' => t('Batch records'),
     '#type' => 'checkbox',
-    '#description' => t('Push items will be processed in a single batch to the Salesforce API rather than one at a time. This may be preferable if API limits are of concern, although changes are not reflected immediately in Salesforce. Requires the salesforce_soap module and asynchronous processing to be enabled.'),
     '#default_value' => isset($mapping) ? $mapping->push_batch : 0,
-    '#disabled' => module_exists('salesforce_soap'),
-    '#states' => array(
+  );
+  if (module_exists('salesforce_soap')) {
+    $requirements_description = t('Requires "Process asynchronously" option to be enabled.');
+    $form['push_batch']['#states'] = array(
       'enabled' => array(
         ':input[name="push_async"]' => array('checked' => TRUE),
       ),
-    ),
-  );
+    );
+  }
+  else {
+    $requirements_description = t('Requires the "Salesforce SOAP (salesforce_soap)" module to be enabled, and the "Process asynchronously" option to be checked.');
+    $form['push_batch']['#disabled'] = TRUE;
+  }
+  $push_batch_description = t('Push items will be processed in a single batch to the Salesforce API rather than one at a time. This may be preferable if API limits are of concern, although changes are not reflected immediately in Salesforce.');
+  $form['push_batch']['#description'] = $requirements_description . ' ' . $push_batch_description;
 
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
