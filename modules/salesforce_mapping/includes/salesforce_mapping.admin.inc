@@ -551,7 +551,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
         }
         // Ensure valid SF external ID field.
         if (!is_null($key_delta) && $key === (int) $key_delta && !$sf_field['externalId']) {
-          form_set_error('salesforce_field_mappings][0][salesforce_field', t('Salesforce field %name is not configured as an external id.',
+          form_set_error('salesforce_field_mappings][' . $key . '][salesforce_field', t('Salesforce field %name is not configured as an external id.',
             array(
               '%name' => $mapping['salesforce_field']['name'],
             )
