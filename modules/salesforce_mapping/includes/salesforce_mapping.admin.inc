@@ -223,7 +223,12 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           }
         }
         else {
-          $sf_field_default = $mapping->field_mappings[$delta]['salesforce_field']['name'];
+          if (isset($mapping->field_mappings[$delta]['salesforce_field']['name'])) {
+            $sf_field_default = $mapping->field_mappings[$delta]['salesforce_field']['name'];
+          }
+          else {
+            $sf_field_default = '';
+          }
         }
       }
 
@@ -487,10 +492,12 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   $efq
     ->entityCondition('entity_type', 'salesforce_mapping')
     ->propertyCondition('salesforce_object_type', $values['salesforce_object_type'])
-    ->propertyCondition('salesforce_record_type', $values['salesforce_record_type'])
     ->propertyCondition('drupal_entity_type', $values['drupal_entity_type'])
-    ->propertyCondition('drupal_bundle', $values['drupal_bundle'])
-    ->count();
+    ->propertyCondition('drupal_bundle', $values['drupal_bundle']);
+  if (isset($values['salesforce_record_type'])) {
+    $efq->propertyCondition('salesforce_record_type', $values['salesforce_record_type']);
+  }
+  $efq->count();
 
   // Existing mapping, ensure not using any other unique combo.
   if ($mapping->name) {

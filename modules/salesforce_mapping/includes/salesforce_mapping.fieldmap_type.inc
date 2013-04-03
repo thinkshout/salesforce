@@ -367,7 +367,7 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
       t('Drupal field %drupal_label is of type %drupal_type, Salesforce field %sf_label is of type %sf_type and cannot be mapped in the %dir direction',
         array(
           '%drupal_label' => $drupal_field['label'],
-          '%drupal_type' => $drupal_field['type'],
+          '%drupal_type' => $drupal_type,
           '%sf_label' => $sf_field['label'],
           '%sf_type' => $sf_field['type'],
           '%dir' => $direction,
