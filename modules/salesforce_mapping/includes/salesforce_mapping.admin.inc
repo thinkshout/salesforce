@@ -507,7 +507,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   $efq->count();
 
   // Existing mapping, ensure not using any other unique combo.
-  if ($mapping->name) {
+  if (isset($mapping->name)) {
     $efq->propertyCondition('name', $mapping->name, '<>');
   }
 
@@ -567,7 +567,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
         if (!is_null($key_delta) && $key === (int) $key_delta && !$sf_field['externalId']) {
           form_set_error('salesforce_field_mappings][' . $key . '][salesforce_field', t('Salesforce field %name is not configured as an external id.',
             array(
-              '%name' => $mapping['salesforce_field']['name'],
+              '%name' => $mapping['salesforce_field'],
             )
           ));
         }
