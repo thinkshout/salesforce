@@ -135,6 +135,13 @@ function salesforce_permission() {
 }
 
 /**
+ * Implements hook_flush_caches().
+ */
+function salesforce_flush_caches() {
+  return array('cache_salesforce_object');
+}
+
+/**
  * Generate the Salesforce authorization form.
  *
  * @return array

@@ -371,14 +371,25 @@ class Salesforce {
    * @param array $conditions
    *   Associative array of filters to apply to the returned objects. Filters
    *   are applied after the list is returned from Salesforce.
+   * @param bool $reset
+   *   Whether to reset the cache and retrieve a fresh version from Salesforce.
    *
    * @return array
    *   Available objects and metadata.
    *
    * @addtogroup salesforce_apicalls
    */
-  public function objects($conditions = array('updateable' => TRUE)) {
-    $result = $this->apiCall('sobjects');
+  public function objects($conditions = array('updateable' => TRUE), $reset = FALSE) {
+    $cache = cache_get('salesforce_objects');
+    // Force the recreation of the cache when it is older than 5 minutes.
+    if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
+      $result = $cache->data;
+    }
+    else {
+      $result = $this->apiCall('sobjects');
+      // Allow the cache to clear at any time by not setting an expire time.
+      cache_set('salesforce_objects', $result, 'cache', CACHE_TEMPORARY);
+    }
 
     if (!empty($conditions)) {
       foreach ($result['sobjects'] as $key => $object) {
@@ -414,6 +425,8 @@ class Salesforce {
    *
    * @param string $name
    *   Object type name, E.g., Contact, Account, etc.
+   * @param bool $reset
+   *   Whether to reset the cache and retrieve a fresh version from Salesforce.
    *
    * @return array
    *   All the metadata for an object, including information about each field,
@@ -421,11 +434,21 @@ class Salesforce {
    *
    * @addtogroup salesforce_apicalls
    */
-  public function objectDescribe($name) {
+  public function objectDescribe($name, $reset = FALSE) {
     if (empty($name)) {
       return array();
     }
-    return $this->apiCall("sobjects/{$name}/describe");
+    $cache = cache_get($name, 'cache_salesforce_object');
+    // Force the recreation of the cache when it is older than 5 minutes.
+    if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
+      return $cache->data;
+    }
+    else {
+      $object = $this->apiCall("sobjects/{$name}/describe");
+      // Allow the cache to clear at any time by not setting an expire time.
+      cache_set($name, $object, 'cache_salesforce_object', CACHE_TEMPORARY);
+      return $object;
+    }
   }
 
   /**
