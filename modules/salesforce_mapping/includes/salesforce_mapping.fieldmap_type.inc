@@ -218,11 +218,21 @@ function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type) {
 
 /**
  * Pull value callback for relation endpoint fieldmap type.
+ *
+ * @param EntityMetadataWrapper $entity_wrapper
+ *   Wrapper for the related entity being synced.
+ * @param SalesforceMappingObject $sf_object
+ *   Mapped Drupal and Salesforce objects.
+ * @param array $field_map
+ *   Field mapping data.
+ *
+ * @return array
+ *   Array of Drupal entities.
  */
 function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-
   $values = array();
 
+  // Load each related Drupal entity.
   foreach ($field_map['salesforce_field'] as $sf_field) {
     $mapped_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
     if ($mapped_object) {
@@ -231,9 +241,34 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
     }
   }
 
+  // Load the relation type entity.
+  $relation_type_name = $entity_wrapper->info()['parent']->getBundle();
+  $relation_type = relation_type_load($relation_type_name);
+
+  // If the relationship is directional, ensure source/bundle are in the right
+  // order.
+  if ($relation_type->directional) {
+    foreach ($values as $value) {
+      foreach ($relation_type->source_bundles as $bundle_key) {
+        list($source_entity_type) = explode(':', $bundle_key);
+        if ($source_entity_type == $value->type()) {
+          $values[0] = $value;
+          break;
+        }
+      }
+
+      foreach ($relation_type->target_bundles as $bundle_key) {
+        list($target_entity_type) = explode(':', $bundle_key);
+        if ($target_entity_type == $value->type()) {
+          $values[1] = $value;
+          break;
+        }
+      }
+    }
+  }
+
   return $values;
 }
-
 
 /**
  * Value callback for property fieldmap type.
