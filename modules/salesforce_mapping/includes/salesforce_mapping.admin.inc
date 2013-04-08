@@ -210,7 +210,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_value'] : NULL,
         );
         if (!empty($fieldmap_type['options_callback'])) {
-          $fieldmap_value_element['#options'] = call_user_func($fieldmap_type['options_callback'], $form_state['values']['drupal_entity_type']);
+          $fieldmap_value_element['#options'] = call_user_func($fieldmap_type['options_callback'], $form_state['values']['drupal_entity_type'], $mapping->drupal_bundle);
         }
       }
 

@@ -67,10 +67,20 @@ function salesforce_mapping_salesforce_mapping_fieldmap_type() {
  * @return array
  *   List of entities that can be used as an #options list.
  */
-function salesforce_mapping_property_fieldmap_options($entity_type, $include_entities = FALSE) {
+function salesforce_mapping_property_fieldmap_options($entity_type, $entity_bundle = NULL, $include_entities = FALSE) {
   $options = array('' => t('-- Select --'));
 
   $properties = entity_get_all_property_info($entity_type);
+  if (isset($entity_bundle)) {
+    $info = entity_get_property_info($entity_type);
+    $properties = $info['properties'];
+    if (isset($info['bundles'][$entity_bundle])) {
+      $properties += $info['bundles'][$entity_bundle]['properties'];
+    }
+  } else {
+    $properties = entity_get_all_property_info($entity_type);
+  }
+
   foreach ($properties as $key => $property) {
     $type = isset($property['type']) ? entity_property_extract_innermost_type($property['type']) : 'text';
     $is_entity = ($type == 'entity') || (bool) entity_get_info($type);
@@ -99,8 +109,8 @@ function salesforce_mapping_property_fieldmap_options($entity_type, $include_ent
  * @return array
  *   The list of related entities that can be used as an #options list.
  */
-function salesforce_mapping_related_entity_fieldmap_options($entity_type) {
-  return salesforce_mapping_property_fieldmap_options($entity_type, TRUE);
+function salesforce_mapping_related_entity_fieldmap_options($entity_type, $entity_bundle) {
+  return salesforce_mapping_property_fieldmap_options($entity_type, $entity_bundle, TRUE);
 }
 
 /**
@@ -206,8 +216,8 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
  *   List of relation endpoints that can be used in an #options array, or FALSE
  *   if none are found.
  */
-function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type) {
-  $properties = salesforce_mapping_property_fieldmap_options($entity_type);
+function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type, $entity_bundle) {
+  $properties = salesforce_mapping_property_fieldmap_options($entity_type, $entity_bundle);
   if (isset($properties['endpoints'])) {
     return array('endpoints' => $properties['endpoints']);
   }
