@@ -77,7 +77,8 @@ function salesforce_mapping_property_fieldmap_options($entity_type, $entity_bund
     if (isset($info['bundles'][$entity_bundle])) {
       $properties += $info['bundles'][$entity_bundle]['properties'];
     }
-  } else {
+  }
+  else {
     $properties = entity_get_all_property_info($entity_type);
   }
 
@@ -252,8 +253,8 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
   }
 
   // Load the relation type entity.
-  $relation_type_name = $entity_wrapper->info()['parent']->getBundle();
-  $relation_type = relation_type_load($relation_type_name);
+  $relation_type_name = $relation_type_name = $entity_wrapper->info();
+  $relation_type = relation_type_load($relation_type_name['parent']->getBundle());
 
   // If the relationship is directional, ensure source/bundle are in the right
   // order.
