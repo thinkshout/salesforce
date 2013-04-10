@@ -333,7 +333,11 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
  * Pull value callback for property fieldmap type.
  */
 function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_object, $field_map) {
-  $value = $sf_object[$field_map['salesforce_field']['name']];
+  // Check to see if the value is set in Salesforce.
+  $value = NULL;
+  if (isset($sf_object[$field_map['salesforce_field']['name']])) {
+    $value = $sf_object[$field_map['salesforce_field']['name']];
+  }
 
   // Salesforce provides multipicklist values as a delimited string. If the
   // destination field in Drupal accepts multiple values, explode the string
