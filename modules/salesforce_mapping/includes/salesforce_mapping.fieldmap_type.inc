@@ -253,7 +253,7 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
   }
 
   // Load the relation type entity.
-  $relation_type_name = $relation_type_name = $entity_wrapper->info();
+  $relation_type_name = $entity_wrapper->info();
   $relation_type = relation_type_load($relation_type_name['parent']->getBundle());
 
   // If the relationship is directional, ensure source/bundle are in the right
