@@ -320,7 +320,7 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
   }
 
   // Field type specific handling.
-  if ($child_wrapper->type() == 'date' && isset($value) && ($fieldmap['salesforce_field']['type'] == 'date' || $fieldmap['salesforce_field']['type'] == 'dateTime')) {
+  if ($child_wrapper->type() == 'date' && isset($value) && ($fieldmap['salesforce_field']['type'] == 'date' || $fieldmap['salesforce_field']['type'] == 'datetime')) {
     // Drupal provides a timestamp, Salesforce wants ISO 8601 formatted
     // date/time.
     $value = format_date($value, 'custom', 'c');
@@ -344,7 +344,7 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
 
   switch ($entity_wrapper->type()) {
     case 'date':
-      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'dateTime')) {
+      if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'datetime')) {
         $value = strtotime($value);
       }
       break;
