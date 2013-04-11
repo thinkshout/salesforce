@@ -49,7 +49,7 @@ function salesforce_mapping_schema() {
       'salesforce_object_type' => array(
         'description' => 'The Salesforce object type for this mapping.',
         'type' => 'varchar',
-        'length' => 32,
+        'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -210,4 +210,28 @@ function salesforce_mapping_schema() {
   );
 
   return $schema;
+}
+
+/**
+ * Increase length of salesforce_object_type database column to 255.
+ */
+function salesforce_mapping_update_7100(&$sandbox) {
+  db_drop_unique_key('salesforce_mapping', 'name_sf_type_drupal_type');
+  db_change_field('salesforce_mapping', 'salesforce_object_type', 'salesforce_object_type', array(
+    'description' => 'The Salesforce object type for this mapping.',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+  ), array(
+    'unique keys' => array(
+      'name_sf_type_drupal_type' => array(
+        'drupal_entity_type',
+        'drupal_bundle',
+        'salesforce_object_type',
+        'salesforce_record_type',
+      ),
+    ),
+  )
+  );
 }
