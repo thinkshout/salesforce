@@ -267,7 +267,7 @@ function salesforce_mapping_entity_delete($entity, $type) {
   ));
 
   foreach ($mappings as $mapping) {
-    if (!$mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
+    if (!($mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE)) {
       $mapping_object->delete();
       return;
     }
