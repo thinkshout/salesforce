@@ -14,24 +14,27 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     $mapping->name = '';
   }
   $form['#id'] = 'salesforce_mapping_form';
-  $form_state['salesforce_mapping'] = $mapping;
+  if (!isset($form_state['salesforce_mapping'])) {
+    $form_state['salesforce_mapping'] = $mapping;
+  }
 
   $form['label'] = array(
     '#title' => t('Label'),
     '#type' => 'textfield',
-    '#default_value' => isset($mapping->label) ? $mapping->label : '',
+    '#default_value' => _salesforce_mapping_get_default_value('label', $form_state),
     '#description' => t('The human-readable name of this field mapping.'),
     '#required' => TRUE,
     '#maxlength' => SALESFORCE_MAPPING_NAME_LENGTH,
     '#size' => 30,
   );
 
+  $mapping_name = _salesforce_mapping_get_default_value('name', $form_state);
   $form['name'] = array(
     '#title' => t('Name'),
     '#type' => 'machine_name',
     '#description' => t(''),
-    '#default_value' => isset($mapping->name) ? $mapping->name : '',
-    '#disabled' => !empty($mapping->name),
+    '#default_value' => $mapping_name,
+    '#disabled' => isset($mapping->name) && !empty($mapping->name),
     '#machine_name' => array(
       'exists' => 'salesforce_mapping_load',
       'source' => array('label'),
@@ -46,241 +49,230 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     ),
   );
 
+  $drupal_entity_type = _salesforce_mapping_get_default_value('drupal_entity_type', $form_state);
   $form['drupal_entity']['drupal_entity_type'] = array(
     '#title' => t('Drupal Entity Type'),
+    '#id' => 'edit-drupal-entity-type',
     '#type' => 'select',
     '#description' => t('Select a Drupal entity type to map to a Salesforce object.'),
-    '#options' => salesforce_mapping_drupal_entities(),
-    '#default_value' => isset($mapping->drupal_entity_type) ? $mapping->drupal_entity_type : 0,
+    '#options' => _salesforce_mapping_get_drupal_entities($form_state),
+    '#default_value' => $drupal_entity_type,
     '#required' => TRUE,
     '#ajax' => array(
       'callback' => 'salesforce_mapping_form_callback',
-      'wrapper' => 'salesforce_mapping_form',
+      'wrapper' => 'edit-drupal-entity',
     ),
   );
 
-  $drupal_entity_type = & $form_state['values']['drupal_entity_type'];
-  if (!$drupal_entity_type && isset($mapping->drupal_entity_type)) {
-    $drupal_entity_type = $mapping->drupal_entity_type;
-  }
+  $drupal_bundle = _salesforce_mapping_get_default_value('drupal_bundle', $form_state);
+  $form['drupal_entity']['drupal_bundle'] = array(
+    '#title' => t('Drupal Entity Bundle'),
+    '#id' => 'edit-drupal-bundle',
+    '#type' => 'select',
+    '#required' => TRUE,
+    '#description' => t('Select a Drupal entity bundle to map to a Salesforce object.'),
+    '#ajax' => array(
+      'callback' => 'salesforce_mapping_form_callback',
+      'wrapper' => 'edit-drupal-entity',
+    ),
+  );
   if ($drupal_entity_type) {
-    $bundles = array('' => t('-- Select --'));
-    $info = entity_get_info($drupal_entity_type);
-    foreach ($info['bundles'] as $key => $bundle) {
-      $bundles[$key] = $bundle['label'];
-    }
-    $form['drupal_entity']['drupal_bundle'] = array(
-      '#title' => t('Drupal Entity Bundle'),
-      '#type' => 'select',
-      '#required' => TRUE,
-      '#description' => t('Select a Drupal entity bundle to map to a Salesforce object.'),
-      '#options' => $bundles,
-      '#default_value' => isset($mapping->drupal_bundle) ? $mapping->drupal_bundle : 0,
-      '#ajax' => array(
-        'callback' => 'salesforce_mapping_form_callback',
-        'wrapper' => 'salesforce_mapping_form',
+    $form['drupal_entity']['drupal_bundle'] += array(
+      '#default_value' => $drupal_bundle,
+      '#options' => _salesforce_mapping_get_entity_bundle_options($drupal_entity_type),
+    );
+  }
+  else {
+    $form['drupal_entity']['drupal_bundle'] += array(
+      '#disabled' => TRUE,
+      '#default_value' => '',
+      '#options' => array(
+        '' => t('Select drupal entity type'),
       ),
     );
   }
 
   $form['salesforce_object'] = array(
     '#title' => t('Salesforce object'),
+    '#id' => 'edit-salesforce-object',
     '#type' => 'fieldset',
-    '#attributes' => array(
-      'id' => array('edit-salesforce-object'),
-    ),
   );
 
-  $sfapi = salesforce_get_api();
-  $sfobjects = & $form_state['sf_objects'];
-  if (!$sfobjects) {
-    // Note that we're filtering SF object types to a reasonable subset.
-    $sfobjects = $sfapi->objects(array(
-      'updateable' => TRUE,
-      'triggerable' => TRUE,
-    ));
-    $form_state['sf_objects'] = $sfobjects;
-  }
-
-  $sfobject_options = array('' => t('-- Select --'));
-  foreach ($sfobjects as $object) {
-    $sfobject_options[$object['name']] = $object['label'];
-  }
-
+  $salesforce_object_type = _salesforce_mapping_get_default_value('salesforce_object_type', $form_state);
   $form['salesforce_object']['salesforce_object_type'] = array(
     '#title' => t('Salesforce object'),
+    '#id' => 'edit-salesforce-object-type',
     '#type' => 'select',
     '#description' => t('Select a Salesforce object to map.'),
-    '#default_value' => isset($mapping->salesforce_object_type) ? $mapping->salesforce_object_type : 0,
-    '#options' => $sfobject_options,
+    '#default_value' => $salesforce_object_type,
+    '#options' => _salesforce_mapping_get_salesforce_object_type_options($form_state),
     '#ajax' => array(
       'callback' => 'salesforce_mapping_form_callback',
-      'wrapper' => 'salesforce_mapping_form',
+      'wrapper' => 'edit-salesforce-object',
     ),
     '#required' => TRUE,
   );
 
-  $salesforce_object_type = & $form_state['values']['salesforce_object_type'];
-  if (!$salesforce_object_type && isset($mapping->salesforce_object_type)) {
-    $salesforce_object_type = $mapping->salesforce_object_type;
-  }
+  $form['salesforce_object']['salesforce_record_type'] = array(
+    '#title' => t('Salesforce record type'),
+    '#id' => 'edit-salesforce-record-type',
+  );
   if (!empty($salesforce_object_type)) {
-    $sfobject = & $form_state['salesforce_mapping_object_' . $salesforce_object_type];
-    if (!$sfobject) {
-      $sfobject = $sfapi->objectDescribe($salesforce_object_type);
-    }
-    $type_count = count($sfobject['recordTypeInfos']);
-    $sf_types = array('' => t('-- Select --'));
-    foreach ($sfobject['recordTypeInfos'] as $type) {
-      if ($type['name'] != 'Master') {
-        $sf_types[$type['recordTypeId']] = $type['name'];
-      }
-    }
     // Check for custom record types.
-    $default = $type_count > 1 ? 0 : SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE;
-    $form['salesforce_object']['salesforce_record_type'] = array(
-      '#title' => t('Salesforce record type'),
-      '#type' => 'select',
-      '#description' => t('Select a Salesforce record type to map.'),
-      '#default_value' => (isset($mapping->name) && $type_count > 1) ? $mapping->salesforce_record_type : $default,
-      '#options' => $sf_types,
-      '#required' => TRUE,
-      '#access' => $type_count > 1,
-    );
-
-    $sf_fields = array('' => t('-- Select --'));
-    foreach ($sfobject['fields'] as $sf_field) {
-      $sf_fields[$sf_field['name']] = $sf_field['label'];
-    }
-
-    if ((isset($form_state['triggering_element']) && $form_state['triggering_element']['#name'] == 'salesforce_add_field') ||
-      !isset($mapping->field_mappings)
-    ) {
-      $mapping->field_mappings[] = array(
-        'drupal_field' => '',
-        'salesforce_field' => '',
-        'key' => '',
-        'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
+    $salesforce_record_type = _salesforce_mapping_get_default_value('salesforce_record_type', $form_state);
+    $salesforce_record_type_options = _salesforce_mapping_get_salesforce_record_type_options($salesforce_object_type, $form_state);
+    $record_type_count = count($salesforce_record_type_options) - 1;
+    if ($record_type_count > 1) {
+      // There are multiple record types for this object type, so the user must
+      // choose one of them.  Provide a select field.
+      $form['salesforce_object']['salesforce_record_type'] = array(
+        '#title' => t('Salesforce record type'),
+        '#type' => 'select',
+        '#description' => t('Select a Salesforce record type to map.'),
+        '#default_value' => $salesforce_record_type,
+        '#options' => $salesforce_record_type_options,
+        '#required' => TRUE,
       );
     }
+    else {
+      // There is only one record type for this object type.  Don't bother the
+      // user and just set the single record type by default.
+      $form['salesforce_object']['salesforce_record_type'] = array(
+        '#type' => 'hidden',
+        '#value' => $salesforce_record_type,
+      );
+    }
+  }
 
-    $form['salesforce_field_mappings_wrapper'] = array(
-      '#title' => t('Salesforce field mappings wrapper'),
-      '#type' => 'fieldset',
+  $form['salesforce_field_mappings_wrapper'] = array(
+    '#title' => t('Field map'),
+    '#type' => 'fieldset',
+    '#id' => 'edit-salesforce-field-mappings-wrapper',
+  );
+
+  // Check to see if we have enough information to allow mapping fields.  If
+  // not, tell the user what is needed in order to have the field map show up.
+  $fields_required_to_map = _salesforce_mapping_get_required_mapping_fields($form, $form_state);
+  if (!empty($fields_required_to_map)) {
+    $message = t('Select a value for !fields in order to map fields.',
+      array('!fields' => implode(' ' . t('and') . ' ', $fields_required_to_map)));
+    $form['salesforce_field_mappings_wrapper']['helptext'] = array(
+      '#markup' => '<p>' . $message . '</p>',
     );
+  }
 
+  // Field mapping form.
+  else {
     $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'] = array(
       '#theme' => 'salesforce_fieldmap_form_table',
       '#tree' => TRUE,
-      '#attributes' => array('id' => 'salesforce_field_mappings'),
+      '#header' => array(
+        t('Drupal field'),
+        t('Salesforce field'),
+        t('key'),
+        t('Direction'),
+        t('Delete'),
+      ),
+      '#attributes' => array(
+        'id' => array('edit-salesforce-field-mappings'),
+      ),
     );
 
-    $drupal_type_options = array('' => t('-- Select --'));
-    foreach (salesforce_mapping_get_fieldmap_types() as $key => $fieldmap_type) {
-      $drupal_type_options[$key] = $fieldmap_type['label'];
-    }
-
+    $drupal_type_options = _salesforce_mapping_get_drupal_type_options();
+    $sf_fields = _salesforce_mapping_get_salesforce_field_options($salesforce_object_type, $form_state);
     $has_token_type = FALSE;
-    foreach ($mapping->field_mappings as $delta => $value) {
-      $delete = & $form_state['values']['salesforce_field_mappings'][$delta]['delete_field_mapping'];
-      if ($delete) {
-        unset($mapping->field_mappings[$delta]);
-        continue;
-      }
-
-      $fieldmap_type_name = & $form_state['values']['salesforce_field_mappings'][$delta]['drupal_field']['fieldmap_type'];
-      if (!$fieldmap_type_name && isset($mapping)) {
-        $fieldmap_type_name = $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'];
-      }
-
-      if ($fieldmap_type_name == 'token') {
-        $has_token_type = TRUE;
-      }
-
-      $fieldmap_value_element = array(
-        '#prefix' => '<div id="drupal_fieldmap_value_wrapper' . $delta . '">',
-        '#suffix' => '</div>',
+    $field_mappings = _salesforce_mapping_get_default_value('field_mappings', $form_state);
+    foreach ($field_mappings as $delta => $value) {
+      $row_id = 'edit-salesforce-field-mappings-' . $delta;
+      $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'id' => array($row_id),
+        ),
       );
+      $row = &$form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta];
+
+      $row['drupal_field'] = array(
+        '#type' => 'container',
+        '#attributes' => array(
+          'id' => array('edit-drupal-field-' . $delta),
+        ),
+      );
+
+      $fieldmap_type_name = _salesforce_mapping_get_default_value('fieldmap_type', $form_state, $delta);
+      $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap_type_name);
+      $has_token_type = ($fieldmap_type_name == 'token') ? TRUE : $has_token_type;
+      $row['drupal_field']['fieldmap_type'] = array(
+        '#id' => 'edit-fieldmap-type-' . $delta,
+        '#type' => 'select',
+        '#options' => $drupal_type_options,
+        '#default_value' => $fieldmap_type_name,
+        '#ajax' => array(
+          'wrapper' => $row_id,
+          'callback' => 'salesforce_mapping_form_field_callback',
+        ),
+      );
+
       if ($fieldmap_type_name) {
-        $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap_type_name);
-        $fieldmap_value_element += array(
+        $row['drupal_field']['fieldmap_value'] = array(
+          '#id' => 'edit-fieldmap-value-' . $delta,
           '#type' => $fieldmap_type['field_type'],
           '#description' => check_plain($fieldmap_type['description']),
           '#size' => !empty($fieldmap_type['description']) ? $fieldmap_type['description'] : 30,
-          '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_value'] : NULL,
+          '#default_value' => _salesforce_mapping_get_default_value('fieldmap_value', $form_state, $delta),
         );
         if (!empty($fieldmap_type['options_callback'])) {
-          $fieldmap_value_element['#options'] = call_user_func($fieldmap_type['options_callback'], $form_state['values']['drupal_entity_type'], $mapping->drupal_bundle);
+          $row['drupal_field']['fieldmap_value']['#options'] = call_user_func($fieldmap_type['options_callback'], $drupal_entity_type, $drupal_bundle);
         }
       }
 
-      $sf_field_default = 0;
-      if (isset($mapping->field_mappings[$delta])) {
-        if (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) {
-          $sf_field_default = array();
-          foreach ($mapping->field_mappings[$delta]['salesforce_field'] as $field) {
-            $sf_field_default[] = $field['name'];
-          }
-        }
-        else {
-          if (isset($mapping->field_mappings[$delta]['salesforce_field']['name'])) {
-            $sf_field_default = $mapping->field_mappings[$delta]['salesforce_field']['name'];
-          }
-          else {
-            $sf_field_default = '';
-          }
-        }
-      }
+      $row['salesforce_field'] = array(
+        '#id' => 'edit-salesforce-field-' . $delta,
+        '#type' => 'select',
+        '#description' => t('Select a Salesforce field to map.'),
+        '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
+        '#options' => $sf_fields,
+        '#default_value' => _salesforce_mapping_get_default_value('salesforce_field', $form_state, $delta),
+      );
 
-      $form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'][$delta] = array(
-        'drupal_field' => array(
-          'fieldmap_type' => array(
-            '#type' => 'select',
-            '#options' => $drupal_type_options,
-            '#default_value' => isset($mapping) ? $mapping->field_mappings[$delta]['drupal_field']['fieldmap_type'] : 0,
-            '#ajax' => array(
-              'wrapper' => "salesforce_field_mappings",
-              'callback' => 'salesforce_mapping_form_field_callback',
-            ),
-          ),
-          'fieldmap_value' => $fieldmap_value_element,
+      $row['key'] = array(
+        '#id' => 'edit-key-' . $delta,
+        '#type' => 'radio',
+        '#name' => 'key',
+        '#return_value' => $delta,
+        '#tree' => FALSE,
+        '#default_value' => _salesforce_mapping_get_default_value('key', $form_state, $delta),
+      );
+
+      $row['direction'] = array(
+        '#id' => 'edit-direction-' . $delta,
+        '#type' => 'radios',
+        '#options' => array(
+          SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
+          SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL => t('SF to Drupal'),
+          SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
         ),
-        'salesforce_field' => array(
-          '#type' => 'select',
-          '#description' => t('Select a Salesforce field to map.'),
-          '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
-          '#options' => $sf_fields,
-          '#default_value' => $sf_field_default,
-        ),
-        'key' => array(
-          '#type' => 'radio',
-          '#name' => 'key',
-          '#return_value' => $delta,
-          '#tree' => FALSE,
-          '#default_value' => (isset($mapping->field_mappings[$delta]['key']) && $mapping->field_mappings[$delta]['key']) ? $delta : FALSE,
-        ),
-        'direction' => array(
-          '#type' => 'radios',
-          '#options' => array(
-            SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
-            SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL => t('SF to Drupal'),
-            SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
-          ),
-          '#required' => TRUE,
-          '#default_value' => isset($mapping->field_mappings[$delta]) ? $mapping->field_mappings[$delta]['direction'] : SALESFORCE_MAPPING_DIRECTION_SYNC,
-        ),
-        'delete_field_mapping' => array(
-          '#type' => 'checkbox',
-          '#ajax' => array(
-            'callback' => 'salesforce_mapping_form_field_callback',
-            'wrapper' => 'salesforce_field_mappings',
-          ),
+        '#required' => TRUE,
+        '#default_value' => _salesforce_mapping_get_default_value('direction', $form_state, $delta),
+      );
+
+      $row['delete_field_mapping'] = array(
+        '#id' => 'edit-delete-field-mapping-' . $delta,
+        '#type' => 'checkbox',
+        '#name' => 'delete_field_mapping-' . $delta,
+        '#ajax' => array(
+          'callback' => 'salesforce_mapping_form_callback',
+          'wrapper' => 'edit-salesforce-field-mappings-wrapper',
+          'delta' => $delta,
         ),
       );
     }
 
     $form['salesforce_field_mappings_wrapper']['ajax_warning'] = array(
       '#type' => 'container',
+      '#attributes' => array(
+        'id' => array('edit-ajax_warning'),
+      ),
     );
 
     $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
@@ -300,31 +292,27 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 
     $form['salesforce_field_mappings_wrapper']['salesforce_add_field'] = array(
       '#value' => t('Add another field mapping'),
+      '#id' => 'edit-salesforce-add-field',
       '#name' => 'salesforce_add_field',
       '#type' => 'button',
       '#description' => t('Add one or more field to configure a mapping for.'),
+      '#executes_submit_callback' => FALSE,
+      '#limit_validation_errors' => array(),
       '#ajax' => array(
-        'callback' => 'salesforce_mapping_form_field_callback',
-        'wrapper' => 'salesforce_field_mappings',
+        'callback' => 'salesforce_mapping_form_callback',
+        'wrapper' => 'edit-salesforce-field-mappings-wrapper',
       ),
     );
   }
 
-  $default_triggers = array();
-  if (isset($mapping)) {
-    foreach (salesforce_mapping_sync_trigger_options() as $key => $option) {
-      if ($key & $mapping->sync_triggers) {
-        $default_triggers[] = $key;
-      }
-    }
-  }
-
+  $trigger_options = _salesforce_mapping_get_sync_trigger_options();
+  $trigger_defaults = _salesforce_mapping_get_default_value('sync_triggers', $form_state);
   $form['sync_triggers'] = array(
     '#title' => t('Action triggers'),
     '#type' => 'checkboxes',
     '#description' => t('Select which actions on Drupal entities and Salesforce objects should trigger a synchronization. These settings are used by the salesforce_push and salesforce_pull modules respectively.'),
-    '#default_value' => $default_triggers,
-    '#options' => salesforce_mapping_sync_trigger_options(),
+    '#default_value' => $trigger_defaults,
+    '#options' => $trigger_options,
     '#required' => TRUE,
   );
 
@@ -332,12 +320,12 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#title' => t('Process asynchronously'),
     '#type' => 'checkbox',
     '#description' => t('If selected, push data will be queued for processing and synchronized when cron is run. This may increase site performance, but changes will not be reflected in real time.'),
-    '#default_value' => isset($mapping) ? $mapping->push_async : 0,
+    '#default_value' => _salesforce_mapping_get_default_value('push_async', $form_state),
   );
   $form['push_batch'] = array(
     '#title' => t('Batch records'),
     '#type' => 'checkbox',
-    '#default_value' => isset($mapping) ? $mapping->push_batch : 0,
+    '#default_value' => _salesforce_mapping_get_default_value('push_batch', $form_state),
   );
   if (module_exists('salesforce_soap')) {
     $requirements_description = t('Requires "Process asynchronously" option to be enabled.');
@@ -364,44 +352,43 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 }
 
 /**
- * Return form options for available sync triggers.
- */
-function salesforce_mapping_sync_trigger_options() {
-  return array(
-    SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE => t('Drupal entity create'),
-    SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE => t('Drupal entity update'),
-    SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE => t('Drupal entity delete'),
-    SALESFORCE_MAPPING_SYNC_SF_CREATE => t('Salesforce object create'),
-    SALESFORCE_MAPPING_SYNC_SF_UPDATE => t('Salesforce object update'),
-    SALESFORCE_MAPPING_SYNC_SF_DELETE => t('Salesforce object delete'),
-  );
-}
-
-/**
- * Return a list of Drupal entities that implement EntityAPIControllerInterface.
- */
-function salesforce_mapping_drupal_entities() {
-  module_load_include('inc', 'entity', 'entity.info');
-  $types = array('' => t('-- Select --'));
-  foreach (entity_entity_property_info() as $type => $value) {
-    if ($info = entity_get_info($type)) {
-      // Exclude Salesforce Mapping and Salesforce Object Mapping entities as
-      // these will never sync with Salesforce.
-      if (in_array($type, array('salesforce_mapping', 'salesforce_mapping_object'))) {
-        continue;
-      }
-      $types[$type] = $info['label'];
-    }
-  }
-
-  return $types;
-}
-
-/**
  * Ajax callback for salesforce_mapping_form().
  */
 function salesforce_mapping_form_callback($form, $form_state) {
-  return $form;
+  $trigger = $form_state['triggering_element']['#name'];
+  $parents = $form_state['triggering_element']['#array_parents'];
+  $delta = isset($parents[2]) ? $parents[2] : NULL;
+  $commands = array();
+  switch ($trigger) {
+    case 'drupal_entity_type':
+    case 'drupal_bundle':
+      // Requires updating itself and the field map.
+      $commands = array(
+        ajax_command_replace('#edit-drupal-entity', render($form['drupal_entity'])),
+        ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
+      );
+      break;
+
+    case 'salesforce_object_type':
+      // Requires updating itself and the field map.
+      $commands = array(
+        ajax_command_replace('#edit-salesforce-object', render($form['salesforce_object'])),
+        ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
+      );
+      break;
+
+    case 'salesforce_add_field':
+    case 'delete_field_mapping-' . $delta:
+      // Replace the field map table.
+      $commands = array(
+        ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
+      );
+      break;
+  }
+  return array(
+    '#type' => 'ajax',
+    '#commands' => $commands,
+  );
 }
 
 /**
@@ -419,15 +406,34 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
       '#markup' => 'Changes made in this list will not be saved until the form is submitted.',
     ),
   );
+
+  // Retreive the row's form information.
+  $wrapper = $form_state['triggering_element']['#ajax']['wrapper'];
+  $parents = $form_state['triggering_element']['#array_parents'];
+  $delta = $parents[2];
+  $row = $form[$parents[0]][$parents[1]][$delta];
+
+  // Render the row.  This requires rendering it as a table, then stripping away
+  // the table tags in order to leave only the HTML of a table row.  Finally,
+  // all line breaks had to be removed in order to prevent the ajax replace from
+  // wrapping the output in a div.
+  $table = array(
+    '#theme' => 'salesforce_fieldmap_form_table',
+    '#tree' => TRUE,
+    0 => $row,
+  );
+  $rendered_table = render($table);
+  $rendered_row = str_replace(array("\r", "\n"), "", substr(substr($rendered_table, 17), 0, -18));
+
   $commands = array(
-    ajax_command_replace("#salesforce_field_mappings", render($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings'])),
+    // Replace the row.
+    ajax_command_replace('#' . $wrapper, $rendered_row),
     ajax_command_replace("#edit-token-tree", render($form['salesforce_field_mappings_wrapper']['token_tree'])),
     ajax_command_replace("#edit-ajax-warning", render($ajax_warn)),
-    // Set message.
+
+    // Set messages if found.
     ajax_command_remove('.messages'),
     ajax_command_after('#page-title', render($errors)),
-    ajax_command_replace('#edit-salesforce-object', render($form['salesforce_object'])),
-    ajax_command_replace('#edit-drupal-entity', render($form['drupal_entity'])),
   );
   return array(
     '#type' => 'ajax',
@@ -441,43 +447,36 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
 function theme_salesforce_fieldmap_form_table($variables) {
   $elements = $variables['elements'];
 
-  // Build the header array.
-  $header = array(
-    t('Drupal field'),
-    t('Salesforce field'),
-    t('key'),
-    t('Direction'),
-    t('Delete'),
-  );
-
   // Build the rows array.
   $rows = array();
   foreach (element_children($elements) as $child_key) {
     $child = & $elements[$child_key];
-    $rows[] = array(
-      array(
-        'data' => drupal_render($child['drupal_field']),
-      ),
-      array(
-        'data' => drupal_render($child['salesforce_field']),
-      ),
-      array(
-        'data' => drupal_render($child['key']),
-      ),
-      array(
-        'data' => drupal_render($child['direction']),
-      ),
-      array(
-        'data' => drupal_render($child['delete_field_mapping']),
+    $row = array(
+      'data' => array(
+        drupal_render($child['drupal_field']),
+        drupal_render($child['salesforce_field']),
+        drupal_render($child['key']),
+        drupal_render($child['direction']),
+        drupal_render($child['delete_field_mapping']),
       ),
     );
+    if (isset($child['#attributes']) && isset($child['#attributes']['id'])) {
+      $row['id'] = $child['#attributes']['id'];
+    }
+    $rows[] = $row;
   }
 
-  return theme('table', array(
-    'header' => $header,
+  $config = array(
     'rows' => $rows,
-    'attributes' => $elements['#attributes'],
-  ));
+  );
+  if (isset($elements['#header'])) {
+    $config['header'] = $elements['#header'];
+  }
+  if (isset($elements['#attributes']) && is_array($elements['#attributes'])) {
+    $config['attributes'] = $elements['#attributes'];
+  }
+
+  return theme('table', $config);
 }
 
 /**
@@ -535,7 +534,8 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     // Validate field mappings.
     $info = entity_get_info($values['drupal_entity_type']);
     $properties = entity_get_all_property_info($values['drupal_entity_type']);
-    $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
+    $sfobject = _salesforce_mapping_get_salesforce_object($values['salesforce_object_type'], $form_state);
+    $sf_fields = isset($sfobject['fields']) ? $sfobject['fields'] : array();
     $key_delta = isset($values['key']) ? $values['key'] : FALSE;
 
     foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
@@ -564,7 +564,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
           call_user_func($field_map['validation_callback'], $drupal_field, $sf_field, $mapping['direction'], $key);
         }
         // Ensure valid SF external ID field.
-        if ($key_delta && $key === (int) $key_delta && !$sf_field['externalId']) {
+        if ($key_delta !== FALSE && $key === (int) $key_delta && !$sf_field['externalId']) {
           form_set_error('salesforce_field_mappings][' . $key . '][salesforce_field', t('Salesforce field %name is not configured as an external id.',
             array(
               '%name' => $mapping['salesforce_field'],
@@ -582,7 +582,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
 function salesforce_field_filter($sf_mapping_field) {
   return function ($sf_field) use ($sf_mapping_field) {
     $pass = FALSE;
-    if ($sf_mapping_field == $sf_field['name']) {
+    if (isset($sf_field['name']) && $sf_mapping_field == $sf_field['name']) {
       $pass = TRUE;
     }
     return $pass;
@@ -596,8 +596,9 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $values = $form_state['values'];
   $mappings = array();
   if (isset($values['key'])) {
-    $key_delta = $values['key'];
-    $sf_fields = $form_state['salesforce_mapping_object_' . $values['salesforce_object_type']]['fields'];
+    $key_delta = isset($values['key']) ? $values['key'] : FALSE;
+    $sfobject = _salesforce_mapping_get_salesforce_object($values['salesforce_object_type'], $form_state);
+    $sf_fields = isset($sfobject['fields']) ? $sfobject['fields'] : array();
     foreach ($values['salesforce_field_mappings'] as $key => $mapping) {
       $drupal_field_type = $mapping['drupal_field']['fieldmap_type'];
       $field_map = salesforce_mapping_get_fieldmap_types($drupal_field_type);
@@ -616,7 +617,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
         $mappings[] = array(
           'drupal_field' => $mapping['drupal_field'],
           'salesforce_field' => $sf_field,
-          'key' => $key_delta && ($key === (int) $key_delta),
+          'key' => $key_delta !== FALSE && ($key === (int) $key_delta),
           'direction' => $mapping['direction'],
         );
       }
@@ -657,4 +658,463 @@ function salesforce_mapping_form_submit($form, &$form_state) {
 
   salesforce_set_message(t('Salesforce field mapping saved.'));
   $form_state['redirect'] = 'admin/structure/salesforce/mappings';
+}
+
+/**
+ * Helper to retreive the current value for a given form field.
+ *
+ * @param string $field
+ *   Name of the field who's value to retreive.
+ * @param array $form_state
+ *   Current state of the form to compare with.
+ * @param mixed $delta
+ *   Optionally provide the delta of the specific field map to check.
+ *
+ * @return mixed
+ *   Value of the field that is appropriate for #default_value.
+ */
+function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NULL) {
+  $mapping = NULL;
+  if (isset($form_state['salesforce_mapping'])) {
+    $mapping = &$form_state['salesforce_mapping'];
+  }
+
+  $value = NULL;
+  if ($field == 'field_mappings') {
+    if (!isset($mapping->field_mappings) || !is_array($mapping->field_mappings)) {
+      $mapping->field_mappings = array(_salesforce_mapping_get_empty_field_map_row());
+    }
+    if (isset($form_state['triggering_element'])) {
+      if ($form_state['triggering_element']['#name'] == 'salesforce_add_field') {
+        $mapping->field_mappings[] = _salesforce_mapping_get_empty_field_map_row();
+      }
+      if (isset($form_state['triggering_element']['#ajax']['delta']) && $form_state['triggering_element']['#name'] == 'delete_field_mapping-' . $form_state['triggering_element']['#ajax']['delta']) {
+        $delta = $form_state['triggering_element']['#ajax']['delta'];
+        unset($mapping->field_mappings[$delta]);
+      }
+    }
+    $value = &$mapping->field_mappings;
+  }
+  elseif (is_null($delta)) {
+    if (isset($form_state['input'][$field])) {
+      $value = &$form_state['input'][$field];
+    }
+    elseif (!empty($mapping)) {
+      $value = &$mapping->$field;
+    }
+
+    // Special case for drupal bundle.
+    if ($field == 'drupal_bundle') {
+      $drupal_entity = _salesforce_mapping_get_default_value('drupal_entity_type', $form_state);
+      $entity_bundle_options = array_keys(_salesforce_mapping_get_entity_bundle_options($drupal_entity, FALSE));
+      if (empty($drupal_entity) || !in_array($value, $entity_bundle_options)) {
+        $value = NULL;
+      }
+    }
+
+    // Special case for salesforce record type.
+    if ($field == 'salesforce_record_type') {
+      $salesforce_object_type = _salesforce_mapping_get_default_value('salesforce_object_type', $form_state);
+      $salesforce_record_type_options = _salesforce_mapping_get_salesforce_record_type_options($salesforce_object_type, $form_state, FALSE);
+      $record_type_count = count($salesforce_record_type_options);
+      $default = $record_type_count > 1 ? 0 : SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE;
+      $value = (!empty($value) && $record_type_count > 1) ? $value : $default;
+    }
+
+    // Special case for sync triggers.
+    if ($field == 'sync_triggers') {
+      if (is_array($value)) {
+        $sync_values = array_filter($value);
+        $sync_triggers = SALESFORCE_MAPPING_SYNC_OFF;
+        foreach ($sync_values as $value) {
+          $sync_triggers = $sync_triggers | $value;
+        }
+        $value = $sync_triggers;
+      }
+      $breakup = array();
+      foreach (_salesforce_mapping_get_sync_trigger_options() as $key => $option) {
+        if ($key & $value) {
+          $breakup[] = $key;
+        }
+      }
+      $value = $breakup;
+    }
+
+    // Special case for push_batch.
+    if ($field == 'push_batch' && !module_exists('salesforce_soap')) {
+      // Enforce this to be disabled when salesforce_soap is disabled.
+      $value = 0;
+    }
+  }
+  else {
+    switch ($field) {
+      case 'fieldmap_type':
+      case 'fieldmap_value':
+        if (isset($form_state['input']['salesforce_field_mappings'][$delta]['drupal_field'][$field])) {
+          $value = &$form_state['input']['salesforce_field_mappings'][$delta]['drupal_field'][$field];
+        }
+        elseif (!empty($mapping) && isset($mapping->field_mappings[$delta]['drupal_field'][$field])) {
+          $value = &$mapping->field_mappings[$delta]['drupal_field'][$field];
+        }
+        break;
+
+      case 'salesforce_field':
+        $salesforce_object_type = _salesforce_mapping_get_default_value('salesforce_object_type', $form_state);
+        if (empty($salesforce_object_type)) {
+          $value = NULL;
+        }
+        else {
+          if (isset($form_state['input']['salesforce_field_mappings'][$delta][$field])) {
+            $value = &$form_state['input']['salesforce_field_mappings'][$delta][$field];
+          }
+          elseif (!empty($mapping) && isset($mapping->field_mappings[$delta])) {
+            $fieldmap_type_name = _salesforce_mapping_get_default_value('fieldmap_type', $form_state, $delta);
+            $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap_type_name);
+            if (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) {
+              $value = array();
+              foreach ($mapping->field_mappings[$delta][$field] as $sf_field) {
+                if (is_array($sf_field) && isset($sf_field['name'])) {
+                  $value[] = &$sf_field['name'];
+                }
+                else {
+                  $value[] = &$sf_field;
+                }
+              }
+            }
+            elseif (isset($mapping->field_mappings[$delta][$field])) {
+              $sf_field = &$mapping->field_mappings[$delta][$field];
+              if (is_array($sf_field) && isset($sf_field['name'])) {
+                $value = &$sf_field['name'];
+              }
+              else {
+                $value = &$sf_field;
+              }
+            }
+            else {
+              $value = NULL;
+            }
+          }
+        }
+        break;
+
+      case 'direction':
+        // Set default for direction, which cannot be NULL like the others.
+        $value = SALESFORCE_MAPPING_DIRECTION_SYNC;
+        break;
+
+      default:
+        if (isset($form_state['input']['salesforce_field_mappings'][$delta][$field])) {
+          $value = &$form_state['input']['salesforce_field_mappings'][$delta][$field];
+        }
+        elseif (isset($mapping->field_mappings[$delta][$field])) {
+          $value = &$mapping->field_mappings[$delta][$field];
+          if ($field == 'key') {
+            if ($value == "") {
+              $value = FALSE;
+            }
+            else {
+              $value = $delta;
+            }
+          }
+        }
+        break;
+    }
+  }
+
+  return $value;
+}
+
+/**
+ * Return a list of Drupal entities that implement EntityAPIControllerInterface.
+ *
+ * @param array $form_state
+ *   Current state of the form to store and retreive results from to minimize
+ *   the need for recalculation.
+ * @param bool $include_select
+ *   Choice to choose a select option or not.  If TRUE, the first item will be
+ *   "-- Select --".  If FALSE, the first item will be the first item of the
+ *   retreived bundles.  Defaults to TRUE.
+ *
+ * @return array
+ *   An array of values keyed by machine name of the entity with the label as
+ *   the value, formatted to be appropriate as a value for #options.
+ */
+function _salesforce_mapping_get_drupal_entities(&$form_state, $include_select = TRUE) {
+  if (isset($form_state['sfm_storage']['drupal_entity_property_info'])) {
+    $property_info = $form_state['sfm_storage']['drupal_entity_property_info'];
+  }
+  else {
+    module_load_include('inc', 'entity', 'entity.info');
+    $property_info = entity_entity_property_info();
+    $form_state['sfm_storage']['drupal_entity_property_info'] = $property_info;
+  }
+
+  $types = array();
+  if ($include_select) {
+    $types[''] = '- ' . t('Select') . ' -';
+  }
+  foreach ($property_info as $type => $properties) {
+    if (!isset($properties['entity_info'])) {
+      $properties['entity_info'] = entity_get_info($type);
+    }
+    if (!empty($properties['entity_info'])) {
+      // Exclude Salesforce Mapping and Salesforce Object Mapping entities as
+      // these will never sync with Salesforce.
+      if (in_array($type, array('salesforce_mapping', 'salesforce_mapping_object'))) {
+        continue;
+      }
+      $types[$type] = $properties['entity_info']['label'];
+    }
+  }
+
+  return $types;
+}
+
+/**
+ * Helper to retreive a list of bundle options for a given entity type.
+ *
+ * @param string $drupal_entity_type
+ *   An entity type whose bundles you want to retreive.
+ * @param bool $include_select
+ *   Choice to choose a select option or not.  If TRUE, the first item will be
+ *   "-- Select --".  If FALSE, the first item will be the first item of the
+ *   retreived bundles.  Defaults to TRUE.
+ *
+ * @return array
+ *   An array of values keyed by machine name of the bundle with the label as
+ *   the value, formatted to be appropriate as a value for #options.
+ */
+function _salesforce_mapping_get_entity_bundle_options($drupal_entity_type, $include_select = TRUE) {
+  $info = entity_get_info($drupal_entity_type);
+  $bundles = array();
+  if ($include_select) {
+    $bundles[''] = '- ' . t('Select') . ' -';
+  }
+  if (isset($info['bundles'])) {
+    foreach ($info['bundles'] as $key => $bundle) {
+      $bundles[$key] = $bundle['label'];
+    }
+  }
+  return $bundles;
+}
+
+/**
+ * Helper to retreive a list of object type options.
+ *
+ * @param array $form_state
+ *   Current state of the form to store and retreive results from to minimize
+ *   the need for recalculation.
+ * @param bool $include_select
+ *   Choice to choose a select option or not.  If TRUE, the first item will be
+ *   "-- Select --".  If FALSE, the first item will be the first item of the
+ *   retreived objects.  Defaults to TRUE.
+ *
+ * @return array
+ *   An array of values keyed by machine name of the object with the label as
+ *   the value, formatted to be appropriate as a value for #options.
+ */
+function _salesforce_mapping_get_salesforce_object_type_options(&$form_state, $include_select = TRUE) {
+  if (isset($form_state['sfm_storage']['salesforce_object_type'])) {
+    $sfobjects = $form_state['sfm_storage']['salesforce_object_type'];
+  }
+  else {
+    $sfapi = salesforce_get_api();
+    // Note that we're filtering SF object types to a reasonable subset.
+    $sfobjects = $sfapi->objects(array(
+      'updateable' => TRUE,
+      'triggerable' => TRUE,
+    ));
+    $form_state['sfm_storage']['salesforce_object_type'] = $sfobjects;
+  }
+
+  $sfobject_options = array();
+  if ($include_select) {
+    $sfobject_options[''] = '- ' . t('Select') . ' -';
+  }
+  foreach ($sfobjects as $object) {
+    $sfobject_options[$object['name']] = $object['label'];
+  }
+  return $sfobject_options;
+}
+
+/**
+ * Retreive Salesforce's information about an object type.
+ *
+ * @param string $salesforce_object_type
+ *   The object type of whose records you want to retreive.
+ * @param array $form_state
+ *   Current state of the form to store and retreive results from to minimize
+ *   the need for recalculation.
+ *
+ * @return array
+ *   Information about the Salesforce object as provided by Salesforce.
+ */
+function _salesforce_mapping_get_salesforce_object($salesforce_object_type, &$form_state) {
+  if (empty($salesforce_object_type)) {
+    return array();
+  }
+  if (isset($form_state['sfm_storage']['salesforce_object'][$salesforce_object_type])) {
+    $sfobject = $form_state['sfm_storage']['salesforce_object'][$salesforce_object_type];
+  }
+  else {
+    $sfapi = salesforce_get_api();
+    $sfobject = $sfapi->objectDescribe($salesforce_object_type);
+    $form_state['sfm_storage']['salesforce_object'][$salesforce_object_type] = $sfobject;
+  }
+  return $sfobject;
+}
+
+/**
+ * Helper to retreive a list of record type options for a given object type.
+ *
+ * @param string $salesforce_object_type
+ *   The object type of whose records you want to retreive.
+ * @param array $form_state
+ *   Current state of the form to store and retreive results from to minimize
+ *   the need for recalculation.
+ * @param bool $include_select
+ *   Choice to choose a select option or not.  If TRUE, the first item will be
+ *   "-- Select --".  If FALSE, the first item will be the first item of the
+ *   retreived records.  Defaults to TRUE.
+ *
+ * @return array
+ *   An array of values keyed by machine name of the record with the label as
+ *   the value, formatted to be appropriate as a value for #options.
+ */
+function _salesforce_mapping_get_salesforce_record_type_options($salesforce_object_type, &$form_state, $include_select = TRUE) {
+  $sfobject = _salesforce_mapping_get_salesforce_object($salesforce_object_type, $form_state);
+  $sf_types = array();
+  if (isset($sfobject['recordTypeInfos'])) {
+    if ($include_select) {
+      $sf_types[''] = '- ' . t('Select') . ' -';
+    }
+    foreach ($sfobject['recordTypeInfos'] as $type) {
+      $sf_types[$type['recordTypeId']] = $type['name'];
+    }
+  }
+  return $sf_types;
+}
+
+/**
+ * Helper to retreive a list of fields for a given object type.
+ *
+ * @param string $salesforce_object_type
+ *   The object type of whose fields you want to retreive.
+ * @param array $form_state
+ *   Current state of the form to store and retreive results from to minimize
+ *   the need for recalculation.
+ * @param bool $include_select
+ *   Choice to choose a select option or not.  If TRUE, the first item will be
+ *   "-- Select --".  If FALSE, the first item will be the first item of the
+ *   retreived fields.  Defaults to TRUE.
+ *
+ * @return array
+ *   An array of values keyed by machine name of the field with the label as
+ *   the value, formatted to be appropriate as a value for #options.
+ */
+function _salesforce_mapping_get_salesforce_field_options($salesforce_object_type, &$form_state, $include_select = TRUE) {
+  $sfobject = _salesforce_mapping_get_salesforce_object($salesforce_object_type, $form_state);
+  $sf_fields = array();
+  if (isset($sfobject['fields'])) {
+    if ($include_select) {
+      $sf_fields[''] = '- ' . t('Select') . ' -';
+    }
+    foreach ($sfobject['fields'] as $sf_field) {
+      $sf_fields[$sf_field['name']] = $sf_field['label'];
+    }
+  }
+  return $sf_fields;
+}
+
+/**
+ * Helper to generate a list of fieldtypes for Drupal fields.
+ *
+ * @param bool $include_select
+ *   Choice to choose a select option or not.  If TRUE, the first item will be
+ *   "-- Select --".  If FALSE, the first item will be the first item of the
+ *   retreived fields.  Defaults to TRUE.
+ *
+ * @return array
+ *   An array of values keyed by machine name of the fieldmap type with the
+ *   label as the value, formatted to be appropriate as a value for #options.
+ */
+function _salesforce_mapping_get_drupal_type_options($include_select = TRUE) {
+  $types = salesforce_mapping_get_fieldmap_types();
+  $drupal_type_options = array();
+  if ($include_select) {
+    $drupal_type_options[''] = '- ' . t('Select') . ' -';
+  }
+  foreach ($types as $key => $fieldmap_type) {
+    $drupal_type_options[$key] = $fieldmap_type['label'];
+  }
+  return $drupal_type_options;
+}
+
+/**
+ * Return form options for available sync triggers.
+ *
+ * @return array
+ *   Array of sync trigger options keyed by their machine name with their lable
+ *   as the value.
+ */
+function _salesforce_mapping_get_sync_trigger_options() {
+  return array(
+    SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE => t('Drupal entity create'),
+    SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE => t('Drupal entity update'),
+    SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE => t('Drupal entity delete'),
+    SALESFORCE_MAPPING_SYNC_SF_CREATE => t('Salesforce object create'),
+    SALESFORCE_MAPPING_SYNC_SF_UPDATE => t('Salesforce object update'),
+    SALESFORCE_MAPPING_SYNC_SF_DELETE => t('Salesforce object delete'),
+  );
+}
+
+/**
+ * Helper to discover which fields required for mapping do not have values.
+ *
+ * @param array $form
+ *   FAPI form array.
+ * @param array $form_state
+ *   Current state of the form.
+ *
+ * @return array
+ *   List of the labels of the fields that are required for mapping fields but
+ *   currently do not have any values.
+ */
+function _salesforce_mapping_get_required_mapping_fields(&$form, &$form_state) {
+  // Retreive the label of the fields from the form to keep these in sync and
+  // hopefully multilingual compliant.
+  $drupal_entity_type_label = &$form['drupal_entity']['drupal_entity_type']['#title'];
+  $drupal_bundle_label = &$form['drupal_entity']['drupal_bundle']['#title'];
+  $salesforce_object_type_label = &$form['salesforce_object']['salesforce_object_type']['#title'];
+
+  $fields = array(
+    $drupal_entity_type_label => _salesforce_mapping_get_default_value('drupal_entity_type', $form_state),
+    $drupal_bundle_label => _salesforce_mapping_get_default_value('drupal_bundle', $form_state),
+    $salesforce_object_type_label => _salesforce_mapping_get_default_value('salesforce_object_type', $form_state),
+  );
+
+  // Weed out fields that have a value to leave us only with those that don't
+  foreach ($fields as $label => $value) {
+    if (!empty($value)) {
+      unset($fields[$label]);
+    }
+  }
+
+  // Return only the labels.
+  return array_keys($fields);
+}
+
+/*
+ * Helper to rapidly retreive an empty field mapping array.
+ *
+ * @return array
+ *   An empty field mapping array.
+ */
+function _salesforce_mapping_get_empty_field_map_row() {
+  return array(
+    'drupal_field' => '',
+    'salesforce_field' => '',
+    'key' => '',
+    'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
+  );
 }
