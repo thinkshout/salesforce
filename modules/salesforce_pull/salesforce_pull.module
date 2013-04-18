@@ -221,12 +221,6 @@ function salesforce_pull_process_records() {
             // See note above about flag.
             $values['salesforce_pull'] = TRUE;
 
-
-            $values = array(
-              $entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle,
-              // See note above about flag.
-              'salesforce_pull' => TRUE,
-            );
             // Create entity.
             $entity = entity_create($sf_mapping->drupal_entity_type, $values);
 
