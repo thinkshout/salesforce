@@ -178,7 +178,6 @@ function salesforce_pull_process_records() {
             // Update mapping object.
             $mapping_object->last_sync = REQUEST_TIME;
             $mapping_object->entity_update = REQUEST_TIME;
-
             watchdog('Salesforce Pull',
               'Updated entity %label associated with Salesforce Object ID: %sfid',
               array(
@@ -206,6 +205,23 @@ function salesforce_pull_process_records() {
           try {
             // Create entity from mapping object and field maps.
             $entity_info = entity_get_info($sf_mapping->drupal_entity_type);
+
+            // Define values to pass to entity_create().
+            $values = array();
+            if (isset($entity_info['entity keys']['bundle']) &&
+              !empty($entity_info['entity keys']['bundle'])) {
+              $values[$entity_info['entity keys']['bundle']] = $sf_mapping->drupal_bundle;
+            }
+            else {
+              // Not all entities will have bundle defined under entity keys,
+              // e.g. the User entity.
+              $values[$sf_mapping->drupal_bundle] = $sf_mapping->drupal_bundle;
+            }
+
+            // See note above about flag.
+            $values['salesforce_pull'] = TRUE;
+
+
             $values = array(
               $entity_info['entity keys']['bundle'] => $sf_mapping->drupal_bundle,
               // See note above about flag.
