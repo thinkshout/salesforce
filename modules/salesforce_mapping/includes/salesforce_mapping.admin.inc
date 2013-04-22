@@ -167,11 +167,11 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#theme' => 'salesforce_fieldmap_form_table',
       '#tree' => TRUE,
       '#header' => array(
-        t('Drupal field'),
-        t('Salesforce field'),
-        t('key'),
-        t('Direction'),
-        t('Delete'),
+        'drupal_field' => t('Drupal field'),
+        'salesforce_field' => t('Salesforce field'),
+        'key' => t('Key'),
+        'direction' => t('Direction'),
+        'delete_field_mapping' => t('Delete'),
       ),
       '#attributes' => array(
         'id' => array('edit-salesforce-field-mappings'),
@@ -420,6 +420,7 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
   $table = array(
     '#theme' => 'salesforce_fieldmap_form_table',
     '#tree' => TRUE,
+    '#columns' => array_keys($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings']['#header']),
     0 => $row,
   );
   $rendered_table = render($table);
@@ -448,20 +449,28 @@ function theme_salesforce_fieldmap_form_table($variables) {
   $elements = $variables['elements'];
 
   // Build the rows array.
+  $columns = isset($elements['#columns']) ? $elements['#columns'] : (isset($elements['#header']) ? array_keys($elements['#header']) : array());
   $rows = array();
   foreach (element_children($elements) as $child_key) {
     $child = & $elements[$child_key];
-    $row = array(
-      'data' => array(
-        drupal_render($child['drupal_field']),
-        drupal_render($child['salesforce_field']),
-        drupal_render($child['key']),
-        drupal_render($child['direction']),
-        drupal_render($child['delete_field_mapping']),
-      ),
-    );
-    if (isset($child['#attributes']) && isset($child['#attributes']['id'])) {
-      $row['id'] = $child['#attributes']['id'];
+    $data = array();
+    $row_columns = empty($columns) ? element_children($child) : $columns;
+    foreach ($row_columns as $column) {
+      if (isset($child[$column])) {
+        $cell = array('data' => drupal_render($child[$column]));
+        if (isset($child[$column]['#attributes'])) {
+          foreach ($child[$column]['#attributes'] as $key => $value) {
+            $cell[$key] = ($key == 'id') ? (is_array($value) ? array($value[0] . '-cell') : $value . '-cell') : $value;
+          }
+        }
+        $data[] = $cell;
+      }
+    }
+    $row = array('data' => $data);
+    if (isset($child['#attributes'])) {
+      foreach ($child['#attributes'] as $key => $value) {
+        $row[$key] = $value;
+      }
     }
     $rows[] = $row;
   }
