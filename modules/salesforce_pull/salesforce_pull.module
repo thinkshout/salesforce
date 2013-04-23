@@ -78,37 +78,31 @@ function salesforce_pull_get_updated_records() {
       continue;
     }
 
+    $soql = new SalesforceSelectQuery($type);
     // Convert field mappings to SOQL.
-    $fields = 'Id,+LastModifiedDate';
+    $soql->fields = array('Id', 'LastModifiedDate');
     foreach ($mapped_fields as $field) {
       // Don't add the Id field to the SOQL query.
       if ($field == 'Id') {
         continue;
       }
-      $fields .= ',+' . $field;
+      $soql->fields[] = $field;
     }
-    $query_string = 'SELECT+' . $fields . '+from+' . $type;
-
-    $where = array();
 
     // If no lastupdate, get all records, else get records since last pull.
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
     if ($sf_last_sync) {
       $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
-      $where[] = 'LastModifiedDate>' . $last_sync;
+      $soql->addCondition('LastModifiedDate', $last_sync, '>');
     }
 
     // If Record Type is specified, restrict query.
     if (count($mapped_record_types) > 0) {
-      $where[] = 'RecordTypeId+IN+(\'' . implode('\',\'', $mapped_record_types) . '\')';
-    }
-
-    if (count($where) > 0) {
-      $query_string .= '+WHERE+' . implode('+AND+', $where);
+      $soql->addCondition('RecordTypeId', $mapped_record_types, 'IN');
     }
 
     // Execute query.
-    $results = $sfapi->query($query_string);
+    $results = $sfapi->query($soql);
     $version_path = parse_url($sfapi->getApiEndPoint(), PHP_URL_PATH);
 
     if (!isset($results['errorCode'])) {

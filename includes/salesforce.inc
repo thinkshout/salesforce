@@ -407,7 +407,7 @@ class Salesforce {
   /**
    * Use SOQL to get objects based on query string.
    *
-   * @param string $query_string
+   * @param SalesforceSelectQuery $query
    *   The constructed SOQL query.
    *
    * @return array
@@ -415,8 +415,8 @@ class Salesforce {
    *
    * @addtogroup salesforce_apicalls
    */
-  public function query($query_string) {
-    $result = $this->apiCall('query?q=' . $query_string);
+  public function query(SalesforceSelectQuery $query) {
+    $result = $this->apiCall('query?q=' . (string) $query);
     return $result;
   }
 
