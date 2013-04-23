@@ -86,5 +86,15 @@ function hook_salesforce_pull_entity_value_alter(&$value, $field_map, $sf_object
 }
 
 /**
+ * Alter a SOQL select query before it is executed.
+ *
+ * @param SalesforceSelectQuery $query
+ *   The query object to alter.
+ */
+function hook_salesforce_query_alter(SalesforceSelectQuery &$query) {
+
+}
+
+/**
  * @} salesforce_hooks
  */

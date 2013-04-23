@@ -416,6 +416,7 @@ class Salesforce {
    * @addtogroup salesforce_apicalls
    */
   public function query(SalesforceSelectQuery $query) {
+    drupal_alter('salesforce_query', $query);
     $result = $this->apiCall('query?q=' . (string) $query);
     return $result;
   }
