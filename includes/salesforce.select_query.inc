@@ -42,6 +42,11 @@ class SalesforceSelectQuery {
         $clause .= "'$item'";
       }
       $clause .= ')';
+
+      // Set operator to IN if wasn't already changed from the default.
+      if ($operator == '=') {
+        $operator = 'IN';
+      }
     }
 
     $this->where[] = "$name+$operator+$clause";
