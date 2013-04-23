@@ -10,7 +10,6 @@ class SalesforceSelectQuery {
   public $order = array();
   public $objectType;
   public $limit;
-  protected $tables = array();
   protected $where = array();
 
   /**
