@@ -807,8 +807,7 @@ function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NU
         break;
 
       case 'direction':
-        // Set default for direction, which cannot be NULL like the others.
-        $value = SALESFORCE_MAPPING_DIRECTION_SYNC;
+        $value = &$mapping->field_mappings[$delta][$field];
         break;
 
       default:
