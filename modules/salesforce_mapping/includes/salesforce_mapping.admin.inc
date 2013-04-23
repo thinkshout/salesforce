@@ -148,6 +148,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#title' => t('Field map'),
     '#type' => 'fieldset',
     '#id' => 'edit-salesforce-field-mappings-wrapper',
+    '#description' => '* Key refers to an property mapped to a Salesforce external ID. if specified an UPSERT will be used to avoid duplicate data when possible.',
   );
 
   // Check to see if we have enough information to allow mapping fields.  If
@@ -169,7 +170,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#header' => array(
         'drupal_field' => t('Drupal field'),
         'salesforce_field' => t('Salesforce field'),
-        'key' => t('Key'),
+        'key' => t('Key') . '*',
         'direction' => t('Direction'),
         'delete_field_mapping' => t('Delete'),
       ),
@@ -295,7 +296,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       '#id' => 'edit-salesforce-add-field',
       '#name' => 'salesforce_add_field',
       '#type' => 'button',
-      '#description' => t('Add one or more field to configure a mapping for.'),
+      '#description' => t('Add one or more fields to configure a mapping for.'),
       '#executes_submit_callback' => FALSE,
       '#limit_validation_errors' => array(),
       '#ajax' => array(
