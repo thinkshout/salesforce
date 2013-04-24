@@ -622,11 +622,11 @@ function salesforce_mapping_form_submit($form, &$form_state) {
           $filtered = array_filter($sf_fields, salesforce_field_filter($mapping['salesforce_field']));
           $sf_field = reset($filtered);
         }
-
         $mappings[] = array(
           'drupal_field' => $mapping['drupal_field'],
           'salesforce_field' => $sf_field,
-          'key' => $key_delta !== FALSE && ($key === (int) $key_delta),
+          'key' => $key_delta !== FALSE && $key_delta != ""
+            && ($key === (int) $key_delta),
           'direction' => $mapping['direction'],
         );
       }
@@ -806,24 +806,30 @@ function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NU
         }
         break;
 
-      case 'direction':
-        $value = &$mapping->field_mappings[$delta][$field];
+      case 'key':
+        if (isset($form_state['input']['key'])) {
+          if ($form_state['input']['key'] == $delta) {
+            $value = $delta;
+          }
+        }
+        elseif ($mapping->field_mappings[$delta][$field] === TRUE) {
+          $value = $delta;
+        }
+        else {
+          $value = FALSE;
+        }
         break;
 
+      case 'direction':
+        // Set default for direction, which cannot be NULL like the others.
+        $value = SALESFORCE_MAPPING_DIRECTION_SYNC;
+        // No break for this case, should carry onto the default case
       default:
         if (isset($form_state['input']['salesforce_field_mappings'][$delta][$field])) {
           $value = &$form_state['input']['salesforce_field_mappings'][$delta][$field];
         }
         elseif (isset($mapping->field_mappings[$delta][$field])) {
           $value = &$mapping->field_mappings[$delta][$field];
-          if ($field == 'key') {
-            if ($value == "") {
-              $value = FALSE;
-            }
-            else {
-              $value = $delta;
-            }
-          }
         }
         break;
     }
@@ -1112,7 +1118,7 @@ function _salesforce_mapping_get_required_mapping_fields(&$form, &$form_state) {
   return array_keys($fields);
 }
 
-/*
+/**
  * Helper to rapidly retreive an empty field mapping array.
  *
  * @return array
