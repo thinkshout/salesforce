@@ -37,11 +37,7 @@ class SalesforceSelectQuery {
   public function addCondition($name, $value, $operator = '=') {
     $clause = $value;
     if (is_array($value)) {
-      $clause = '(';
-      foreach ($value as $item) {
-        $clause .= "'$item'";
-      }
-      $clause .= ')';
+      $clause = "('" . implode("','", $value) . "')";
 
       // Set operator to IN if wasn't already changed from the default.
       if ($operator == '=') {

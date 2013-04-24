@@ -224,6 +224,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         );
         if (!empty($fieldmap_type['options_callback'])) {
           $row['drupal_field']['fieldmap_value']['#options'] = call_user_func($fieldmap_type['options_callback'], $drupal_entity_type, $drupal_bundle);
+          $row['drupal_field']['fieldmap_value']['#options'][''] = '- ' . t('Select @field_type', array('@field_type' => $fieldmap_type_name)) . ' -';
         }
       }
 
@@ -860,7 +861,7 @@ function _salesforce_mapping_get_drupal_entities(&$form_state, $include_select =
 
   $types = array();
   if ($include_select) {
-    $types[''] = '- ' . t('Select') . ' -';
+    $types[''] = '- ' . t('Select Drupal entity') . ' -';
   }
   foreach ($property_info as $type => $properties) {
     if (!isset($properties['entity_info'])) {
@@ -897,7 +898,7 @@ function _salesforce_mapping_get_entity_bundle_options($drupal_entity_type, $inc
   $info = entity_get_info($drupal_entity_type);
   $bundles = array();
   if ($include_select) {
-    $bundles[''] = '- ' . t('Select') . ' -';
+    $bundles[''] = '- ' . t('Select entity bundle') . ' -';
   }
   if (isset($info['bundles'])) {
     foreach ($info['bundles'] as $key => $bundle) {
@@ -938,7 +939,7 @@ function _salesforce_mapping_get_salesforce_object_type_options(&$form_state, $i
 
   $sfobject_options = array();
   if ($include_select) {
-    $sfobject_options[''] = '- ' . t('Select') . ' -';
+    $sfobject_options[''] = '- ' . t('Select object type') . ' -';
   }
   foreach ($sfobjects as $object) {
     $sfobject_options[$object['name']] = $object['label'];
@@ -995,7 +996,7 @@ function _salesforce_mapping_get_salesforce_record_type_options($salesforce_obje
   $sf_types = array();
   if (isset($sfobject['recordTypeInfos'])) {
     if ($include_select) {
-      $sf_types[''] = '- ' . t('Select') . ' -';
+      $sf_types[''] = '- ' . t('Select record type') . ' -';
     }
     foreach ($sfobject['recordTypeInfos'] as $type) {
       $sf_types[$type['recordTypeId']] = $type['name'];
@@ -1051,7 +1052,7 @@ function _salesforce_mapping_get_drupal_type_options($include_select = TRUE) {
   $types = salesforce_mapping_get_fieldmap_types();
   $drupal_type_options = array();
   if ($include_select) {
-    $drupal_type_options[''] = '- ' . t('Select') . ' -';
+    $drupal_type_options[''] = '- ' . t('Select Drupal field type') . ' -';
   }
   foreach ($types as $key => $fieldmap_type) {
     $drupal_type_options[$key] = $fieldmap_type['label'];
