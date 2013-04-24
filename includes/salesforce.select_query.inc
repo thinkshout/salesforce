@@ -60,6 +60,7 @@ class SalesforceSelectQuery {
    * @return string
    *   SOQL query ready to be executed the SF API.
    */
+   // @codingStandardsIgnoreStart
   public function __toString() {
 
     $query = 'SELECT+';
@@ -85,4 +86,5 @@ class SalesforceSelectQuery {
 
     return $query;
   }
+  // @codingStandardsIgnoreEnd
 }

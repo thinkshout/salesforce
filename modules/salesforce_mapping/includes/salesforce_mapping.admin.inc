@@ -1113,7 +1113,7 @@ function _salesforce_mapping_get_required_mapping_fields(&$form, &$form_state) {
   return array_keys($fields);
 }
 
-/*
+/**
  * Helper to rapidly retreive an empty field mapping array.
  *
  * @return array
