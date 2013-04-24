@@ -424,6 +424,17 @@ function salesforce_mapping_property_validation($drupal_field, $sf_field, $direc
         )
       ));
   }
+
+  // Ensure that a property has a setter method if it needs to be updated.
+  if (in_array($direction, array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL))) {
+    if (empty($drupal_field['setter callback'])) {
+      form_set_error(
+        "salesforce_field_mappings][{$key}][salesforce_field",
+        t('Drupal field %drupal_label does not have a setter method and cannot be written to.',
+          array('%drupal_label' => $drupal_field['label'])
+        ));
+    }
+  }
 }
 
 /**
