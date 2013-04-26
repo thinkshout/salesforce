@@ -628,7 +628,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
           'drupal_field' => $mapping['drupal_field'],
           'salesforce_field' => $sf_field,
           'key' => $key_delta !== FALSE && $key_delta != ""
-            && ($key === (int) $key_delta),
+          && ($key === (int) $key_delta),
           'direction' => $mapping['direction'],
         );
       }
@@ -825,7 +825,7 @@ function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NU
       case 'direction':
         // Set default for direction, which cannot be NULL like the others.
         $value = SALESFORCE_MAPPING_DIRECTION_SYNC;
-        // No break for this case, should carry onto the default case
+        // No break for this case, should carry onto the default case.
       default:
         if (isset($form_state['input']['salesforce_field_mappings'][$delta][$field])) {
           $value = &$form_state['input']['salesforce_field_mappings'][$delta][$field];
