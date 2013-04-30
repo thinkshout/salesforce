@@ -199,7 +199,7 @@ function salesforce_oauth_form() {
       }
     }
     else {
-      salesforce_set_message(t('Salesforce needs to authorized to connect to this website.'));
+      salesforce_set_message(t('Salesforce needs to be authorized to connect to this website.'), 'error');
     }
   }
 
