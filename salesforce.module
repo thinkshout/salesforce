@@ -44,7 +44,7 @@ function salesforce_help($path, $arg) {
       $output .= '<li>' . t('In Salesforce go to Your Name > Setup > Create > Apps then create a new Connected App. (Depending on your Salesforce instance, you may need to go to Your Name > Setup > Develop > Remote Access.)') . '</li>';
       $output .= '<li>' . t('Set the callback URL to: !url (SSL is required)', array('!url' => '<code>' . 'https://' . $_SERVER['HTTP_HOST'] . '/salesforce/oauth_callback' . '</code>')) . '</li>';
       $output .= '<li>' . t('Select at least "Perform requests on your behalf at any time" for OAuth Scope
-  as well as the appropriate other scopes for your application. !info.', array('!info' => l(t('Additional information'), 'https://help.salesforce.com/help/doc/en/remoteaccess_about.htm'))) . '</li>';
+  as well as the appropriate other scopes for your application. Note that "Full access" does not include the "Perform requests on your behalf at any time" scope! !info.', array('!info' => l(t('Additional information'), 'https://help.salesforce.com/help/doc/en/remoteaccess_about.htm'))) . '</li>';
       $output .= '<li>' . t('For more help see !salesforce.', array('!salesforce' => l(t('the salesforce.com documentation'), 'https://www.salesforce.com/us/developer/docs/api_rest/Content/quickstart_oauth.htm'))) . '</li>';
       $output .= '</ul>';
       $output .= '<li>' . t('Your site needs to be SSL enabled to authorize the remote application using OAUTH.') . '</li>';
