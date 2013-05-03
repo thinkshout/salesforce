@@ -251,7 +251,7 @@ function salesforce_push_cron() {
           $sobject->fields[$key] = $value;
         }
 
-        if ($mapped_objects) {
+        if ($mapped_objects && $mapped_objects->salesforce_id) {
           $sobject->Id = $mapped_objects->salesforce_id;
           $update_list[$delta] = $sobject;
         }
@@ -294,7 +294,7 @@ function salesforce_push_cron() {
 
     if (!empty($upsert_list)) {
       foreach ($upsert_list as $key => $upsert_item) {
-        $results = $soap->upsert($key, $upsert_list);
+        $results = $soap->upsert($key, $upsert_item);
         salesforce_push_process_soap_results('Upsert', $results, $synced_entities);
       }
     }
