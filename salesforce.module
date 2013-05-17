@@ -231,6 +231,9 @@ function salesforce_oauth_form_submit($form, &$form_state) {
  */
 function salesforce_oauth_callback() {
   $salesforce = salesforce_get_api();
+  if (!isset($_GET['code'])) {
+    return drupal_access_denied();
+  }
   $salesforce->requestToken($_GET['code']);
 
   salesforce_set_message('Salesforce OAUTH2 authorization successful.');
