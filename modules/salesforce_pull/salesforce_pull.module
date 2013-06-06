@@ -52,7 +52,7 @@ function salesforce_pull_get_updated_records() {
     $mapped_fields = array();
     $mapped_record_types = array();
 
-    // Iterate over each field mapping to determine our query paramters.
+    // Iterate over each field mapping to determine our query parameters.
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
         // Exclude field mappings that are only drupal to SF.
