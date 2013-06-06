@@ -39,9 +39,15 @@ function salesforce_cron_queue_info() {
  * and places each updated SF object into the queue for later processing.
  */
 function salesforce_pull_get_updated_records() {
-  $sfapi = salesforce_get_api();
   $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
 
+  // Avoid overloading the processing queue and pass this time around if it's
+  // over a configurable limit.
+  if ($queue->numberOfItems() > variable_get('salesforce_pull_max_queue_size', 100000)) {
+    return;
+  }
+
+  $sfapi = salesforce_get_api();
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
     $mapped_fields = array();
     $mapped_record_types = array();
