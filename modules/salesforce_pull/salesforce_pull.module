@@ -27,7 +27,7 @@ function salesforce_pull_cron() {
 function salesforce_cron_queue_info() {
   $queues[SALESFORCE_PULL_QUEUE] = array(
     'worker callback' => 'salesforce_pull_process_records',
-    'time' => 60,
+    'time' => variable_get('salesforce_pull_max_cron_time', 180),
   );
   return $queues;
 }
