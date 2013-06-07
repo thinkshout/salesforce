@@ -218,9 +218,9 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
  *   if none are found.
  */
 function salesforce_mapping_relation_endpoints_fieldmap_options($entity_type, $entity_bundle) {
-  $properties = salesforce_mapping_property_fieldmap_options($entity_type, $entity_bundle);
+  $properties = entity_get_all_property_info($entity_type);
   if (isset($properties['endpoints'])) {
-    return array('endpoints' => $properties['endpoints']);
+    return array('endpoints' => $properties['endpoints']['label']);
   }
   else {
     return FALSE;
