@@ -236,7 +236,7 @@ function salesforce_pull_process_records($sf_object) {
           $wrapper->save();
 
           // If no id exists, the insert failed.
-          $entity_id = $wrapper->getIdentifier();
+          list($entity_id) = entity_extract_ids($sf_mapping->drupal_entity_type, $entity);
           if (!$entity_id) {
             throw new Exception('Entity ID not returned, insert failed.');
           }

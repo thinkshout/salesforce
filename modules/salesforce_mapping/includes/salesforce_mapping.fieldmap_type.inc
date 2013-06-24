@@ -133,9 +133,11 @@ function salesforce_mapping_related_entity_fieldmap_push_value($fieldmap, $entit
   else {
     $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'];
   }
+
+  list($related_entity_id) = entity_extract_ids($related_wrapper->type(), $related_wrapper->value());
   $mapped_objects = salesforce_mapping_object_load_by_drupal(
     $related_wrapper->type(),
-    $related_wrapper->getIdentifier()
+    $related_entity_id
   );
   if ($mapped_objects) {
     $value = $mapped_objects->salesforce_id;
@@ -156,6 +158,8 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
   // Handle relations.
   else {
     if (module_exists('relation')) {
+      list($related_entity_id) = entity_extract_ids($related_wrapper->type(), $related_wrapper->value());
+
       $type = $info['parent']->type();
       $id = $info['parent']->getIdentifier();
       $query = relation_query($type, $id);
