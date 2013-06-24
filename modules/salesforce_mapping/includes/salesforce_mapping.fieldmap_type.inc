@@ -158,10 +158,9 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
   // Handle relations.
   else {
     if (module_exists('relation')) {
-      list($related_entity_id) = entity_extract_ids($related_wrapper->type(), $related_wrapper->value());
-
+      list($parent_entity_id) = entity_extract_ids($info['parent']->type(), $info['parent']->value());
       $type = $info['parent']->type();
-      $id = $info['parent']->getIdentifier();
+      $id = $info['parent']->$parent_entity_id;
       $query = relation_query($type, $id);
       $query->propertyCondition('relation_type', $info['relation_type']);
       $results = $query->execute();
