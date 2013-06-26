@@ -98,8 +98,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     return;
   }
 
-  $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
-  $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_wrapper->getIdentifier());
+  list($entity_id) = entity_extract_ids($entity_type, $entity);
+  $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
 
   // Delete SF object.
   if ($sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
@@ -122,6 +122,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   }
 
   // Generate parameter array from field mappings.
+  $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
   $params = salesforce_push_map_params($mapping, $entity_wrapper, $key_field, $key_value);
 
   // Entity is not linked to an SF object.
@@ -153,7 +154,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     if (empty($data['errorCode'])) {
       // Create mapping object, saved below.
       $mapped_objects = entity_create('salesforce_mapping_object', array(
-        'entity_id' => $entity_wrapper->getIdentifier(),
+        'entity_id' => $entity_id,
         'entity_type' => $entity_type,
         'salesforce_id' => $data['id'],
       ));
@@ -302,7 +303,9 @@ function salesforce_push_cron() {
 }
 
 /**
- * Record SOAP API batch API calls to watchdog.
+ * Process SOAP API batch results.
+ *
+ * Create or update mapped object entities and log results.
  *
  * @param string $op
  *   Operation performed.
@@ -321,8 +324,9 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
       else {
         // Create mapping object, saved below.
         $wrapper = $synced_entities[$key]['entity_wrapper'];
+        list($entity_id) = entity_extract_ids($wrapper->type(), $wrapper->value());
         $mapped_objects = entity_create('salesforce_mapping_object', array(
-          'entity_id' => $wrapper->getIdentifier(),
+          'entity_id' => $entity_id,
           'entity_type' => $wrapper->type(),
           'salesforce_id' => $result->id,
         ));

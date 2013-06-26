@@ -10,7 +10,7 @@ class SalesforceSelectQuery {
   public $order = array();
   public $objectType;
   public $limit;
-  protected $where = array();
+  public $conditions = array();
 
   /**
    * Constructor which sets the query object type.
@@ -25,7 +25,7 @@ class SalesforceSelectQuery {
   /**
    * Add a condition to the query.
    *
-   * @param string $name
+   * @param string $field
    *   Field name.
    * @param mixed $value
    *   Condition value. If an array, it will be split into quote enclosed
@@ -34,10 +34,9 @@ class SalesforceSelectQuery {
    * @param string $operator
    *   Conditional operator. One of '=', '!=', '<', '>', 'LIKE, 'IN', 'NOT IN'.
    */
-  public function addCondition($name, $value, $operator = '=') {
-    $clause = $value;
+  public function addCondition($field, $value, $operator = '=') {
     if (is_array($value)) {
-      $clause = "('" . implode("','", $value) . "')";
+      $value = "('" . implode("','", $value) . "')";
 
       // Set operator to IN if wasn't already changed from the default.
       if ($operator == '=') {
@@ -45,7 +44,11 @@ class SalesforceSelectQuery {
       }
     }
 
-    $this->where[] = "$name+$operator+$clause";
+    $this->conditions[] = array(
+      'field' => $field,
+      'operator' => $operator,
+      'value' => $value,
+    );
   }
 
   /**
@@ -63,8 +66,12 @@ class SalesforceSelectQuery {
     $query .= implode(',+', $this->fields);
     $query .= "+FROM+" . $this->objectType;
 
-    if (count($this->where) > 0) {
-      $query .= '+WHERE+' . implode('+AND+', $this->where);
+    if (count($this->conditions) > 0) {
+      $where = array();
+      foreach ($this->conditions as $condition) {
+        $where[] = implode('+', $condition);
+      }
+      $query .= '+WHERE+' . implode('+AND+', $where);
     }
 
     if ($this->order) {
