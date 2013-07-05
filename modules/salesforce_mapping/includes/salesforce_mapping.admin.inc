@@ -814,7 +814,7 @@ function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NU
             $value = $delta;
           }
         }
-        elseif ($mapping->field_mappings[$delta][$field] === TRUE) {
+        elseif (isset($mapping->field_mappings[$delta][$field]) && $mapping->field_mappings[$delta][$field] === TRUE) {
           $value = $delta;
         }
         else {
