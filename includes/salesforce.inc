@@ -500,6 +500,10 @@ class Salesforce {
    * @addtogroup salesforce_apicalls
    */
   public function objectUpsert($name, $key, $value, $params) {
+    // If key is set, remove from $params to avoid UPSERT errors.
+    if (isset($params[$key])) {
+      unset($params[$key]);
+    }
     $data = $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
     if ($this->response->code == 300) {
       $data['message'] = t('The value provided is not unique.');
