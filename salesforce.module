@@ -18,7 +18,7 @@ function salesforce_help($path, $arg) {
         $output .= '<p>' . t('In order to configure Salesforce Mappings, you must first enable the <a href="/admin/modules">Salesforce Mapping</a> module.') . '</p>';
       }
       if (!variable_get('salesforce_consumer_secret', NULL) || !variable_get('salesforce_consumer_key', NULL) || !variable_get('salesforce_refresh_token', NULL)) {
-        $output .= '<p>' . t('You must !authorize in order to configure Salesforce Mappings.', array('!authorize' => l(t('authorize your account with Salesforce'), 'admin/config/services/salesforce'))) . '</p>';
+        $output .= '<p>' . t('You must !authorize in order to configure Salesforce Mappings.', array('!authorize' => l(t('authorize your account with Salesforce'), 'admin/config/salesforce/authorize'))) . '</p>';
       }
       return $output;
 
@@ -242,7 +242,7 @@ function salesforce_oauth_callback() {
   // Rebuild the menu so the mappings links are now available.
   menu_rebuild();
 
-  drupal_goto('admin/config/salesforce/salesforce');
+  drupal_goto('admin/config/salesforce/authorize');
 }
 
 /**
