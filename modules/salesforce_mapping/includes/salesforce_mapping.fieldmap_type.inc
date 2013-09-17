@@ -133,14 +133,15 @@ function salesforce_mapping_related_entity_fieldmap_push_value($fieldmap, $entit
   else {
     $related_wrapper = $entity_wrapper->$fieldmap['drupal_field']['fieldmap_value'];
   }
-
-  list($related_entity_id) = entity_extract_ids($related_wrapper->type(), $related_wrapper->value());
-  $mapped_objects = salesforce_mapping_object_load_by_drupal(
-    $related_wrapper->type(),
-    $related_entity_id
-  );
-  if ($mapped_objects) {
-    $value = $mapped_objects->salesforce_id;
+  if ($related_entity = $related_wrapper->value()) {
+    list($related_entity_id) = entity_extract_ids($related_wrapper->type(), $related_entity);
+    $mapped_objects = salesforce_mapping_object_load_by_drupal(
+      $related_wrapper->type(),
+      $related_entity_id
+    );
+    if ($mapped_objects) {
+      $value = $mapped_objects->salesforce_id;
+    }
   }
   return $value;
 }
