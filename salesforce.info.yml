@@ -1,0 +1,7 @@
+name: Salesforce API
+type: module
+description: Defines an API that enables modules to interact with the Salesforce REST API.
+package: Salesforce
+core: 8.x
+configure: salesforce.settings
+php: 5.3
