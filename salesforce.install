@@ -6,16 +6,6 @@
  */
 
 /**
- * Implements hook_uninstall().
- */
-function salesforce_uninstall() {
-  variable_del('salesforce_consumer_key');
-  variable_del('salesforce_consumer_secret');
-  variable_del('salesforce_instance_url');
-  variable_del('salesforce_refresh_token');
-}
-
-/**
  * Implements hook_schema().
  */
 function salesforce_schema() {
