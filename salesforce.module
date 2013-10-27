@@ -264,8 +264,8 @@ function salesforce_get_api() {
  * Wrapper around drupal_set_message(), checks for proper permissions.
  */
 function salesforce_set_message($message = NULL, $type = 'status', $repeat = TRUE) {
-  global $user;
-  if ($user->uid == 1 || user_access('administer salesforce', $user)) {
+   $account = \Drupal::currentUser();
+  if ($account->id() == 1 || $account->hasPermission('administer salesforce')) {
     drupal_set_message($message, $type, $repeat);
   }
 }
