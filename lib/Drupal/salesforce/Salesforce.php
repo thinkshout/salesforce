@@ -1,11 +1,17 @@
 <?php
-/**
- * @file
- * Objects, properties, and methods to communicate with the Salesforce REST API
- */
 
 /**
- * Ability to authorize and communicate with the Salesforce REST API.
+ * @file
+ * Contains \Drupal\salesforce\Salesforce.
+ */
+
+namespace Drupal\salesforce;
+
+use Symfony\Component\Debug\ExceptionHandler;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+
+/**
+ * Objects, properties, and methods to communicate with the Salesforce REST API.
  */
 class Salesforce {
 
@@ -575,5 +581,5 @@ class Salesforce {
   }
 }
 
-class SalesforceException extends Exception {
+class SalesforceException extends ExceptionHandler {
 }

@@ -5,7 +5,8 @@
  * API and module for Salesforce integration.
  */
 
-module_load_include('inc', 'salesforce', 'includes/salesforce');
+use \Drupal\salesforce\Salesforce;
+use \Drupal\Core\Config;
 
 /**
  * Implements hook_help().
@@ -252,9 +253,10 @@ function salesforce_oauth_callback() {
  *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
+  $settings = \Drupal::config()->get('salesforce.settings');
   return new Salesforce(
-    variable_get('salesforce_consumer_key', ''),
-    variable_get('salesforce_consumer_secret', '')
+    $settings['consumer_key'],
+    $settings['salesforce_consumer_secret']
   );
 }
 
