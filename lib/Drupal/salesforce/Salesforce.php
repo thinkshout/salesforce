@@ -309,14 +309,14 @@ class Salesforce {
    * OAuth step 1: Redirect to Salesforce and request and authorization code.
    */
   public function getAuthorizationCode() {
-    $url = $this->login_url . '/services/oauth2/authorize';
+    $path = $this->login_url . '/services/oauth2/authorize';
     $query = array(
       'redirect_uri' => $this->redirectUrl(),
       'response_type' => 'code',
       'client_id' => $this->consumer_key,
     );
 
-    drupal_goto($url, array('query' => $query));
+    return new RedirectResponse(url($path, array('query' => $query, 'absolute' => TRUE)));
   }
 
   /**
