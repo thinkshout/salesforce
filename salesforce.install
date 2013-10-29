@@ -14,13 +14,3 @@ function salesforce_schema() {
   $schema['cache_salesforce_object']['description'] = 'Cache table for detailed information about specific Salesforce objects.';
   return $schema;
 }
-
-/**
- * Create the cache bin for Salesforce objects.
- */
-function salesforce_update_7300() {
-  $schema_name = 'cache_salesforce_object';
-  $schema[$schema_name] = drupal_get_schema_unprocessed('system', 'cache');
-  $schema[$schema_name]['description'] = 'Cache table for detailed information about specific Salesforce objects.';
-  db_create_table($schema_name, $schema[$schema_name]);
-}

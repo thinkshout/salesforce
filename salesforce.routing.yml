@@ -1,0 +1,15 @@
+salesforce.oauth_callback:
+  path: 'salesforce/oauth_callback'
+  defaults:
+    _controller: '\Drupal\salesforce\Controller\SalesforceController::oauthCallback'
+  requirements:
+    _permission: 'access content'
+
+salesforce.authorize:
+  path: 'admin/config/salesforce/authorize'
+  defaults:
+    _form: '\Drupal\salesforce\Form\SalesforceAuthorizeForm'
+    _title: 'Authorize'
+    _description: 'Authorize this website to communicate with Salesforce.'
+  requirements:
+    _permission: 'administer salesforce'
