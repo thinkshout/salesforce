@@ -96,6 +96,7 @@ function salesforce_api_schema() {
     'indexes' => array(
       'sfid' => array('sfid'),
       'name' => array('name'),
+      'oid' => array('oid'),
       'entity_bundle_oid' => array('drupal_entity', 'drupal_bundle', 'oid'),
     ),
     // Primary key has been changed to the fieldmap:
@@ -442,3 +443,12 @@ function salesforce_api_update_7001(&$sandbox) {
     return t('Added the following fields to {salesforce_object_map}: @fields', array('@fields' => $added_fields));
   }
 }
+
+/**
+ * Adds index on oid
+ */
+function salesforce_api_update_7002(&$sandbox) {
+  db_add_index('salesforce_object_map', 'oid', array('oid'));
+}
+
+
