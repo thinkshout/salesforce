@@ -45,6 +45,33 @@ function salesforce_api_fieldmap_features_revert($module = 'salesforce_api') {
   ctools_component_features_revert($module);
 }
 
+/*
+ * Implements hook_features_rebuild().
+ */
+function salesforce_fieldmap_features_rebuild($module) {
+  $table = 'salesforce_fieldmap';
+  $defaults = features_get_default($table, $module);
+
+  if (empty($defaults)) {
+    return;
+  }
+
+  // Revert.
+  if (!empty($defaults)) {
+    foreach ($defaults as $object) {
+      if (empty($object->name) || empty($object->drupal_entity) || empty($object->salesforce)) {
+        continue;
+      }
+
+      // If it exists, just update the record.
+      $existing = salesforce_api_salesforce_fieldmap_load($object->name);
+      $primary_key = empty($existing->in_code_only) ? 'name' : array();
+      drupal_write_record('salesforce_fieldmap', $object, $primary_key);
+    }
+  }
+}
+
+
 /**
  * }
  */
