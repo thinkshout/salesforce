@@ -773,7 +773,9 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
   if (!isset($sf) || !is_object($sf)) {
     // Let modules react to a failure to export this entity.
     module_invoke_all('salesforce_api_export_connect_fail', $id, $name, $sfid);
-    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    }
     return FALSE;
   }
 
@@ -904,7 +906,9 @@ function sf_entity_import($sf_data, $name, $id = NULL, $options = array()) {
       // Let modules react to a failure to update this entity.
       module_invoke_all('salesforce_api_import_connect_fail', $name, $id);
     }
-    drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    if (user_access('administer salesforce')) {
+      drupal_set_message(t('Unable to connect to Salesforce using <a href="!url">current credentials</a>.', array('!url' => url(SALESFORCE_PATH_ADMIN))));
+    }
     return FALSE;
   }
   if (is_sfid($sf_data)) {
