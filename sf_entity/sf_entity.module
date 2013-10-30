@@ -120,10 +120,21 @@ function sf_entity_salesforce_form_access($entity_type, $entity = NULL) {
  * Implements hook_entity_load().
  */
 function sf_entity_entity_load(&$entities, $type) {
+  $map = &drupal_static(__FUNCTION__ . '_map', array());
+
+  if (empty($map)) {
+    $items = salesforce_api_salesforce_fieldmap_load_all();
+    foreach ($items as $item) {
+      $map[$item->drupal_entity . '-' . $item->drupal_bundle] = TRUE;
+    }
+  }
+
   foreach($entities as $entity) {
     list($oid, $vid, $bundle) = entity_extract_ids($type, $entity);
-    $result = salesforce_api_id_load($oid, $type, $bundle);
-    $entities[$oid]->salesforce = $result;
+    if (isset($map[$type . '-' . $bundle])) {
+      $result = salesforce_api_id_load($oid, $type, $bundle);
+      $entities[$oid]->salesforce = $result;
+    }
   }
 }
 
