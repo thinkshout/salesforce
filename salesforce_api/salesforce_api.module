@@ -2064,6 +2064,9 @@ function salesforce_api_id_convert($sfid15) {
  * Wrapper for Devel's dpm() function. Called in other Salesforce API modules.
  */
 function sf_dpm($var, $show_msg = TRUE, $msg_level = 'error') {
+  if (!variable_get('salesforce_api_debug', TRUE)) {
+    return;
+  }
   if (function_exists('dpm')) {
     dpm($var);
   }

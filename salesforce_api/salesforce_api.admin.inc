@@ -108,6 +108,13 @@ function salesforce_api_settings_form($form, &$form_state) {
     ),
     '#default_value' => variable_get('salesforce_api_error_log', SALESFORCE_LOG_ALL),
   );
+
+  $form['log']['salesforce_api_debug'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display debug messages'),
+    '#default_value' => variable_get('salesforce_api_debug', TRUE),
+  );
+
   $form['objects'] = array(
     '#type' => 'fieldset',
     '#title' => t('Object settings'),
