@@ -16,7 +16,7 @@
  * @return string sfid
  */
 function sf_prematch_export($entity_name, $bundle_name, $drupal_object, $map, $match_by) {
-  if (empty($drupal_object) || empty($map->drupal) || empty($match_by)) {
+  if (empty($drupal_object) || empty($map->drupal_entity) || empty($map->drupal_bundle) || empty($match_by)) {
     return;
   }
   // Get information to allow using handlers to get values of Drupal fields.
@@ -173,7 +173,7 @@ function sf_prematch_import($entity_name, $bundle_name, $object, $map, $match_by
     case "node":
       $id_name = "nid";
       $table_name = "node";
-      $content_type = str_replace("node_", "", $map->drupal);
+      $content_type = $map->drupal_bundle;
       $schema = drupal_get_schema($table_name);
       $fields_table_name = 'content_type_' . $content_type;
       $fields_schema = drupal_get_schema($fields_table_name);

@@ -72,7 +72,7 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
 
     // Load the object definitions.
     $context['sandbox']['salesforce']['drupal_object'] =
-      salesforce_api_fieldmap_objects_load('drupal', $map->drupal);
+      salesforce_api_fieldmap_objects_load('drupal', $map->drupal_entity);
     // $context['sandbox']['salesforce']['salesforce_object'] =
     //   salesforce_api_fieldmap_objects_load('salesforce', $map['salesforce']);
     $result = db_query('SELECT oid, sfid FROM {salesforce_object_map} WHERE name = :name', array(':name' => $map->name));

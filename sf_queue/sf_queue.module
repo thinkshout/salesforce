@@ -121,7 +121,7 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
     'attempts' => 0,
     'created' => REQUEST_TIME,
     'sfid' => empty($sf_object->Id) ? '' : $sf_object->Id, // will be blank on create
-    'drupal_type' => $map->drupal,
+    'drupal_type' => $map->drupal_entity,
     'sf_type' => $map->salesforce,
     'name' => md5(microtime()),
     'fieldmap_name' => $map->name,
@@ -136,7 +136,7 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
   // update the queue by merging the two records instead of appending to it.
   if ($existing = db_fetch_array(db_query('SELECT oid
       FROM {salesforce_export_queue}
-      WHERE drupal_type = :drupal_type AND fieldmap_name = :fieldmap_name AND oid = :oid', array(':drupal_type' => $map->drupal, ':fieldmap_name' => $map->name, ':oid' => $oid)))) {
+      WHERE drupal_type = :drupal_type AND fieldmap_name = :fieldmap_name AND oid = :oid', array(':drupal_type' => $map->drupal_entity, ':fieldmap_name' => $map->name, ':oid' => $oid)))) {
     $update = 'oid';
     $object->oid = $existing['oid'];
   }
@@ -146,7 +146,7 @@ function sf_queue_enqueue($op, $sf_object, $map, $oid) {
   // error but don't prevent the export.
   if (drupal_write_record('salesforce_export_queue', $object, $update)) {
     if (user_access('administer salesforce')) {
-      drupal_set_message(t('Drupal !type queued for Salesforce export.', array('!type' => $map->drupal)));
+      drupal_set_message(t('Drupal !type queued for Salesforce export.', array('!type' => $map->drupal_entity)));
     }
     return FALSE;
   }
