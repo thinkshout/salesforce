@@ -80,6 +80,36 @@ function salesforce_help($path, $arg) {
 }
 
 /**
+ * Implements hook_menu().
+ */
+function salesforce_menu() {
+  $items = array();
+
+  $items['admin/config/salesforce'] = array(
+    'title' => 'Salesforce',
+    'description' => 'Salesforce settings.',
+    'route_name' => 'salesforce.config_index',
+  );
+  $items['admin/config/salesforce/authorize'] = array(
+    'title' => 'Authorize',
+    'description' => 'Authorize this website to communicate with Salesforce.',
+    'route_name' => 'salesforce.authorize',
+  );
+  $items['salesforce/oauth_callback'] = array(
+    'title' => 'Salesforce oauth callback',
+    'route_name' => 'salesforce.oauth_callback',
+  );
+
+  $items['admin/structure/salesforce'] = array(
+    'title' => 'Salesforce',
+    'description' => 'Configuration for Salesforce integration.',
+    'route_name' => 'salesforce.structure_index',
+  );
+
+  return $items;
+}
+
+/**
  * Implements hook_permission().
  */
 function salesforce_permission() {

@@ -1,15 +1,33 @@
 salesforce.oauth_callback:
-  path: 'salesforce/oauth_callback'
+  path: '/salesforce/oauth_callback'
   defaults:
     _controller: '\Drupal\salesforce\Controller\SalesforceController::oauthCallback'
   requirements:
     _permission: 'access content'
 
 salesforce.authorize:
-  path: 'admin/config/salesforce/authorize'
+  path: '/admin/config/salesforce/authorize'
   defaults:
     _form: '\Drupal\salesforce\Form\SalesforceAuthorizeForm'
     _title: 'Authorize'
     _description: 'Authorize this website to communicate with Salesforce.'
+  requirements:
+    _permission: 'administer salesforce'
+
+salesforce.config_index:
+  path: '/admin/config/salesforce'
+  defaults:
+    _content: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'Salesforce'
+    _description: 'Salesforce settings'
+  requirements:
+    _permission: 'access administration pages'
+
+salesforce.structure_index:
+  path: '/admin/structure/salesforce'
+  defaults:
+    _content: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'Salesforce'
+    _description: 'Configuration for Salesforce integration'
   requirements:
     _permission: 'administer salesforce'
