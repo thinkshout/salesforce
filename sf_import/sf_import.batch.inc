@@ -89,6 +89,9 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
     }
     try {
       $sf = salesforce_api_connect();
+      if (!$sf) {
+        throw new Exception('Unable to connect to Salesforce');
+      }
       $context['sandbox']['salesforce']['query'] = $query = $sf->client->query($soql);
     }
     catch (Exception $e) {
@@ -122,6 +125,9 @@ function sf_import_batchjob($fieldmap_key, $extra, &$context) {
   if (!$query_array['done'] && !empty($query_array['queryLocator']) && !isset($query_array['records'][$pos])) {
     try {
       $sf = salesforce_api_connect();
+      if (!$sf) {
+        throw new Exception('Unable to connect to Salesforce');
+      }
       $context['sandbox']['salesforce']['query'] = $query = $sf->client->queryMore($query_array['queryLocator']);
       $query_array = get_object_vars($query);
       $context['sandbox']['position'] = $pos = key($query_array['records']);

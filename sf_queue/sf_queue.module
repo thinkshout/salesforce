@@ -258,6 +258,9 @@ function sf_queue_handle_deletes($settings) {
 
   try {
     $sf = salesforce_api_connect();
+    if (!$sf) {
+      throw new Exception('Unable to connect to Salesforce');
+    }
     $responses = $sf->client->delete($sfids);
     sf_queue_handle_responses($responses, $deletes);
   }
@@ -330,6 +333,9 @@ function sf_queue_handle_upserts($settings) {
         if (count($ids) > 0) {
           try {
             $sf = salesforce_api_connect();
+            if (!$sf) {
+              throw new Exception('Unable to connect to Salesforce');
+            }
             $responses = $sf->client->{$op}($objects, $sf_type);
             error_log(print_r($responses, 1));
             list($wins, $fails) = sf_queue_handle_responses($responses, $items);

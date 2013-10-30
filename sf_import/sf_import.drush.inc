@@ -152,6 +152,9 @@ function drush_sf_import_sf_fieldmap($fieldmap_key = NULL) {
     _sf_import_drush_check_soap();
     try {
       $sf = salesforce_api_connect();
+      if (!$sf) {
+        throw new Exception('Unable to connect to Salesforce');
+      }
       $sql = "
         SELECT COUNT(Id)
         FROM " . $map->salesforce . "
@@ -247,6 +250,9 @@ function drush_sf_import($fieldmap_key) {
   }
   try {
     $sf = salesforce_api_connect();
+    if (!$sf) {
+      throw new Exception('Unable to connect to Salesforce');
+    }
     $query = $sf->client->query($soql);
   }
   catch (Exception $e) {
@@ -344,6 +350,9 @@ function drush_sf_import($fieldmap_key) {
     if (!empty($query->queryLocator)) {
       try {
         $sf = salesforce_api_connect();
+        if (!$sf) {
+          throw new Exception('Unable to connect to Salesforce');
+        }
         $query = $sf->client->queryMore($query->queryLocator);
       }
       catch (Exception $e) {

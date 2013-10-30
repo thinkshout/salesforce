@@ -1476,6 +1476,9 @@ function salesforce_api_delete_salesforce_objects($sfids) {
   }
   try {
     $sf = salesforce_api_connect();
+    if (!$sf) {
+      throw new Exception('Unable to connect to Salesforce');
+    }
     return $sf->client->delete($real_sfids);
   }
   catch (Exception $e) {
