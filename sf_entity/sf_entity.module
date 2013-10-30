@@ -1166,8 +1166,8 @@ function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_nam
       // After that node_object_prepare() can be called to set default values.
       node_object_prepare($entity);
     }
-    // Set the node to published, if a status has not already been set.
-    if (!isset($entity->status) || empty($entity->status)) {
+    // Status property must be set.
+    if (!property_exists($entity, 'status')) {
       $entity->status = 1;
     }
     // To save a node, a uid must be set.
@@ -1203,8 +1203,8 @@ function _sf_entity_import_preprocess_entity(&$entity, $entity_type, $bundle_nam
  */
 function _sf_entity_import_process_entity(&$entity, $entity_type, $bundle_name = NULL) {
   if ($entity_type == 'user') {
-    // If status is still empty, set it to 1 (active)
-    if (!isset($entity->status) || empty($entity->status)) {
+    // Status property must be set.
+    if (!property_exists($entity, 'status')) {
       $entity->status = 1;
     }
     // If the created date is still empty, set it to now.
