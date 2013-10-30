@@ -69,7 +69,7 @@ class Salesforce {
 
     $this->response = $this->apiHttpRequest($path, $params, $method);
 
-    switch ($this->response->code) {
+    switch ($this->response->getStatusCode()) {
       // The session ID or OAuth token used has expired or is invalid.
       case 401:
         // Refresh token.
@@ -78,8 +78,8 @@ class Salesforce {
         // Rebuild our request and repeat request.
         $this->response = $this->apiHttpRequest($path, $params, $method);
         // Throw an error if we still have bad response.
-        if (!in_array($this->response->code, array(200, 201, 204))) {
-          throw new SalesforceException($this->response->error, $this->response->code);
+        if (!in_array($this->response->getStatusCode(), array(200, 201, 204))) {
+          throw new SalesforceException($this->response->getReasonPhrase(), $this->response->getStatusCode());
         }
 
         break;
@@ -92,12 +92,14 @@ class Salesforce {
 
       default:
         // We have problem and no specific Salesforce error provided.
-        if (empty($this->response->data)) {
-          throw new SalesforceException($this->response->error, $this->response->code);
+        if (empty($this->response) || !$this->response->getBody(TRUE)) {
+          throw new SalesforceException($this->response->getReasonPhrase(), $this->response->getStatusCode());
         }
     }
 
-    $data = drupal_json_decode($this->response->data);
+    // @todo Guzzle\Http\Message\Response\json() can throw RuntimeException that we should try to handle.
+    $data = $this->response->json();
+
     if (!empty($data[0]) && count($data) == 1) {
       $data = $data[0];
     }
@@ -132,7 +134,10 @@ class Salesforce {
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
       'Content-type' => 'application/json',
     );
-    $data = drupal_json_encode($params);
+    $data = NULL;
+    if (!empty($params)) {
+      $data = drupal_json_encode($params);
+    }
     return $this->httpRequest($url, $data, $headers, $method);
   }
 
@@ -148,18 +153,17 @@ class Salesforce {
    * @param string $method
    *   Method to initiate the call, such as GET or POST.  Defaults to GET.
    *
+   * @throws RequestException
+   *
    * @return object
    *   Salesforce response object.
    */
-  protected function httpRequest($url, $data, $headers = array(), $method = 'GET') {
+  protected function httpRequest($url, $data = NULL, $headers = array(), $method = 'GET') {
     // Build the request, including path and headers. Internal use.
-    $options = array(
-      'method' => $method,
-      'headers' => $headers,
-      'data' => $data,
-    );
-
-    return drupal_http_request($url, $options);
+    $method = $method == 'POST' ? 'post' : 'get';
+    $request = \Drupal::httpClient()->$method($url, $headers, $data);
+    $request->send();
+    return $request->getResponse();
   }
 
   /**
@@ -184,7 +188,7 @@ class Salesforce {
    * Get the SF instance URL. Useful for linking to objects.
    */
   public function getInstanceUrl() {
-    return variable_get('salesforce_instance_url', '');
+    return \Drupal::config('salesforce.settings')->get('instance_url');
   }
 
   /**
@@ -194,7 +198,9 @@ class Salesforce {
    *   URL to set.
    */
   protected function setInstanceUrl($url) {
-    variable_set('salesforce_instance_url', $url);
+    \Drupal::config('salesforce.settings')
+      ->set('instance_url', $url)
+      ->save();
   }
 
   /**
@@ -220,7 +226,7 @@ class Salesforce {
    * Get refresh token.
    */
   protected function getRefreshToken() {
-    return variable_get('salesforce_refresh_token', '');
+    return \Drupal::config('salesforce.settings')->get('refresh_token');
   }
 
   /**
@@ -230,7 +236,9 @@ class Salesforce {
    *   Refresh token from Salesforce.
    */
   protected function setRefreshToken($token) {
-    variable_set('salesforce_refresh_token', $token);
+    \Drupal::config('salesforce.settings')
+      ->set('refresh_token', $token)
+      ->save();
   }
 
   /**
@@ -258,12 +266,12 @@ class Salesforce {
     );
     $response = $this->httpRequest($url, $data, $headers, 'POST');
 
-    if ($response->code != 200) {
+    if ($response->isError()) {
       // @TODO: Deal with error better.
-      throw new SalesforceException(t('Unable to get a Salesforce access token.'), $response->code);
+      throw new SalesforceException(t('Unable to get a Salesforce access token.'), $response->getStatusCode());
     }
 
-    $data = drupal_json_decode($response->data);
+    $data = drupal_json_decode($response->getBody(TRUE));
 
     if (isset($data['error'])) {
       throw new SalesforceException($data['error_description'], $data['error']);
@@ -288,11 +296,14 @@ class Salesforce {
       'Content-type' => 'application/json',
     );
     $response = $this->httpRequest($id, NULL, $headers);
-    if ($response->code != 200) {
-      throw new SalesforceException(t('Unable to access identity service.'), $response->code);
+    if ($response->isError()) {
+      throw new SalesforceException(t('Unable to access identity service.'), $response->getStatusCode());
     }
-    $data = drupal_json_decode($response->data);
-    variable_set('salesforce_identity', $data);
+    // @todo handle RuntimeException
+    $data = $response->json();
+    \Drupal::config('salesforce.settings')
+      ->set('identity', $data)
+      ->save();
   }
 
   /**
@@ -302,7 +313,7 @@ class Salesforce {
    *   Returns FALSE is no identity has been stored.
    */
   public function getIdentity() {
-    return variable_get('salesforce_identity', FALSE);
+    return \Drupal::config('salesforce.settings')->get('identity');
   }
 
   /**
@@ -316,7 +327,8 @@ class Salesforce {
       'client_id' => $this->consumer_key,
     );
 
-    return new RedirectResponse(url($path, array('query' => $query, 'absolute' => TRUE)));
+    $response = new RedirectResponse(url($path, array('query' => $query, 'absolute' => TRUE)));
+    $response->send();
   }
 
   /**
@@ -341,13 +353,12 @@ class Salesforce {
     );
     $response = $this->httpRequest($url, $data, $headers, 'POST');
 
-    $data = drupal_json_decode($response->data);
-
-    if ($response->code != 200) {
-      $error = isset($data['error_description']) ? $data['error_description'] : $response->error;
-      throw new SalesforceException($error, $response->code);
+    if ($response->isError()) {
+      throw new SalesforceException($response->getReasonPhrase(), $response->getStatusCode());
     }
 
+    $data = $response->json();
+    dpm($data);
     $this->setRefreshToken($data['refresh_token']);
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);

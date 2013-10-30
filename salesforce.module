@@ -81,6 +81,10 @@ function salesforce_help($path, $arg) {
 
 /**
  * Implements hook_menu().
+ * @todo hook_menu is going away. this will likely be replaced by something like 
+ *   hook_default_menu_links()
+ * @see http://drupal.org/node/1800686
+ * @see http://drupal.org/node/2047633
  */
 function salesforce_menu() {
   $items = array();
@@ -136,10 +140,10 @@ function salesforce_flush_caches() {
  *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
-  $settings = \Drupal::config()->get('salesforce.settings');
+  $settings = Drupal::config('salesforce.settings');
   return new Salesforce(
-    $settings['consumer_key'],
-    $settings['consumer_secret']
+    $settings->get('consumer_key'),
+    $settings->get('consumer_secret')
   );
 }
 

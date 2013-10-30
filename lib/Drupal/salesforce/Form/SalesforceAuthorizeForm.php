@@ -81,14 +81,18 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, array &$form_state) {
-    $config = $this->config('salesforce.settings');
-    $consumer_key = $form_state['values']['consumer_key'];
-    $consumer_secret = $form_state['values']['consumer_secret'];
-    $config->set('consumer_key', $consumer_key);
-    $config->set('consumer_secret', $consumer_secret);
+    $config = $this->config('salesforce.settings')
+      ->set('consumer_key', $form_state['values']['consumer_key'])
+      ->set('consumer_secret', $form_state['values']['consumer_secret'])
+      ->save();
 
-    $salesforce = new Salesforce($consumer_key, $consumer_secret);
-    $salesforce->getAuthorizationCode();
+    $salesforce = new Salesforce($config->get('consumer_key'), $config->get('consumer_secret'));
+    try {
+      return $salesforce->getAuthorizationCode();
+    }
+    catch (SalesforceException $e) {
+      // Set form error
+    }
 
     parent::submitForm($form, $form_state);
   }
