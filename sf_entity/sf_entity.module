@@ -1312,6 +1312,11 @@ function sf_entity_import_field_default(&$entity, $fieldkey, $drupal_field_defin
     $column = 'value';
   }
 
+  $data = array();
+  if (property_exists($entity, $fieldname) && is_array($entity->$fieldname)) {
+    $data = $entity->$fieldname;
+  }
+
   // Don't try to do an import for a field that does't exist in the response from Salesforce.
   if(!isset($sf_data->$sf_fieldname)) {
     return;
@@ -1331,22 +1336,22 @@ function sf_entity_import_field_default(&$entity, $fieldkey, $drupal_field_defin
         }
       }
       else {
-        $data[$lang][0]['value'] = $sf_data->$sf_fieldname;
+        $data[$lang][0][$column] = $sf_data->$sf_fieldname;
       }
       break;
     case 'boolean':
       // Drupal stores boolean fields as ints.
       // Trying to pass a boolean value (TRUE, FALSE) will cause a fatal database error.
-      $data[$lang][0]['value'] = (int) $sf_data->$sf_fieldname;
+      $data[$lang][0][$column] = (int) $sf_data->$sf_fieldname;
       break;
     case 'date':
     case 'datetime':
       // Truncate the date to a length that can be saved.
-      $data[$lang][0]['value'] = substr($sf_data->$sf_fieldname, 0, 19);
+      $data[$lang][0][$column] = substr($sf_data->$sf_fieldname, 0, 19);
       break;
     default:
       // Unless handled above in this switch, we don't yet handle fields with multiple values.
-      $data[$lang][0]['value'] = $sf_data->$sf_fieldname;
+      $data[$lang][0][$column] = $sf_data->$sf_fieldname;
     break;
   }
   $entity->$fieldname = $data;
