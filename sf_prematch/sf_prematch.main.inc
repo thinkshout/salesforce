@@ -117,6 +117,11 @@ function sf_prematch_export($entity_name, $bundle_name, $drupal_object, $map, $m
       return;
   }
 
+  // Make sure that Id is in SELECT clause, since that's the data we're returning from the query
+  if(!preg_match('/\bId\b/', $fields_list)) {
+    $fields_list .= ', Id ';
+  }
+
   $query = $select_clause . ' ' . $fields_list . $from_where_clause . ' ORDER BY CreatedDate ASC';
 
   // Run the SOQL query against the Salesforce API
