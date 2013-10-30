@@ -789,7 +789,8 @@ function sf_entity_export($entity, $name, $sfid = NULL) {
       $sfid = reset($matches);
       $entity->salesforce->sfid = $sfid;
       salesforce_api_id_save($id, $sfid, $name, $map->drupal_entity, $map->drupal_bundle, 'export');
-      $entity = entity_load($map->drupal_entity, array($id), array(), TRUE);
+      $e = entity_load($map->drupal_entity, array($id), array(), TRUE);
+      $entity = $e[$id];
     }
   }
   // Create an object for export based on the specified fieldmap.
