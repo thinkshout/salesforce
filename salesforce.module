@@ -182,7 +182,7 @@ function salesforce_oauth_form() {
   $form['advanced']['salesforce_endpoint'] = array(
     '#title' => t('Salesforce endpoint'),
     '#type' => 'textfield',
-    '#description' => t('Enter the URL of your salesforce environment. <strong>Caution:</strong> Note that switching this setting after you have already synchronised will render any existing links between Salesforce objects and Drupal objects invalid.'),
+    '#description' => t('Enter the URL of your Salesforce environment (for example, <code>https://test.salesforce.com</code>). <strong>Caution:</strong> Note that switching this setting after you have already synchronised data between your Drupal site and Salesforce will render any existing links between Salesforce objects and Drupal objects invalid!'),
     '#default_value' => $salesforce_endpoint,
   );
   $form['submit'] = array(
