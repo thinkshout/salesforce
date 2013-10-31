@@ -9,6 +9,9 @@ namespace Drupal\salesforce;
 
 use Symfony\Component\Debug\ExceptionHandler;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Guzzle\Http\Client;
+use Guzzle\Http\Exception\RequestException;
+use Guzzle\Common\RuntimeException;
 
 /**
  * Objects, properties, and methods to communicate with the Salesforce REST API.
@@ -67,23 +70,27 @@ class Salesforce {
       $this->refreshToken();
     }
 
-    $this->response = $this->apiHttpRequest($path, $params, $method);
+    try {
+      $this->response = $this->apiHttpRequest($path, $params, $method);
+    }
+    catch (RequestException $e) {
+      $this->response = $e->getRequest()->getResponse();
+    }
 
     switch ($this->response->getStatusCode()) {
-      // The session ID or OAuth token used has expired or is invalid.
       case 401:
-        // Refresh token.
+        // The session ID or OAuth token used has expired or is invalid: refresh
+        // token. If refreshToken() throws an exception, or if apiHttpRequest()
+        // throws anything but a RequestException, let it bubble up.
         $this->refreshToken();
-
-        // Rebuild our request and repeat request.
-        $this->response = $this->apiHttpRequest($path, $params, $method);
-        // Throw an error if we still have bad response.
-        if (!in_array($this->response->getStatusCode(), array(200, 201, 204))) {
+        try {
+          $this->response = $this->apiHttpRequest($path, $params, $method);
+        }
+        catch (RequestException $e) {
+          $this->response = $e->getRequest()->getResponse();
           throw new SalesforceException($this->response->getReasonPhrase(), $this->response->getStatusCode());
         }
-
         break;
-
       case 200:
       case 201:
       case 204:
@@ -92,13 +99,17 @@ class Salesforce {
 
       default:
         // We have problem and no specific Salesforce error provided.
-        if (empty($this->response) || !$this->response->getBody(TRUE)) {
-          throw new SalesforceException($this->response->getReasonPhrase(), $this->response->getStatusCode());
+        if (empty($this->response)) {
+          throw new SalesforceException('Unknown error occurred during API call');
         }
     }
 
-    // @todo Guzzle\Http\Message\Response\json() can throw RuntimeException that we should try to handle.
-    $data = $this->response->json();
+    try {
+      $data = $this->response->json();
+    }
+    catch (RuntimeException $e) {
+      throw new SalesforceException('Unable to parse API call response.');
+    }
 
     if (!empty($data[0]) && count($data) == 1) {
       $data = $data[0];
