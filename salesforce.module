@@ -152,6 +152,7 @@ function salesforce_oauth_form() {
 
   $consumer_key = variable_get('salesforce_consumer_key', FALSE);
   $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
+  $salesforce_endpoint = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
 
   $form['message'] = array(
     '#type' => 'item',
@@ -171,6 +172,18 @@ function salesforce_oauth_form() {
     '#description' => t('Consumer secret of the Salesforce remote application you want to grant access to'),
     '#required' => TRUE,
     '#default_value' => $consumer_secret,
+  );
+  $form['advanced'] = array(
+    '#title' => t('Advanced'),
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['advanced']['salesforce_endpoint'] = array(
+    '#title' => t('Salesforce endpoint'),
+    '#type' => 'textfield',
+    '#description' => t('Enter the URL of your salesforce environment. <strong>Caution:</strong> Note that switching this setting after you have already synchronised will render any existing links between Salesforce objects and Drupal objects invalid.'),
+    '#default_value' => $salesforce_endpoint,
   );
   $form['submit'] = array(
     '#value' => t('Authorize'),
@@ -217,8 +230,10 @@ function salesforce_oauth_form() {
 function salesforce_oauth_form_submit($form, &$form_state) {
   $consumer_key = $form_state['values']['salesforce_consumer_key'];
   $consumer_secret = $form_state['values']['salesforce_consumer_secret'];
+  $salesforce_endpoint = $form_state['values']['salesforce_endpoint'];
   variable_set('salesforce_consumer_key', $consumer_key);
   variable_set('salesforce_consumer_secret', $consumer_secret);
+  variable_set('salesforce_endpoint', $salesforce_endpoint);
 
   $salesforce = new Salesforce($consumer_key, $consumer_secret);
   $salesforce->getAuthorizationCode();

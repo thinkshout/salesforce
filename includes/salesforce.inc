@@ -22,7 +22,7 @@ class Salesforce {
   public function __construct($consumer_key, $consumer_secret = '') {
     $this->consumer_key = $consumer_key;
     $this->consumer_secret = $consumer_secret;
-    $this->login_url = 'https://login.salesforce.com';
+    $this->login_url = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
 
     // @TODO: Does this need to be configurable?
     $this->rest_api_version = array(
