@@ -14,6 +14,7 @@ salesforce.authorize:
   requirements:
     _permission: 'administer salesforce'
 
+# @TODO at some point, hopefully, the configure path from info.yml will be included automatically and we won't need these two routes:
 salesforce.config_index:
   path: '/admin/config/salesforce'
   defaults:

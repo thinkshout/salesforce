@@ -1,0 +1,10 @@
+name: Salesforce Mapping
+type: module
+description: Map Drupal entities to Salesforce objects.
+package: Salesforce
+core: 8.x
+# configure: salesforce.settings
+# configure = salesforce_mapping.list
+php: 5.3
+dependencies:
+  - salesforce

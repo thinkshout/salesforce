@@ -5,6 +5,8 @@
  * Manages Salesforce object and Drupal entity mappings.
  */
 
+use Drupal\salesforce_mapping\Entity\SalesforceMapping;
+
 module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping.fieldmap_type');
 
 /**
@@ -38,6 +40,7 @@ define('SALESFORCE_MAPPING_ARRAY_DELIMITER', ';');
 /**
  * Field mapping maximum name length.
  */
+ 
 define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
 
 /**
@@ -52,57 +55,94 @@ function salesforce_mappings_access() {
 }
 
 /**
- * Implements hook_entity_info().
+ * @todo hook_menu is going away, and entity framework no longer builds our menu items. Need this here to expose our routing items to as menus.
  */
-function salesforce_mapping_entity_info() {
-  $return = array(
-    'salesforce_mapping' => array(
-      'label' => t('Salesforce Mapping'),
-      'controller class' => 'EntityAPIControllerExportable',
-      'entity class' => 'SalesforceMapping',
-      'base table' => 'salesforce_mapping',
-      'uri callback' => 'entity_class_uri',
-      'fieldable' => FALSE,
-      'exportable' => TRUE,
-      'module' => 'salesforce_mapping',
-      'entity keys' => array(
-        'id' => 'salesforce_mapping_id',
-        'name' => 'name',
-        'label' => 'label',
-      ),
-      'bundle keys' => array(
-        'bundle' => 'type',
-      ),
-      'bundles' => array(
-        'salesforce_mapping' => array(
-          'label' => 'Salesforce Mapping',
-        ),
-      ),
-      // Enable the entity API's admin UI.
-      'admin ui' => array(
-        'path' => 'admin/structure/salesforce/mappings',
-        'file' => 'salesforce_mapping.admin.inc',
-        'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
-        'controller class' => 'SalesforceMappingUIController',
-      ),
-      'access callback' => 'salesforce_mappings_access',
-    ),
-    'salesforce_mapping_object' => array(
-      'label' => t('Salesforce Object Mapping'),
-      'controller class' => 'EntityAPIController',
-      'entity class' => 'SalesforceMappingObject',
-      'base table' => 'salesforce_mapping_object',
-      'fieldable' => FALSE,
-      'exportable' => FALSE,
-      'module' => 'salesforce_mapping',
-      'entity keys' => array(
-        'id' => 'salesforce_mapping_object_id',
-      ),
-    ),
+function salesforce_mapping_menu() {
+  $items = array();
+
+  $items['admin/structure/salesforce/mappings'] = array(
+    'title' => 'Salesforce Mappings',
+    'description' => 'Manage Salesforce Mappings.',
+    'route_name' => 'salesforce_mapping.list',
   );
 
-  return $return;
+  $items['admin/structure/salesforce/mappings/add'] = array(
+    'title' => 'Add Salesforce Mapping',
+    'description' => 'Add Salesforce Mapping',
+    'route_name' => 'salesforce_mapping.add',
+  );
+
+  return $items;
 }
+
+/**
+ * Implements hook_entity_info().
+ */
+ function salesforce_entity_info(&$entity_info) {
+   dpm($entity_info);
+ }
+//   $entity_info['salesforce_mapping']['controllers'] += array(
+//     'list' => 'Drupal\Core\Config\Entity\ConfigEntityListController',
+//     'form' => array(
+//       'edit' => 'Drupal\Core\Entity\EntityFormController',
+//       'add' => 'Drupal\Core\Entity\EntityFormController',
+//       // 'preview' => 'Drupal\Core\Entity\EntityFormController',
+//       // 'clone' => 'Drupal\Core\Entity\EntityFormController',
+//       // 'delete' => 'Drupal\Core\Entity\EntityConfirmFormBase',
+//       // 'break_lock' => 'Drupal\Core\Entity\EntityConfirmFormBase',
+//     ),
+//   );
+// }
+
+// function salesforce_mapping_entity_info() {
+//   $return = array(
+//     'salesforce_mapping' => array(
+//       'label' => t('Salesforce Mapping'),
+//       'controller class' => 'EntityAPIControllerExportable',
+//       'entity class' => 'SalesforceMapping',
+//       'base table' => 'salesforce_mapping',
+//       'uri callback' => 'entity_class_uri',
+//       'fieldable' => FALSE,
+//       'exportable' => TRUE,
+//       'module' => 'salesforce_mapping',
+//       'entity keys' => array(
+//         'id' => 'salesforce_mapping_id',
+//         'name' => 'name',
+//         'label' => 'label',
+//       ),
+//       'bundle keys' => array(
+//         'bundle' => 'type',
+//       ),
+//       'bundles' => array(
+//         'salesforce_mapping' => array(
+//           'label' => 'Salesforce Mapping',
+//         ),
+//       ),
+//       // Enable the entity API's admin UI.
+//       'admin ui' => array(
+//         'path' => 'admin/structure/salesforce/mappings',
+//         'file' => 'salesforce_mapping.admin.inc',
+//         'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
+//         'controller class' => 'SalesforceMappingUIController',
+//       ),
+//       'access callback' => 'salesforce_mappings_access',
+//     ),
+//     'salesforce_mapping_object' => array(
+//       'label' => t('Salesforce Object Mapping'),
+//       'controller class' => 'EntityAPIController',
+//       'entity class' => 'SalesforceMappingObject',
+//       'base table' => 'salesforce_mapping_object',
+//       'fieldable' => FALSE,
+//       'exportable' => FALSE,
+//       'module' => 'salesforce_mapping',
+//       'entity keys' => array(
+//         'id' => 'salesforce_mapping_object_id',
+//       ),
+//     ),
+//   );
+// 
+//   return $return;
+// }
 
 /**
  * Loads a single salesforce_mapping or all of them if no name provided.
@@ -113,10 +153,10 @@ function salesforce_mapping_entity_info() {
  * @return array
  *   The requested mapping or all of them if no one specific was requested.
  */
-function salesforce_mapping_load($name = NULL) {
-  $types = entity_load_multiple_by_name('salesforce_mapping', isset($name) ? array($name) : FALSE);
-  return isset($name) ? reset($types) : $types;
-}
+// function salesforce_mapping_load($name = NULL) {
+//   $types = entity_load_multiple_by_name('salesforce_mapping', isset($name) ? array($name) : FALSE);
+//   return isset($name) ? reset($types) : $types;
+// }
 
 /**
  * Loads multiple salesforce_mappings based on a set of matching conditions.
@@ -130,54 +170,54 @@ function salesforce_mapping_load($name = NULL) {
  * @return array
  *   An array of salesforce_mapping objects.
  */
-function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE) {
-  $mappings = array();
-  $efq = new EntityFieldQuery();
-  $efq->entityCondition('entity_type', 'salesforce_mapping');
-  foreach ($properties as $key => $value) {
-    $efq->propertyCondition($key, $value);
-  }
-  $efq->propertyOrderBy('weight');
-
-  $results = $efq->execute();
-  if (!empty($results)) {
-    $salesforce_mapping_ids = array_keys($results['salesforce_mapping']);
-
-    if (!empty($salesforce_mapping_ids)) {
-      $mappings = entity_load('salesforce_mapping', $salesforce_mapping_ids, array(), $reset);
-    }
-  }
-
-  return $mappings;
-}
+// function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE) {
+//   $mappings = array();
+//   $efq = new EntityFieldQuery();
+//   $efq->entityCondition('entity_type', 'salesforce_mapping');
+//   foreach ($properties as $key => $value) {
+//     $efq->propertyCondition($key, $value);
+//   }
+//   $efq->propertyOrderBy('weight');
+// 
+//   $results = $efq->execute();
+//   if (!empty($results)) {
+//     $salesforce_mapping_ids = array_keys($results['salesforce_mapping']);
+// 
+//     if (!empty($salesforce_mapping_ids)) {
+//       $mappings = entity_load('salesforce_mapping', $salesforce_mapping_ids, array(), $reset);
+//     }
+//   }
+// 
+//   return $mappings;
+// }
 
 /**
  * Implements hook_theme().
  */
-function salesforce_mapping_theme($existing, $type, $theme, $path) {
-  return array(
-    'salesforce_fieldmap_form_table' => array(
-      'render element' => 'elements',
-      'file' => 'includes/salesforce_mapping.admin.inc',
-    ),
-    'salesforce_mapping_linked_object' => array(
-      'variables' => array(
-        'label_hidden' => FALSE,
-        'title_attributes' => NULL,
-        'label' => '',
-        'content_attributes' => NULL,
-        'items' => array(),
-        'item_attributes' => array(0 => ''),
-        'classes' => '',
-        'attributes' => '',
-      ),
-    ),
-    'salesforce_mapping_overview_tabledrag_form' => array(
-      'render element' => 'form',
-      'file' => 'includes/salesforce_mapping.ui_controller.inc',
-    ),
-  );
-}
+// function salesforce_mapping_theme($existing, $type, $theme, $path) {
+//   return array(
+//     'salesforce_fieldmap_form_table' => array(
+//       'render element' => 'elements',
+//       'file' => 'includes/salesforce_mapping.admin.inc',
+//     ),
+//     'salesforce_mapping_linked_object' => array(
+//       'variables' => array(
+//         'label_hidden' => FALSE,
+//         'title_attributes' => NULL,
+//         'label' => '',
+//         'content_attributes' => NULL,
+//         'items' => array(),
+//         'item_attributes' => array(0 => ''),
+//         'classes' => '',
+//         'attributes' => '',
+//       ),
+//     ),
+//     'salesforce_mapping_overview_tabledrag_form' => array(
+//       'render element' => 'form',
+//       'file' => 'includes/salesforce_mapping.ui_controller.inc',
+//     ),
+//   );
+// }
 
 /**
  * Returns Salesforce object mappings for a given Drupal entity.
@@ -249,44 +289,44 @@ function salesforce_mapping_sort($mapping_a, $mapping_b) {
 /**
  * Implements hook_entity_delete().
  */
-function salesforce_mapping_entity_delete($entity, $type) {
-  // Delete any Salesforce object mappings with this entity.
-  list($entity_id, , $bundle) = entity_extract_ids($type, $entity);
-  $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-
-  // No mapping object for this entity, return.
-  if (!$mapping_object) {
-    return;
-  }
-
-  // Only delete mapping if it won't be handled by the delete trigger in the
-  // mapping. We're avoiding the issue of mapping deleting the (the what?).
-  $mappings = salesforce_mapping_load_multiple(array(
-    'drupal_entity_type' => $type,
-    'drupal_bundle' => $bundle,
-  ));
-
-  foreach ($mappings as $mapping) {
-    if (!($mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE)) {
-      $mapping_object->delete();
-      return;
-    }
-  }
-}
+// function salesforce_mapping_entity_delete($entity, $type) {
+//   // Delete any Salesforce object mappings with this entity.
+//   list($entity_id, , $bundle) = entity_extract_ids($type, $entity);
+//   $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+// 
+//   // No mapping object for this entity, return.
+//   if (!$mapping_object) {
+//     return;
+//   }
+// 
+//   // Only delete mapping if it won't be handled by the delete trigger in the
+//   // mapping. We're avoiding the issue of mapping deleting the (the what?).
+//   $mappings = salesforce_mapping_load_multiple(array(
+//     'drupal_entity_type' => $type,
+//     'drupal_bundle' => $bundle,
+//   ));
+// 
+//   foreach ($mappings as $mapping) {
+//     if (!($mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE)) {
+//       $mapping_object->delete();
+//       return;
+//     }
+//   }
+// }
 
 /**
  * Implements hook_entity_load().
  */
-function salesforce_mapping_entity_load($entities, $type) {
-  // Load the linked Salesforce ID into an entity.
-  foreach ($entities as $entity) {
-    list($entity_id) = entity_extract_ids($type, $entity);
-    $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-    if ($mapping) {
-      $entity->salesforce_id = $mapping->salesforce_id;
-    }
-  }
-}
+// function salesforce_mapping_entity_load($entities, $type) {
+//   // Load the linked Salesforce ID into an entity.
+//   foreach ($entities as $entity) {
+//     list($entity_id) = entity_extract_ids($type, $entity);
+//     $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+//     if ($mapping) {
+//       $entity->salesforce_id = $mapping->salesforce_id;
+//     }
+//   }
+// }
 
 /**
  * Implements hook_permission().
@@ -309,63 +349,63 @@ function salesforce_mapping_permission() {
 /**
  * Implements hook_entity_view().
  */
-function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
-  // Render linked Salesforce data when viewing a mapped entity.
-  list($entity_id) = entity_extract_ids($type, $entity);
-  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-  if ($mapping && user_access('view salesforce mapping')) {
-    $sfapi = salesforce_get_api();
-    $entity->content['salesforce_id'] = array(
-      '#theme' => 'salesforce_mapping_linked_object',
-      '#label' => t('Salesforce ID'),
-      '#items' => array(
-        array(
-          '#markup' => l(
-            $mapping->salesforce_id,
-            $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
-            array(
-              'attributes' => array('target' => '_blank'),
-            )
-          ),
-        ),
-      ),
-      '#classes' => 'field field-label-inline clearfix',
-    );
-    $entity->content['salesforce_last_sync'] = array(
-      '#theme' => 'salesforce_mapping_linked_object',
-      '#label' => t('Salesforce last sync'),
-      '#items' => array(array('#markup' => format_date($mapping->last_sync))),
-      '#markup' => format_date($mapping->last_sync),
-      '#classes' => 'field field-label-inline clearfix',
-    );
-  }
-}
+// function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
+//   // Render linked Salesforce data when viewing a mapped entity.
+//   list($entity_id) = entity_extract_ids($type, $entity);
+//   $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+//   if ($mapping && user_access('view salesforce mapping')) {
+//     $sfapi = salesforce_get_api();
+//     $entity->content['salesforce_id'] = array(
+//       '#theme' => 'salesforce_mapping_linked_object',
+//       '#label' => t('Salesforce ID'),
+//       '#items' => array(
+//         array(
+//           '#markup' => l(
+//             $mapping->salesforce_id,
+//             $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
+//             array(
+//               'attributes' => array('target' => '_blank'),
+//             )
+//           ),
+//         ),
+//       ),
+//       '#classes' => 'field field-label-inline clearfix',
+//     );
+//     $entity->content['salesforce_last_sync'] = array(
+//       '#theme' => 'salesforce_mapping_linked_object',
+//       '#label' => t('Salesforce last sync'),
+//       '#items' => array(array('#markup' => format_date($mapping->last_sync))),
+//       '#markup' => format_date($mapping->last_sync),
+//       '#classes' => 'field field-label-inline clearfix',
+//     );
+//   }
+// }
 
 /**
  * Implements hook_field_extra_fields().
  */
-function salesforce_mapping_field_extra_fields() {
-  // Include Salesforce data for mapped entities.
-  $mappings = salesforce_mapping_load();
-  foreach ($mappings as $mapping) {
-    $extra[$mapping->drupal_entity_type][$mapping->drupal_bundle] = array(
-      'display' => array(
-        'salesforce_id' => array(
-          'label' => t('Salesforce Id'),
-          'description' => t('ID of a linked Salesforce object.'),
-          'weight' => 0,
-        ),
-        'salesforce_last_sync' => array(
-          'label' => t('Salesforce last sync'),
-          'description' => t('Timestamp for the latest sync with Salesforce.'),
-          'weight' => 0,
-        ),
-      ),
-    );
-  }
-
-  return isset($extra) ? $extra : array();
-}
+// function salesforce_mapping_field_extra_fields() {
+//   // Include Salesforce data for mapped entities.
+//   $mappings = salesforce_mapping_load();
+//   foreach ($mappings as $mapping) {
+//     $extra[$mapping->drupal_entity_type][$mapping->drupal_bundle] = array(
+//       'display' => array(
+//         'salesforce_id' => array(
+//           'label' => t('Salesforce Id'),
+//           'description' => t('ID of a linked Salesforce object.'),
+//           'weight' => 0,
+//         ),
+//         'salesforce_last_sync' => array(
+//           'label' => t('Salesforce last sync'),
+//           'description' => t('Timestamp for the latest sync with Salesforce.'),
+//           'weight' => 0,
+//         ),
+//       ),
+//     );
+//   }
+// 
+//   return isset($extra) ? $extra : array();
+// }
 
 /**
  * Wrapper around theme_field() to format linked Salesforce data.
@@ -379,19 +419,19 @@ function theme_salesforce_mapping_linked_object($variables) {
  *
  * Ensures drupal entity has an update timestamp.
  */
-function salesforce_mapping_entity_update($entity, $type) {
-  // Check if mapping exists.
-  $sf_mappings = salesforce_mapping_load_multiple(array('drupal_entity_type' => $type));
-  if ($sf_mappings) {
-    list($entity_id) = entity_extract_ids($type, $entity);
-    $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-    if ($sf_mapping_object) {
-      // Update entity update property.
-      $sf_mapping_object->entity_updated = REQUEST_TIME;
-      $sf_mapping_object->save();
-    }
-  }
-}
+// function salesforce_mapping_entity_update($entity, $type) {
+//   // Check if mapping exists.
+//   $sf_mappings = salesforce_mapping_load_multiple(array('drupal_entity_type' => $type));
+//   if ($sf_mappings) {
+//     list($entity_id) = entity_extract_ids($type, $entity);
+//     $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+//     if ($sf_mapping_object) {
+//       // Update entity update property.
+//       $sf_mapping_object->entity_updated = REQUEST_TIME;
+//       $sf_mapping_object->save();
+//     }
+//   }
+// }
 
 /**
  * Get the Salesforce fieldmap types array.
