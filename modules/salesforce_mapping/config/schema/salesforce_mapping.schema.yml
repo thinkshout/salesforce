@@ -1,0 +1,216 @@
+# Schema for the configuration files of the Salesforce Mapping module
+
+salesforce.salesforce_mapping.*:
+  type: mapping
+  label: 'Salesforce Mapping'
+  mapping:
+    uuid:
+      type: string
+      label: 'UUID'
+    id:
+      type: int
+      label: 'ID'
+    name:
+      type: string
+      label: 'machine name'
+    label:
+      type: label
+      label: 'Human readable name'
+    type:
+      type: string
+      label: 'Type'
+    sync_triggers:
+      type: int
+      label: 'Sync triggers'
+    salesforce_object_type:
+      type: string
+      label: 'Salesforce Object Type'
+    salesforce_record_type:
+      type: string
+      label: 'Salesforce Record Type'
+    drupal_entity_type:
+      type: string
+      label: 'Drupal Entity Type'
+    drupal_bundle:
+      type: string
+      label: 'Drupal Bundle'
+    push_async:
+      type: boolean
+      label: 'Push Async'
+    push_batch:
+      type: boolean
+      label: 'Push Batch'
+    weight:
+      type: int
+      label: 'Weight'
+    locked:
+      type: boolean
+      label: 'Locked'
+    status:
+      type: boolean
+      label: 'Status'
+    module:
+      type: string
+      label: 'Module'
+    field_mappings:
+      type: sequence
+      label: 'Field Mappings'
+      sequence:
+        - type: mapping
+          label: 'Field Mapping'
+          mapping:
+            drupal_field:
+              label: 'Drupal Field'
+              type: mapping
+              mapping:
+                fieldmap_type:
+                  type: string
+                  label: 'Fieldmap Type'
+                fieldmap_value:
+                  type: string
+                  label: 'Fieldmap Value'
+            key:
+              type: boolean
+              label: 'Key'
+            direction:
+              type: string
+              label: 'Direction'
+            salesforce_field:
+              type: mapping
+              label: 'Salesforce Field'
+              mapping:
+                restrictedPicklist:
+                  type: boolean
+                  label: 'restrictedPicklist'
+                length:
+                  type: int
+                  label: 'length'
+                name:
+                  type: string
+                  label: 'name'
+                type:
+                  type: string
+                  label: 'type'
+                defaultValue:
+                  type: string
+                  label: 'defaultValue'
+                filterable:
+                  type: boolean
+                  label: 'filterable'
+                nillable:
+                  type: boolean
+                  label: 'nillable'
+                unique:
+                  type: boolean
+                  label: 'unique'
+                caseSensitive:
+                  type: boolean
+                  label: 'caseSensitive'
+                calculated:
+                  type: boolean
+                  label: 'calculated'
+                scale:
+                  type: int
+                  label: 'scale'
+                nameField:
+                  type: boolean
+                  label: 'nameField'
+                sortable:
+                  type: boolean
+                  label: 'sortable'
+                displayLocationInDecimal:
+                  type: boolean
+                  label: 'displayLocationInDecimal'
+                cascadeDelete:
+                  type: boolean
+                  label: 'cascadeDelete'
+                restrictedDelete:
+                  type: boolean
+                  label: 'restrictedDelete'
+                deprecatedAndHidden:
+                  type: boolean
+                  label: 'deprecatedAndHidden'
+                picklistValues:
+                  type: sequence
+                  label: 'picklistValues'
+                  sequence:
+                    - type: string
+                      label: 'picklistEntry'
+                byteLength:
+                  type: int
+                  label: 'byteLength'
+                label:
+                  type: string
+                  label: 'label'
+                precision:
+                  type: int
+                  label: 'precision'
+                autoNumber:
+                  type: boolean
+                  label: 'autoNumber'
+                controllerName:
+                  type: string
+                  label: 'controllerName'
+                externalId:
+                  type: boolean
+                  label: 'externalId'
+                idLookup:
+                  type: boolean
+                  label: 'idLookup'
+                createable:
+                  type: boolean
+                  label: 'createable'
+                updateable:
+                  type: boolean
+                  label: 'updateable'
+                namePointing:
+                  type: boolean
+                  label: 'namePointing'
+                relationshipName:
+                  type: string
+                  label: 'relationshipName'
+                relationshipOrder:
+                  type: int
+                  label: 'relationshipOrder'
+                referenceTo:
+                  type: sequence
+                  label: 'referenceTo'
+                  sequence:
+                    - type: 'string'
+                      label: 'reference'
+                groupable:
+                  type: boolean
+                  label: 'groupable'
+                permissionable:
+                  type: boolean
+                  label: 'permissionable'
+                soapType:
+                  type: string
+                  label: 'soapType'
+                calculatedFormula:
+                  type: string
+                  label: 'calculatedFormula'
+                defaultValueFormula:
+                  type: string
+                  label: 'defaultValueFormula'
+                defaultedOnCreate:
+                  type: boolean
+                  label: 'defaultedOnCreate'
+                digits:
+                  type: int
+                  label: 'digits'
+                inlineHelpText:
+                  type: string
+                  label: 'inlineHelpText'
+                writeRequiresMasterRead:
+                  type: boolean
+                  label: 'writeRequiresMasterRead'
+                custom:
+                  type: boolean
+                  label: 'custom'
+                htmlFormatted:
+                  type: boolean
+                  label: 'htmlFormatted'
+                dependentPicklist:
+                  type: boolean
+                  label: 'dependentPicklist'

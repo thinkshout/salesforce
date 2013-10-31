@@ -36,7 +36,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#default_value' => $mapping_name,
     '#disabled' => isset($mapping->name) && !empty($mapping->name),
     '#machine_name' => array(
-      'exists' => 'salesforce_mapping_load',
+      // 'exists' => 'salesforce_mapping_load',
       'source' => array('label'),
     ),
   );
