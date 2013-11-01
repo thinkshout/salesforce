@@ -1,16 +1,17 @@
 <?php
 
-/**
- * @file
- * Install/uninstall tasks for the Salesforce module.
- */
-
-/**
- * Implements hook_schema().
- */
-function salesforce_schema() {
-  $schema = array();
-  $schema['cache_salesforce_object'] = drupal_get_schema_unprocessed('system', 'cache');
-  $schema['cache_salesforce_object']['description'] = 'Cache table for detailed information about specific Salesforce objects.';
-  return $schema;
-}
+// @todo caching API has changed.
+// /**
+//  * @file
+//  * Install/uninstall tasks for the Salesforce module.
+//  */
+// 
+// /**
+//  * Implements hook_schema().
+//  */
+// function salesforce_schema() {
+//   $schema = array();
+//   $schema['cache_salesforce_object'] = drupal_get_schema_unprocessed('system', 'cache');
+//   $schema['cache_salesforce_object']['description'] = 'Cache table for detailed information about specific Salesforce objects.';
+//   return $schema;
+// }

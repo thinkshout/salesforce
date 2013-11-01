@@ -73,36 +73,119 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
       '#weight' => -20,
     );
 
+    $form['drupal_entity'] = array(
+      '#title' => t('Drupal entity'),
+      '#type' => 'fieldset',
+      '#attributes' => array(
+        'id' => array('edit-drupal-entity'),
+      ),
+    );
+
+    $entity_types = $this->get_entity_options($form_state);
+    $form['drupal_entity']['drupal_entity_type'] = array(
+      '#title' => t('Drupal Entity Type'),
+      '#id' => 'edit-drupal-entity-type',
+      '#type' => 'select',
+      '#description' => t('Select a Drupal entity type to map to a Salesforce object.'),
+      '#options' => $entity_types,
+      '#default_value' => $this->entity->drupal_entity_type,
+      '#required' => TRUE,
+      // Do we really need ajax for this? How many bundles could there be?
+      // Doesn't seem like that much overhead to just load them all now.
+      // '#ajax' => array(
+      //   'callback' => 'salesforce_mapping_form_callback',
+      //   'wrapper' => 'edit-drupal-entity',
+      // ),
+    );
+
+    $form['drupal_entity']['drupal_bundle'] = array('#tree' => TRUE);
+    foreach ($entity_types as $entity_type => $label) {
+      $bundle_info = \Drupal::entityManager()->getBundleInfo($entity_type);
+      if (empty($bundle_info)) {
+        continue;
+      }
+      $form['drupal_entity']['drupal_bundle'][$entity_type] = array(
+        '#title' => 'Drupal Entity Bundle',
+        '#type' => 'select',
+        '#options' => array('' => t('- Select -')),
+        '#states' => array(
+          'visible' => array(
+            ':input#edit-drupal-entity-type' => array('value' => $entity_type),
+          ),
+          'required' => array(
+            ':input#edit-drupal-entity-type, dummy1' => array('value' => $entity_type),
+          ),
+          'disabled' => array(
+            ':input#edit-drupal-entity-type, dummy2' => array('!value' => $entity_type),
+          )
+        ),
+      );
+      foreach ($bundle_info as $key => $info) {
+        $form['drupal_entity']['drupal_bundle'][$entity_type]['#options'][$key] = $info['label'];
+        if ($key == $this->entity->drupal_bundle) {
+          $form['drupal_entity']['drupal_bundle'][$entity_type]['#default_value'] = $key;
+        }
+      }
+    }
+
     return parent::form($form, $form_state);
   }
 
- // /**
- //   * {@inheritdoc}
- //   */
- //  public function validate(array $form, array &$form_state) {
- //    // parent::validate($form, $form_state);
- //    // 
- //    // if ($this->plugin instanceof PluginFormInterface) {
- //    //   $this->plugin->validateConfigurationForm($form, $form_state);
- //    // }
- //  }
- // 
- //  /**
- //   * {@inheritdoc}
- //   */
- //  public function submit(array $form, array &$form_state) {
- //    // parent::submit($form, $form_state);
- //    // 
- //    // if ($this->plugin instanceof PluginFormInterface) {
- //    //   $this->plugin->submitConfigurationForm($form, $form_state);
- //    // }
- //    return $this->entity;
- //  }
- // 
+  /**
+   * Helper function to get the list of mappable entities for mapping form.
+   */
+  private function get_entity_options($form_state) {
+    $options = array();
+    $entity_info = \Drupal::entityManager()->getDefinitions();
+
+    // For now, let's only concern ourselves with fieldable entities. This is an
+    // arbitrary restriction, but otherwise there would be dozens of entities,
+    // making this options list unwieldy.
+    foreach ($entity_info as $info) {
+      if (!$info['fieldable']) {
+        continue;
+      }
+      $options[$info['id']] = $info['label'];
+    }
+    return $options;
+  }
+
+  private function get_bundle_options($entity_type, $form_state) {
+    
+  }
+
+ /**
+   * {@inheritdoc}
+   */
+  public function validate(array $form, array &$form_state) {
+    parent::validate($form, $form_state);
+
+    $values = $form_state['values'];
+    $entity_type = $values['drupal_entity_type'];
+    if (empty($values['drupal_bundle'][$entity_type])) {
+      $element = &$form['drupal_entity']['drupal_bundle'][$entity_type];
+      \Drupal::formBuilder()->setError($element, t('!name field is required.', array('!name' => $element['#title'])));
+    }
+  }
+ 
+  /**
+   * {@inheritdoc}
+   */
+  public function submit(array $form, array &$form_state) {
+    parent::submit($form, $form_state);
+    // Drupal bundle is still an array, but needs to be a string.
+    $this->entity->drupal_bundle = $this->entity->drupal_bundle[$this->entity->drupal_entity_type];
+    dpm(func_get_args());
+    dpm($this->entity);
+    return $this->entity;
+  }
+ 
   /**
    * {@inheritdoc}
    */
   public function save(array $form, array &$form_state) {
+    dpm(func_get_args());
+    dpm($this->entity);
     $this->entity->save();
     drupal_set_message($this->t('The mapping has been successfully saved.'));
      $form_state['redirect_route'] = array(

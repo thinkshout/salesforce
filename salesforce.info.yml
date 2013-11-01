@@ -4,4 +4,3 @@ description: Defines an API that enables modules to interact with the Salesforce
 package: Salesforce
 core: 8.x
 configure: salesforce.config_index
-php: 5.3

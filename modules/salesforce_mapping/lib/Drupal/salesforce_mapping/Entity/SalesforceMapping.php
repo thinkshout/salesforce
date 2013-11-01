@@ -77,6 +77,20 @@ class SalesforceMapping extends ConfigEntityBase {
   public $weight = 0;
 
   /**
+   * The drupal entity type to which this mapping points
+   *
+   * @var string
+   */
+  public $drupal_entity_type;
+
+  /**
+   * The drupal entity bundle to which this mapping points
+   *
+   * @var string
+   */
+  public $drupal_bundle;
+
+  /**
    * Constructor for SalesforceMapping.
    *
    * @param array $values
