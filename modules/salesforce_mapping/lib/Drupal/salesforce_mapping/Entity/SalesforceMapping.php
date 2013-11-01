@@ -91,6 +91,20 @@ class SalesforceMapping extends ConfigEntityBase {
   public $drupal_bundle;
 
   /**
+   * The salesforce object type to which this mapping points
+   *
+   * @var string
+   */
+  public $salesforce_object_type;
+
+  /**
+   * The salesforce record type to which this mapping points, if applicable
+   *
+   * @var string (optional)
+   */
+  public $salesforce_record_type = '';
+  
+  /**
    * Constructor for SalesforceMapping.
    *
    * @param array $values

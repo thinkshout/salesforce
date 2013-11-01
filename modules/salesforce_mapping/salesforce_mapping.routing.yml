@@ -18,4 +18,3 @@ salesforce_mapping.edit:
     _entity_form: 'salesforce_mapping.edit'
   requirements:
     _permission: 'administer salesforce mapping'
-

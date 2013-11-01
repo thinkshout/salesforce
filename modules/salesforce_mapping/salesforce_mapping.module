@@ -5,7 +5,11 @@
  * Manages Salesforce object and Drupal entity mappings.
  */
 
+namespace Drupal\salesforce_mapping;
+
 use Drupal\salesforce_mapping\Entity\SalesforceMapping;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\ReplaceCommand;
 
 module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping.fieldmap_type');
 
@@ -452,7 +456,7 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
   $salesforce_fieldmap_type = & $drupal_static_fast['salesforce_fieldmap_type'];
 
   if (empty($salesforce_fieldmap_type)) {
-    if ($cache = cache_get('salesforce_fieldmap_type')) {
+    if ($cache = cache()->get('salesforce:fieldmap_type')) {
       $salesforce_fieldmap_type = $cache->data;
     }
     else {
@@ -460,7 +464,8 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
 
       // Let other modules alter the fieldmap type.
       drupal_alter('salesforce_fieldmap_type', $salesforce_fieldmap_type);
-      cache_set('salesforce_fieldmap_type', $salesforce_fieldmap_type);
+      cache()->set('salesforce:fieldmap_type', $salesforce_fieldmap_type, CacheBackendInterface::CACHE_PERMANENT, array('salesforce' => TRUE));
+
     }
   }
 
@@ -471,3 +476,4 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
     return $salesforce_fieldmap_type[$fieldmap_type];
   }
 }
+

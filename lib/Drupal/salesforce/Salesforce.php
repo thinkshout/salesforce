@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Guzzle\Http\Client;
 use Guzzle\Http\Exception\RequestException;
 use Guzzle\Common\RuntimeException;
+use Drupal\Core\Cache\CacheBackendInterface;
 
 /**
  * Objects, properties, and methods to communicate with the Salesforce REST API.
@@ -407,7 +408,7 @@ class Salesforce {
    * @addtogroup salesforce_apicalls
    */
   public function objects($conditions = array('updateable' => TRUE), $reset = FALSE) {
-    $cache = cache_get('salesforce_objects');
+    $cache = cache()->get('salesforce:objects');
     // Force the recreation of the cache when it is older than 5 minutes.
     if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
       $result = $cache->data;
@@ -415,7 +416,10 @@ class Salesforce {
     else {
       $result = $this->apiCall('sobjects');
       // Allow the cache to clear at any time by not setting an expire time.
-      cache_set('salesforce_objects', $result, 'cache', CACHE_TEMPORARY);
+      // CACHE_TEMPORARY has been removed. Using 'content' tag to replicate
+      // old functionality.
+      // @see https://drupal.org/node/1534648
+      cache()->set('salesforce:objects', $result, CacheBackendInterface::CACHE_PERMANENT, array('salesforce' => TRUE, 'content' => TRUE));
     }
 
     if (!empty($conditions)) {
@@ -464,18 +468,23 @@ class Salesforce {
    * @addtogroup salesforce_apicalls
    */
   public function objectDescribe($name, $reset = FALSE) {
+dpm(__LINE__);
     if (empty($name)) {
       return array();
     }
-    $cache = cache_get($name, 'cache_salesforce_object');
+    $cache = cache()->get('salesforce:object:' . $name);
     // Force the recreation of the cache when it is older than 5 minutes.
     if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
+dpm($cache->data);
       return $cache->data;
     }
     else {
       $object = $this->apiCall("sobjects/{$name}/describe");
+dpm($object);
       // Allow the cache to clear at any time by not setting an expire time.
-      cache_set($name, $object, 'cache_salesforce_object', CACHE_TEMPORARY);
+      // CACHE_TEMPORARY has been removed. Using 'content' tag to replicate
+      // old functionality. @see https://drupal.org/node/1534648
+      cache()->set('salesforce:object:' . $name, $object, CacheBackendInterface::CACHE_PERMANENT, array('salesforce' => TRUE, 'content' => TRUE));
       return $object;
     }
   }

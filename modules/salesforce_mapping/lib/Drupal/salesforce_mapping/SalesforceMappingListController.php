@@ -37,7 +37,10 @@ class SalesforceMappingListController extends DraggableListController implements
     $header['drupal_entity_type'] = t('Drupal Entity');
     $header['drupal_bundle'] = t('Drupal Bundle');
     $header['salesforce_object_type'] = t('Salesforce Object');
-    $header['status'] = t('Salesforce Object');
+
+    // "status" means something new now.
+    // @todo rename old "Status" field
+    // $header['status'] = t('Status');
     return $header + parent::buildHeader();
   }
   
@@ -47,6 +50,18 @@ class SalesforceMappingListController extends DraggableListController implements
   public function buildRow(EntityInterface $entity) {
     $row = array();
     $row['label'] = $entity->label();
+    $properties = array('drupal_entity_type', 'drupal_bundle', 'salesforce_object_type');
+    foreach ($properties as $property) {
+      $row[$property] = array('#markup' => $entity->get($property));
+    }
+
+    // If this mapping is disabled, denote it visually.
+    if (!$entity->get('status')) {
+      foreach ($row as &$value) {
+        $value = String::placeholder($value);
+      }
+    }
+    
     return $row + parent::buildRow($entity);
   }
   

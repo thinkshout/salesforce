@@ -1,5 +1,9 @@
 <?php
 
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\AlertCommand;
+use Drupal\Core\Ajax\InsertCommand;
+
 /**
  * @file
  * Configuration page for creating and modifying a mapping.
@@ -362,15 +366,6 @@ function salesforce_mapping_form_callback($form, $form_state) {
   $delta = isset($parents[2]) ? $parents[2] : NULL;
   $commands = array();
   switch ($trigger) {
-    case 'drupal_entity_type':
-    case 'drupal_bundle':
-      // Requires updating itself and the field map.
-      $commands = array(
-        ajax_command_replace('#edit-drupal-entity', render($form['drupal_entity'])),
-        ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
-      );
-      break;
-
     case 'salesforce_object_type':
       // Requires updating itself and the field map.
       $commands = array(
@@ -684,6 +679,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
  * @return mixed
  *   Value of the field that is appropriate for #default_value.
  */
+ // @todo this function is completely insane. Rewrite into separate functions.
 function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NULL) {
   $mapping = NULL;
   if (isset($form_state['salesforce_mapping'])) {
