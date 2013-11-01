@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains Drupal\salesforce_mapping\SalesforceMappingAddFormController.
+ * Contains Drupal\salesforce_mapping\SalesforceMappingEditFormController.
  */
 
 namespace Drupal\salesforce_mapping\Form;
@@ -13,6 +13,6 @@ namespace Drupal\salesforce_mapping\Form;
  * @todo create SalesforceMappingEditFormController
  * @todo refactor this class to use the Base class
  */
-class SalesforceMappingAddFormController extends SalesforceMappingFormControllerBase {
+class SalesforceMappingEditFormController extends SalesforceMappingFormControllerBase {
 
 }

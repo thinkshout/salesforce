@@ -12,10 +12,10 @@ salesforce_mapping.add:
   requirements:
     _permission: 'administer salesforce mapping'
 
-# salesforce_mapping.edit:
-#   path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}'
-#   defaults:
-#     _content: '\Drupal\salesforce_mapping\Controller\SalesforceMappingController::editForm'
-#   requirements:
-#     _permission: 'administer salesforce mapping'
-# 
+salesforce_mapping.edit:
+  path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}'
+  defaults:
+    _entity_form: 'salesforce_mapping.edit'
+  requirements:
+    _permission: 'administer salesforce mapping'
+
