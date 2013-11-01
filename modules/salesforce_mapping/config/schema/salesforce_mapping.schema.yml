@@ -8,9 +8,6 @@ salesforce.salesforce_mapping.*:
       type: string
       label: 'UUID'
     id:
-      type: int
-      label: 'ID'
-    name:
       type: string
       label: 'machine name'
     label:

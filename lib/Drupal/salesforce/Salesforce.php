@@ -369,7 +369,6 @@ class Salesforce {
     }
 
     $data = $response->json();
-    dpm($data);
     $this->setRefreshToken($data['refresh_token']);
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);

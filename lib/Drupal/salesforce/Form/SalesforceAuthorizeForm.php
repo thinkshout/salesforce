@@ -5,7 +5,7 @@
  * Contains \Drupal\salesforce\Form\SalesforceAuthorizeForm.
  */
 
-namespace Drupal\salesforce\AuthorizeForm;
+namespace Drupal\salesforce\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\salesforce\Salesforce;

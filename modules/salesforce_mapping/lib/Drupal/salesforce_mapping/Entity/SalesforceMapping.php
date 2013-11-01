@@ -18,14 +18,14 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   module = "salesforce_mapping",
  *   controllers = {
  *     "storage" = "Drupal\Core\Config\Entity\ConfigStorageController",
- *     "view_builder" = "Drupal\Core\Config\Entity\EntityViewBuilder",
+ *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "access" = "Drupal\Core\Entity\EntityAccessController",
- *     "list" = "Drupal\Core\Config\Entity\ConfigEntityListController",
+ *     "list" = "Drupal\salesforce_mapping\SalesforceMappingListController",
  *     "form" = {
- *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingFormController",
- *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingFormController",
- *       "default" = "Drupal\salesforce_mapping\Form\SalesforceMappingFormController",
- *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingFormController"
+ *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
+ *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
+ *       "default" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
+ *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController"
  *      }
  *   },
  *   admin_permission = "administer salesforce mapping",
@@ -34,7 +34,8 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "id" = "id",
  *     "label" = "label",
  *     "uuid" = "uuid",
- *     "status" = "status"
+ *     "status" = "status",
+ *     "weight" = "weight",
  *   },
  *   links = {
  *     "edit-form" = "admin/structure/salesforce/mappings/manage/{salesforce_mapping}"
@@ -45,6 +46,35 @@ class SalesforceMapping extends ConfigEntityBase {
 
   // Only one bundle type for now.
   public $type = 'salesforce_mapping';
+
+  /**
+   * ID (machine name) of the Mapping
+   * @note numeric id was removed
+   *
+   * @var string
+   */
+  public $id;
+
+  /**
+   * Label of the Mapping
+   *
+   * @var string
+   */
+  public $label;
+
+  /**
+   * The UUID for this entity.
+   *
+   * @var string
+   */
+  public $uuid;
+
+  /**
+   * A default weight for the mapping.
+   *
+   * @var int (optional)
+   */
+  public $weight = 0;
 
   /**
    * Constructor for SalesforceMapping.

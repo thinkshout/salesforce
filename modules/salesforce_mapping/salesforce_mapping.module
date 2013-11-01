@@ -79,7 +79,7 @@ function salesforce_mapping_menu() {
  * Implements hook_entity_info().
  */
  function salesforce_entity_info(&$entity_info) {
-   dpm($entity_info);
+   // dpm($entity_info);
  }
 //   $entity_info['salesforce_mapping']['controllers'] += array(
 //     'list' => 'Drupal\Core\Config\Entity\ConfigEntityListController',
