@@ -143,7 +143,7 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
       $salesforce_object_type = $this->entity->get('salesforce_object_type');
     }
     $form['salesforce_object']['salesforce_object_type'] = array(
-      '#title' => $this->t('Salesforce object'),
+      '#title' => $this->t('Salesforce Object'),
       '#id' => 'edit-salesforce-object-type',
       '#type' => 'select',
       '#description' => $this->t('Select a Salesforce object to map.'),
@@ -159,7 +159,6 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
     );
 
     $form['salesforce_object']['salesforce_record_type'] = array(
-      '#title' => $this->t('Salesforce record type'),
       '#id' => 'edit-salesforce-record-type',
     );
 
@@ -167,23 +166,24 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
       // Check for custom record types.
       $salesforce_record_type = $this->entity->get('salesforce_record_type');
       $salesforce_record_type_options = $this->get_salesforce_record_type_options($salesforce_object_type, $form_state);
-      $record_type_count = count($salesforce_record_type_options) - 1;
-      if ($record_type_count > 1) {
+      if (count($salesforce_record_type_options) > 1) {
         // There are multiple record types for this object type, so the user
         // must choose one of them.  Provide a select field.
         $form['salesforce_object']['salesforce_record_type'] = array(
-          '#title' => $this->t('Salesforce record type'),
+          '#title' => $this->t('Salesforce Record Type'),
           '#type' => 'select',
           '#description' => $this->t('Select a Salesforce record type to map.'),
           '#default_value' => $salesforce_record_type,
           '#options' => $salesforce_record_type_options,
-          '#required' => TRUE,
+          // Do not make it required to preserve graceful degradation:
+          // '#required' => TRUE,
         );
       }
       else {
         // There is only one record type for this object type.  Don't bother the
         // user and just set the single record type by default.
         $form['salesforce_object']['salesforce_record_type'] = array(
+          '#title' => $this->t('Salesforce Record Type'),
           '#type' => 'hidden',
           '#value' => '',
         );
@@ -194,13 +194,13 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
   }
 
   /**
-   * Return a list of Drupal entities for mapping.
+   * Return a list of Drupal entity types for mapping.
    *
    * @return array
    *   An array of values keyed by machine name of the entity with the label as
    *   the value, formatted to be appropriate as a value for #options.
    */
-   private function get_entity_type_options() {
+  private function get_entity_type_options() {
     $options = array();
     $entity_info = \Drupal::entityManager()->getDefinitions();
 
@@ -263,7 +263,6 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
    */
   private function get_salesforce_record_type_options($salesforce_object_type, $form_state) {
     $sfobject = $this->get_salesforce_object($salesforce_object_type, $form_state);
-    $sf_types = array('' => '- ' . $this->t('Select record type') . ' -');
     if (isset($sfobject['recordTypeInfos'])) {
       foreach ($sfobject['recordTypeInfos'] as $type) {
         $sf_types[$type['recordTypeId']] = $type['name'];
@@ -310,6 +309,17 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
     if (empty($values['drupal_bundle'][$entity_type])) {
       $element = &$form['drupal_entity']['drupal_bundle'][$entity_type];
       \Drupal::formBuilder()->setError($element, $this->t('!name field is required.', array('!name' => $element['#title'])));
+    }
+
+    // In case the form was submitted without javascript, we must validate the
+    // salesforce record type.
+    if (empty($values['salesforce_record_type'])) {
+      $record_types = $this->get_salesforce_record_type_options($values['salesforce_object_type'], $form_state);
+      if (count($record_types) > 1) {
+        $element = &$form['salesforce_object']['salesforce_record_type'];
+        drupal_set_message($this->t('!name field is required for this Salesforce Object type.', array('!name' => $element['#title'])));
+        $form_state['rebuild'] = TRUE;
+      }
     }
   }
  
