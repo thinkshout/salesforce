@@ -20,12 +20,13 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "storage" = "Drupal\Core\Config\Entity\ConfigStorageController",
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "access" = "Drupal\Core\Entity\EntityAccessController",
- *     "list" = "Drupal\salesforce_mapping\SalesforceMappingListController",
+ *     "list" = "Drupal\salesforce_mapping\SalesforceMappingList",
  *     "form" = {
- *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditFormController",
- *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
- *       "disable" = "Drupal\salesforce_mapping\Form\SalesforceMappingDisableFormController",
- *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingDeleteFormController",
+ *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditForm",
+ *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddForm",
+ *       "disable" = "Drupal\salesforce_mapping\Form\SalesforceMappingDisableForm",
+ *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingDeleteForm",
+ *       "enable" = "Drupal\salesforce_mapping\Form\SalesforceMappingEnableForm",
  *      }
  *   },
  *   admin_permission = "administer salesforce mapping",
@@ -76,6 +77,14 @@ class SalesforceMapping extends ConfigEntityBase {
    */
   public $weight = 0;
 
+  /**
+   * Status flag for the mapping.
+   *
+   * @var boolean
+   */
+  public $status = TRUE;
+
+  
   /**
    * The drupal entity type to which this mapping points
    *

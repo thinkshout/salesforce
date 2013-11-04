@@ -30,20 +30,20 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
 
     $form['message'] = array(
       '#type' => 'item',
-      '#markup' => t('Authorize this website to communicate with Salesforce by entering the consumer key and secret from a remote application. Clicking authorize will redirect you to Salesforce where you will be asked to grant access.'),
+      '#markup' => $this->t('Authorize this website to communicate with Salesforce by entering the consumer key and secret from a remote application. Clicking authorize will redirect you to Salesforce where you will be asked to grant access.'),
     );
 
     $form['consumer_key'] = array(
-      '#title' => t('Salesforce consumer key'),
+      '#title' => $this->t('Salesforce consumer key'),
       '#type' => 'textfield',
-      '#description' => t('Consumer key of the Salesforce remote application you want to grant access to'),
+      '#description' => $this->t('Consumer key of the Salesforce remote application you want to grant access to'),
       '#required' => TRUE,
       '#default_value' => $config->get('consumer_key'),
     );
     $form['consumer_secret'] = array(
-      '#title' => t('Salesforce consumer secret'),
+      '#title' => $this->t('Salesforce consumer secret'),
       '#type' => 'textfield',
-      '#description' => t('Consumer secret of the Salesforce remote application you want to grant access to'),
+      '#description' => $this->t('Consumer secret of the Salesforce remote application you want to grant access to'),
       '#required' => TRUE,
       '#default_value' => $config->get('consumer_secret'),
     );
@@ -60,7 +60,7 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
             $items[] = $key . ': ' . $path;
           }
           $form['resources'] = array(
-            '#title' => t('Your Salesforce instance is authorized and has access to the following resources:'),
+            '#title' => $this->t('Your Salesforce instance is authorized and has access to the following resources:'),
             '#type' => 'item',
             '#markup' => theme('item_list', array('items' => $items)),
           );

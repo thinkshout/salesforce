@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains Drupal\salesforce_mapping\SalesforceMappingDeleteFormController.
+ * Contains Drupal\salesforce_mapping\SalesforceMappingDeleteForm.
  */
 
 namespace Drupal\salesforce_mapping\Form;
@@ -10,9 +10,9 @@ namespace Drupal\salesforce_mapping\Form;
 use Drupal\Core\Entity\EntityConfirmFormBase;
 
 /**
- * Salesforce Mapping Add Form controller.
+ * Salesforce Mapping Delete Form .
  */
-class SalesforceMappingDeleteFormController extends EntityConfirmFormBase {
+class SalesforceMappingDeleteForm extends EntityConfirmFormBase {
 
   /**
    * {@inheritdoc}

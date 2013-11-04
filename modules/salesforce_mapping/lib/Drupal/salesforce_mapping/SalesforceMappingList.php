@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_mapping\SalesforceMappingListController.
+ * Contains \Drupal\salesforce_mapping\SalesforceMappingList.
  */
 
 namespace Drupal\salesforce_mapping;
@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Defines the filter format list controller.
  */
-class SalesforceMappingListController extends DraggableListController implements EntityControllerInterface {
+class SalesforceMappingList extends DraggableListController implements EntityControllerInterface {
 
   /**
    * {@inheritdoc}
@@ -33,14 +33,13 @@ class SalesforceMappingListController extends DraggableListController implements
    */
   public function buildHeader() {
     $header = array();
-    $header['label'] = t('Label');
-    $header['drupal_entity_type'] = t('Drupal Entity');
-    $header['drupal_bundle'] = t('Drupal Bundle');
-    $header['salesforce_object_type'] = t('Salesforce Object');
-
+    $header['label'] = $this->t('Label');
+    $header['drupal_entity_type'] = $this->t('Drupal Entity');
+    $header['drupal_bundle'] = $this->t('Drupal Bundle');
+    $header['salesforce_object_type'] = $this->t('Salesforce Object');
     // "status" means something new now.
     // @todo rename old "Status" field
-    // $header['status'] = t('Status');
+    $header['status'] = $this->t('Status');
     return $header + parent::buildHeader();
   }
   
@@ -56,12 +55,21 @@ class SalesforceMappingListController extends DraggableListController implements
     }
 
     // If this mapping is disabled, denote it visually.
-    if (!$entity->get('status')) {
+    if (!$entity->status()) {
+      $row['status'] = array('#markup' => $this->t('Disabled'));
       foreach ($row as &$value) {
-        $value = String::placeholder($value);
+        if (is_string($value)) {
+          $value = String::placeholder($value);
+        }
+        elseif (is_array($value) && is_string($value['#markup'])) {
+          $value['#markup'] = String::placeholder($value['#markup']);
+        }
       }
     }
-    
+    else {
+      $row['status'] = array('#markup' => $this->t('Enabled'));
+    }
+
     return $row + parent::buildRow($entity);
   }
   
@@ -70,7 +78,7 @@ class SalesforceMappingListController extends DraggableListController implements
    */
   public function buildForm(array $form, array &$form_state) {
     $form = parent::buildForm($form, $form_state);
-    $form['actions']['submit']['#value'] = t('Save changes');
+    $form['actions']['submit']['#value'] = $this->t('Save changes');
     return $form;
   }
 

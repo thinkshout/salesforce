@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains Drupal\salesforce_mapping\Form\SalesforceMappingFormControllerBase.
+ * Contains Drupal\salesforce_mapping\Form\SalesforceMappingFormBase.
  */
 
 namespace Drupal\salesforce_mapping\Form;
@@ -16,9 +16,9 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\InsertCommand;
 
 /**
- * Salesforce Mapping Form controller base.
+ * Salesforce Mapping Form base.
  */
-abstract class SalesforceMappingFormControllerBase extends EntityFormController {
+abstract class SalesforceMappingFormBase extends EntityFormController {
 
   /**
    * The storage controller.
@@ -56,7 +56,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
     $mapping = $this->entity;
     $form['label'] = array(
       '#type' => 'textfield',
-      '#title' => t('Label'),
+      '#title' => $this->t('Label'),
       '#default_value' => $mapping->label(),
       '#required' => TRUE,
       '#weight' => -30,
@@ -75,7 +75,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
     );
 
     $form['drupal_entity'] = array(
-      '#title' => t('Drupal entity'),
+      '#title' => $this->t('Drupal entity'),
       '#type' => 'fieldset',
       '#attributes' => array(
         'id' => array('edit-drupal-entity'),
@@ -84,10 +84,10 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
 
     $entity_types = $this->get_entity_type_options();
     $form['drupal_entity']['drupal_entity_type'] = array(
-      '#title' => t('Drupal Entity Type'),
+      '#title' => $this->t('Drupal Entity Type'),
       '#id' => 'edit-drupal-entity-type',
       '#type' => 'select',
-      '#description' => t('Select a Drupal entity type to map to a Salesforce object.'),
+      '#description' => $this->t('Select a Drupal entity type to map to a Salesforce object.'),
       '#options' => $entity_types,
       '#default_value' => $this->entity->get('drupal_entity_type'),
       '#required' => TRUE,
@@ -108,7 +108,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
       $form['drupal_entity']['drupal_bundle'][$entity_type] = array(
         '#title' => 'Drupal Entity Bundle',
         '#type' => 'select',
-        '#options' => array('' => '- ' . t('Select') . ' -'),
+        '#options' => array('' => '- ' . $this->t('Select') . ' -'),
         '#states' => array(
           'visible' => array(
             ':input#edit-drupal-entity-type' => array('value' => $entity_type),
@@ -130,7 +130,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
     }
 
     $form['salesforce_object'] = array(
-      '#title' => t('Salesforce object'),
+      '#title' => $this->t('Salesforce object'),
       '#id' => 'edit-salesforce-object',
       '#type' => 'fieldset',
     );
@@ -143,10 +143,10 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
       $salesforce_object_type = $this->entity->get('salesforce_object_type');
     }
     $form['salesforce_object']['salesforce_object_type'] = array(
-      '#title' => t('Salesforce object'),
+      '#title' => $this->t('Salesforce object'),
       '#id' => 'edit-salesforce-object-type',
       '#type' => 'select',
-      '#description' => t('Select a Salesforce object to map.'),
+      '#description' => $this->t('Select a Salesforce object to map.'),
       '#default_value' => $salesforce_object_type,
       '#options' => $this->get_salesforce_object_type_options($form_state),
       // @todo implement record type callback using new FAPI
@@ -159,7 +159,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
     );
 
     $form['salesforce_object']['salesforce_record_type'] = array(
-      '#title' => t('Salesforce record type'),
+      '#title' => $this->t('Salesforce record type'),
       '#id' => 'edit-salesforce-record-type',
     );
 
@@ -172,9 +172,9 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
         // There are multiple record types for this object type, so the user
         // must choose one of them.  Provide a select field.
         $form['salesforce_object']['salesforce_record_type'] = array(
-          '#title' => t('Salesforce record type'),
+          '#title' => $this->t('Salesforce record type'),
           '#type' => 'select',
-          '#description' => t('Select a Salesforce record type to map.'),
+          '#description' => $this->t('Select a Salesforce record type to map.'),
           '#default_value' => $salesforce_record_type,
           '#options' => $salesforce_record_type_options,
           '#required' => TRUE,
@@ -263,7 +263,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
    */
   private function get_salesforce_record_type_options($salesforce_object_type, $form_state) {
     $sfobject = $this->get_salesforce_object($salesforce_object_type, $form_state);
-    $sf_types = array('' => '- ' . t('Select record type') . ' -');
+    $sf_types = array('' => '- ' . $this->t('Select record type') . ' -');
     if (isset($sfobject['recordTypeInfos'])) {
       foreach ($sfobject['recordTypeInfos'] as $type) {
         $sf_types[$type['recordTypeId']] = $type['name'];
@@ -309,7 +309,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
     $entity_type = $values['drupal_entity_type'];
     if (empty($values['drupal_bundle'][$entity_type])) {
       $element = &$form['drupal_entity']['drupal_bundle'][$entity_type];
-      \Drupal::formBuilder()->setError($element, t('!name field is required.', array('!name' => $element['#title'])));
+      \Drupal::formBuilder()->setError($element, $this->t('!name field is required.', array('!name' => $element['#title'])));
     }
   }
  
