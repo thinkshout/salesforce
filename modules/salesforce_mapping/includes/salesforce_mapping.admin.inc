@@ -360,33 +360,33 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 /**
  * Ajax callback for salesforce_mapping_form().
  */
-function salesforce_mapping_form_callback($form, $form_state) {
-  $trigger = $form_state['triggering_element']['#name'];
-  $parents = $form_state['triggering_element']['#array_parents'];
-  $delta = isset($parents[2]) ? $parents[2] : NULL;
-  $commands = array();
-  switch ($trigger) {
-    case 'salesforce_object_type':
-      // Requires updating itself and the field map.
-      $commands = array(
-        ajax_command_replace('#edit-salesforce-object', render($form['salesforce_object'])),
-        ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
-      );
-      break;
-
-    case 'salesforce_add_field':
-    case 'delete_field_mapping-' . $delta:
-      // Replace the field map table.
-      $commands = array(
-        ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
-      );
-      break;
-  }
-  return array(
-    '#type' => 'ajax',
-    '#commands' => $commands,
-  );
-}
+// function salesforce_mapping_form_callback($form, $form_state) {
+//   $trigger = $form_state['triggering_element']['#name'];
+//   $parents = $form_state['triggering_element']['#array_parents'];
+//   $delta = isset($parents[2]) ? $parents[2] : NULL;
+//   $commands = array();
+//   switch ($trigger) {
+//     case 'salesforce_object_type':
+//       // Requires updating itself and the field map.
+//       $commands = array(
+//         ajax_command_replace('#edit-salesforce-object', render($form['salesforce_object'])),
+//         ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
+//       );
+//       break;
+// 
+//     case 'salesforce_add_field':
+//     case 'delete_field_mapping-' . $delta:
+//       // Replace the field map table.
+//       $commands = array(
+//         ajax_command_replace('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])),
+//       );
+//       break;
+//   }
+//   return array(
+//     '#type' => 'ajax',
+//     '#commands' => $commands,
+//   );
+// }
 
 /**
  * Ajax callback for deleting a field mapping row.

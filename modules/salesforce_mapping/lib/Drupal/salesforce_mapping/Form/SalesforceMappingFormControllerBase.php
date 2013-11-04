@@ -95,7 +95,7 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
       '#default_value' => $this->entity->get('drupal_entity_type'),
       '#required' => TRUE,
       // Do we really need ajax for this? How many bundles could there be?
-      // Doesn't seem like that much overhead to just load them all now.
+      // Seems easier to load them all and manage the UI with #states.
       // '#ajax' => array(
       //   'callback' => 'salesforce_mapping_form_callback',
       //   'wrapper' => 'edit-drupal-entity',
@@ -138,17 +138,24 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
       '#type' => 'fieldset',
     );
 
+    $salesforce_object_type = '';
+    if (!empty($form_state['values']) && !empty($form_state['values']['salesforce_object_type'])) {
+      $salesforce_object_type = $form_state['values']['salesforce_object_type'];
+    }
+    elseif ($this->entity->get('salesforce_object_type')) {
+      $salesforce_object_type = $this->entity->get('salesforce_object_type');
+    }
     $form['salesforce_object']['salesforce_object_type'] = array(
       '#title' => t('Salesforce object'),
       '#id' => 'edit-salesforce-object-type',
       '#type' => 'select',
       '#description' => t('Select a Salesforce object to map.'),
-      '#default_value' => $this->entity->get('salesforce_object'),
+      '#default_value' => $salesforce_object_type,
       '#options' => $this->get_salesforce_object_type_options($form_state),
       // @todo implement record type callback using new FAPI
       // @see https://drupal.org/node/1734540
       '#ajax' => array(
-        'callback' => array($this, 'salesforce_mapping_form_callback'),
+        'callback' => array($this, 'salesforce_mapping_form_record_type_callback'),
         'wrapper' => 'edit-salesforce-object',
       ),
       '#required' => TRUE,
@@ -159,16 +166,14 @@ abstract class SalesforceMappingFormControllerBase extends EntityFormController 
       '#id' => 'edit-salesforce-record-type',
     );
 
-    if ($form_state['values']['salesforce_object_type']) {
-dpm($form_state['values']['salesforce_object_type']);
+    if ($salesforce_object_type) {
       // Check for custom record types.
       $salesforce_record_type = $this->entity->get('salesforce_record_type');
-      $salesforce_record_type_options = $this->get_salesforce_record_type_options($form_state['values']['salesforce_object_type'], $form_state);
-dpm($salesforce_record_type_options);
+      $salesforce_record_type_options = $this->get_salesforce_record_type_options($salesforce_object_type, $form_state);
       $record_type_count = count($salesforce_record_type_options) - 1;
       if ($record_type_count > 1) {
-        // There are multiple record types for this object type, so the user must
-        // choose one of them.  Provide a select field.
+        // There are multiple record types for this object type, so the user
+        // must choose one of them.  Provide a select field.
         $form['salesforce_object']['salesforce_record_type'] = array(
           '#title' => t('Salesforce record type'),
           '#type' => 'select',
@@ -183,7 +188,7 @@ dpm($salesforce_record_type_options);
         // user and just set the single record type by default.
         $form['salesforce_object']['salesforce_record_type'] = array(
           '#type' => 'hidden',
-          '#value' => $salesforce_record_type,
+          '#value' => '',
         );
       }
     }
@@ -261,7 +266,6 @@ dpm($salesforce_record_type_options);
    */
   private function get_salesforce_record_type_options($salesforce_object_type, $form_state) {
     $sfobject = $this->get_salesforce_object($salesforce_object_type, $form_state);
-dpm($sfobject);
     $sf_types = array('' => '- ' . t('Select record type') . ' -');
     if (isset($sfobject['recordTypeInfos'])) {
       foreach ($sfobject['recordTypeInfos'] as $type) {
@@ -284,7 +288,6 @@ dpm($sfobject);
    *   Information about the Salesforce object as provided by Salesforce.
    */
   private function get_salesforce_object($salesforce_object_type, &$form_state) {
-    dpm($salesforce_object_type);
     if (empty($salesforce_object_type)) {
       return array();
     }
@@ -296,7 +299,6 @@ dpm($sfobject);
       $sfobject = $sfapi->objectDescribe($salesforce_object_type);
       $form_state['sfm_storage']['salesforce_object'][$salesforce_object_type] = $sfobject;
     }
-    dpm($sfobject);
     return $sfobject;
   }
 
@@ -332,8 +334,6 @@ dpm($sfobject);
    * {@inheritdoc}
    */
   public function save(array $form, array &$form_state) {
-    dpm(func_get_args());
-    dpm($this->entity);
     $this->entity->save();
     drupal_set_message($this->t('The mapping has been successfully saved.'));
      $form_state['redirect_route'] = array(
@@ -344,23 +344,12 @@ dpm($sfobject);
   /**
    * Ajax callback for salesforce_mapping_form().
    */
-  public function salesforce_mapping_form_callback($form, $form_state) {
-    $trigger = $form_state['triggering_element']['#name'];
-    $parents = $form_state['triggering_element']['#array_parents'];
-    $delta = isset($parents[2]) ? $parents[2] : NULL;
+  public function salesforce_mapping_form_record_type_callback($form, $form_state) {
     $response = new AjaxResponse();
-    switch ($trigger) {
-      case 'salesforce_object_type':
-        // Requires updating itself and the field map.
-        $response->addCommand(new ReplaceCommand('#edit-salesforce-object', render($form['salesforce_object'])))->addCommand(new ReplaceCommand('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])));
-        break;
-
-      // case 'salesforce_add_field':
-      // case 'delete_field_mapping-' . $delta:
-      //   // Replace the field map table.
-      //   $response->addCommand(new ReplaceCommand('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])));
-      //   break;
-    }
+    // Requires updating itself and the field map.
+    $response
+      ->addCommand(new ReplaceCommand('#edit-salesforce-object', render($form['salesforce_object'])))
+      ->addCommand(new ReplaceCommand('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])));
     return $response;
   }
 

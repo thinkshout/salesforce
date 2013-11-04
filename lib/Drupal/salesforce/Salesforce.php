@@ -468,19 +468,16 @@ class Salesforce {
    * @addtogroup salesforce_apicalls
    */
   public function objectDescribe($name, $reset = FALSE) {
-dpm(__LINE__);
     if (empty($name)) {
       return array();
     }
     $cache = cache()->get('salesforce:object:' . $name);
     // Force the recreation of the cache when it is older than 5 minutes.
     if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
-dpm($cache->data);
       return $cache->data;
     }
     else {
       $object = $this->apiCall("sobjects/{$name}/describe");
-dpm($object);
       // Allow the cache to clear at any time by not setting an expire time.
       // CACHE_TEMPORARY has been removed. Using 'content' tag to replicate
       // old functionality. @see https://drupal.org/node/1534648
