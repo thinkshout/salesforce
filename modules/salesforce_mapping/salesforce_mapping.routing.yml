@@ -8,7 +8,7 @@ salesforce_mapping.list:
 salesforce_mapping.add:
   path: '/admin/structure/salesforce/mappings/add'
   defaults:
-    _entity_form: 'salesforce_mapping.add'
+    _entity_form: 'salesforce_mapping.edit'
   requirements:
     _permission: 'administer salesforce mapping'
 
@@ -16,6 +16,13 @@ salesforce_mapping.edit:
   path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}'
   defaults:
     _entity_form: 'salesforce_mapping.edit'
+  requirements:
+    _permission: 'administer salesforce mapping'
+
+salesforce_mapping.fields:
+  path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}/fields'
+  defaults:
+    _entity_form: 'salesforce_mapping.fields'
   requirements:
     _permission: 'administer salesforce mapping'
 
@@ -32,6 +39,16 @@ salesforce_mapping.disable:
     _entity_form: 'salesforce_mapping.disable'
   requirements:
     _permission: 'administer salesforce mapping'
+
+# @todo: make enable/disable work like views.
+# @todo: remove it from tabs and make it a checkbox on the properties form
+# views_ui.operation:
+#   path: '/admin/structure/views/view/{view}/{op}'
+#   defaults:
+#     _controller: '\Drupal\views_ui\Controller\ViewsUIController::ajaxOperation'
+#   requirements:
+#     _permission: 'administer views'
+#     op: 'enable|disable'
 
 salesforce_mapping.delete:
   path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}/delete'

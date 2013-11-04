@@ -22,11 +22,12 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "access" = "Drupal\Core\Entity\EntityAccessController",
  *     "list" = "Drupal\salesforce_mapping\SalesforceMappingList",
  *     "form" = {
- *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditForm",
- *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddForm",
+ *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingForm",
+ *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingForm",
  *       "disable" = "Drupal\salesforce_mapping\Form\SalesforceMappingDisableForm",
  *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingDeleteForm",
  *       "enable" = "Drupal\salesforce_mapping\Form\SalesforceMappingEnableForm",
+ *       "fields" = "Drupal\salesforce_mapping\Form\SalesforceMappingFieldsForm",
  *      }
  *   },
  *   admin_permission = "administer salesforce mapping",
@@ -112,7 +113,17 @@ class SalesforceMapping extends ConfigEntityBase {
    * @var string (optional)
    */
   public $salesforce_record_type = '';
-  
+
+
+  /**
+   * @todo documentation
+   */
+  public $field_mappings = array();
+  public $sync_triggers = array();
+  public $push_async;
+  public $puth_batch;
+
+
   /**
    * Constructor for SalesforceMapping.
    *

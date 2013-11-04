@@ -5,12 +5,12 @@
  * Manages Salesforce object and Drupal entity mappings.
  */
 
-namespace Drupal\salesforce_mapping;
-
-use Drupal\salesforce_mapping\Entity\SalesforceMapping;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\salesforce_mapping\Entity\SalesforceMapping;
 
+// @todo fix this:
 module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping.fieldmap_type');
 
 /**

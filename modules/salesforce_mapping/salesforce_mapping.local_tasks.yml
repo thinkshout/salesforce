@@ -1,0 +1,28 @@
+salesforce_mapping.fields:
+  route_name: salesforce_mapping.fields
+  tab_root_id: salesforce_mapping.fields
+  title: Fields
+
+salesforce_mapping.edit:
+  route_name: salesforce_mapping.edit
+  tab_root_id: salesforce_mapping.fields
+  title: Properties
+  weight: -10
+
+salesforce_mapping.enable:
+  route_name: salesforce_mapping.enable
+  tab_root_id: salesforce_mapping.fields
+  title: Enable
+  weight: 30
+
+salesforce_mapping.disable:
+  route_name: salesforce_mapping.disable
+  tab_root_id: salesforce_mapping.fields
+  title: Disable
+  weight: 40
+
+salesforce_mapping.delete:
+  route_name: salesforce_mapping.delete
+  tab_root_id: salesforce_mapping.fields
+  title: Delete
+  weight: 50

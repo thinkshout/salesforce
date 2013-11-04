@@ -13,12 +13,43 @@ salesforce.salesforce_mapping.*:
     label:
       type: label
       label: 'Human readable name'
+    weight:
+      type: int
+      label: 'Weight'
+    locked:
+      type: boolean
+      label: 'Locked'
+    status:
+      type: boolean
+      label: 'Status'
     type:
       type: string
       label: 'Type'
     sync_triggers:
-      type: int
+      type: mapping
       label: 'Sync triggers'
+      mapping:
+        bitmask_value:
+          type: int
+          label: 'Sync triggers bitmask value'
+        drupal_create:
+          type: boolean
+          label: 'Drupal entity create'
+        drupal_update:
+          type: boolean
+          label: 'Drupal entity update'
+        drupal_delete:
+          type: boolean
+          label: 'Drupal entity delete'
+        salesforce_create:
+          type: boolean
+          label: 'Salesforce object create'
+        salesforce_update:
+          type: boolean
+          label: 'Salesforce object update'
+        salesforce_delete:
+          type: boolean
+          label: 'Salesforce object delete'          
     salesforce_object_type:
       type: string
       label: 'Salesforce Object Type'
@@ -37,15 +68,6 @@ salesforce.salesforce_mapping.*:
     push_batch:
       type: boolean
       label: 'Push Batch'
-    weight:
-      type: int
-      label: 'Weight'
-    locked:
-      type: boolean
-      label: 'Locked'
-    status:
-      type: boolean
-      label: 'Status'
     module:
       type: string
       label: 'Module'
