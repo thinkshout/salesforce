@@ -16,10 +16,7 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\InsertCommand;
 
 /**
- * Salesforce Mapping Add Form controller.
- * @todo create SalesforceMappingFormControllerBase
- * @todo create SalesforceMappingEditFormController
- * @todo refactor this class to use the Base class
+ * Salesforce Mapping Form controller base.
  */
 abstract class SalesforceMappingFormControllerBase extends EntityFormController {
 

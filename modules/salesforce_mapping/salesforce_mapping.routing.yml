@@ -18,3 +18,10 @@ salesforce_mapping.edit:
     _entity_form: 'salesforce_mapping.edit'
   requirements:
     _permission: 'administer salesforce mapping'
+
+salesforce_mapping.delete:
+  path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}/delete'
+  defaults:
+    _entity_form: 'salesforce_mapping.delete'
+  requirements:
+    _permission: 'administer salesforce mapping'

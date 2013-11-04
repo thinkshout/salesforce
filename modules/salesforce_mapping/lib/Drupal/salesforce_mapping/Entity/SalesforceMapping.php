@@ -22,10 +22,10 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "access" = "Drupal\Core\Entity\EntityAccessController",
  *     "list" = "Drupal\salesforce_mapping\SalesforceMappingListController",
  *     "form" = {
- *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
+ *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditFormController",
  *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
- *       "default" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController",
- *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingAddFormController"
+ *       "disable" = "Drupal\salesforce_mapping\Form\SalesforceMappingDisableFormController",
+ *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingDeleteFormController",
  *      }
  *   },
  *   admin_permission = "administer salesforce mapping",

@@ -8,10 +8,7 @@
 namespace Drupal\salesforce_mapping\Form;
 
 /**
- * Salesforce Mapping Add Form controller.
- * @todo create SalesforceMappingFormControllerBase
- * @todo create SalesforceMappingEditFormController
- * @todo refactor this class to use the Base class
+ * Salesforce Mapping Edit Form controller.
  */
 class SalesforceMappingEditFormController extends SalesforceMappingFormControllerBase {
 
