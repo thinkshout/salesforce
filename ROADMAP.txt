@@ -1,8 +1,37 @@
+In progress:
+- salesforce.module
+- salesforce_mapping
+
+@TODOS
+- Modules yet untouched:
+  - salesforce_pull
+    - EventSubscriberInterface?
+  - salesforce_push
+    - EventSubscriberInterface?
+  - salesforce_soap
+
+- convert Salesforce.php to a service
+  - rip out as much of salesforce.module as possible
+  
+- replace Drupal:: calls in class files with Dependency Injection
+
+- replace strings with consistent, drupal-wide text
+  e.g. "-- Select --", "--" . t('Select') . "--", "Select Object Type", etc.
+  Nobody wants to translate all those.
+  
+- replace calls to t() with whatever is the standard approach now.
+
+- Create interfaces:
+  - SalesforceMapping
+  - SalesforceMappingForm
+
+
+Big picture items:
 - Field Mapping is obfuscated and inflexible. It needs to be overhauled, and D8 is a good opportunity to take advantage of new frameworks.
 
 * convert field maps to plugin system
 * convert field map fields to plugin system
-* convert synchronization to use plugin system
+* convert API to use plugin system?
 
 -- Mapping Data Type Interface
   -- convert existing hook_salesforce_mapping_fieldmap_type()

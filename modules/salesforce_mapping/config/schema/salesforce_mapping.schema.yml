@@ -91,6 +91,9 @@ salesforce.salesforce_mapping.*:
             key:
               type: boolean
               label: 'Key'
+            locked:
+              type: boolean
+              label: 'Locked'
             direction:
               type: string
               label: 'Direction'

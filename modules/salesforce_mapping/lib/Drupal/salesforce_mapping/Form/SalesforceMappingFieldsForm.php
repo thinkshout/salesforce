@@ -75,34 +75,34 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
     $form['#entity'] = $this->entity;
     // For each field on the map, add a row to our table.
     $form['overview'] = array('#markup' => 'Field mapping overview goes here.');
-    $form['salesforce_field_mappings_wrapper'] = array(
+    $form['field_mappings_wrapper'] = array(
       '#title' => t('Field map'),
       '#type' => 'fieldset',
-      '#id' => 'edit-salesforce-field-mappings-wrapper',
+      '#id' => 'edit-field-mappings-wrapper',
       '#description' => '* Key refers to an property mapped to a Salesforce external ID. if specified an UPSERT will be used to avoid duplicate data when possible.',
     );
 
-    $field_mappings_wrapper = &$form['salesforce_field_mappings_wrapper'];
+    $field_mappings_wrapper = &$form['field_mappings_wrapper'];
     // Check to see if we have enough information to allow mapping fields.  If
     // not, tell the user what is needed in order to have the field map show up.
 
-    $field_mappings_wrapper['salesforce_field_mappings'] = array(
+    $field_mappings_wrapper['field_mappings'] = array(
       '#tree' => TRUE,
       '#type' => 'table',
+      // @todo there's probably a better way to tie ajax callbacks to this element than by hard-coding an HTML DOM ID here.
+      '#id' => 'edit-field-mappings',
       '#header' => array(
         'field_type' => '',
-        'drupal_field' => t('Drupal field'),
-        'salesforce_field' => t('Salesforce field'),
-        'key' => t('Key') . '*',
-        'direction' => t('Direction'),
-      ),
-      '#attributes' => array(
-        'id' => array('edit-salesforce-field-mappings'),
+        'drupal_field' => $this->t('Drupal field'),
+        'salesforce_field' => $this->t('Salesforce field'),
+        'key' => $this->t('Key') . '*',
+        'direction' => $this->t('Direction'),
+        'operations' => $this->t('Operations'),
       ),
     );
-    $rows = &$field_mappings_wrapper['salesforce_field_mappings'];
+    $rows = &$field_mappings_wrapper['field_mappings'];
 
-    $form['salesforce_field_mappings_wrapper']['ajax_warning'] = array(
+    $form['field_mappings_wrapper']['ajax_warning'] = array(
       '#type' => 'container',
       '#attributes' => array(
         'id' => array('edit-ajax-warning'),
@@ -110,13 +110,13 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
     );
 
     // @todo figure out how D8 does tokens
-    // $form['salesforce_field_mappings_wrapper']['token_tree'] = array(
+    // $form['field_mappings_wrapper']['token_tree'] = array(
     //   '#type' => 'container',
     //   '#attributes' => array(
     //     'id' => array('edit-token-tree'),
     //   ),
     // );
-    // $form['salesforce_field_mappings_wrapper']['token_tree']['tree'] = array(
+    // $form['field_mappings_wrapper']['token_tree']['tree'] = array(
     //   '#theme' => 'token_tree',
     //   '#token_types' => array($drupal_entity_type),
     //   '#global_types' => TRUE,
@@ -129,7 +129,8 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
       '#title' => t('Field Type'),
       '#type' => 'select',
       '#options' => $this->get_drupal_type_options(),
-      '#attributes' => array('id' => array('edit-salesforce-mapping-add-field-type'))
+      '#attributes' => array('id' => array('edit-mapping-add-field-type')),
+      '#empty_option' => $this->t('- Select -'),
     );
     $form['buttons']['add'] = array(
       '#value' => $add_field_text,
@@ -138,12 +139,12 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
       '#limit_validation_errors' => array(),
       '#ajax' => array(
         'callback' => array($this, 'field_add_callback'),
-        'wrapper' => 'edit-salesforce-field-mappings-wrapper',
+        'wrapper' => 'edit-field-mappings-wrapper',
       ),
       // @todo add validation to field_add_callback()
       '#states' => array(
         'disabled' => array(
-          ':input#edit-salesforce-mapping-add-field-type' => array('value' => ''),
+          ':input#edit-mapping-add-field-type' => array('value' => ''),
         ),
       ),
     );
@@ -161,8 +162,8 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
 
     // Apply any changes from form_state to existing fields.
     $input = array();
-    if (!empty($form_state['input']['salesforce_field_mappings'])) {
-      $input = &$form_state['input']['salesforce_field_mappings'];
+    if (!empty($form_state['input']['field_mappings'])) {
+      $input = &$form_state['input']['field_mappings'];
     }
     while (isset($input[++$delta])) {
       $rows[$delta] = $this->get_row($input[$delta], $form, $form_state);
@@ -199,6 +200,9 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
   private function get_row($field = array(), $form, $form_state) {
     // @todo this is already defined in schema.yml: can we use that or a
     // settings.yml file instead of rewriting?
+
+    // @todo get default configuration from plugins for all these fields
+    // @todo upate schema.yml for the plugin configuration, move it out of
     $defaults = array(
       'delta' => 'new',
       'key' => FALSE,
@@ -208,18 +212,24 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
         'fieldmap_type' => '', 
         'fieldmap_value' => ''
       ),
+      'operations' => array('delete', 'lock'),
+      'locked' => FALSE,
     );
     $field = NestedArray::mergeDeepArray(array($defaults, $field));
 
+    // @todo allow plugins to override forms for all these fields
+
     $field_plugin_definition = $this->get_field_plugin($field['drupal_field']['fieldmap_type']);
     $row['field_type'] = array(
-        '#title' => 'Field Type',
+        // '#title' => 'Field Type',
         '#type' => 'item',
         // @todo replace with label from plugin:
         '#markup' => $field_plugin_definition['label'],
     );
+
+    // @todo create versus load
     $field_plugin = $this->fieldManager->createInstance($field_plugin_definition['id']);
-    dpm($field_plugin);
+
     // This should be the field-type specific values.
     $row['drupal_field'] = array(
       'fieldmap_type' => array(
@@ -231,24 +241,25 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
     );
 
     $row['salesforce_field'] = array(
-      '#title' => t('Salesforce Field'),
+      // '#title' => t('Salesforce Field'),
       '#type' => 'select',
       '#description' => t('Select a Salesforce field to map.'),
       '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
       '#options' => $this->get_salesforce_field_options(),
       '#default_value' => $field['salesforce_field'],
+      '#empty_option' => $this->t('- Select -'),
     );
 
     $row['key'] = array(
       '#name' => 'key',
-      '#title' => t('Key'),
+      // '#title' => t('Key'),
       '#type' => 'radio',
       '#return_value' => $field['delta'],
       '#default_value' => $field['key'],
     );
 
     $row['direction'] = array(
-      '#title' => t('Direction'),
+      // '#title' => t('Direction'),
       '#type' => 'radios',
       '#options' => array(
         SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
@@ -257,6 +268,16 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
       ),
       '#required' => TRUE,
       '#default_value' => $field['direction'],
+    );
+
+    // @todo implement "lock/unlock" logic here:
+    // @todo make these AJAX
+    $row['operations'] = array(
+      '#type' => 'checkboxes',
+      '#options' => array(
+        'lock' => $this->t('Lock'),
+        'delete' => $this->t('Delete'),
+      ),
     );
     return $row;
   }
@@ -267,7 +288,7 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
    */
   public function validate(array $form, array &$form_state) {
     parent::validate($form, $form_state);
-    // What do we need to do here?
+    // @todo require an "ID" radio field to be checked
   }
  
   /**
@@ -275,24 +296,57 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
    */
   public function submit(array $form, array &$form_state) {
     parent::submit($form, $form_state);
-    // What do we need to do here?
+// @todo do the conversion of form_state into config-readable data here.
+    dpm(func_get_args());
+    if (empty($form_state['values']['field_mappings'])) {
+      return $this->entity;
+    }
+
+    // Copy the submitted values so we don't run into problems with array
+    // indexing while removing delete field mappings.
+    $values = $form_state['values']['field_mappings'];
+    foreach ($values as $i => $value) {
+      if (!empty($value['operations']['delete'])) {
+        unset($form_state['values']['field_mappings'][$i]);
+        continue;
+      }
+      if (!empty($value['operations']['lock'])) {
+        $form_state['values']['field_mappings'][$i]['lock'] = TRUE;
+      }
+      unset($form_state['values']['field_mappings'][$i]['operations']);
+    }
     return $this->entity;
   }
+
+  // overrides sfmappingformbase:
+  public function save(array $form, array &$form_state) {
+    parent::save($form, $form_state);
+
+    // this form should only change entity->field_mappings
+    // assume that any extenders will handle other changes themselves
+  
+    // Gather the plugin config forms and save their configurations.
+    // Naming and ordering is not important.
+    $field_plugins = $this->fieldManager->getDefinitions();
+    dpm($field_plugins);
+    // @todo implement "save and continue editing"
+    // for testing:
+    // unset($form_state['redirect_route']);
+    dpm(func_get_args());
+    dpm($this->entity);
+  }
+
 
   public function field_add_callback($form, &$form_state) {
     $response = new AjaxResponse();
     // Requires updating itself and the field map.
-    $response->addCommand(new ReplaceCommand('#edit-salesforce-field-mappings-wrapper', render($form['salesforce_field_mappings_wrapper'])));
+    $response->addCommand(new ReplaceCommand('#edit-field-mappings-wrapper', render($form['field_mappings_wrapper'])));
     return $response;
   }
 
-  protected function get_drupal_type_options($include_select = TRUE) {
+  protected function get_drupal_type_options() {
     $field_plugins = $this->fieldManager->getDefinitions();
-    dpm($field_plugins);
     $field_type_options = array();
-    if ($include_select) {
-      $field_type_options[''] = t('- Select -');
-    }
     foreach ($field_plugins as $field_plugin) {
       $field_type_options[$field_plugin['id']] = $field_plugin['label'];
     }
@@ -321,7 +375,7 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
       $salesforce_object_type = $this->entity->get('salesforce_object_type');
     }
     $sfobject = $this->get_salesforce_object($salesforce_object_type);
-    $sf_fields = array('' => $this->t('- ' . t('Select') . ' -'));
+    $sf_fields = array();
     if (isset($sfobject['fields'])) {
       foreach ($sfobject['fields'] as $sf_field) {
         $sf_fields[$sf_field['name']] = $sf_field['label'];

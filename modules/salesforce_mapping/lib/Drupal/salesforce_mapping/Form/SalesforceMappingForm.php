@@ -59,6 +59,7 @@ class SalesforceMappingForm extends SalesforceMappingFormBase {
       '#options' => $entity_types,
       '#default_value' => $this->entity->get('drupal_entity_type'),
       '#required' => TRUE,
+      '#empty_option' => $this->t('- Select -'),
       // '#ajax' => array(
       //   'callback' => array($this, 'drupal_entity_type_bundle_callback'),
       //   'wrapper' => 'edit-drupal-entity',
@@ -74,7 +75,8 @@ class SalesforceMappingForm extends SalesforceMappingFormBase {
       $form['drupal_entity']['drupal_bundle'][$entity_type] = array(
         '#title' => $this->t('!entity_type Bundle', array('!entity_type' => $label)),
         '#type' => 'select',
-        '#options' => array('' => '- ' . $this->t('Select') . ' -'),
+        '#empty_option' => $this->t('- Select -'),
+        '#options' => array(),
         '#states' => array(
           'visible' => array(
             ':input#edit-drupal-entity-type' => array('value' => $entity_type),
@@ -124,6 +126,7 @@ class SalesforceMappingForm extends SalesforceMappingFormBase {
         'wrapper' => 'edit-salesforce-object',
       ),
       '#required' => TRUE,
+      '#empty_option' => $this->t('- Select -'),
     );
 
     $form['salesforce_object']['salesforce_record_type'] = array(
@@ -143,6 +146,7 @@ class SalesforceMappingForm extends SalesforceMappingFormBase {
           '#description' => $this->t('Select a Salesforce record type to map.'),
           '#default_value' => $salesforce_record_type,
           '#options' => $salesforce_record_type_options,
+          '#empty_option' => $this->t('- Select -'),
           // Do not make it required to preserve graceful degradation:
           // '#required' => TRUE,
         );
@@ -305,7 +309,7 @@ class SalesforceMappingForm extends SalesforceMappingFormBase {
    *   the value, formatted to be appropriate as a value for #options.
    */
   protected function get_salesforce_object_type_options() {
-    $sfobject_options = array('' => '- ' . $this->t('Select Object Type') . ' -');
+    $sfobject_options = array();
     // No need to cache here: Salesforce::objects() implements its own caching.
     $sfapi = salesforce_get_api();
     // Note that we're filtering SF object types to a reasonable subset.

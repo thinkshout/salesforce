@@ -54,14 +54,20 @@ class Properties extends FieldPluginBase {
 
   public function buildConfigurationForm(array $form, array &$form_state) {
     parent::buildConfigurationForm($form, $form_state);
-
+dpm($this->getConfiguration());
     // @todo inspecting the form and form_state seems wrong
-    // @todo find the equivalent to entity_get_all_property_info()
-    // 
     $entity = $form['#entity'];
     $entity_type = $entity->get('drupal_entity_type');
     $entity_info = $this->entityManager->getDefinition($entity_type);
-    return array('foo' => array('#markup' => 'test'));
+    // @todo find a suitable replacement for entity_get_all_property_info()
+    dpm($entity);
+    dpm(func_get_args());
+    return array(
+      // '#title' => t('Drupal Field'),
+      '#type' => 'select',
+      '#options' => $entity_info['entity_keys'],
+      '#empty_option' => $this->t('- Select -'),
+    );
     
     // $entity_type = $this->mapping->get('drupal_entity_type');
     // 
