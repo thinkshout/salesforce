@@ -141,11 +141,8 @@ function salesforce_flush_caches() {
  *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
-  $settings = Drupal::config('salesforce.settings');
-  return new Salesforce(
-    $settings->get('consumer_key'),
-    $settings->get('consumer_secret')
-  );
+  // @todo Salesforce should be a service 
+  return new Salesforce(\Drupal::httpClient(), \Drupal::service('config.factory'));
 }
 
 /**

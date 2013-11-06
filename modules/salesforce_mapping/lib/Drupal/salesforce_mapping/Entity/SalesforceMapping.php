@@ -121,7 +121,7 @@ class SalesforceMapping extends ConfigEntityBase {
   public $field_mappings = array();
   public $sync_triggers = array();
   public $push_async;
-  public $puth_batch;
+  public $push_batch;
 
 
   /**
@@ -148,14 +148,12 @@ class SalesforceMapping extends ConfigEntityBase {
     return parent::save();
   }
 
-  // /**
-  //  * Retreive the default URI.
-  //  *
-  //  * @return array
-  //  *   Associated array with the default URI on the 'path' key.
-  //  */
-  // protected function defaultUri() {
-  //   return array('path' => 'admin/structure/salesforce/mappings/manage/' . $this->identifier());
-  // }
+  public function push() {
+    
+  }
+  
+  public function pull() {
+    
+  }
 
 }

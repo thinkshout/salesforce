@@ -2,24 +2,25 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_mapping\Plugin\SalesforceMappingPluginManager.
+ * Contains \Drupal\salesforce_mapping\Plugin\FieldPluginManager.
  */
 
-namespace Drupal\views\Plugin;
+namespace Drupal\salesforce_mapping\Plugin;
 
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Language\LanguageManager;
 use Drupal\Core\Plugin\DefaultPluginManager;
-use Symfony\Component\DependencyInjection\Container;
+// use Symfony\Component\DependencyInjection\ContainerInterface;
+
 
 /**
  * Plugin type manager for all views plugins.
  */
-class SalesforceMappingPluginManager extends DefaultPluginManager {
+class FieldPluginManager extends DefaultPluginManager {
 
   /**
-   * Constructs a SalesforceMappingPluginManager object.
+   * Constructs a FieldPluginManager object.
    *
    * @param \Traversable $namespaces
    *   An object that implements \Traversable which contains the root paths
@@ -32,10 +33,10 @@ class SalesforceMappingPluginManager extends DefaultPluginManager {
    *   The module handler to invoke the alter hook with.
    */
   public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, LanguageManager $language_manager, ModuleHandlerInterface $module_handler) {
-    parent::__construct('Plugin/Salesforce', $namespaces, 'Drupal\tour\Annotation\Tip');
+    parent::__construct('Plugin/salesforce_mapping/Field', $namespaces, 'Drupal\Component\Annotation\Plugin');
 
-    $this->alterInfo($module_handler, 'tour_tips_info');
-    $this->setCacheBackend($cache_backend, $language_manager, 'tour_plugins');
+    $this->alterInfo($module_handler, 'salesforce_mapping_fields_info');
+    $this->setCacheBackend($cache_backend, $language_manager, 'salesforce_mapping_plugins');
 
   }
 

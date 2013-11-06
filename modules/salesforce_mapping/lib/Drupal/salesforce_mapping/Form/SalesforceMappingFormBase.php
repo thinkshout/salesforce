@@ -61,12 +61,12 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
     drupal_set_message($this->t('The mapping has been successfully saved.'));
     // Redirect to the listing if this is not a new mapping. 
     $route_name = 'salesforce_mapping.list';
-    $route_params = array();
+    $route_parameters = array();
 
     // Otherwise, redirect to the fields form.
     if ($is_new && $this->entity->id()) {
        $route_name = 'salesforce_mapping.fields';
-       $route_params = array('salesforce_mapping' => $this->entity->id());
+       $route_parameters = array('salesforce_mapping' => $this->entity->id());
     }
     $form_state['redirect_route'] = array(
       'route_name' => $route_name,

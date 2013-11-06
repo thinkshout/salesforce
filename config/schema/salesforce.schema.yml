@@ -1,0 +1,49 @@
+salesforce.settings:
+  type: mapping
+  label: 'Salesforce Settings'
+  mapping:
+    consumer_key:
+      type: string
+      label: 'Consumer Key'
+    consumer_secret:
+      type: string
+      label: 'Consumer Secret'
+    login_url:
+      type: string
+      label: 'Login URL'
+    refresh_token:
+      type: string
+      label: 'Refresh Token'
+    instance_url:
+      type: string
+      label: 'Instance URL'
+    rest_api_version:
+      type: mapping
+      label: 'REST API Version'
+      mapping:
+        label:
+          type: string
+          label: 'Label'
+        url:
+          type: string
+          label: 'URL'
+        version:
+          type: string
+          label: 'Version'
+    identity:
+      type: mapping
+      label: 'Identity'
+      mapping:
+        urls:
+          type: mapping
+          label: 'URLs'
+          mapping:
+            enterprise:
+              type: string
+              label: 'Enterprise'
+            partner:
+              type: string
+              label: 'partner'
+            rest:
+              type: string
+              label: 'REST'

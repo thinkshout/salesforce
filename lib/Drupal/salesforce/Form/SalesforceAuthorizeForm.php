@@ -7,13 +7,48 @@
 
 namespace Drupal\salesforce\Form;
 
+use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\salesforce\Salesforce;
+use Drupal\salesforce\SalesforceException;
+use Guzzle\Http\ClientInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Creates authorization form for Salesforce.
  */
 class SalesforceAuthorizeForm extends ConfigFormBase {
+
+  protected $httpClient;
+
+  /**
+   * Constructs a \Drupal\system\ConfigFormBase object.
+   *
+   * @param \Drupal\Core\Config\ConfigFactory $config_factory
+   *   The factory for configuration objects.
+   * @param \Drupal\Core\Config\Context\ContextInterface $context
+   *   The configuration context to use.
+   * @param \Drupal\Core\Config\Context\ContextInterface $context
+   *   The configuration context to use.
+   * @param \Guzzle\Http\ClientInterface $http_client
+   *   The Guzzle HTTP client.
+   */
+  public function __construct(ConfigFactory $config_factory, ContextInterface $context, ClientInterface $http_client) {
+    $this->configFactory = $config_factory;
+    $this->configFactory->enterContext($context);
+    $this->httpClient = $http_client;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('config.factory'),
+      $container->get('config.context.free'),
+      $container->get('http_default_client')
+    );
+  }
 
   /**
    * {@inheritdoc}
@@ -50,7 +85,8 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
 
     // If we're authenticated, show a list of available REST resources.
     if ($config->get('consumer_key') && $config->get('consumer_secret')) {
-      $sfapi = new Salesforce($config->get('consumer_key'), $config->get('consumer_secret'));
+      $sfapi = new Salesforce($this->httpClient, $this->configFactory);
+
       // If fully configured, attempt to connect to Salesforce and return a list
       // of resources.
       if ($sfapi->isAuthorized()) {
@@ -86,7 +122,7 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
       ->set('consumer_secret', $form_state['values']['consumer_secret'])
       ->save();
 
-    $salesforce = new Salesforce($config->get('consumer_key'), $config->get('consumer_secret'));
+    $salesforce = new Salesforce($this->httpClient, $this->configFactory);
     try {
       return $salesforce->getAuthorizationCode();
     }

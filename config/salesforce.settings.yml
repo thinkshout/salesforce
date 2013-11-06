@@ -1,0 +1,14 @@
+consumer_key: ''
+consumer_secret: ''
+login_url: 'https://login.salesforce.com'
+refresh_token: ''
+instance_url: ''
+rest_api_version:
+  label: "Spring '13"
+  url: "/services/data/v27.0/"
+  version: "27.0"
+identity:
+  urls:
+    enterprise: ''
+    partner: ''
+    rest: ''

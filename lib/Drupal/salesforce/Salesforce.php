@@ -7,12 +7,11 @@
 
 namespace Drupal\salesforce;
 
-use Symfony\Component\Debug\ExceptionHandler;
-use Symfony\Component\HttpFoundation\RedirectResponse;
-use Guzzle\Http\Client;
-use Guzzle\Http\Exception\RequestException;
-use Guzzle\Common\RuntimeException;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\ConfigFactory;
+use Guzzle\Http\Exception\RequestException;
+use Guzzle\Http\ClientInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * Objects, properties, and methods to communicate with the Salesforce REST API.
@@ -20,27 +19,33 @@ use Drupal\Core\Cache\CacheBackendInterface;
 class Salesforce {
 
   public $response;
+  protected $httpClient;
+  protected $configFactory;
+  private $config;
 
   /**
    * Constructor which initializes the consumer.
-   *
-   * @param string $consumer_key
-   *   Salesforce key to connect to your Salesforce instance.
-   * @param string $consumer_secret
-   *   Salesforce secret to connect to your Salesforce instance.
+   * @param \Drupal\Core\Config\ConfigFactory $config_factory
+   *   The config factory
+   * @param \Guzzle\Http\ClientInterface $http_client
+   *   The config factory
    */
-  public function __construct($consumer_key, $consumer_secret = '') {
-    $this->consumer_key = $consumer_key;
-    $this->consumer_secret = $consumer_secret;
-    $this->login_url = 'https://login.salesforce.com';
-
-    // @TODO: Does this need to be configurable?
-    $this->rest_api_version = array(
-      "label" => "Spring '13",
-      "url" => "/services/data/v27.0/",
-      "version" => "27.0",
-    );
+  public function __construct(ClientInterface $http_client, ConfigFactory $config_factory) {
+    $this->configFactory = $config_factory;
+    $this->httpClient = $http_client;
+    $this->config = $this->configFactory->get('salesforce.settings');
   }
+
+  // Don't need this?
+  // /**
+  //  * {@inheritdoc}
+  //  */
+  // public static function create(ContainerInterface $container) {
+  //   return new static(
+  //     $container->get('http_default_client'),
+  //     $container->get('')
+  //   );
+  // }
 
   /**
    * Determine if this SF instance is fully configured.
@@ -48,7 +53,7 @@ class Salesforce {
    * @TODO: Consider making a test API call.
    */
   public function isAuthorized() {
-    return !empty($this->consumer_key) && !empty($this->consumer_secret) && $this->getRefreshToken();
+    return $this->getConsumerKey() && $this->getConsumerSecret() && $this->getRefreshToken();
   }
 
   /**
@@ -67,6 +72,7 @@ class Salesforce {
    * @throws SalesforceException
    */
   public function apiCall($path, $params = array(), $method = 'GET') {
+
     if (!$this->getAccessToken()) {
       $this->refreshToken();
     }
@@ -75,7 +81,12 @@ class Salesforce {
       $this->response = $this->apiHttpRequest($path, $params, $method);
     }
     catch (RequestException $e) {
+      // A RequestException gets thrown if the response has any error status.
       $this->response = $e->getRequest()->getResponse();
+    }
+
+    if (!is_object($this->response)) {
+      throw new SalesforceException('Unknown error occurred during API call');
     }
 
     switch ($this->response->getStatusCode()) {
@@ -108,8 +119,8 @@ class Salesforce {
     try {
       $data = $this->response->json();
     }
-    catch (RuntimeException $e) {
-      throw new SalesforceException('Unable to parse API call response.');
+    catch (\RuntimeException $e) {
+      throw new SalesforceException('Unable to parse API response.');
     }
 
     if (!empty($data[0]) && count($data) == 1) {
@@ -121,7 +132,7 @@ class Salesforce {
     }
 
     if (!empty($data['errorCode'])) {
-      throw new SalesforceException($data['message'], $this->response->code);
+      throw new SalesforceException($data['message'], $this->response->getStatusCode());
     }
 
     return $data;
@@ -141,6 +152,9 @@ class Salesforce {
    *   The requested data.
    */
   protected function apiHttpRequest($path, $params, $method) {
+    if (!$this->getAccessToken()) {
+      throw new SalesforceException('Missing OAuth Token');
+    }
     $url = $this->getApiEndPoint() . $path;
     $headers = array(
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
@@ -148,7 +162,8 @@ class Salesforce {
     );
     $data = NULL;
     if (!empty($params)) {
-      $data = drupal_json_encode($params);
+      // @todo: convert this into Dependency Injection
+      $data =  \Json::encode($params);
     }
     return $this->httpRequest($url, $data, $headers, $method);
   }
@@ -173,7 +188,7 @@ class Salesforce {
   protected function httpRequest($url, $data = NULL, $headers = array(), $method = 'GET') {
     // Build the request, including path and headers. Internal use.
     $method = $method == 'POST' ? 'post' : 'get';
-    $request = \Drupal::httpClient()->$method($url, $headers, $data);
+    $request = $this->httpClient->$method($url, $headers, $data);
     $request->send();
     return $request->getResponse();
   }
@@ -191,16 +206,37 @@ class Salesforce {
     $url = &drupal_static(__FUNCTION__ . $api_type);
     if (!isset($url)) {
       $identity = $this->getIdentity();
-      $url = str_replace('{version}', $this->rest_api_version['version'], $identity['urls'][$api_type]);
+      if (is_string($identity)) {
+        $url = $identity;
+      }
+      elseif (isset($identity['urls'][$api_type])) {
+        $url = $identity['urls'][$api_type];
+      }
+      $url = str_replace('{version}', $this->config->get('rest_api_version.version'), $url);
     }
     return $url;
   }
 
+  public function getConsumerKey() {
+    return $this->config->get('consumer_key');
+  }
+
+  public function setConsumerKey($value) {
+    return $this->config->set('consumer_key', $value)->save();
+  }
+
+  public function getConsumerSecret() {
+    return $this->config->get('consumer_secret');
+  }
+
+  public function setConsumerSecret($value) {
+    return $this->config->set('consumer_secret', $value)->save();
+  }
   /**
    * Get the SF instance URL. Useful for linking to objects.
    */
   public function getInstanceUrl() {
-    return \Drupal::config('salesforce.settings')->get('instance_url');
+    return $this->config->get('instance_url');
   }
 
   /**
@@ -210,15 +246,15 @@ class Salesforce {
    *   URL to set.
    */
   protected function setInstanceUrl($url) {
-    \Drupal::config('salesforce.settings')
-      ->set('instance_url', $url)
-      ->save();
+    $this->config->set('instance_url', $url)->save();
   }
 
   /**
    * Get the access token.
    */
   public function getAccessToken() {
+    // @todo There is probably a better way to do this in D8.
+    // Why not put it in settings?
     return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
   }
 
@@ -231,6 +267,8 @@ class Salesforce {
    *   Access token from Salesforce.
    */
   protected function setAccessToken($token) {
+    // @todo There is probably a better way to do this in D8.
+    // Why not put it in settings?
     $_SESSION['salesforce_access_token'] = $token;
   }
 
@@ -238,7 +276,7 @@ class Salesforce {
    * Get refresh token.
    */
   protected function getRefreshToken() {
-    return \Drupal::config('salesforce.settings')->get('refresh_token');
+    return $this->config->get('refresh_token');
   }
 
   /**
@@ -248,9 +286,7 @@ class Salesforce {
    *   Refresh token from Salesforce.
    */
   protected function setRefreshToken($token) {
-    \Drupal::config('salesforce.settings')
-      ->set('refresh_token', $token)
-      ->save();
+    $this->config->set('refresh_token', $token)->save();
   }
 
   /**
@@ -267,11 +303,11 @@ class Salesforce {
     $data = drupal_http_build_query(array(
       'grant_type' => 'refresh_token',
       'refresh_token' => $refresh_token,
-      'client_id' => $this->consumer_key,
-      'client_secret' => $this->consumer_secret,
+      'client_id' => $this->getConsumerKey(),
+      'client_secret' => $this->getConsumerSecret(),
     ));
 
-    $url = $this->login_url . '/services/oauth2/token';
+    $url = $this->config->get('login_url') . '/services/oauth2/token';
     $headers = array(
       // This is an undocumented requirement on Salesforce's end.
       'Content-Type' => 'application/x-www-form-urlencoded',
@@ -283,7 +319,12 @@ class Salesforce {
       throw new SalesforceException(t('Unable to get a Salesforce access token.'), $response->getStatusCode());
     }
 
-    $data = drupal_json_decode($response->getBody(TRUE));
+    try {
+      $data = $response->json();
+    }
+    catch (\RuntimeException $e) {
+      throw new SalesforceException($e->getMessage(), $e->getCode());
+    }
 
     if (isset($data['error'])) {
       throw new SalesforceException($data['error_description'], $data['error']);
@@ -291,7 +332,9 @@ class Salesforce {
 
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);
-    $this->setInstanceUrl($data['instance_url']);
+    $this->config
+      ->set('instance_url', $data['instance_url'])
+      ->save();
   }
 
   /**
@@ -311,11 +354,15 @@ class Salesforce {
     if ($response->isError()) {
       throw new SalesforceException(t('Unable to access identity service.'), $response->getStatusCode());
     }
-    // @todo handle RuntimeException
-    $data = $response->json();
-    \Drupal::config('salesforce.settings')
-      ->set('identity', $data)
-      ->save();
+
+    try {
+      $data = $response->json();
+    }
+    catch (\RuntimeException $e) {
+      throw new SalesforceException($e->getMessage(), $e->getCode());
+    }
+
+    $this->config->set('identity', $data)->save();
   }
 
   /**
@@ -325,18 +372,18 @@ class Salesforce {
    *   Returns FALSE is no identity has been stored.
    */
   public function getIdentity() {
-    return \Drupal::config('salesforce.settings')->get('identity');
+    return $this->config->get('identity');
   }
 
   /**
    * OAuth step 1: Redirect to Salesforce and request and authorization code.
    */
   public function getAuthorizationCode() {
-    $path = $this->login_url . '/services/oauth2/authorize';
+    $path = $this->config->get('login_url') . '/services/oauth2/authorize';
     $query = array(
       'redirect_uri' => $this->redirectUrl(),
       'response_type' => 'code',
-      'client_id' => $this->consumer_key,
+      'client_id' => $this->getConsumerKey(),
     );
 
     $response = new RedirectResponse(url($path, array('query' => $query, 'absolute' => TRUE)));
@@ -353,12 +400,11 @@ class Salesforce {
     $data = drupal_http_build_query(array(
       'code' => $code,
       'grant_type' => 'authorization_code',
-      'client_id' => $this->consumer_key,
-      'client_secret' => $this->consumer_secret,
+      'client_id' => $this->getConsumerKey(),
+      'client_secret' => $this->getConsumerSecret(),
       'redirect_uri' => $this->redirectUrl(),
     ));
-
-    $url = $this->login_url . '/services/oauth2/token';
+    $url = $this->config->get('login_url') . '/services/oauth2/token';
     $headers = array(
       // This is an undocumented requirement on SF's end.
       'Content-Type' => 'application/x-www-form-urlencoded',
@@ -369,11 +415,19 @@ class Salesforce {
       throw new SalesforceException($response->getReasonPhrase(), $response->getStatusCode());
     }
 
-    $data = $response->json();
-    $this->setRefreshToken($data['refresh_token']);
+    try {
+      $data = $response->json();
+    }
+    catch (\RuntimeException $e) {
+      throw new SalesforceException($e->getMessage(), $e->getCode());
+    }
+
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);
-    $this->setInstanceUrl($data['instance_url']);
+    $this->config
+      ->set('refresh_token', $data['refresh_token'])
+      ->set('instance_url', $data['instance_url'])
+      ->save();
   }
 
   /**
@@ -415,6 +469,7 @@ class Salesforce {
     }
     else {
       $result = $this->apiCall('sobjects');
+
       // Allow the cache to clear at any time by not setting an expire time.
       // CACHE_TEMPORARY has been removed. Using 'content' tag to replicate
       // old functionality.
@@ -606,7 +661,4 @@ class Salesforce {
     }
     return $items;
   }
-}
-
-class SalesforceException extends ExceptionHandler {
 }

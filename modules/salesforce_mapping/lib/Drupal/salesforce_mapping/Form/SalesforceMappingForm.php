@@ -213,6 +213,7 @@ class SalesforceMappingForm extends SalesforceMappingFormBase {
     $entity_type = $values['drupal_entity_type'];
     if (!empty($entity_type) && empty($values['drupal_bundle'][$entity_type])) {
       $element = &$form['drupal_entity']['drupal_bundle'][$entity_type];
+      // @todo replace with Dependency Injection
       \Drupal::formBuilder()->setError($element, $this->t('!name field is required.', array('!name' => $element['#title'])));
     }
 
