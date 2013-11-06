@@ -36,15 +36,12 @@ class SalesforceSelectQuery {
    */
   public function addCondition($field, $value, $operator = '=') {
     if (is_array($value)) {
-      $value = "('" . implode("','", addslashes($value)) . "')";
+      $value = "('" . implode("','", $value) . "')";
 
       // Set operator to IN if wasn't already changed from the default.
       if ($operator == '=') {
         $operator = 'IN';
       }
-    }
-    else {
-      $value = addslashes($value);
     }
 
     $this->conditions[] = array(
