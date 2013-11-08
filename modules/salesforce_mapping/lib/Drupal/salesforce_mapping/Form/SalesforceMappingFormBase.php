@@ -30,10 +30,6 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
   /**
    * Constructs a new FilterFormatFormControllerBase.
    *
-   * @param \Drupal\Core\Config\ConfigFactory $config_factory
-   *   The config factory.
-   * @param \Drupal\Core\Entity\Query\QueryFactory $query_factory
-   *   The entity query factory.
    */
   public function __construct(EntityStorageControllerInterface $storageController) {
     $this->storageController = $storageController;

@@ -23,18 +23,9 @@ salesforce_mapping.fields:
   path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}/fields'
   defaults:
     _entity_form: 'salesforce_mapping.fields'
+    _title: 'Fields'
   requirements:
     _permission: 'administer salesforce mapping'
-
-# salesforce_mapping.fields:
-#   path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}/fields'
-#   defaults:
-#     _controller: '\Drupal\Core\Controller\HtmlFormController::content'
-#     _form: '\Drupal\salesforce_mapping\Form\SalesforceMappingFieldsForm'
-#     _title: 'Fields'
-#     _description: 'Salesforce Mapping Fields'
-#   requirements:
-#     _permission: 'administer salesforce mapping'
 
 salesforce_mapping.enable:
   path: '/admin/structure/salesforce/mappings/manage/{salesforce_mapping}/enable'

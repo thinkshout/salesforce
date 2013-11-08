@@ -14,8 +14,6 @@ use Drupal\Core\Ajax\CommandInterface;
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\InsertCommand;
-use Drupal\Core\Config\ConfigFactory;
-use Drupal\Core\Config\Context\ContextInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\salesforce_mapping\Plugin\FieldPluginInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -24,13 +22,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Salesforce Mapping Fields Form
  */
 class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
-
-  /**
-   * Stores the configuration factory.
-   *
-   * @var \Drupal\Core\Config\ConfigFactory
-   */
-  protected $configFactory;
 
   /**
    * Salesforce Mapping Plugin Field manager
@@ -42,16 +33,14 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
   /**
    * Constructs a \Drupal\system\ConfigFormBase object.
    *
-   * @param \Drupal\Core\Config\ConfigFactory $config_factory
-   *   The factory for configuration objects.
-   * @param \Drupal\Core\Config\Context\ContextInterface $context
-   *   The configuration context to use.
+   * @param \Drupal\Core\Entity\EntityStorageControllerInterface
+   *   Need this to fetch the appropriate field mapping
+   * @param \Drupal\salesforce_mapping\Plugin\FieldPluginInterface
+   *   Need this to fetch the mapping field plugins
    *
    * @throws RuntimeException
    */
-  public function __construct(EntityStorageControllerInterface $storage_controller, ConfigFactory $config_factory, ContextInterface $context, FieldPluginInterface $field_manager) {
-    $this->configFactory = $config_factory;
-    $this->configFactory->enterContext($context);
+  public function __construct(EntityStorageControllerInterface $storage_controller, FieldPluginInterface $field_manager) {
     $this->fieldManager = $field_manager;
     $this->storageController = $storage_controller;
   }
@@ -62,18 +51,9 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
   public static function create(ContainerInterface $container) {
     return new static(
 $container->get('entity.manager')->getStorageController('salesforce_mapping'),
-      $container->get('config.factory'),
-      $container->get('config.context.free'),
       $container->get('plugin.manager.salesforce_mapping.field')
     );
   }
-  // 
-  // /**
-  //  * {@inheritdoc}
-  //  */
-  // public function getFormId() {
-  //   return 'salesforce_mapping_fields_form';
-  // }
 
   /**
    * Previously "Field Mapping" table on the map edit form.
@@ -101,7 +81,7 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
       // @todo there's probably a better way to tie ajax callbacks to this element than by hard-coding an HTML DOM ID here.
       '#id' => 'edit-field-mappings',
       '#header' => array(
-        // @todo: there must be a better way to get two fields in the same cell
+        // @todo: there must be a better way to get two fields in the same cell than to create an extraneous column
         'drupal_field_type' => '',
         'drupal_field_type_label' => $this->t('Field type'),
         'drupal_field_value' => $this->t('Drupal field'),
@@ -164,8 +144,8 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
     $field_mappings = array_filter($this->entity->get('field_mappings'));
     $has_token_type = FALSE;
 
-    $delta = 0;
     // Add a row for each saved mapping
+    $delta = 0;
     foreach ($field_mappings as $delta => $value) {
       $value['delta'] = $delta;
       $rows[$delta] = $this->get_row($value, $form, $form_state);
@@ -261,14 +241,11 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
 
     $row['key'] = array(
       '#name' => 'key',
-      // '#title' => t('Key'),
       '#type' => 'radio',
-      // '#return_value' => $field_plugin->getId(),
       '#default_value' => $field_plugin->config('key'),
     );
 
     $row['direction'] = array(
-      // '#title' => t('Direction'),
       '#type' => 'radios',
       '#options' => array(
         SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
