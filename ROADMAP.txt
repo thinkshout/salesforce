@@ -3,6 +3,10 @@ In progress:
 - salesforce_mapping
 
 @TODOS
+- salesforce_mapping:
+  - there's no replacement for entity_get_all_property_info()
+    - figure out the best way to compile and present property and field info.
+
 - Modules yet untouched:
   - salesforce_pull
     - EventSubscriberInterface?

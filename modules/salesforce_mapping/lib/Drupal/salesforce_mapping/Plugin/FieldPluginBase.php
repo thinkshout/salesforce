@@ -25,23 +25,6 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   protected $id;
   protected $mapping;
 
-  // /**
-  //  * Constructs a \Drupal\salesforce_mapping\Plugin\FieldPluginBase object.
-  //  *
-  //  * @param array $configuration
-  //  *   A configuration array containing information about the plugin instance.
-  //  * @param string $plugin_id
-  //  *   The plugin_id for the plugin instance.
-  //  * @param array $plugin_definition
-  //  *   The plugin implementation definition.
-  //  * @param \Drupal\salesforce_mapping\Entity\SalesforceMapping $mapping
-  //  *   The token service.
-  //  */
-  // public function __construct(array $configuration, $plugin_id, array $plugin_definition, SalesforceMapping $mapping) {
-  //   parent::__construct($configuration, $plugin_id, $plugin_definition);
-  //   $this->mapping = $mapping;
-  // }
-  // 
   /**
    * {@inheritdoc}
    */
@@ -53,21 +36,36 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
    * {@inheritdoc}
    */
   public function getConfiguration() {
-    
+    return $this->configuration;
   }
 
   /**
    * {@inheritdoc}
    */
   public function setConfiguration(array $configuration) {
-    
+    $this->configuration = $configuration;
+  }
+
+  public function config($key) {
+    if (array_key_exists($key, $this->configuration)) {
+      return $this->configuration[$key];
+    }
+    return FALSE;
   }
 
   /**
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
-    
+    return array(
+      'key' => FALSE,
+      'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
+      'salesforce_field' => array(),
+      'drupal_field_type' => $this->id,
+      'drupal_field_value' => '',
+      'locked' => FALSE,
+    );
+
   }
 
   /**

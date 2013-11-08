@@ -76,6 +76,7 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
 
   /**
    * Retreive Salesforce's information about an object type.
+   * @todo this should move to the Salesforce service
    *
    * @param string $salesforce_object_type
    *   The object type of whose records you want to retreive.

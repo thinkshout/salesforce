@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains Drupal\salesforce_mapping\SalesforceMappingFieldsForm.
+ * Contains \Drupal\salesforce_mapping\Form\SalesforceMappingFieldsForm.
  */
 
 namespace Drupal\salesforce_mapping\Form;
@@ -16,11 +16,12 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\InsertCommand;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Config\Context\ContextInterface;
+use Drupal\Core\Form\FormBase;
 use Drupal\salesforce_mapping\Plugin\FieldPluginInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Salesforce Mapping Fields Form .
+ * Salesforce Mapping Fields Form
  */
 class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
 
@@ -45,13 +46,14 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
    *   The factory for configuration objects.
    * @param \Drupal\Core\Config\Context\ContextInterface $context
    *   The configuration context to use.
+   *
+   * @throws RuntimeException
    */
-  public function __construct(ConfigFactory $config_factory, ContextInterface $context, FieldPluginInterface $field_manager) {
+  public function __construct(EntityStorageControllerInterface $storage_controller, ConfigFactory $config_factory, ContextInterface $context, FieldPluginInterface $field_manager) {
     $this->configFactory = $config_factory;
     $this->configFactory->enterContext($context);
     $this->fieldManager = $field_manager;
-
-    Debug::enable(E_ALL);
+    $this->storageController = $storage_controller;
   }
 
   /**
@@ -59,19 +61,26 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
+$container->get('entity.manager')->getStorageController('salesforce_mapping'),
       $container->get('config.factory'),
       $container->get('config.context.free'),
       $container->get('plugin.manager.salesforce_mapping.field')
     );
   }
-
+  // 
+  // /**
+  //  * {@inheritdoc}
+  //  */
+  // public function getFormId() {
+  //   return 'salesforce_mapping_fields_form';
+  // }
 
   /**
    * Previously "Field Mapping" table on the map edit form.
    * {@inheritdoc}
    * @todo add a header with Fieldmap Property information
    */
-  public function form(array $form, array &$form_state) {
+  public function buildForm(array $form, array &$form_state) {
     $form['#entity'] = $this->entity;
     // For each field on the map, add a row to our table.
     $form['overview'] = array('#markup' => 'Field mapping overview goes here.');
@@ -92,12 +101,14 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
       // @todo there's probably a better way to tie ajax callbacks to this element than by hard-coding an HTML DOM ID here.
       '#id' => 'edit-field-mappings',
       '#header' => array(
-        'field_type' => '',
-        'drupal_field' => $this->t('Drupal field'),
+        // @todo: there must be a better way to get two fields in the same cell
+        'drupal_field_type' => '',
+        'drupal_field_type_label' => $this->t('Field type'),
+        'drupal_field_value' => $this->t('Drupal field'),
         'salesforce_field' => $this->t('Salesforce field'),
         'key' => $this->t('Key') . '*',
         'direction' => $this->t('Direction'),
-        'operations' => $this->t('Operations'),
+        'ops' => $this->t('Operations'),
       ),
     );
     $rows = &$field_mappings_wrapper['field_mappings'];
@@ -175,78 +186,76 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
     // required. If not, take no action. #states is already used to prevent
     // users from adding without selecting field_type. If they've worked
     // around that, they're going to have problems.
-// error_log(print_r($form_state['values'], 1));
-// error_log(print_r($form_state['input'], 1));
     if (!empty($form_state['values'])
     && $form_state['values']['add'] == $form_state['values']['op']
     && !empty($form_state['input']['field_type'])) {
-      $rows[$delta] = $this->get_row(array('drupal_field' => array('fieldmap_type' => $form_state['input']['field_type'])), $form, $form_state);
-      $form['buttons']['field_type']['#default_value'] = '';
+      $rows[$delta] = $this->get_row(array(), $form, $form_state);
     }
 
-// ob_start();
-// var_dump($form);
-// error_log(ob_get_clean());
-    // Add any fields which are in form_state but not yet saved.
-
-    return parent::form($form, $form_state);
+    $entity_uri = $this->entity->uri();
+    $form['actions'] = array(
+      '#type' => 'actions',
+      'submit' => array(
+        '#type' => 'submit',
+        '#value' => $this->t('Save'),
+        '#validate' => array(
+          array($this, 'validate'),
+        ),
+        '#submit' => array(
+          array($this, 'submit'),
+          array($this, 'save'),
+        ),
+        '#button_type' => 'primary'
+      ),
+      'delete' => array(
+        // @todo is there a better way to get this path?
+        '#markup' => l($this->t('Delete'), $entity_uri['path']. '/delete', array('attributes' => array('class' => array('button-danger')))),
+      ),
+    );
+    return $form;
   }
 
   /**
    * Helper function to return an empty row for the field mapping form.
-   *
-   * @author Aaron Bauman
    */
-  private function get_row($field = array(), $form, $form_state) {
-    // @todo this is already defined in schema.yml: can we use that or a
-    // settings.yml file instead of rewriting?
-
-    // @todo get default configuration from plugins for all these fields
-    // @todo upate schema.yml for the plugin configuration, move it out of
-    $defaults = array(
-      'delta' => 'new',
-      'key' => FALSE,
-      'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
-      'salesforce_field' => array(),
-      'drupal_field' => array(
-        'fieldmap_type' => '', 
-        'fieldmap_value' => ''
-      ),
-      'operations' => array('delete', 'lock'),
-      'locked' => FALSE,
-    );
-    $field = NestedArray::mergeDeepArray(array($defaults, $field));
-
+  private function get_row($field_configuration = array(), $form, $form_state) {
+    $field_type = FALSE;
+    if (empty($field_configuration) && !empty($form_state['input']['field_type'])) {
+      $field_type = $form_state['input']['field_type'];
+    }
+    elseif (!empty($field_configuration['drupal_field_type'])) {
+      $field_type = $field_configuration['drupal_field_type'];
+    }
+    else {
+      // Can't provide a row without a field type.
+      // @todo throw an exception here
+      return;
+    }
+    $field_plugin_definition = $this->get_field_plugin($field_type);
+    if (empty($field_plugin_definition)) {
+      // @todo throw an exception here
+      return;
+    }
+    $field_plugin = $this->fieldManager->createInstance($field_plugin_definition['id'], $field_configuration);
     // @todo allow plugins to override forms for all these fields
 
-    $field_plugin_definition = $this->get_field_plugin($field['drupal_field']['fieldmap_type']);
-    $row['field_type'] = array(
-        // '#title' => 'Field Type',
-        '#type' => 'item',
-        // @todo replace with label from plugin:
+    $row['drupal_field_type'] = array(
+        '#type' => 'hidden',
+        '#value' => $field_type,
+    );
+    $row['drupal_field_type_label'] = array(
         '#markup' => $field_plugin_definition['label'],
     );
 
-    // @todo create versus load
-    $field_plugin = $this->fieldManager->createInstance($field_plugin_definition['id']);
-
-    // This should be the field-type specific values.
-    $row['drupal_field'] = array(
-      'fieldmap_type' => array(
-        '#type' => 'hidden',
-        '#value' => $field['drupal_field']['fieldmap_type'],
-      ),
-      // Display the plugin config form here:
-      'fieldmap_value' => $field_plugin->buildConfigurationForm($form, $form_state),
-    );
+    // Display the plugin config form here:
+    $row['drupal_field_value'] = $field_plugin->buildConfigurationForm($form, $form_state);
 
     $row['salesforce_field'] = array(
-      // '#title' => t('Salesforce Field'),
       '#type' => 'select',
       '#description' => t('Select a Salesforce field to map.'),
-      '#multiple' => (isset($fieldmap_type['salesforce_multiple_fields']) && $fieldmap_type['salesforce_multiple_fields']) ? TRUE : FALSE,
+      '#multiple' => (isset($drupal_field_type['salesforce_multiple_fields']) && $drupal_field_type['salesforce_multiple_fields']) ? TRUE : FALSE,
       '#options' => $this->get_salesforce_field_options(),
-      '#default_value' => $field['salesforce_field'],
+      '#default_value' => $field_plugin->config('salesforce_field'),
       '#empty_option' => $this->t('- Select -'),
     );
 
@@ -254,8 +263,8 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
       '#name' => 'key',
       // '#title' => t('Key'),
       '#type' => 'radio',
-      '#return_value' => $field['delta'],
-      '#default_value' => $field['key'],
+      // '#return_value' => $field_plugin->getId(),
+      '#default_value' => $field_plugin->config('key'),
     );
 
     $row['direction'] = array(
@@ -267,76 +276,45 @@ class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
         SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
       ),
       '#required' => TRUE,
-      '#default_value' => $field['direction'],
+      '#default_value' => $field_plugin->config('direction'),
     );
 
     // @todo implement "lock/unlock" logic here:
-    // @todo make these AJAX
-    $row['operations'] = array(
+    // @todo convert these to AJAX operations
+    $operations = array('lock' => $this->t('Lock'), 'delete' => $this->t('Delete'));
+    $defaults = array();
+    if ($field_plugin->config('locked')) {
+      $defaults = array('lock');
+    }
+    $row['ops'] = array(
       '#type' => 'checkboxes',
-      '#options' => array(
-        'lock' => $this->t('Lock'),
-        'delete' => $this->t('Delete'),
-      ),
+      '#options' => $operations,
+      '#default_value' => $defaults,
     );
     return $row;
   }
-
 
  /**
    * {@inheritdoc}
    */
   public function validate(array $form, array &$form_state) {
-    parent::validate($form, $form_state);
-    // @todo require an "ID" radio field to be checked
-  }
- 
-  /**
-   * {@inheritdoc}
-   */
-  public function submit(array $form, array &$form_state) {
-    parent::submit($form, $form_state);
-// @todo do the conversion of form_state into config-readable data here.
-    dpm(func_get_args());
-    if (empty($form_state['values']['field_mappings'])) {
-      return $this->entity;
-    }
+    // @todo require a "Key" radio field to be checked
 
+    // Transform data from the operations column into the expected schema.
     // Copy the submitted values so we don't run into problems with array
     // indexing while removing delete field mappings.
     $values = $form_state['values']['field_mappings'];
     foreach ($values as $i => $value) {
-      if (!empty($value['operations']['delete'])) {
+      // If a field was deleted, delete it!
+      if (!empty($value['ops']['delete'])) {
         unset($form_state['values']['field_mappings'][$i]);
         continue;
       }
-      if (!empty($value['operations']['lock'])) {
-        $form_state['values']['field_mappings'][$i]['lock'] = TRUE;
-      }
-      unset($form_state['values']['field_mappings'][$i]['operations']);
+      $form_state['values']['field_mappings'][$i]['locked'] = !empty($value['ops']['lock']);
+      unset($form_state['values']['field_mappings'][$i]['ops']);
     }
-    return $this->entity;
   }
-
-  // overrides sfmappingformbase:
-  public function save(array $form, array &$form_state) {
-    parent::save($form, $form_state);
-
-    // this form should only change entity->field_mappings
-    // assume that any extenders will handle other changes themselves
-  
-    // Gather the plugin config forms and save their configurations.
-    // Naming and ordering is not important.
-    $field_plugins = $this->fieldManager->getDefinitions();
-    dpm($field_plugins);
-    // @todo implement "save and continue editing"
-    // for testing:
-    // unset($form_state['redirect_route']);
-    dpm(func_get_args());
-    dpm($this->entity);
-  }
-
-
+ 
   public function field_add_callback($form, &$form_state) {
     $response = new AjaxResponse();
     // Requires updating itself and the field map.

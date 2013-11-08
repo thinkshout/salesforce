@@ -11,7 +11,7 @@ use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\salesforce_mapping\Entity\SalesforceMapping;
 
 // @todo fix this:
-module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping.fieldmap_type');
+// module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping.fieldmap_type');
 
 /**
  * Bit flags defining when a data sync should take place for a given mapping.
@@ -85,6 +85,7 @@ function salesforce_mapping_menu() {
 
   $items['admin/structure/salesforce/mappings/%/fields'] = array(
     'title' => 'Fields',
+    'description' => 'Salesforce Mapping Fields',
     'route_name' => 'salesforce_mapping.fields',
   );
 

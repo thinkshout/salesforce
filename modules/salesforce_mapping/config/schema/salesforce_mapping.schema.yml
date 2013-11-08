@@ -78,16 +78,12 @@ salesforce.salesforce_mapping.*:
         - type: mapping
           label: 'Field Mapping'
           mapping:
-            drupal_field:
-              label: 'Drupal Field'
-              type: mapping
-              mapping:
-                fieldmap_type:
-                  type: string
-                  label: 'Fieldmap Type'
-                fieldmap_value:
-                  type: string
-                  label: 'Fieldmap Value'
+            drupal_field_type:
+              type: string
+              label: 'Fieldmap Type'
+            drupal_field_value:
+              type: string
+              label: 'Fieldmap Value'
             key:
               type: boolean
               label: 'Key'
