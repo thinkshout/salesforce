@@ -9,7 +9,7 @@ namespace Drupal\salesforce\Form;
 
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Form\ConfigFormBase;
-use Drupal\salesforce\Salesforce;
+use Drupal\salesforce\SalesforceClient;
 use Drupal\salesforce\SalesforceException;
 use Guzzle\Http\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -85,7 +85,7 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
 
     // If we're authenticated, show a list of available REST resources.
     if ($config->get('consumer_key') && $config->get('consumer_secret')) {
-      $sfapi = new Salesforce($this->httpClient, $this->configFactory);
+      $sfapi = new SalesforceClient($this->httpClient, $this->configFactory);
 
       // If fully configured, attempt to connect to Salesforce and return a list
       // of resources.
@@ -122,7 +122,7 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
       ->set('consumer_secret', $form_state['values']['consumer_secret'])
       ->save();
 
-    $salesforce = new Salesforce($this->httpClient, $this->configFactory);
+    $salesforce = new SalesforceClient($this->httpClient, $this->configFactory);
     try {
       return $salesforce->getAuthorizationCode();
     }

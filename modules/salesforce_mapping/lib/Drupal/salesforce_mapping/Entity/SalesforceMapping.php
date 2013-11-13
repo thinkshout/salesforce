@@ -22,8 +22,8 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *     "access" = "Drupal\Core\Entity\EntityAccessController",
  *     "list" = "Drupal\salesforce_mapping\SalesforceMappingList",
  *     "form" = {
- *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingForm",
- *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingForm",
+ *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditForm",
+ *       "add" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditForm",
  *       "disable" = "Drupal\salesforce_mapping\Form\SalesforceMappingDisableForm",
  *       "delete" = "Drupal\salesforce_mapping\Form\SalesforceMappingDeleteForm",
  *       "enable" = "Drupal\salesforce_mapping\Form\SalesforceMappingEnableForm",

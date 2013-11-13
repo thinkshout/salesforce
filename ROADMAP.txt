@@ -3,9 +3,15 @@ In progress:
 - salesforce_mapping
 
 @TODOS
-- salesforce_mapping:
-  - there's no replacement for entity_get_all_property_info()
-    - figure out the best way to compile and present property and field info.
+- rewrite all tests for D8
+
+- Need interfaces for entites:
+  - SalesforceMappingInterface
+  - SalesforceMappingObjectInterface
+
+- Need to build an entity definition for Salesforce Objects as defined by instance schema
+
+- extend mapping plugins to be able to override all aspects of field mappings
 
 - Modules yet untouched:
   - salesforce_pull
@@ -15,7 +21,7 @@ In progress:
   - salesforce_soap
 
 - convert Salesforce.php to a service
-  - rip out as much of salesforce.module as possible
+  - abstract and rip out as much of salesforce.module as possible
   
 - replace Drupal:: calls in class files with Dependency Injection
 
@@ -23,31 +29,6 @@ In progress:
   e.g. "-- Select --", "--" . t('Select') . "--", "Select Object Type", etc.
   Nobody wants to translate all those.
   
-- replace calls to t() with whatever is the standard approach now.
-
-- Create interfaces:
-  - SalesforceMapping
-  - SalesforceMappingForm
+- Replace hooks with interfaces, plugins, event subscribers, etc.
 
 
-Big picture items:
-- Field Mapping is obfuscated and inflexible. It needs to be overhauled, and D8 is a good opportunity to take advantage of new frameworks.
-
-* convert field maps to plugin system
-* convert field map fields to plugin system
-* convert API to use plugin system?
-
--- Mapping Data Type Interface
-  -- convert existing hook_salesforce_mapping_fieldmap_type()
-  -- Plugin system?
-
--- Mapping Fields Manager
-  -- Drupal Mapping Field Interface
-    -- Supported data types
-    -- Supported  types
-    -- Value Widget
-    -- Supported Directions
-
-  -- Salesforce Mapping Field Interface
-    -- Required
-    -- Supported data types

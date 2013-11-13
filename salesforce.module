@@ -5,7 +5,7 @@
  * API and module for Salesforce integration.
  */
 
-use \Drupal\salesforce\Salesforce;
+use \Drupal\salesforce\SalesforceClient;
 
 /**
  * Implements hook_help().
@@ -142,7 +142,7 @@ function salesforce_flush_caches() {
  */
 function salesforce_get_api() {
   // @todo Salesforce should be a service 
-  return new Salesforce(\Drupal::httpClient(), \Drupal::service('config.factory'));
+  return new SalesforceClient(\Drupal::httpClient(), \Drupal::service('config.factory'));
 }
 
 /**

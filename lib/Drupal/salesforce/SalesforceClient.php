@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce\Salesforce.
+ * Contains \Drupal\salesforce\SalesforceClient.
  */
 
 namespace Drupal\salesforce;
@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 /**
  * Objects, properties, and methods to communicate with the Salesforce REST API.
  */
-class Salesforce {
+class SalesforceClient {
 
   public $response;
   protected $httpClient;

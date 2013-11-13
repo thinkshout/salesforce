@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains Drupal\salesforce_mapping\SalesforceMappingForm.
+ * Contains Drupal\salesforce_mapping\SalesforceMappingEditForm.
  */
 
 namespace Drupal\salesforce_mapping\Form;
@@ -16,7 +16,7 @@ use Drupal\Core\Ajax\InsertCommand;
 /**
  * Salesforce Mapping Add/Edit Form
  */
-class SalesforceMappingForm extends SalesforceMappingFormBase {
+class SalesforceMappingEditForm extends SalesforceMappingFormBase {
   /**
    * {@inheritdoc}
    */
