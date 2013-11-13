@@ -25,6 +25,7 @@ namespace Drupal\salesforce\Entity;
  *      "bundle" = "type"
  *   }
  * )
+ * @todo we'll probably need Dependency Injection of salesforce.client service
  */
 class SObject extends Entity {
   /**

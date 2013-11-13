@@ -1,0 +1,4 @@
+services:
+  salesforce.client:
+    class: Drupal\salesforce\SalesforceClient
+    arguments: ['@http_default_client', '@config.factory']

@@ -7,11 +7,9 @@
 
 namespace Drupal\salesforce\Form;
 
-use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\salesforce\SalesforceClient;
 use Drupal\salesforce\SalesforceException;
-use Guzzle\Http\ClientInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -19,24 +17,16 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class SalesforceAuthorizeForm extends ConfigFormBase {
 
-  protected $httpClient;
+  protected $sf_client;
 
   /**
    * Constructs a \Drupal\system\ConfigFormBase object.
    *
-   * @param \Drupal\Core\Config\ConfigFactory $config_factory
+   * @param \Drupal\salesforce\SalesforceClient $sf_client
    *   The factory for configuration objects.
-   * @param \Drupal\Core\Config\Context\ContextInterface $context
-   *   The configuration context to use.
-   * @param \Drupal\Core\Config\Context\ContextInterface $context
-   *   The configuration context to use.
-   * @param \Guzzle\Http\ClientInterface $http_client
-   *   The Guzzle HTTP client.
    */
-  public function __construct(ConfigFactory $config_factory, ContextInterface $context, ClientInterface $http_client) {
-    $this->configFactory = $config_factory;
-    $this->configFactory->enterContext($context);
-    $this->httpClient = $http_client;
+  public function __construct(SalesforceClient $sf_client) {
+    $this->sf_client = $sf_client;
   }
 
   /**
@@ -44,9 +34,7 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('config.factory'),
-      $container->get('config.context.free'),
-      $container->get('http_default_client')
+      $container->get('salesforce_client'),
     );
   }
 
@@ -85,13 +73,11 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
 
     // If we're authenticated, show a list of available REST resources.
     if ($config->get('consumer_key') && $config->get('consumer_secret')) {
-      $sfapi = new SalesforceClient($this->httpClient, $this->configFactory);
-
       // If fully configured, attempt to connect to Salesforce and return a list
       // of resources.
-      if ($sfapi->isAuthorized()) {
+      if ($this->sf_client->isAuthorized()) {
         try {
-          $resources = $sfapi->listResources();
+          $resources = $this->sf_client->listResources();
           foreach ($resources as $key => $path) {
             $items[] = $key . ': ' . $path;
           }
@@ -122,9 +108,8 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
       ->set('consumer_secret', $form_state['values']['consumer_secret'])
       ->save();
 
-    $salesforce = new SalesforceClient($this->httpClient, $this->configFactory);
     try {
-      return $salesforce->getAuthorizationCode();
+      return $this->sf_client->getAuthorizationCode();
     }
     catch (SalesforceException $e) {
       // Set form error
