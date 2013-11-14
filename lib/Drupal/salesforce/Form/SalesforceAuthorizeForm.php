@@ -7,6 +7,8 @@
 
 namespace Drupal\salesforce\Form;
 
+use Drupal\Core\Config\ConfigFactory;
+use Drupal\Core\Config\Context\ContextInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\salesforce\SalesforceClient;
 use Drupal\salesforce\SalesforceException;
@@ -22,19 +24,26 @@ class SalesforceAuthorizeForm extends ConfigFormBase {
   /**
    * Constructs a \Drupal\system\ConfigFormBase object.
    *
+   * @param \Drupal\Core\Config\ConfigFactory $config_factory
+   *   The factory for configuration objects.
+   * @param \Drupal\Core\Config\Context\ContextInterface $context
+   *   The configuration context to use.
    * @param \Drupal\salesforce\SalesforceClient $sf_client
    *   The factory for configuration objects.
    */
-  public function __construct(SalesforceClient $sf_client) {
-    $this->sf_client = $sf_client;
+  public function __construct(ConfigFactory $config_factory, ContextInterface $context, SalesforceClient $salesforce_client) {
+    parent::__construct($config_factory, $context);
+    $this->sf_client = $salesforce_client;
   }
-
+  
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('salesforce_client'),
+      $container->get('config.factory'),
+      $container->get('config.context.free'),
+      $container->get('salesforce.client')
     );
   }
 

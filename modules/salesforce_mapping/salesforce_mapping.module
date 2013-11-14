@@ -10,7 +10,6 @@ use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\salesforce_mapping\Entity\SalesforceMapping;
 
-
 /**
  * Bit flags defining when a data sync should take place for a given mapping.
  */

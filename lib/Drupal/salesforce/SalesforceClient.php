@@ -36,16 +36,15 @@ class SalesforceClient {
     $this->config = $this->configFactory->get('salesforce.settings');
   }
 
-  // Don't need this?
-  // /**
-  //  * {@inheritdoc}
-  //  */
-  // public static function create(ContainerInterface $container) {
-  //   return new static(
-  //     $container->get('http_default_client'),
-  //     $container->get('')
-  //   );
-  // }
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('http_default_client'),
+      $container->get('config.factory')
+    );
+  }
 
   /**
    * Determine if this SF instance is fully configured.

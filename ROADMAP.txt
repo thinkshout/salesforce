@@ -20,8 +20,7 @@ In progress:
     - EventSubscriberInterface?
   - salesforce_soap
 
-- convert Salesforce.php to a service
-  - abstract and rip out as much of salesforce.module as possible
+- abstract and rip out as much of old .module files as possible
   
 - replace Drupal:: calls in class files with Dependency Injection
 
@@ -31,4 +30,6 @@ In progress:
   
 - Replace hooks with interfaces, plugins, event subscribers, etc.
 
-
+- Automatically pre-add all required Salesforce fields to mappings
+  - require that they be mapped
+  - require a key radio button be ticked
