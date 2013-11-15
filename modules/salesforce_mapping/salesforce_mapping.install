@@ -10,150 +10,11 @@
  */
 function salesforce_mapping_schema() {
 
-  // Salesforce mapping table.
-  $schema['salesforce_mapping'] = array(
-    'description' => 'Drupal to Salesforce mappings',
-    'fields' => array(
-      'salesforce_mapping_id' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique salesforce_mapping entity ID.',
-      ),
-      'name' => array(
-        'description' => 'The machine-readable name of this salesforce_mapping type.',
-        'type' => 'varchar',
-        'length' => 128,
-        'not null' => TRUE,
-      ),
-      'label' => array(
-        'description' => 'The human-readable name of this salesforce_mapping type.',
-        'type' => 'varchar',
-        'length' => 128,
-        'not null' => TRUE,
-      ),
-      'type' => array(
-        'description' => 'The type/bundle of this salesforce_mapping.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'sync_triggers' => array(
-        'description' => 'Indicates when the sync should take place.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0x0000,
-        'size' => 'tiny',
-      ),
-      'salesforce_object_type' => array(
-        'description' => 'The Salesforce object type for this mapping.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'salesforce_record_type' => array(
-        'description' => 'The Salesforce record type for this mapping.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'drupal_entity_type' => array(
-        'description' => 'The Drupal entity type for this mapping (e.g. "node", "user").',
-        'type' => 'varchar',
-        'length' => 128,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'drupal_bundle' => array(
-        'description' => 'The Drupal bundle for this mapping (e.g. "page", "user")',
-        'type' => 'varchar',
-        'length' => 128,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'field_mappings' => array(
-        'type' => 'text',
-        'serialize' => TRUE,
-        'size' => 'big',
-        'description' => 'A serialized object that stores the field mappings.',
-      ),
-      'push_async' => array(
-        'type' => 'int',
-        'size' => 'tiny',
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => 'Indicates this mapping should be processed asynchronously.',
-      ),
-      'push_batch' => array(
-        'type' => 'int',
-        'size' => 'tiny',
-        'not null' => TRUE,
-        'default' => 0,
-        'description' => 'Indicates if SOAP API batch processing should be used during async processing.',
-      ),
-      'created' => array(
-        'description' => 'The Unix timestamp when the salesforce_mapping was created.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'updated' => array(
-        'description' => 'The Unix timestamp when the salesforce_mapping was most recently saved.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'weight' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny',
-        'description' => 'The weight of this salesforce_mapping type in relation to others.',
-      ),
-      // Following fields are for supporting exportable status.
-      'locked' => array(
-        'description' => 'A boolean indicating whether the administrator may delete this mapping.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-        'size' => 'tiny',
-      ),
-      'status' => array(
-        'type' => 'int',
-        'not null' => TRUE,
-        // Set the default to ENTITY_CUSTOM without using the constant as it is
-        // not safe to use it at this point.
-        'default' => 0x01,
-        'size' => 'tiny',
-        'description' => 'The exportable status of the entity.',
-      ),
-      'module' => array(
-        'description' => 'The name of the providing module if the entity has been defined in code.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => FALSE,
-      ),
-    ),
-    'primary key' => array('salesforce_mapping_id'),
-    'unique keys' => array(
-      'name' => array('name'),
-      'name_sf_type_drupal_type' => array(
-        'drupal_entity_type',
-        'drupal_bundle',
-        'salesforce_object_type',
-        'salesforce_record_type',
-      ),
-    ),
-  );
-
   // Object mapping table.
   $schema['salesforce_mapping_object'] = array(
     'description' => 'Drupal to Salesforce object mappings',
     'fields' => array(
-      'salesforce_mapping_object_id' => array(
+      'id' => array(
         'type' => 'serial',
         'not null' => TRUE,
         'description' => 'Primary Key: Unique salesforce_mapping_object entity ID.',
@@ -198,7 +59,7 @@ function salesforce_mapping_schema() {
         'default' => 0,
       ),
     ),
-    'primary key' => array('salesforce_mapping_object_id'),
+    'primary key' => array('id'),
     'indexes' => array(
       'drupal_entity' => array('entity_type', 'entity_id'),
       'salesforce_object' => array('salesforce_id'),

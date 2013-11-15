@@ -7,7 +7,7 @@
 
 namespace Drupal\salesforce_mapping\Entity;
 
-use Drupal\Core\Config\Entity\ContentEntityBase;
+use Drupal\Core\Entity\ContentEntityBase;
 
 /**
  * Defines a Salesforce Mapping Object entity class. Mapping Objects are content
@@ -18,10 +18,11 @@ use Drupal\Core\Config\Entity\ContentEntityBase;
  *   label = @Translation("Salesforce Mapping Object"),
  *   module = "salesforce_mapping",
  *   controllers = {
- *     "storage" = "Drupal\Core\Entity\DatabaseStorageController",
+ *     "storage" = "Drupal\Core\Entity\FieldableDatabaseStorageController",
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "access" = "Drupal\Core\Entity\EntityAccessController",
  *   },
+ *   base_table = "salesforce_mapping_object",
  *   admin_permission = "administer salesforce mapping",
  *   entity_keys = {
  *      "id" = "id",
@@ -37,6 +38,8 @@ class SalesforceMappingObject extends ContentEntityBase {
    * {@inheritdoc}
    */
   public static function baseFieldDefinitions($entity_type) {
+    // @todo Do we really have to define this, and hook_schema, and entity_keys?
+    // so much redundancy.
     $fields = array();
     $fields['id'] = array(
       'label' => t('Salesforce Mapping Object ID'),
@@ -47,7 +50,7 @@ class SalesforceMappingObject extends ContentEntityBase {
     $fields['entity_id'] = array(
       'label' => t('Entity ID'),
       'description' => t('Reference to the mapped Drupal entity.'),
-      'type' => 'entity_reference_field',
+      'type' => 'integer_field',
       'required' => TRUE,
     );
     $fields['entity_type'] = array(
@@ -59,7 +62,7 @@ class SalesforceMappingObject extends ContentEntityBase {
     $fields['salesforce_id'] = array(
       'label' => t("Salesforce object identifier"),
       'description' => t('Reference to the mapped Salesforce object (SObject)'),
-      'type' => 'salesforce_reference',
+      'type' => 'string_field',
       'required' => TRUE,
     );
     $fields['created'] = array(
