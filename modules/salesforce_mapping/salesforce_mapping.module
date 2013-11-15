@@ -8,7 +8,9 @@
 use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Cache\CacheBackendInterface;
+// Not sure if we'll actually need these, since entity API seems to provide everything:
 use Drupal\salesforce_mapping\Entity\SalesforceMapping;
+use Drupal\salesforce_mapping\Entity\SalesforceMappingObject;
 
 /**
  * Bit flags defining when a data sync should take place for a given mapping.
@@ -45,17 +47,6 @@ define('SALESFORCE_MAPPING_ARRAY_DELIMITER', ';');
 define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
 
 /**
- * Access callback for managing Salesforce mappings.
- */
-function salesforce_mappings_access() {
-  if (user_access('administer salesforce mapping')) {
-    $sfapi = salesforce_get_api();
-    return $sfapi->isAuthorized();
-  }
-  return FALSE;
-}
-
-/**
  * @todo hook_menu is going away, and entity framework no longer builds our menu items. Need this here to expose our routing items to as menus.
  */
 function salesforce_mapping_menu() {
@@ -90,25 +81,67 @@ function salesforce_mapping_menu() {
 }
 
 /**
+ * Loads a single salesforce_mapping or all of them if no name provided.
+ *
+ * @param string $name (optional)
+ *   Name of the map to load, or NULL to load all
+ *
+ * @return array | Drupal\salesforce_mapping\Entity\SalesforceMapping
+ *   The requested mapping or an array of all mappings, indexed by id, if $name
+ *   was not specified
+ */
+function salesforce_mapping_load($name = NULL) {
+  if ($name) {
+    return entity_load('salesforce_mapping', $name);
+  }
+  return entity_load_multiple('salesforce_mapping');
+}
+
+/**
+ * Loads multiple salesforce_mappings based on a set of matching conditions.
+ *
+ * @param array $properties (optional)
+ *   An array of properties on the {salesforce_mapping} table in the form
+ *     'field' => $value.
+ *   If $properties is empty, return an all mappings.
+ *
+ * @return array
+ *   An array of Drupal\salesforce_mapping\Entity\SalesforceMapping objects,
+ *   indexed by id
+ */
+function salesforce_mapping_load_multiple($properties = array()) {
+  if (empty($properties)) {
+    return entity_load_multiple('salesforce_mapping');
+  }
+  return entity_load_multiple_by_properties('salesforce_mapping', $properties);
+}
+
+/**
  * Returns Salesforce object mappings for a given Drupal entity.
  *
  * @param string $entity_type
  *   Type of entity to load.
  * @param int $entity_id
  *   Unique identifier of the target entity to load.
- * @param bool $reset
- *   Whether or not the cache should be cleared and fetch from current data.
+ * @param bool $all (optional)
+ *   If TRUE, return all object mappings if more than one. Otherwise, return 
+ *   only the first. Default FALSE.
  *
- * @return array
- *   The requested entity or FALSE if none was found.
+ * @return bool | array | salesforce_mapping_object 
+ *   The requested salesforce_mapping_object, or array of
+ *   salesforce_mapping_objects, or FALSE if none was found.
+ * @see Drupal\salesforce_mapping\Entity\SalesforceMappingObject
  */
-function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $reset = FALSE) {
-  $conditions = array(
+function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $all = FALSE) {
+  $properties = array(
     'entity_id' => $entity_id,
     'entity_type' => $entity_type,
   );
-  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
-  return !empty($results) ? reset($results) : FALSE;
+  $results = entity_load_multiple_by_properties('salesforce_mapping_object', $properties);
+  if (empty($results)) {
+    return FALSE;
+  }
+  return $all ? $results : reset($results);
 }
 
 /**
@@ -226,7 +259,7 @@ function salesforce_mapping_permission() {
 function salesforce_mapping_entity_view(Drupal\entity\EntityInterface $entity, $view_mode, $langcode) {
   // Render linked Salesforce data when viewing a mapped entity.
   $entity_id = $entity->id();
-  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  $mapping = salesforce_mapping_object_load_by_drupal($entity->entityType(), $entity_id);
   if ($mapping && user_access('view salesforce mapping')) {
     $sfapi = salesforce_get_api();
     $entity->content['salesforce_id'] = array(

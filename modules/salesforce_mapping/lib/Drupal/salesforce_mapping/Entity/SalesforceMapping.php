@@ -19,7 +19,7 @@ use Drupal\Core\Config\Entity\ConfigEntityBase;
  *   controllers = {
  *     "storage" = "Drupal\Core\Config\Entity\ConfigStorageController",
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
- *     "access" = "Drupal\Core\Entity\EntityAccessController",
+ *     "access" = "Drupal\salesforce_mapping\SalesforceMappingAccessController",
  *     "list" = "Drupal\salesforce_mapping\SalesforceMappingList",
  *     "form" = {
  *       "edit" = "Drupal\salesforce_mapping\Form\SalesforceMappingEditForm",

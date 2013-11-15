@@ -130,8 +130,10 @@ function salesforce_permission() {
 /**
  * Implements hook_flush_caches().
  */
-function salesforce_flush_caches() {
-  return array('cache_salesforce_object');
+function salesforce_cache_flush() {
+  // flush static caches only.
+  // do not rebuild.
+  // see hook_rebiuld()
 }
 
 /**
@@ -141,8 +143,7 @@ function salesforce_flush_caches() {
  *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
-  // @todo Salesforce should be a service 
-  return new SalesforceClient(\Drupal::httpClient(), \Drupal::service('config.factory'));
+  return \Drupal::service('salesforce.client');
 }
 
 /**
@@ -151,8 +152,7 @@ function salesforce_get_api() {
  * Wrapper around drupal_set_message(), checks for proper permissions.
  */
 function salesforce_set_message($message = NULL, $type = 'status', $repeat = TRUE) {
-   $account = \Drupal::currentUser();
-  if ($account->id() == 1 || $account->hasPermission('administer salesforce')) {
+  if (Drupal::currentUser()->hasPermission('administer salesforce')) {
     drupal_set_message($message, $type, $repeat);
   }
 }
