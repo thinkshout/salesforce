@@ -34,6 +34,11 @@ use Drupal\Core\Entity\ContentEntityBase;
  */
 class SalesforceMappingObject extends ContentEntityBase {
 
+  public function save() {
+    $this->entity_updated = REQUEST_TIME;
+    return parent::save();
+  }
+
   /**
    * {@inheritdoc}
    */
@@ -83,4 +88,22 @@ class SalesforceMappingObject extends ContentEntityBase {
     return $fields;
   }
 
+  public function getSalesforceLink($options = array()) {
+    $defaults = array('attributes' => array('target' => '_blank'));
+    $options = array_merge($defaults, $options);
+    return l($this->sfid(), $this->getSalesforceUrl(), $options);
+  }
+
+  public function getSalesforceUrl() {
+    // @todo dependency injection here:
+    $sfapi = salesforce_get_api();
+    if (!$sfapi) {
+      return $this->salesforce_id->value;
+    }
+    return $sfapi->getInstanceUrl() . '/' . $this->salesforce_id->value;
+  }
+
+  public function sfid() {
+    return $this->get('salesforce_id')->value;
+  }
 }

@@ -330,64 +330,57 @@ function salesforce_mapping_entity_view(EntityInterface $entity, EntityDisplay $
   }
   // Render linked Salesforce data when viewing a mapped entity.
   $entity_id = $entity->id();
-  $mapping = salesforce_mapping_object_load_by_drupal($entity->entityType(), $entity_id);
+  $mapping_object = salesforce_mapping_object_load_by_drupal($entity->entityType(), $entity_id);
 
-  if ($mapping && Drupal::currentUser()->hasPermission('view salesforce mapping')) {
-    $sfapi = salesforce_get_api();
-    $entity->content['salesforce_id'] = array(
-      // '#theme' => 'salesforce_mapping_linked_object',
-      '#title' => t('Salesforce ID'),
-      '#type' => 'item',
-      '#markup' => l(
-        $mapping->salesforce_id->value,
-        $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id->value,
-        array(
-          'attributes' => array('target' => '_blank'),
-        )
-      ),
-      '#classes' => 'field field-label-inline clearfix',
-    );
-    $entity->content['salesforce_last_sync'] = array(
-      // '#theme' => 'salesforce_mapping_linked_object',
-      '#title' => t('Salesforce last sync'),
-      '#type' => 'item',
-      '#markup' => format_date($mapping->last_sync->value),
-      '#classes' => 'field field-label-inline clearfix',
-    );
+  if ($mapping_object && Drupal::currentUser()->hasPermission('view salesforce mapping')) {
+    // theme_field() is a overkill to display these two values. Use the
+    // #field_type property, or hook_entity_view_alter() to override the theme
+    // of this.
+    if ($conf = $display->getComponent('salesforce_id')) {
+      $entity->content['salesforce_id'] = array(
+        '#type' => 'item',
+        '#title' => t('Salesforce ID'),
+        '#markup' => $mapping_object->getSalesforceLink(),
+        '#weight' => $conf['weight'],
+        '#field_type' => 'salesforce',
+      );
+    }
+    if ($conf = $display->getComponent('salesforce_last_sync')) {
+      $entity->content['salesforce_last_sync'] = array(
+        '#type' => 'item',
+        '#title' => t('Salesforce last sync'),
+        '#markup' => format_date($mapping_object->last_sync->value),
+        '#weight' => $conf['weight'],
+        '#field_type' => 'salesforce',
+      );
+    }
   }
 }
 
 /**
  * Implements hook_field_extra_fields().
  */
-// function salesforce_mapping_field_extra_fields() {
-//   // Include Salesforce data for mapped entities.
-//   $mappings = salesforce_mapping_load();
-//   foreach ($mappings as $mapping) {
-//     $extra[$mapping->drupal_entity_type][$mapping->drupal_bundle] = array(
-//       'display' => array(
-//         'salesforce_id' => array(
-//           'label' => t('Salesforce Id'),
-//           'description' => t('ID of a linked Salesforce object.'),
-//           'weight' => 0,
-//         ),
-//         'salesforce_last_sync' => array(
-//           'label' => t('Salesforce last sync'),
-//           'description' => t('Timestamp for the latest sync with Salesforce.'),
-//           'weight' => 0,
-//         ),
-//       ),
-//     );
-//   }
-// 
-//   return isset($extra) ? $extra : array();
-// }
-
-/**
- * Wrapper around theme_field() to format linked Salesforce data.
- */
-function theme_salesforce_mapping_linked_object($variables) {
-  return theme_field($variables);
+function salesforce_mapping_field_extra_fields() {
+  // Include Salesforce data for mapped entities.
+  $extra = array();
+  $mappings = salesforce_mapping_load_multiple();
+  foreach ($mappings as $mapping) {
+    $extra[$mapping->drupal_entity_type][$mapping->drupal_bundle] = array(
+      'display' => array(
+        'salesforce_id' => array(
+          'label' => t('Salesforce Id'),
+          'description' => t('ID of a linked Salesforce object.'),
+          'weight' => 0,
+        ),
+        'salesforce_last_sync' => array(
+          'label' => t('Salesforce last sync'),
+          'description' => t('Timestamp for the latest sync with Salesforce.'),
+          'weight' => 0,
+        ),
+      ),
+    );
+  }
+  return $extra;
 }
 
 /**
@@ -395,19 +388,17 @@ function theme_salesforce_mapping_linked_object($variables) {
  *
  * Ensures drupal entity has an update timestamp.
  */
-// function salesforce_mapping_entity_update($entity, $type) {
-//   // Check if mapping exists.
-//   $sf_mappings = salesforce_mapping_load_multiple(array('drupal_entity_type' => $type));
-//   if ($sf_mappings) {
-//     list($entity_id) = entity_extract_ids($type, $entity);
-//     $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-//     if ($sf_mapping_object) {
-//       // Update entity update property.
-//       $sf_mapping_object->entity_updated = REQUEST_TIME;
-//       $sf_mapping_object->save();
-//     }
-//   }
-// }
+function salesforce_mapping_entity_update(EntityInterface $entity) {
+  // Check if mapping exists.
+  if (!salesforce_mapping_load_by_drupal($entity->entityType())) {
+    return;
+  }
+  $sf_mapping_object = salesforce_mapping_object_load_by_drupal($entity->entityType(), $entity->id());
+  if ($sf_mapping_object) {
+    // Triggering the sf mapping's save callback updates its timestamp.
+    $sf_mapping_object->save();
+  }
+}
 
 /**
  * Get the Salesforce fieldmap types array.
@@ -448,4 +439,3 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
     return $salesforce_fieldmap_type[$fieldmap_type];
   }
 }
-
