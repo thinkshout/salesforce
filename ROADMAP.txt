@@ -51,3 +51,9 @@ could use the same queue interface, regardless of whether REST can leverage
 the advanced features of SOAP.
 
 - Conversions to do when https://drupal.org/node/1972304 lands
+
+- Migration paths for field mappings
+  -- wait for dust to settle on field mapping schema
+  
+- Migration paths for mapping object
+  -- wait for dust to settle on mapping object schema
