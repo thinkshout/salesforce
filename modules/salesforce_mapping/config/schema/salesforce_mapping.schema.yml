@@ -29,9 +29,6 @@ salesforce.salesforce_mapping.*:
       type: mapping
       label: 'Sync triggers'
       mapping:
-        bitmask_value:
-          type: int
-          label: 'Sync triggers bitmask value'
         drupal_create:
           type: boolean
           label: 'Drupal entity create'

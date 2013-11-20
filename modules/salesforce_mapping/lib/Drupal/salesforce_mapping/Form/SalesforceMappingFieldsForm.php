@@ -276,6 +276,7 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
    */
   public function validate(array $form, array &$form_state) {
     // @todo require a "Key" radio field to be checked
+    // Assign key to special "key_field" property for easy locating.
 
     // Transform data from the operations column into the expected schema.
     // Copy the submitted values so we don't run into problems with array

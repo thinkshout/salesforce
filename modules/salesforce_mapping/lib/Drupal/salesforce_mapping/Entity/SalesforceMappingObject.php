@@ -34,8 +34,29 @@ use Drupal\Core\Entity\ContentEntityBase;
  */
 class SalesforceMappingObject extends ContentEntityBase {
 
+  protected $created;
+  protected $entity_updated = REQUEST_TIME;
+  protected $last_sync = REQUEST_TIME;
+
+  /**
+   * Overrides ContentEntityBase::__construct().
+   */
+  public function __construct(array $values) {
+    parent::__construct($values, 'salesforce_mapping_object');
+  }
+
   public function save() {
-    $this->entity_updated = REQUEST_TIME;
+    if ($this->isNew()) {
+      $this->created = REQUEST_TIME;
+    }
+
+    // Does setting these as default properties work the same?
+    // if (!$this->entity_updated) {
+    //   $this->entity_updated = REQUEST_TIME;
+    // }
+    // if (!$this->last_sync) {
+    //   $this->last_sync = REQUEST_TIME;
+    // }
     return parent::save();
   }
 

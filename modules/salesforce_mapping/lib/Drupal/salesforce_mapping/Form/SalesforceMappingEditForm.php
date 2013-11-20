@@ -162,6 +162,7 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
       }
     }
 
+    // @todo either change sync_triggers to human readable values, or make them work as hex flags again.
     $trigger_options = $this->get_sync_trigger_options();
     $form['sync_triggers'] = array(
       '#title' => t('Action triggers'),
@@ -214,6 +215,8 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
     parent::validate($form, $form_state);
 
     $values = $form_state['values'];
+dpm($values);
+
     $entity_type = $values['drupal_entity_type'];
     if (!empty($entity_type) && empty($values['drupal_bundle'][$entity_type])) {
       $element = &$form['drupal_entity']['drupal_bundle'][$entity_type];

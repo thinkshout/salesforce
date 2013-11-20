@@ -8,6 +8,8 @@
 namespace Drupal\salesforce_mapping\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
+use Drupal\salesforce_mapping\Plugin\FieldPluginManager;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Defines a Salesforce Mapping configuration entity class.
@@ -48,6 +50,8 @@ class SalesforceMapping extends ConfigEntityBase {
 
   // Only one bundle type for now.
   public $type = 'salesforce_mapping';
+
+  // @todo a little overboard on the properties. Can probably ditch these and force callers to use ->get or ->config
 
   /**
    * ID (machine name) of the Mapping
@@ -114,6 +118,20 @@ class SalesforceMapping extends ConfigEntityBase {
    */
   public $salesforce_record_type = '';
 
+  /**
+   * ID of field plugin marked as "key" (in field_mappings)
+   */
+  private $key_field_id = NULL;
+
+  /**
+   * cache copy of key field plugin object from field_mappings
+   */
+  private $key_field_plugin;
+
+  /** 
+   * quick bool to know whether or not we should even check for key value.
+   */
+  private $has_key = NULL;
 
   /**
    * @todo documentation
@@ -123,15 +141,34 @@ class SalesforceMapping extends ConfigEntityBase {
   public $push_async;
   public $push_batch;
 
+  protected $fieldManager;
 
   /**
-   * Constructor for SalesforceMapping.
-   *
-   * @param array $values
-   *   Associated array of values for the fields the entity should start with.
+   * {@inheritdoc}
    */
-  public function __construct(array $values = array()) {
-    parent::__construct($values, 'salesforce_mapping');
+  public function __construct(array $values = array(), $entity_type) {
+    parent::__construct($values, $entity_type);
+    // entities don't support Dependency Injection, so we have to build a hard
+    // dependency on the container here.
+    $this->fieldManager = \Drupal::service('plugin.manager.salesforce_mapping.field');
+
+    // Initialize our private key field tracker for easy access.
+    foreach ($this->field_mappings as $key => $value) {
+      if ($value['key']) {
+        $this->key_field_id = $key;
+      }
+    }
+
+    if (empty($this->field_mappings[$this->key_field_id])) {
+      $this->has_key = FALSE;
+      return;
+    }
+    $fieldmap = $this->field_mappings[$this->key_field_id];
+    $this->key_field_plugin = $this->fieldManager->createInstance($fieldmap['drupal_field_type'], $fieldmap);
+    // Just double-check that we have something there:
+    if ($this->key_field_plugin->config('salesforce_field')) {
+      $this->has_key = TRUE;
+    }
   }
 
   /**
@@ -145,13 +182,61 @@ class SalesforceMapping extends ConfigEntityBase {
     if (isset($this->is_new) && $this->is_new) {
       $this->created = REQUEST_TIME;
     }
+    foreach ($this->field_mappings as $i => $fieldmap) {
+      if ($fieldmap['key']) {
+        $this->key_field_id = $i;
+        break;
+      }
+    }
     return parent::save();
   }
 
-  public function push() {
-    
+  /**
+   * Given a Drupal entity, return an array of Salesforce key-value pairs 
+   *
+   * @param object $entity
+   *   Entity wrapper object.
+   *
+   * @return array
+   *   Associative array of key value pairs.
+   * @see salesforce_push_map_params (from d7)
+   */
+  public function getPushParams(EntityInterface $entity) {
+    // @todo This should probably be delegated to a field plugin bag?
+    foreach ($this->field_mappings as $fieldmap) {
+      $field_plugin = $this->fieldManager->createInstance($fieldmap['drupal_field_type'], $fieldmap);
+      // Skip fields that aren't being pushed to Salesforce.
+      if (!$field_plugin->push()) {
+        continue;
+      }
+      $params[$field_plugin->config('salesforce_field')] = $field_plugin->value($entity);
+    }
+    // @todo make this an event
+    drupal_alter('salesforce_push_params', $params, $mapping, $entity_wrapper);
+    return $params;
   }
-  
+
+  /**
+   * Get the name of the salesforce key field, or NULL if no key is set.
+   */
+  public function getKeyField() {
+    if (!$this->hasKey()) {
+      return;
+    }
+    return $this->key_field_plugin->config('salesforce_field');
+  }
+
+  public function hasKey() {
+    return $this->has_key;
+  }
+
+  public function getKeyValue(EntityInterface $entity) {
+    if (!$this->hasKey()) {
+      return;
+    }
+    return $ths->key_field_plugin->config('salesforce_field');
+  }
+
   public function pull() {
     
   }

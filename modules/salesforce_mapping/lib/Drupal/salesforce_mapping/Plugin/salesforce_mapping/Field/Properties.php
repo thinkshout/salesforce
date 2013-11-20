@@ -10,6 +10,7 @@ namespace Drupal\salesforce_mapping\Plugin\salesforce_mapping\Field;
 use Drupal\Component\Annotation\Plugin;
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\salesforce_mapping\Plugin\FieldPluginBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 // use Drupal\Core\Utility\Token;
@@ -68,5 +69,9 @@ class Properties extends FieldPluginBase {
       '#empty_option' => $this->t('- Select -'),
       '#default_value' => $this->config('drupal_field_value'),
     );
+  }
+
+  public function value(EntityInterface $entity) {
+    return 'Foo';
   }
 }

@@ -106,5 +106,29 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   public function set($key, $value) {
     $this->$key = $value;
   }
-  
+
+  /**
+   * @return bool
+   *  Whether or not this field should be pushed to Salesforce.
+   * @todo Does this need a better name? Could be mistaken for a verb.
+   */
+  public function push() {
+    return in_array($this->config('direction'), array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC));
+  }
+
+  /**
+   * @return bool
+   *  Whether or not this field should be pulled from Salesforce to Drupal.
+   * @todo Does this need a better name? Could be mistaken for a verb.
+   */
+  public function pull() {
+    return in_array($this->config('direction'), array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL));
+  }
+
+  /** 
+   * We are purposefully not implementing value() to force extenders of this
+   * class to do it themselves. 
+   * public function value() { }
+   */
+
 }

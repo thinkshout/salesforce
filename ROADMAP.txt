@@ -5,9 +5,11 @@ In progress:
 @TODOS
 - rewrite all tests for D8
 
-- Need interfaces for entites:
+- Need interfaces for entites and classes:
+  - SalesforceClientInterface
   - SalesforceMappingInterface
   - SalesforceMappingObjectInterface
+  - FieldPluginManagerInterface
 
 - Need to build an entity definition for Salesforce Objects as defined by instance schema
 
@@ -33,3 +35,19 @@ In progress:
 - Automatically pre-add all required Salesforce fields to mappings
   - require that they be mapped
   - require a key radio button be ticked
+
+- restore Salesforce local action for entities
+
+- Salesforce Push should be turned into a mock field, like Path will be
+  - free CRUD operations. get rid of hook_entity_* operations
+  - better separation of logic
+  - easier for other modules to extend, alter behavior
+  - standardized, consolidated approach
+
+- Since Drupal Queue Interface is a properly OOP now, we should create a 
+Salesforce Queue implementation that unlocks the full potential of Salesforce API
+Whether or not this is dependent on SOAP is somewhat irrelevant, as REST and SOAP
+could use the same queue interface, regardless of whether REST can leverage 
+the advanced features of SOAP.
+
+- Conversions to do when https://drupal.org/node/1972304 lands

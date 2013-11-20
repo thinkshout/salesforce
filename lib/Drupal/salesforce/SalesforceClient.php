@@ -7,6 +7,7 @@
 
 namespace Drupal\salesforce;
 
+use Drupal\Component\Utility\Json;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\ConfigFactory;
 use Guzzle\Http\Exception\RequestException;
@@ -162,7 +163,7 @@ class SalesforceClient {
     $data = NULL;
     if (!empty($params)) {
       // @todo: convert this into Dependency Injection
-      $data =  \Json::encode($params);
+      $data =  Json::encode($params);
     }
     return $this->httpRequest($url, $data, $headers, $method);
   }
@@ -576,7 +577,7 @@ class SalesforceClient {
    *   Values of the fields to set for the object.
    *
    * @return array
-   *   success:
+   *   successful create:
    *     "id" : "00190000001pPvHAAU",
    *     "errors" : [ ],
    *     "success" : true
@@ -591,10 +592,9 @@ class SalesforceClient {
     if (isset($params[$key])) {
       unset($params[$key]);
     }
+    // @todo handle "duplicate external id" response
+    // @see https://drupal.org/node/2140417
     $data = $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
-    if ($this->response->code == 300) {
-      $data['message'] = t('The value provided is not unique.');
-    }
     return $data;
   }
 
@@ -607,6 +607,8 @@ class SalesforceClient {
    *   Salesforce id of the object.
    * @param array $params
    *   Values of the fields to set for the object.
+   *
+   * @return null
    *
    * @addtogroup salesforce_apicalls
    */
@@ -622,13 +624,32 @@ class SalesforceClient {
    * @param string $id
    *   Salesforce id of the object.
    *
-   * @return object
+   * @return array
    *   Object of the requested Salesforce object.
    *
    * @addtogroup salesforce_apicalls
    */
   public function objectRead($name, $id) {
     return $this->apiCall("sobjects/{$name}/{$id}", array(), 'GET');
+  }
+
+  /**
+   * Return a full loaded Salesforce object given an external key
+   *
+   * @param string $name
+   *   Object type name, e.g. Contact, Account
+   * @param string $key_field
+   *   External key field name, e.g. External_ID__c
+   * @param string $key_value
+   *   External key value, e.g. $node->nid, $user->uid
+   *
+   * @return array
+   *   Object of the requested Salesforce object
+   *
+   * @addtogroup salesforce_apicalls
+   */
+  public function objectReadKey($name, $key_field, $key_value) {
+    return $this->apiCall("sobjects/{$naem}/{$key_field}/{$key_value}", 'GET');
   }
 
   /**

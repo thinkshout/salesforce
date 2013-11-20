@@ -141,6 +141,7 @@ function salesforce_cache_flush() {
  *
  * @return Salesforce
  *   Returns a Salesforce class object.
+ * @deprecated use \Drupal::service('salesforce.client');
  */
 function salesforce_get_api() {
   return \Drupal::service('salesforce.client');

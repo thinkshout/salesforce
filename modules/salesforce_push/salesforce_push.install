@@ -1,0 +1,19 @@
+<?php
+/**
+ * @file
+ * Install/uninstall tasks for the Salesforce Push module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function salesforce_push_install() {
+  \Drupal::state()->set('salesforce.push_limit', 50);
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function salesforce_push_uninstall() {
+  \Drupal::state()->delete('salesforce.push_limit');
+}

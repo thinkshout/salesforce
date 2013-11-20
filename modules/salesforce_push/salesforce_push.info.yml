@@ -1,0 +1,8 @@
+name: Salesforce Push
+type: module
+description: Push data to Salesforce when updates are made to Drupal entities.
+package: Salesforce
+core: 8.x
+
+dependencies:
+  - salesforce_mapping

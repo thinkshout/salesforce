@@ -18,12 +18,12 @@ use Drupal\salesforce_mapping\Entity\SalesforceMappingObject;
  * Bit flags defining when a data sync should take place for a given mapping.
  */
 define('SALESFORCE_MAPPING_SYNC_OFF', 0x0000);
-define('SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE', 0x0001);
-define('SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE', 0x0002);
-define('SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE', 0x0004);
-define('SALESFORCE_MAPPING_SYNC_SF_CREATE', 0x0008);
-define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 0x0010);
-define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 0x0020);
+define('SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE', 'push_create');
+define('SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE', 'push_update');
+define('SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE', 'push_delete');
+define('SALESFORCE_MAPPING_SYNC_SF_CREATE', 'pull_create');
+define('SALESFORCE_MAPPING_SYNC_SF_UPDATE', 'pull_update');
+define('SALESFORCE_MAPPING_SYNC_SF_DELETE', 'pull_delete');
 
 /**
  * Field mapping direction constants.
@@ -171,7 +171,7 @@ function salesforce_mapping_load_by_drupal($entity_type = null, $reset = FALSE) 
 }
 
 /**
- * Returns Salesforce object mappings for a given Drupal entity.
+ * Returns Salesforce object mappings for given Drupal entity properties.
  *
  * @param string $entity_type
  *   Type of entity to load.
@@ -190,6 +190,32 @@ function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $all
   $properties = array(
     'entity_id' => $entity_id,
     'entity_type' => $entity_type,
+  );
+  $results = entity_load_multiple_by_properties('salesforce_mapping_object', $properties);
+  if (empty($results)) {
+    return FALSE;
+  }
+  return $all ? $results : reset($results);
+}
+
+/**
+ * Returns Salesforce object mappings for a given Drupal entity.
+ *
+ * @param string $entity
+ *   The entity for which to load object mappings
+ * @param bool $all (optional)
+ *   If TRUE, return all object mappings if more than one. Otherwise, return 
+ *   only the first. Default FALSE.
+ *
+ * @return bool | array | salesforce_mapping_object 
+ *   The requested salesforce_mapping_object, or array of
+ *   salesforce_mapping_objects, or FALSE if none was found.
+ * @see SalesforceMappingObject
+ */
+function salesforce_mapping_object_load_by_entity($entity, $all = FALSE) {
+  $properties = array(
+    'entity_id' => $entity->id(),
+    'entity_type' => $entity->entityType(),
   );
   $results = entity_load_multiple_by_properties('salesforce_mapping_object', $properties);
   if (empty($results)) {
@@ -245,11 +271,8 @@ function salesforce_mapping_sort($mapping_a, $mapping_b) {
  * Implements hook_entity_delete().
  */
 function salesforce_mapping_entity_delete(EntityInterface $entity) {
-  $type = $entity->entityType();
   // Delete any Salesforce object mappings with this entity.
-  $entity_id = $entity->id();
-  $bundle = $entity->bundle();
-  $mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  $mapping_object = salesforce_mapping_object_load_by_entity($entity);
 
   // No mapping object for this entity, return.
   if (!$mapping_object) {
@@ -259,9 +282,12 @@ function salesforce_mapping_entity_delete(EntityInterface $entity) {
   // Only delete mapping if it won't be handled by the delete trigger in the
   // mapping. We're avoiding the issue of mapping deleting the (the what?).
   $mappings = salesforce_mapping_load_multiple(array(
-    'drupal_entity_type' => $type,
-    'drupal_bundle' => $bundle,
+    'drupal_entity_type' => $entity->entityType(),
+    'drupal_bundle' => $entity->bundle(),
   ));
+  if (empty($mappings)) {
+    return;
+  }
 
   foreach ($mappings as $mapping) {
     if (!($mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE)) {
@@ -293,8 +319,7 @@ function salesforce_mapping_entity_load($entities, $entity_type) {
     return;
   }
   foreach ($entities as $entity) {
-    $entity_id = $entity->id();
-    $mapping = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
+    $mapping = salesforce_mapping_object_load_by_entity($entity);
     if ($mapping) {
       $entity->salesforce_id = $mapping->salesforce_id;
     }
@@ -329,8 +354,7 @@ function salesforce_mapping_entity_view(EntityInterface $entity, EntityDisplay $
     return;
   }
   // Render linked Salesforce data when viewing a mapped entity.
-  $entity_id = $entity->id();
-  $mapping_object = salesforce_mapping_object_load_by_drupal($entity->entityType(), $entity_id);
+  $mapping_object = salesforce_mapping_object_load_by_entity($entity);
 
   if ($mapping_object && Drupal::currentUser()->hasPermission('view salesforce mapping')) {
     // theme_field() is a overkill to display these two values. Use the
@@ -393,7 +417,7 @@ function salesforce_mapping_entity_update(EntityInterface $entity) {
   if (!salesforce_mapping_load_by_drupal($entity->entityType())) {
     return;
   }
-  $sf_mapping_object = salesforce_mapping_object_load_by_drupal($entity->entityType(), $entity->id());
+  $sf_mapping_object = salesforce_mapping_object_load_by_entity($entity);
   if ($sf_mapping_object) {
     // Triggering the sf mapping's save callback updates its timestamp.
     $sf_mapping_object->save();

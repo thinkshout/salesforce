@@ -6,7 +6,7 @@
  */
 
 namespace Drupal\salesforce_mapping\Plugin;
-
+use Drupal\Core\Entity\EntityInterface;
 /**
  * Defines an interface for salesforce mapping plugins.
  */
@@ -41,5 +41,10 @@ interface FieldPluginInterface {
    *   Value of the key.
    */
   public function set($key, $value);
+
+  /**
+   * Given a Drupal entity, return the outbound value.
+   */
+  public function value(EntityInterface $entity);
 
 }

@@ -6,11 +6,6 @@
  */
 
 /**
- * Define pull queue name.
- */
-define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
-
-/**
  * Implements hook_cron().
  */
 function salesforce_pull_cron() {
@@ -22,13 +17,16 @@ function salesforce_pull_cron() {
 }
 
 /**
- * Implements hook_cron_queue_info().
+ * Implements hook_queue_info().
  */
-function salesforce_cron_queue_info() {
-  $queues[SALESFORCE_PULL_QUEUE] = array(
+function salesforce_pull_queue_info() {
+  $queues['salesforce_pull'] = array(
+    'title' => t('Salesforce Pull Queue'),
     'worker callback' => 'salesforce_pull_process_records',
     // Set to a high max timeout in case pulling in lots of data from SF.
-    'time' => 180,
+    'cron' => array(
+      'time' => 180,
+    ),
   );
   return $queues;
 }
@@ -40,7 +38,7 @@ function salesforce_cron_queue_info() {
  * and places each updated SF object into the queue for later processing.
  */
 function salesforce_pull_get_updated_records() {
-  $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
+  $queue = \Drupal::queue('salesforce_pull');
 
   // Avoid overloading the processing queue and pass this time around if it's
   // over a configurable limit.
@@ -341,6 +339,7 @@ function salesforce_pull_process_deleted_records() {
  *   Entity wrapper object.
  * @param object $sf_object
  *   sObject of the Salesforce record.
+ * @todo this should move into SalesforceMapping.php
  */
 function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
   foreach ($field_maps as $field_map) {
@@ -375,3 +374,13 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
     }
   }
 }
+
+/**
+ * Implements hook_salesforce_push_entity_allowed()
+ * Prevent an entity from being re-synched multiple times during one request.
+ */
+function salesforce_pull_salesforce_push_entity_allowed($entity, $op) {
+  return !isset($entity->salesforce_pull) || !$entity->salesforce_pull;
+}
+
+

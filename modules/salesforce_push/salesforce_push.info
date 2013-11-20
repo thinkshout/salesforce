@@ -1,6 +1,0 @@
-name = Salesforce Push
-description = Push data to Salesforce when updates are made to Drupal entities.
-package = Salesforce
-core = 7.x
-
-dependencies[] = salesforce_mapping
