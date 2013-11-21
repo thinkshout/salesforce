@@ -16,7 +16,6 @@ class SalesforcePushRest extends SalesforcePushBase {
    * @throws SalesforcException
    */
   public function push_create() {
-    dpm(__FUNCTION__);
     $this->push();
   }
 
@@ -25,7 +24,7 @@ class SalesforcePushRest extends SalesforcePushBase {
    * @throws SalesforcException
    */
   public function push_update() {
-    dpm(__FUNCTION__);
+    // No difference between drupal create and drupal update... yet
     $this->push();
   }
 
@@ -34,7 +33,6 @@ class SalesforcePushRest extends SalesforcePushBase {
    * @throws SalesforceException
    */
   public function push_delete() {
-    dpm(__FUNCTION__);
     if (!$this->get_mapped_object()) {
       return FALSE;
     }
@@ -58,12 +56,12 @@ class SalesforcePushRest extends SalesforcePushBase {
       '%name' => $this->entity->label(),
       '%sfid' => $this->mapped_object->sfid(),
     )));
-
+    $this->mapped_object->entity_updated = REQUEST_TIME;
+    // dpm($this->entity->getPropertyValues());
     $this->mapped_object->save();
   }
 
   private function push_mapped() {
-    dpm(__FUNCTION__);
     // In case of mapped objects last sync is more recent than the entity's
     // timestamp, do not push an old change.
     if ($this->mapped_object->last_sync > $this->mapped_object->entity_updated) {
@@ -80,7 +78,6 @@ class SalesforcePushRest extends SalesforcePushBase {
   }
 
   private function push_unmapped() {
-    dpm(__FUNCTION__);
     // An external key has been specified, attempt an upsert().
     if ($this->mapping->hasKey()) {
       $sfid = $this->_upsert();
@@ -93,15 +90,10 @@ class SalesforcePushRest extends SalesforcePushBase {
     // If we get this far, there was no error and sfid must have been assigned.
     // Create mapping object, saved in caller.
     // @todo use a mapping object factory
-dpm(array(
+    $this->mapped_object = entity_create('salesforce_mapping_object', array(
       'entity_id' => $this->entity->id(),
       'entity_type' => $this->entity->entityType(),
-      'salesforce_id' => $sfid
-    ));
-    $this->mapped_object = new SalesforceMappingObject(array(
-      'entity_id' => array($this->entity->id()),
-      'entity_type' => array($this->entity->entityType()),
-      'salesforce_id' => array($sfid)
+      'salesforce_id' => $sfid,
     ));
   }
 
@@ -111,11 +103,7 @@ dpm(array(
    * @return salesforce id
    */
   private function _create() {
-    dpm(__FUNCTION__);
-    dpm($this->mapping->salesforce_object_type);
-    dpm($this->mapping->getPushParams($this->entity));
     $data = $this->sf_client->objectCreate($this->mapping->salesforce_object_type, $this->mapping->getPushParams($this->entity));
-    dpm($data);
     return $data['id'];
   }
 
@@ -125,7 +113,6 @@ dpm(array(
    * @return null
    */
   private function _update() {
-    dpm(__FUNCTION__);
     try {
       $data = $this->sf_client->objectUpdate($this->mapping->salesforce_object_type, $this->mapped_object->sfid(), $this->mapping->getPushParams($this->entity));
     }
@@ -144,7 +131,6 @@ dpm(array(
    * @return salesforce id
    */
   private function _upsert() {
-    dpm(__FUNCTION__);
     // An upsert only returns an Id if the record was created. If no Id was
     // returned, go and fetch the Id. @see https://drupal.org/node/1992260
     $data = $this->sf_client->objectUpsert($this->mapping->salesforce_object_type, $this->mapping->getKeyField(), $this->mapping->getKeyValue($this->entity), $this->mapping->getPushParams($this->entity));

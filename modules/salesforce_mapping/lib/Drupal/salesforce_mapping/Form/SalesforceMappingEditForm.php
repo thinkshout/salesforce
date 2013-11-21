@@ -215,7 +215,6 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
     parent::validate($form, $form_state);
 
     $values = $form_state['values'];
-dpm($values);
 
     $entity_type = $values['drupal_entity_type'];
     if (!empty($entity_type) && empty($values['drupal_bundle'][$entity_type])) {

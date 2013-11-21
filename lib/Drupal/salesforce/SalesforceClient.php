@@ -187,7 +187,6 @@ class SalesforceClient {
    */
   protected function httpRequest($url, $data = NULL, $headers = array(), $method = 'GET') {
     // Build the request, including path and headers. Internal use.
-    $method = $method == 'POST' ? 'post' : 'get';
     $request = $this->httpClient->$method($url, $headers, $data);
     $request->send();
     return $request->getResponse();

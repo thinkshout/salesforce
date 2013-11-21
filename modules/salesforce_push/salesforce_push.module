@@ -14,21 +14,21 @@ use Drupal\salesforce_push\SalesforcePushRestAsync;
 /**
  * Implements hook_entity_insert().
  */
-function salesforce_push_entity_insert(EntityInterface $entity) {
+function salesforce_push_entity_insert($entity) {
   salesforce_push_entity_crud($entity, SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE);
 }
 
 /**
  * Implements hook_entity_update().
  */
-function salesforce_push_entity_update(EntityInterface $entity) {
+function salesforce_push_entity_update($entity) {
   salesforce_push_entity_crud($entity, SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE);
 }
 
 /**
  * Implements hook_entity_delete().
  */
-function salesforce_push_entity_delete(EntityInterface $entity) {
+function salesforce_push_entity_delete($entity) {
   salesforce_push_entity_crud($entity, SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE);
 }
 
@@ -40,8 +40,12 @@ function salesforce_push_entity_delete(EntityInterface $entity) {
  * @param int $op
  *   The trigger being responded to. 
  *   One of push_create, push_update, push_delete.
+ * @todo
+ *   at some point all these hook_entity_* implementations will go away. We'll
+ *   create an event subscriber class to respond to entity events and delegate
+ *   actions to the appropriate Push procedures.
  */
-function salesforce_push_entity_crud(EntityInterface $entity, $op) {
+function salesforce_push_entity_crud($entity, $op) {
   // @todo consider asking the entity itself whether it allows push/pull, instead of asking modules. This will give us better readability and granularity. E.g. using a field.
   // Trigger a hook to allow other modules to prevent this entity/operation from
   // triggering a sync with Salesforce.
