@@ -17,11 +17,19 @@ use Drupal\Core\Ajax\InsertCommand;
  * Salesforce Mapping Add/Edit Form
  */
 class SalesforceMappingEditForm extends SalesforceMappingFormBase {
+
   /**
    * {@inheritdoc}
+   * @todo this function is almost 200 lines. Look into leveraging core Entity
+   *   interfaces like FieldsDefinition (or something). Look at breaking this up
+   *   into smaller chunks.
    */
   public function form(array $form, array &$form_state) {
     $mapping = $this->entity;
+    if (!$mapping->isNew()) {
+      // @todo consider making Entity and SObject create-only.
+      drupal_set_message(t('Changing Drupal Entity or Salesforce Object will reset field mappings. Please proceed with caution.'), 'warning');
+    }
     $form['label'] = array(
       '#type' => 'textfield',
       '#title' => $this->t('Label'),
@@ -44,10 +52,12 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
 
     $form['drupal_entity'] = array(
       '#title' => $this->t('Drupal entity'),
-      '#type' => 'fieldset',
+      '#type' => 'details',
       '#attributes' => array(
         'id' => array('edit-drupal-entity'),
       ),
+      // Gently discourage admins from breaking existing fieldmaps:
+      '#collapsed' => !$mapping->isNew(),
     );
 
     $entity_types = $this->get_entity_type_options();
@@ -57,9 +67,10 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
       '#type' => 'select',
       '#description' => $this->t('Select a Drupal entity type to map to a Salesforce object.'),
       '#options' => $entity_types,
-      '#default_value' => $this->entity->get('drupal_entity_type'),
+      '#default_value' => $mapping->get('drupal_entity_type'),
       '#required' => TRUE,
       '#empty_option' => $this->t('- Select -'),
+      // Bundles are based on States now. Ajax is overkill.
       // '#ajax' => array(
       //   'callback' => array($this, 'drupal_entity_type_bundle_callback'),
       //   'wrapper' => 'edit-drupal-entity',
@@ -88,14 +99,10 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
             ':input#edit-drupal-entity-type, dummy2' => array('!value' => $entity_type),
           ),
         ),
-        // '#ajax' => array(
-        //   'callback' => array($this, 'drupal_entity_type_bundle_callback'),
-        //   'wrapper' => 'edit-drupal-entity',
-        // ),
       );
       foreach ($bundle_info as $key => $info) {
         $form['drupal_entity']['drupal_bundle'][$entity_type]['#options'][$key] = $info['label'];
-        if ($key == $this->entity->get('drupal_bundle')) {
+        if ($key == $mapping->get('drupal_bundle')) {
           $form['drupal_entity']['drupal_bundle'][$entity_type]['#default_value'] = $key;
         }
       }
@@ -104,15 +111,17 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
     $form['salesforce_object'] = array(
       '#title' => $this->t('Salesforce object'),
       '#id' => 'edit-salesforce-object',
-      '#type' => 'fieldset',
+      '#type' => 'details',
+      // Gently discourage admins from breaking existing fieldmaps:
+      '#collapsed' => !$mapping->isNew(),
     );
 
     $salesforce_object_type = '';
     if (!empty($form_state['values']) && !empty($form_state['values']['salesforce_object_type'])) {
       $salesforce_object_type = $form_state['values']['salesforce_object_type'];
     }
-    elseif ($this->entity->get('salesforce_object_type')) {
-      $salesforce_object_type = $this->entity->get('salesforce_object_type');
+    elseif ($mapping->get('salesforce_object_type')) {
+      $salesforce_object_type = $mapping->get('salesforce_object_type');
     }
     $form['salesforce_object']['salesforce_object_type'] = array(
       '#title' => $this->t('Salesforce Object'),
@@ -135,7 +144,7 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
 
     if ($salesforce_object_type) {
       // Check for custom record types.
-      $salesforce_record_type = $this->entity->get('salesforce_record_type');
+      $salesforce_record_type = $mapping->get('salesforce_record_type');
       $salesforce_record_type_options = $this->get_salesforce_record_type_options($salesforce_object_type, $form_state);
       if (count($salesforce_record_type_options) > 1) {
         // There are multiple record types for this object type, so the user
@@ -171,19 +180,19 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
       '#options' => $trigger_options,
       '#required' => TRUE,
       // form.inc doesn't type-check default values. Don't pass NULL or FALSE.
-      '#default_value' => $this->entity->get('sync_triggers'),
+      '#default_value' => $mapping->get('sync_triggers'),
     );
 
     $form['push_async'] = array(
       '#title' => t('Process asynchronously'),
       '#type' => 'checkbox',
       '#description' => t('If selected, push data will be queued for processing and synchronized when cron is run. This may increase site performance, but changes will not be reflected in real time.'),
-      '#default_value' => $this->entity->get('push_async'),
+      '#default_value' => $mapping->get('push_async'),
     );
     $form['push_batch'] = array(
       '#title' => t('Batch records'),
       '#type' => 'checkbox',
-      '#default_value' => $this->entity->get('push_batch'),
+      '#default_value' => $mapping->get('push_batch'),
     );
     if (\Drupal::moduleHandler()->moduleExists('salesforce_soap')) {
       $requirements_description = t('Requires "Process asynchronously" option to be enabled.');

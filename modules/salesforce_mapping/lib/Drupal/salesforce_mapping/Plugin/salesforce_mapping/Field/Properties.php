@@ -72,6 +72,9 @@ class Properties extends FieldPluginBase {
   }
 
   public function value(EntityInterface $entity) {
-    return 'Foo';
+    // No error checking here. If a property is not defined, it's a
+    // configuration bug that needs to be solved elsewhere.
+    return $entity->get($this->config('drupal_field_value'))->value;
   }
+
 }

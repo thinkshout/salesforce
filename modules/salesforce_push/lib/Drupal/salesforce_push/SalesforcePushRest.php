@@ -56,8 +56,7 @@ class SalesforcePushRest extends SalesforcePushBase {
       '%name' => $this->entity->label(),
       '%sfid' => $this->mapped_object->sfid(),
     )));
-    $this->mapped_object->entity_updated = REQUEST_TIME;
-    // dpm($this->entity->getPropertyValues());
+    $this->mapped_object->entity_updated = $this->entity->get('changed');
     $this->mapped_object->save();
   }
 

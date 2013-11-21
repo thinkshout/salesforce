@@ -313,6 +313,8 @@ function salesforce_mapping_entity_load($entities, $entity_type) {
   $maps = &$drupal_static_fast['maps'];
 
   if (empty($maps)) {
+    // Since salesforce_mapping_load_by_drupal() loads all the maps anyway, best
+    // to load them all here, once, into static cache.
     $maps = salesforce_mapping_load_by_drupal();
   }
   if (!isset($maps[$entity_type])) {
@@ -420,6 +422,7 @@ function salesforce_mapping_entity_update(EntityInterface $entity) {
   $sf_mapping_object = salesforce_mapping_object_load_by_entity($entity);
   if ($sf_mapping_object) {
     // Triggering the sf mapping's save callback updates its timestamp.
+    $sf_mapping_object->entity_updated = $entity->changed;
     $sf_mapping_object->save();
   }
 }

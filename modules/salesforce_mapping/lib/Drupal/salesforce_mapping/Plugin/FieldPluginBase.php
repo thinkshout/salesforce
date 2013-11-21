@@ -17,13 +17,23 @@ use Drupal\salesforce_mapping\Entity\SalesforceMapping;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * Defines a base tour implementation.
+ * Defines a base Salesforce Mapping Field Plugin implementation.
+ * Extenders need to implement FieldPluginInterface::value() and
+ * PluginFormInterface::buildConfigurationForm().
+ * @see Drupal\salesforce_mapping\Plugin\FieldPluginInterface
+ * @see Drupal\Core\Plugin\PluginFormInterface
  */
 abstract class FieldPluginBase extends PluginBase implements FieldPluginInterface, PluginFormInterface, ConfigurablePluginInterface, ContainerFactoryPluginInterface {
 
   protected $label;
   protected $id;
   protected $mapping;
+
+  // @see FieldPluginInterface::value()
+  // public function value();
+
+  // @see PluginFormInterface::buildConfigurationForm().
+  // public function buildConfigurationForm(array $form, array &$form_state);
 
   /**
    * {@inheritdoc}
@@ -69,11 +79,15 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   }
 
   /**
-   * {@inheritdoc}
+   * Implements PluginFormInterface::validateConfigurationForm().
    */
   public function validateConfigurationForm(array &$form, array &$form_state) {
+    
   }
 
+  /**
+   * Implements PluginFormInterface::submitConfigurationForm().
+   */
   public function submitConfigurationForm(array &$form, array &$form_state) {
     
   }
@@ -83,14 +97,6 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
    */
   public function label() {
     return $this->get('label');
-  }
-
-  /**
-   * Implements FieldPluginInterface::buildOptionsForm().
-   */
-  public function buildConfigurationForm(array $form, array &$form_state) {
-    // Force extending classes to build their own options.
-    return array();
   }
 
   /**
@@ -110,7 +116,7 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   /**
    * @return bool
    *  Whether or not this field should be pushed to Salesforce.
-   * @todo Does this need a better name? Could be mistaken for a verb.
+   * @todo This needs a better name. Could be mistaken for a verb.
    */
   public function push() {
     return in_array($this->config('direction'), array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC));
@@ -119,16 +125,10 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   /**
    * @return bool
    *  Whether or not this field should be pulled from Salesforce to Drupal.
-   * @todo Does this need a better name? Could be mistaken for a verb.
+   * @todo This needs a better name. Could be mistaken for a verb.
    */
   public function pull() {
     return in_array($this->config('direction'), array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL));
   }
-
-  /** 
-   * We are purposefully not implementing value() to force extenders of this
-   * class to do it themselves. 
-   * public function value() { }
-   */
 
 }
