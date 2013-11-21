@@ -39,16 +39,4 @@ class FieldPluginManager extends DefaultPluginManager {
     $this->setCacheBackend($cache_backend, $language_manager, 'salesforce_mapping_plugins');
   }
 
-  /**
-   * {@inheritdoc}
-   */
-  public function createInstance($plugin_id, array $configuration = array()) {
-    $instance = parent::createInstance($plugin_id, $configuration);
-    // Seems like the factory should do this for us, wtf?
-    if (empty($configuration)) {
-      $instance->setConfiguration($instance->defaultConfiguration());
-    }
-    return $instance;
-  }
-
 }

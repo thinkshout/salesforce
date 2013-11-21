@@ -8,11 +8,13 @@
 namespace Drupal\salesforce_mapping\Plugin;
 
 use Drupal\Component\Plugin\ConfigurablePluginInterface;
+use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Plugin\PluginFormInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\salesforce_mapping\Plugin\FieldPluginInterface;
 use Drupal\salesforce_mapping\Entity\SalesforceMapping;
+
 // use Drupal\Core\Utility\Token;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -28,6 +30,7 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   protected $label;
   protected $id;
   protected $mapping;
+  protected $entityManager;
 
   // @see FieldPluginInterface::value()
   // public function value();
@@ -36,10 +39,30 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
   // public function buildConfigurationForm(array $form, array &$form_state);
 
   /**
+   * Constructs a \Drupal\salesforce_mapping\Plugin\FieldPluginBase object.
+   *
+   * @param array $configuration
+   *   A configuration array containing information about the plugin instance.
+   * @param string $plugin_id
+   *   The plugin_id for the plugin instance.
+   * @param array $plugin_definition
+   *   The plugin implementation definition.
+   * @param \Drupal\salesforce_mapping\Entity\SalesforceMapping $mapping
+   *   The token service.
+   */
+  public function __construct(array $configuration, $plugin_id, array $plugin_definition, EntityManagerInterface $entity_manager) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition);
+    $this->entityManager = $entity_manager;
+    $this->mapping = $this->entityManager
+      ->getStorageController('salesforce_mapping')
+      ->load($configuration['mapping_name']);
+  }
+
+  /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, array $plugin_definition) {
-    return new static($configuration, $plugin_id, $plugin_definition);
+   public static function create(ContainerInterface $container, array $configuration, $plugin_id, array $plugin_definition) {
+    return new static($configuration, $plugin_id, $plugin_definition, $container->get('entity.manager'));
   }
 
   /**
@@ -56,11 +79,17 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
     $this->configuration = $configuration;
   }
 
-  public function config($key) {
+  /**
+   * In order to set a config value to null, use setConfiguration()
+   */
+  public function config($key, $value = NULL) {
+    if ($value !== NULL) {
+      $this->configuration[$key] = $value;
+    }
     if (array_key_exists($key, $this->configuration)) {
       return $this->configuration[$key];
     }
-    return FALSE;
+    return NULL;
   }
 
   /**
@@ -74,8 +103,8 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
       'drupal_field_type' => $this->id,
       'drupal_field_value' => '',
       'locked' => FALSE,
+      'mapping_name' => '',
     );
-
   }
 
   /**

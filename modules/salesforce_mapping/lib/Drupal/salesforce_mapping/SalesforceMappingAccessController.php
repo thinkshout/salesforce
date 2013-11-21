@@ -23,7 +23,6 @@ class SalesforceMappingAccessController extends EntityAccessController {
    * {@inheritdoc}
    */
   protected function checkAccess(EntityInterface $entity, $operation, $langcode, AccountInterface $account) {
-error_log(print_r(func_get_args(), 1));
     switch ($operation) {
       case 'view':
         return $account->hasPermission('view salesforce mapping');

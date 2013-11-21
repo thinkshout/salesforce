@@ -11,9 +11,10 @@ use Drupal\Component\Annotation\Plugin;
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\salesforce_mapping\Plugin\FieldPluginBase;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 // use Drupal\Core\Utility\Constant;
+use Drupal\Core\Utility\Token;
+use Drupal\salesforce_mapping\Plugin\FieldPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 
@@ -26,5 +27,21 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * )
  */
 class Constant extends FieldPluginBase {
-  
+
+  public function buildConfigurationForm(array $form, array &$form_state) {
+    return array(
+      '#type' => 'textfield',
+      '#default_value' => $this->config('drupal_field_value'),
+      '#description' => $this->t('Enter a constant value to map to a Salesforce field.'),
+    );
+  }
+
+  public function value(EntityInterface $entity) {
+    // @todo token replace goes here:
+    return $this->config('drupal_field_value');
+  }
+
+  // @todo add validation handler. Prevent user from submitting anything that
+  // isn't a token.
+
 }

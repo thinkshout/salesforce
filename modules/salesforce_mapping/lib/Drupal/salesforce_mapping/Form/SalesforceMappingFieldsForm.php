@@ -216,9 +216,10 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
       // @todo throw an exception here
       return;
     }
-    $field_plugin = $this->fieldManager->createInstance($field_plugin_definition['id'], $field_configuration);
-    // @todo allow plugins to override forms for all these fields
 
+    $field_plugin = $this->fieldManager->createInstance($field_plugin_definition['id'], $field_configuration);
+
+    // @todo allow plugins to override forms for all these fields
     $row['drupal_field_type'] = array(
         '#type' => 'hidden',
         '#value' => $field_type,
@@ -253,7 +254,7 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
         SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
       ),
       '#required' => TRUE,
-      '#default_value' => $field_plugin->config('direction'),
+      '#default_value' => $field_plugin->config('direction') ? $field_plugin->config('direction') : SALESFORCE_MAPPING_DIRECTION_SYNC,
     );
 
     // @todo implement "lock/unlock" logic here:
@@ -267,6 +268,10 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
       '#type' => 'checkboxes',
       '#options' => $operations,
       '#default_value' => $defaults,
+    );
+    $row['mapping_name'] = array(
+        '#type' => 'value',
+        '#value' => $this->entity->id(),
     );
     return $row;
   }
