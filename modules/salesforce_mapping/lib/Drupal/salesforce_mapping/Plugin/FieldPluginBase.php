@@ -48,20 +48,22 @@ abstract class FieldPluginBase extends PluginBase implements FieldPluginInterfac
    * @param array $plugin_definition
    *   The plugin implementation definition.
    * @param \Drupal\salesforce_mapping\Entity\SalesforceMapping $mapping
-   *   The token service.
+   *   The Salesforce Mapping.
    */
   public function __construct(array $configuration, $plugin_id, array $plugin_definition, EntityManagerInterface $entity_manager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
     $this->entityManager = $entity_manager;
-    $this->mapping = $this->entityManager
-      ->getStorageController('salesforce_mapping')
-      ->load($configuration['mapping_name']);
+    if (!empty($configuration['mapping_name'])) {
+      $this->mapping = $this->entityManager
+        ->getStorageController('salesforce_mapping')
+        ->load($configuration['mapping_name']);
+    }
   }
 
   /**
    * {@inheritdoc}
    */
-   public static function create(ContainerInterface $container, array $configuration, $plugin_id, array $plugin_definition) {
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, array $plugin_definition) {
     return new static($configuration, $plugin_id, $plugin_definition, $container->get('entity.manager'));
   }
 

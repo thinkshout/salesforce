@@ -38,7 +38,8 @@ In progress:
 
 - restore Salesforce local action for entities
 
-- Salesforce Push should be turned into a mock field, like Path will be
+- Salesforce Push / Salesforce Mapping Object should be turned into a mock fields
+  similar to drupal core Path
   - free CRUD operations. get rid of hook_entity_* operations
   - better separation of logic
   - easier for other modules to extend, alter behavior

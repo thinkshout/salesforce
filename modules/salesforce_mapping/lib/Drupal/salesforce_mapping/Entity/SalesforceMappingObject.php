@@ -39,7 +39,7 @@ class SalesforceMappingObject extends ContentEntityBase {
    */
   public function __construct(array $values) {
     parent::__construct($values, 'salesforce_mapping_object');
-  }
+}
 
   public function save() {
     if ($this->isNew()) {
