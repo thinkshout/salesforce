@@ -62,7 +62,6 @@ class Reference extends FieldPluginBase {
     // @todo this procedural call will go away when sf mapping object becomes a service or field
     if ($referenced_mapping =
       salesforce_mapping_object_load_by_entity($referenced_entity)) {
-      dpm($referenced_mapping);
       return $referenced_mapping->sfid();
     }
   }
