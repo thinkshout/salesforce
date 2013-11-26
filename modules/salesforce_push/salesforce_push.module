@@ -138,6 +138,20 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       // An external key has been specified, attempt an upsert().
       if (!empty($key_field)) {
         $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $key_value, $params);
+        // Handle upsert responses.
+        switch ($sfapi->response->code) {
+          // On Upsert:update retreive object.
+          case '204':
+            $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $key_field, $key_value);
+            $data['id'] = $sf_object['Id'];
+            break;
+
+          // Handle duplicate records.
+          case '300':
+            $data['errorCode'] = $sfapi->response->error .
+              ' (' . $key_field . ':' . $key_value . ')';
+            break;
+        }
       }
       // No key or mapping, create a new object in Salesforce.
       else {
