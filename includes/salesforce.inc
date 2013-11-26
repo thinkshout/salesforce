@@ -545,6 +545,25 @@ class Salesforce {
   }
 
   /**
+   * Return a full loaded Salesforce object from External ID.
+   *
+   * @param string $name
+   *   Object type name, E.g., Contact, Account.
+   * @param string $field
+   *   Salesforce external id field name.
+   * @param string $value
+   *   Value of external id.
+   *
+   * @return object
+   *   Object of the requested Salesforce object.
+   *
+   * @addtogroup salesforce_apicalls
+   */
+  public function objectReadbyExternalId($name, $field, $value) {
+    return $this->apiCall("sobjects/{$name}/{$field}/{$value}");
+  }
+
+  /**
    * Delete a Salesforce object.
    *
    * @param string $name
