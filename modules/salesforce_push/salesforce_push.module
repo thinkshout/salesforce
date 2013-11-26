@@ -160,12 +160,15 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       ));
     }
     else {
-      salesforce_set_message(t('Failed to sync %label with Salesforce. @code: @message', array(
-        '%label' => $entity_wrapper->label(),
-        '@code' => $data['errorCode'],
-        '@message' => $data['message'],
-      )), 'error');
-
+      $message = t('Failed to sync %label with Salesforce. @code: @message',
+        array(
+          '%label' => $entity_wrapper->label(),
+          '@code' => $data['errorCode'],
+          '@message' => $data['message'],
+        )
+      );
+      salesforce_set_message($message, 'error');
+      watchdog('salesforce_push', $message);
       return;
     }
   }
