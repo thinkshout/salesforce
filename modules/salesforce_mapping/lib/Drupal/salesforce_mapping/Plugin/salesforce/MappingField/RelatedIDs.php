@@ -80,7 +80,6 @@ class RelatedIDs extends MappingFieldPluginBase {
     );
     $options = array();
     foreach ($instances as $name => $instance) {
-      dpm($instance);
       if ($instance->getField()->get('type') != 'entity_reference') {
         continue;
       }

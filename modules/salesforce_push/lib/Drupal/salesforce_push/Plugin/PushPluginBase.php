@@ -27,7 +27,6 @@ abstract class PushPluginBase extends PluginBase implements PushPluginInterface,
   protected $entity_manager;
 
   public function __construct(array $configuration, $plugin_id, array $plugin_definition, EntityManagerInterface $entity_manager, SalesforceClient $sf_client) {
-    // dpm($configuration, $plugin_id, $plugin_definition);
     $this->sf_client = $sf_client;
     $this->entity_manager = $entity_manager;
     if (!$this->sf_client->isAuthorized()) {
