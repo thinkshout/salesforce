@@ -11,9 +11,11 @@ namespace Drupal\salesforce_mapping\Form;
 // use Drupal\Core\Ajax\AjaxResponse;
 // use Drupal\Core\Ajax\ReplaceCommand;
 // use Drupal\Core\Ajax\InsertCommand;
+use Drupal\Component\Plugin\PluginManagerInterface;
 use Drupal\Core\Entity\EntityFormController;
 use Drupal\Core\Entity\EntityStorageControllerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\salesforce_mapping\Plugin\MappingFieldPluginInterface;
 
 /**
  * Salesforce Mapping Form base.
@@ -27,12 +29,24 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
    */
   protected $storageController;
 
+  protected $mappingFieldManager;
+
+  protected $pushPluginManager;
+
   /**
-   * Constructs a new FilterFormatFormControllerBase.
+   * Constructs a \Drupal\system\ConfigFormBase object.
    *
+   * @param \Drupal\Core\Entity\EntityStorageControllerInterface
+   *   Need this to fetch the appropriate field mapping
+   * @param \Drupal\salesforce_mapping\Plugin\MappingFieldPluginInterface
+   *   Need this to fetch the mapping field plugins
+   *
+   * @throws RuntimeException
    */
-  public function __construct(EntityStorageControllerInterface $storageController) {
+  public function __construct(EntityStorageControllerInterface $storageController, PluginManagerInterface $mappingFieldManager, PluginManagerInterface $pushPluginManager) {
+    $this->mappingFieldManager = $mappingFieldManager;
     $this->storageController = $storageController;
+    $this->pushPluginManager = $pushPluginManager;
   }
 
   /**
@@ -40,9 +54,12 @@ abstract class SalesforceMappingFormBase extends EntityFormController {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity.manager')->getStorageController('salesforce_mapping')
+$container->get('entity.manager')->getStorageController('salesforce_mapping'),
+      $container->get('plugin.manager.salesforce.mapping_field'),
+      $container->get('plugin.manager.salesforce.push')
     );
   }
+
 
   /**
    * {@inheritdoc}

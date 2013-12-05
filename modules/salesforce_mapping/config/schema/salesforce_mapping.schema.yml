@@ -59,12 +59,9 @@ salesforce.salesforce_mapping.*:
     drupal_bundle:
       type: string
       label: 'Drupal Bundle'
-    push_async:
-      type: boolean
-      label: 'Push Async'
-    push_batch:
-      type: boolean
-      label: 'Push Batch'
+    push_plugin:
+      type: string
+      label: 'Push Plugin'
     module:
       type: string
       label: 'Module'

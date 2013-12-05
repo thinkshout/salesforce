@@ -183,31 +183,14 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
       '#default_value' => $mapping->get('sync_triggers'),
     );
 
-    $form['push_async'] = array(
-      '#title' => t('Process asynchronously'),
-      '#type' => 'checkbox',
-      '#description' => t('If selected, push data will be queued for processing and synchronized when cron is run. This may increase site performance, but changes will not be reflected in real time.'),
-      '#default_value' => $mapping->get('push_async'),
+    $form['push_plugin'] = array(
+      '#title' => t('Push Plugin'),
+      '#type' => 'select',
+      '#options' => $this->get_push_plugin_options(),
+      '#description' => t('Choose a plugin to handle synching with Salesforce.'),
+      '#default_value' => $mapping->get('push_plugin'),
+      '#empty_option' => $this->t('- Select -'),
     );
-    $form['push_batch'] = array(
-      '#title' => t('Batch records'),
-      '#type' => 'checkbox',
-      '#default_value' => $mapping->get('push_batch'),
-    );
-    if (\Drupal::moduleHandler()->moduleExists('salesforce_soap')) {
-      $requirements_description = t('Requires "Process asynchronously" option to be enabled.');
-      $form['push_batch']['#states'] = array(
-        'enabled' => array(
-          ':input[name="push_async"]' => array('checked' => TRUE),
-        ),
-      );
-    }
-    else {
-      $requirements_description = t('Requires the "Salesforce SOAP (salesforce_soap)" module to be enabled, and the "Process asynchronously" option to be checked.');
-      $form['push_batch']['#disabled'] = TRUE;
-    }
-    $push_batch_description = t('Push items will be processed in a single batch to the Salesforce API rather than one at a time. This may be preferable if API limits are of concern, although changes are not reflected immediately in Salesforce.');
-    $form['push_batch']['#description'] = $requirements_description . ' ' . $push_batch_description;
 
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array(
@@ -374,6 +357,15 @@ class SalesforceMappingEditForm extends SalesforceMappingFormBase {
       SALESFORCE_MAPPING_SYNC_SF_UPDATE => t('Salesforce object update'),
       SALESFORCE_MAPPING_SYNC_SF_DELETE => t('Salesforce object delete'),
     );
+  }
+
+  protected function get_push_plugin_options() {
+    $field_plugins = $this->pushPluginManager->getDefinitions();
+    $field_type_options = array();
+    foreach ($field_plugins as $field_plugin) {
+      $field_type_options[$field_plugin['id']] = $field_plugin['label'];
+    }
+    return $field_type_options;
   }
 
 }

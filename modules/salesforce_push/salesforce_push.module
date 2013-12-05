@@ -62,25 +62,16 @@ function salesforce_push_entity_crud($entity, $op) {
 
   foreach ($mappings as $mapping) {
     // @todo make sync_triggers human readable or convert them back to hex flags
-    if (!isset($mapping->sync_triggers[$op])) {
+    if (!isset($mapping->sync_triggers[$op]) || !$mapping->pushPlugin) {
       continue;
     }
-      // @todo the Drupal Way™ would be to implement a plugin service for SalesforcePush, assign a particular plugin to the mapping, and load that plugin. For now we do it the old way just to get something working.
     try {
-      if ($mapping->push_async) {
-        $push = new SalesforcePushRestAsync($entity, $mapping);
-      }
-      else {
-        $push = new SalesforcePushRest($entity, $mapping);
-      }
-      // If we failed to create a Push, there's no mapping to update.
-      if (!$push) {
-        return;
-      }
       // SFPush decides what to do with entity values, mapping flags, op, etc:
       // The module layer is only responsible for gathering objects and calling
       // the appropriate methods.
-      $push->$op();
+      // @todo init() is weird, but since the mapping is not attached to the
+      // entity (e.g. as a field), we have to feed it somehow. Seems like the plugin should be able to get at the mapping container at least...
+      $mapping->pushPlugin->init($entity, $mapping)->$op();
     }
     catch (SalesforceException $e) {
       $vars = array(

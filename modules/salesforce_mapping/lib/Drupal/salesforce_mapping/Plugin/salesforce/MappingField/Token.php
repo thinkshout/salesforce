@@ -2,17 +2,17 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_mapping\Plugin\salesforce_mapping\Field\Token.
+ * Contains \Drupal\salesforce_mapping\Plugin\salesforce\MappingField\Token.
  */
 
-namespace Drupal\salesforce_mapping\Plugin\salesforce_mapping\Field;
+namespace Drupal\salesforce_mapping\Plugin\salesforce\MappingField;
 
 use Drupal\Component\Annotation\Plugin;
 use Drupal\Core\Annotation\Translation;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Utility\Token as TokenService;
-use Drupal\salesforce_mapping\Plugin\FieldPluginBase;
+use Drupal\salesforce_mapping\Plugin\MappingFieldPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -23,12 +23,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = @Translation("Token")
  * )
  */
-class Token extends FieldPluginBase {
+class Token extends MappingFieldPluginBase {
  
   protected $token;
 
   /**
-   * Constructs a \Drupal\salesforce_mapping\Plugin\FieldPluginBase object.
+   * Constructs a \Drupal\salesforce_mapping\Plugin\MappingFieldPluginBase object.
    *
    * @param array $configuration
    *   A configuration array containing information about the plugin instance.

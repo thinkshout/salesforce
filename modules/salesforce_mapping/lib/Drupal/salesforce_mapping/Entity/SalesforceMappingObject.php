@@ -8,6 +8,7 @@
 namespace Drupal\salesforce_mapping\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
+use Drupal\salesforce_mapping\Entity\SalesforceMappingObjectInterface;
 
 /**
  * Defines a Salesforce Mapping Object entity class. Mapping Objects are content
@@ -32,7 +33,7 @@ use Drupal\Core\Entity\ContentEntityBase;
  *   }
  * )
  */
-class SalesforceMappingObject extends ContentEntityBase {
+class SalesforceMappingObject extends ContentEntityBase implements SalesforceMappingObjectInterface {
 
   /**
    * Overrides ContentEntityBase::__construct().

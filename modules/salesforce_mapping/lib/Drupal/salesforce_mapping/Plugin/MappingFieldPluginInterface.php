@@ -2,15 +2,16 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_mapping\Plugin\FieldPluginInterface.
+ * Contains \Drupal\salesforce_mapping\Plugin\MappingFieldPluginInterface.
  */
 
 namespace Drupal\salesforce_mapping\Plugin;
 use Drupal\Core\Entity\EntityInterface;
+
 /**
  * Defines an interface for salesforce mapping plugins.
  */
-interface FieldPluginInterface {
+interface MappingFieldPluginInterface {
 
   /**
    * Returns label of the tip.

@@ -2,14 +2,22 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_push\SalesforcePushRest.
+ * Contains \Drupal\salesforce_push\Plugin\salesforce\Push\REST.
  */
 
-namespace Drupal\salesforce_push;
+namespace Drupal\salesforce_push\Plugin\salesforce\Push;
 
-use Drupal\salesforce_mapping\Entity\SalesforceMappingObject;
+use Drupal\Component\Annotation\Plugin;
+use Drupal\Core\Annotation\Translation;
+use Drupal\salesforce_push\Plugin\PushPluginBase;
 
-class SalesforcePushRest extends SalesforcePushBase {
+/**
+ * @Plugin(
+ *   id = "REST",
+ *   label = @Translation("REST")
+ * )
+ */
+class REST extends PushPluginBase {
 
   /**
    * @{inheritdoc}

@@ -2,12 +2,22 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_push\SalesforcePushRestAsync.
+ * Contains \Drupal\salesforce_push\Plugin\salesforce\Push\RESTAsync.
  */
 
-namespace Drupal\salesforce_push;
+namespace Drupal\salesforce_push\Plugin\salesforce\Push;
 
-class SalesforcePushRestAsync extends SalesforcePushBase {
+use Drupal\Component\Annotation\Plugin;
+use Drupal\Core\Annotation\Translation;
+use Drupal\salesforce_push\Plugin\PushPluginBase;
+
+/**
+ * @Plugin(
+ *   id = "RESTAsync",
+ *   label = @Translation("REST Async")
+ * )
+ */
+class RESTAsync extends PushPluginBase {
 
   protected function queue($op) {
     // Create queues by fieldmap name for increased efficiency of API ops. Queue

@@ -15,45 +15,11 @@ use Drupal\Core\Ajax\AjaxResponse;
 use Drupal\Core\Ajax\ReplaceCommand;
 use Drupal\Core\Ajax\InsertCommand;
 use Drupal\Core\Form\FormBase;
-use Drupal\salesforce_mapping\Plugin\FieldPluginInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Salesforce Mapping Fields Form
  */
 class SalesforceMappingFieldsForm extends SalesforceMappingFormBase {
-
-  /**
-   * Salesforce Mapping Plugin Field manager
-   *
-   * @var \Drupal\salesforce_mapping\Plugin\FieldPluginInterface
-   */
-  protected $fieldManager;
-
-  /**
-   * Constructs a \Drupal\system\ConfigFormBase object.
-   *
-   * @param \Drupal\Core\Entity\EntityStorageControllerInterface
-   *   Need this to fetch the appropriate field mapping
-   * @param \Drupal\salesforce_mapping\Plugin\FieldPluginInterface
-   *   Need this to fetch the mapping field plugins
-   *
-   * @throws RuntimeException
-   */
-  public function __construct(EntityStorageControllerInterface $storage_controller, FieldPluginInterface $field_manager) {
-    $this->fieldManager = $field_manager;
-    $this->storageController = $storage_controller;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container) {
-    return new static(
-$container->get('entity.manager')->getStorageController('salesforce_mapping'),
-      $container->get('plugin.manager.salesforce_mapping.field')
-    );
-  }
 
   /**
    * Previously "Field Mapping" table on the map edit form.
@@ -217,7 +183,7 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
       return;
     }
 
-    $field_plugin = $this->fieldManager->createInstance($field_plugin_definition['id'], $field_configuration);
+    $field_plugin = $this->mappingFieldManager->createInstance($field_plugin_definition['id'], $field_configuration);
 
     // @todo allow plugins to override forms for all these fields
     $row['drupal_field_type'] = array(
@@ -306,7 +272,7 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
   }
 
   protected function get_drupal_type_options() {
-    $field_plugins = $this->fieldManager->getDefinitions();
+    $field_plugins = $this->mappingFieldManager->getDefinitions();
     $field_type_options = array();
     foreach ($field_plugins as $field_plugin) {
       $field_type_options[$field_plugin['id']] = $field_plugin['label'];
@@ -316,8 +282,8 @@ $container->get('entity.manager')->getStorageController('salesforce_mapping'),
 
   protected function get_field_plugin($field_type) {
     // @todo not sure if it's best practice to static cache definitions, or just
-    // get them from fieldManager each time.
-    $field_plugins = $this->fieldManager->getDefinitions();
+    // get them from mappingFieldManager each time.
+    $field_plugins = $this->mappingFieldManager->getDefinitions();
     return $field_plugins[$field_type];
   }
 

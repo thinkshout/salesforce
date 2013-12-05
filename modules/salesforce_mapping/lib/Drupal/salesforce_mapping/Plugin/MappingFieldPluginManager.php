@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_mapping\Plugin\FieldPluginManager.
+ * Contains \Drupal\salesforce_mapping\Plugin\MappingFieldPluginManager.
  */
 
 namespace Drupal\salesforce_mapping\Plugin;
@@ -17,10 +17,10 @@ use Drupal\Core\Plugin\DefaultPluginManager;
 /**
  * Plugin type manager for all views plugins.
  */
-class FieldPluginManager extends DefaultPluginManager {
+class MappingFieldPluginManager extends DefaultPluginManager {
 
   /**
-   * Constructs a FieldPluginManager object.
+   * Constructs a MappingFieldPluginManager object.
    *
    * @param \Traversable $namespaces
    *   An object that implements \Traversable which contains the root paths
@@ -33,7 +33,7 @@ class FieldPluginManager extends DefaultPluginManager {
    *   The module handler to invoke the alter hook with.
    */
   public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, LanguageManager $language_manager, ModuleHandlerInterface $module_handler) {
-    parent::__construct('Plugin/salesforce_mapping/Field', $namespaces, 'Drupal\Component\Annotation\Plugin');
+    parent::__construct('Plugin/salesforce/MappingField', $namespaces, 'Drupal\Component\Annotation\Plugin');
 
     $this->alterInfo($module_handler, 'salesforce_mapping_fields_info');
     $this->setCacheBackend($cache_backend, $language_manager, 'salesforce_mapping_plugins');

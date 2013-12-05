@@ -8,8 +8,9 @@
 namespace Drupal\salesforce_mapping\Entity;
 
 use Drupal\Core\Config\Entity\ConfigEntityBase;
-use Drupal\salesforce_mapping\Plugin\FieldPluginManager;
+use Drupal\salesforce_mapping\Plugin\MappingFieldPluginManager;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\salesforce_mapping\Entity\SalesforceMappingInterface;
 
 /**
  * Defines a Salesforce Mapping configuration entity class.
@@ -46,7 +47,7 @@ use Drupal\Core\Entity\EntityInterface;
  *   }
  * )
  */
-class SalesforceMapping extends ConfigEntityBase {
+class SalesforceMapping extends ConfigEntityBase implements SalesforceMappingInterface {
 
   // Only one bundle type for now.
   public $type = 'salesforce_mapping';
@@ -138,10 +139,9 @@ class SalesforceMapping extends ConfigEntityBase {
    */
   public $field_mappings = array();
   public $sync_triggers = array();
-  public $push_async;
-  public $push_batch;
+  public $push_plugin;
 
-  protected $fieldManager;
+  protected $mappingFieldManager;
 
   /**
    * {@inheritdoc}
@@ -150,8 +150,11 @@ class SalesforceMapping extends ConfigEntityBase {
     parent::__construct($values, $entity_type);
     // entities don't support Dependency Injection, so we have to build a hard
     // dependency on the container here.
-    $this->fieldManager = \Drupal::service('plugin.manager.salesforce_mapping.field');
-
+    $this->mappingFieldManager = \Drupal::service('plugin.manager.salesforce.mapping_field');
+    $this->pushManager = \Drupal::service('plugin.manager.salesforce.push');
+    if ($this->get('push_plugin')) {
+      $this->pushPlugin = $this->pushManager->createInstance($this->get('push_plugin'));
+    }
     // Initialize our private key field tracker for easy access.
     foreach ($this->field_mappings as $key => $value) {
       if ($value['key']) {
@@ -164,7 +167,7 @@ class SalesforceMapping extends ConfigEntityBase {
       return;
     }
     $fieldmap = $this->field_mappings[$this->key_field_id];
-    $this->key_field_plugin = $this->fieldManager->createInstance($fieldmap['drupal_field_type'], $fieldmap);
+    $this->key_field_plugin = $this->mappingFieldManager->createInstance($fieldmap['drupal_field_type'], $fieldmap);
     // Just double-check that we have something there:
     if ($this->key_field_plugin->config('salesforce_field')) {
       $this->has_key = TRUE;
@@ -191,6 +194,10 @@ class SalesforceMapping extends ConfigEntityBase {
     return parent::save();
   }
 
+  public function getPushPlugins() {
+    
+  }
+
   /**
    * Given a Drupal entity, return an array of Salesforce key-value pairs 
    *
@@ -204,7 +211,7 @@ class SalesforceMapping extends ConfigEntityBase {
   public function getPushParams(EntityInterface $entity) {
     // @todo This should probably be delegated to a field plugin bag?
     foreach ($this->field_mappings as $fieldmap) {
-      $field_plugin = $this->fieldManager->createInstance($fieldmap['drupal_field_type'], $fieldmap);
+      $field_plugin = $this->mappingFieldManager->createInstance($fieldmap['drupal_field_type'], $fieldmap);
       // Skip fields that aren't being pushed to Salesforce.
       if (!$field_plugin->push()) {
         continue;

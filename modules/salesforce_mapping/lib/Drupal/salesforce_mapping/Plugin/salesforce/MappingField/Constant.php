@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Drupal\salesforce_mapping\Plugin\salesforce_mapping\Field\Constant.
+ * Contains \Drupal\salesforce_mapping\Plugin\salesforce\MappingField\Constant.
  */
 
-namespace Drupal\salesforce_mapping\Plugin\salesforce_mapping\Field;
+namespace Drupal\salesforce_mapping\Plugin\salesforce\MappingField;
 
 use Drupal\Component\Annotation\Plugin;
 use Drupal\Core\Annotation\Translation;
@@ -14,7 +14,7 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 // use Drupal\Core\Utility\Constant;
 use Drupal\Core\Utility\Token;
-use Drupal\salesforce_mapping\Plugin\FieldPluginBase;
+use Drupal\salesforce_mapping\Plugin\MappingFieldPluginBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 
@@ -26,7 +26,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = @Translation("Constant")
  * )
  */
-class Constant extends FieldPluginBase {
+class Constant extends MappingFieldPluginBase {
 
   public function buildConfigurationForm(array $form, array &$form_state) {
     return array(
