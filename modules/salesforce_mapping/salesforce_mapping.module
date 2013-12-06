@@ -407,27 +407,27 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
   // Use the advanced drupal_static() pattern, since this is called very often.
   static $drupal_static_fast;
   if (!isset($drupal_static_fast)) {
-    $drupal_static_fast['salesforce_fieldmap_type'] = & drupal_static(__FUNCTION__);
+    $drupal_static_fast['salesforce_mapping_fieldmap_type'] = & drupal_static(__FUNCTION__);
   }
-  $salesforce_fieldmap_type = & $drupal_static_fast['salesforce_fieldmap_type'];
+  $salesforce_mapping_fieldmap_type = & $drupal_static_fast['salesforce_mapping_fieldmap_type'];
 
-  if (empty($salesforce_fieldmap_type)) {
-    if ($cache = cache_get('salesforce_fieldmap_type')) {
-      $salesforce_fieldmap_type = $cache->data;
+  if (empty($salesforce_mapping_fieldmap_type)) {
+    if ($cache = cache_get('salesforce_mapping_fieldmap_type')) {
+      $salesforce_mapping_fieldmap_type = $cache->data;
     }
     else {
-      $salesforce_fieldmap_type = module_invoke_all('salesforce_mapping_fieldmap_type');
+      $salesforce_mapping_fieldmap_type = module_invoke_all('salesforce_mapping_fieldmap_type');
 
       // Let other modules alter the fieldmap type.
-      drupal_alter('salesforce_fieldmap_type', $salesforce_fieldmap_type);
-      cache_set('salesforce_fieldmap_type', $salesforce_fieldmap_type);
+      drupal_alter('salesforce_mapping_fieldmap_type', $salesforce_mapping_fieldmap_type);
+      cache_set('salesforce_mapping_fieldmap_type', $salesforce_mapping_fieldmap_type);
     }
   }
 
   if (empty($fieldmap_type)) {
-    return $salesforce_fieldmap_type;
+    return $salesforce_mapping_fieldmap_type;
   }
-  elseif (isset($salesforce_fieldmap_type[$fieldmap_type])) {
-    return $salesforce_fieldmap_type[$fieldmap_type];
+  elseif (isset($salesforce_mapping_fieldmap_type[$fieldmap_type])) {
+    return $salesforce_mapping_fieldmap_type[$fieldmap_type];
   }
 }
