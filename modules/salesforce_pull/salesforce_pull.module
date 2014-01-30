@@ -71,8 +71,12 @@ function salesforce_pull_get_updated_records() {
         }
       }
 
-      if (!empty($mapped_fields) && isset($mapping->salesforce_record_type)  && $mapping->salesforce_record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
-        $mapped_record_types[$mapping->salesforce_record_type] = $mapping->salesforce_record_type;
+      if (!empty($mapped_fields) ) {
+        foreach ($mapping->salesforce_record_types_allowed as $record_type) {
+          if ($record_type) { // && $record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
+            $mapped_record_types[$record_type] = $record_type;
+          }
+        }
         // Add the RecordTypeId field so we can use it when processing the
         // queued SF objects.
         $mapped_fields['RecordTypeId'] = 'RecordTypeId';
