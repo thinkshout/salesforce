@@ -652,7 +652,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
   $params = array(
     'label' => $values['label'],
     'salesforce_object_type' => $values['salesforce_object_type'],
-    'salesforce_record_types_allowed' => serialize($values['salesforce_record_types_allowed']),
+    'salesforce_record_types_allowed' => $values['salesforce_record_types_allowed'],
     'salesforce_record_type_default' => $values['salesforce_record_type_default'],
     'drupal_entity_type' => $values['drupal_entity_type'],
     'drupal_bundle' => $values['drupal_bundle'],
@@ -721,9 +721,6 @@ function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NU
     }
     elseif (!empty($mapping)) {
       $value = &$mapping->$field;
-      if ($field == 'salesforce_record_types_allowed') {
-        $value = unserialize($value);
-      }
     }
 
     // Special case for drupal bundle.

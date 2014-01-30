@@ -57,6 +57,7 @@ function salesforce_mapping_schema() {
         'description' => 'The Salesforce record types available for this mapping.',
         'type' => 'blob',
         'size' => 'big',
+        'serialize' => TRUE,
       ),
       'salesforce_record_type_default' => array(
         'description' => 'The default Salesforce record type for this mapping.',
