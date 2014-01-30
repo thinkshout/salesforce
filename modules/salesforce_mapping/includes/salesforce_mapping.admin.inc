@@ -131,7 +131,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         '#description' => t('Reducing the allowed Record Types can provide significant performance improvements when pulling data from Salesforce.'),
         '#type' => 'checkboxes',
         '#options' => $salesforce_record_type_options,
-        '#default_value' => array_flip($salesforce_record_type_options),
+        '#default_value' => $salesforce_record_types_allowed_default,
       );
       unset($form['salesforce_object']['salesforce_record_types_allowed']['#options']['']);
       $form['salesforce_object']['salesforce_record_type_default'] = array(
