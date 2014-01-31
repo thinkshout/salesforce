@@ -240,8 +240,24 @@ function salesforce_mapping_update_7100(&$sandbox) {
   )
   );
 }
-// @ todo: hook_update_N
-// remove 'salesforce_record_type'
-// remove 'salesforce_record_type' from 'name_sf_type_drupal_type'
-// add 'salesforce_record_type_default' and
-// 'salesforce_record_types_allowed' to existing mappings, default to 'salesforce_record_type'
+
+/**
+ * Update Salesforce Mappings with new record type configuration.
+ */
+function salesforce_mapping_update_7101(&$sandbox) {
+  $schemas = salesforce_mapping_schema();
+  // Update Unique Keys to exclude salesforce_record_type:
+  db_drop_unique_key('salesforce_mapping', 'name_sf_type_drupal_type');
+  db_change_field('salesforce_mapping', 'salesforce_record_type', 'salesforce_record_type_default',
+    $schemas['salesforce_mapping']['fields']['salesforce_record_type_default'], 
+    array('unique keys' => $schemas['salesforce_mapping']['unique keys']));
+  // Add salesforce_record_types_allowed column to salesforce_mapping table.
+  db_add_field('salesforce_mapping', 'salesforce_record_types_allowed', $schemas['salesforce_mapping']['fields']['salesforce_record_types_allowed']);
+  $mappings = salesforce_mapping_load_multiple();
+  foreach($mappings as $mapping) {
+    $mapping->salesforce_record_types_allowed = array(
+      $mapping->salesforce_record_type_default => $mapping->salesforce_record_type_default,
+    );
+    $mapping->save();
+  }
+}
