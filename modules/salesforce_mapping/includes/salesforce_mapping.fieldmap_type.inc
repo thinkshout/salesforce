@@ -158,6 +158,13 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
   }
   // Handle relations.
   elseif (module_exists('relation') && isset($info['relation_type'])) {
+    // We cannot create relationships between new items. We are saving them here
+    // to avoid performing a duplicate save for all entities in
+    // salesforce_pull_process_records().
+    if (!$info['parent']->getIdentifier()) {
+      $info['parent']->save();
+    }
+
     list($parent_entity_id) = entity_extract_ids($info['parent']->type(), $info['parent']->value());
     $type = $info['parent']->type();
     $id = $info['parent']->$parent_entity_id;
