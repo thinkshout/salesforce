@@ -166,9 +166,8 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     }
 
     list($parent_entity_id) = entity_extract_ids($info['parent']->type(), $info['parent']->value());
-    $type = $info['parent']->type();
-    $id = $info['parent']->$parent_entity_id;
-    $query = relation_query($type, $id);
+    $parent_type = $info['parent']->type();
+    $query = relation_query($parent_type, $parent_entity_id);
     $query->propertyCondition('relation_type', $info['relation_type']);
     $results = $query->execute();
     if ($results) {
@@ -185,8 +184,8 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
         // Check if matches existing.
         $current_endpoints = $relations[$rid]->endpoints;
         if (
-          ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $type) ||
-          ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $id) ||
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_type'] != $parent_type) ||
+          ($current_endpoints[LANGUAGE_NONE][0]['entity_id'] != $parent_entity_id) ||
           ($current_endpoints[LANGUAGE_NONE][1]['entity_type'] != $mapped_objects->entity_type) ||
           ($current_endpoints[LANGUAGE_NONE][1]['entity_id'] != $mapped_objects->entity_id)
         ) {
@@ -202,7 +201,10 @@ function salesforce_mapping_related_entity_fieldmap_pull_value($entity_wrapper, 
     if ($mapped_objects && !$match) {
       $relation_type = $info['relation_type'];
       $endpoints = array(
-        array('entity_type' => $type, 'entity_id' => $id),
+        array(
+          'entity_type' => $parent_type,
+          'entity_id' => $parent_entity_id,
+        ),
         array(
           'entity_type' => $mapped_objects->entity_type,
           'entity_id' => $mapped_objects->entity_id,
