@@ -344,6 +344,7 @@ function salesforce_pull_process_deleted_records() {
  *   sObject of the Salesforce record.
  */
 function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
+  $dates = array();
   foreach ($field_maps as $field_map) {
     if ($field_map['direction'] == 'sync' || $field_map['direction'] == 'sf_drupal') {
 
@@ -356,6 +357,27 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
         else {
           $child_wrapper = $parent->{$drupal_field};
         }
+        // Date fields in drupal need special treatment because the setters
+        // don't behave normally.
+        $property_info = $parent->{$drupal_field} ? $parent->{$drupal_field}->info() : NULL;
+        if (!empty($property_info['field'])) { // && $parent->{$drupal_field}->type() == "date") {
+          $field_info = field_info_field($property_info['name']);
+          if ($field_info['type'] == 'datetime') {
+            $date_time_field = $drupal_field;
+            // Check if we are already building an update for this field: if we
+            // aren't, we need to initialize it:
+            if (!$dates[$date_time_field]) {
+              $dates[$date_time_field] = array('object' => $child_wrapper);
+              if ($parent->is_new->value()) {
+                $dates[$date_time_field]['data'] = array('value' => NULL, 'value2' => NULL);
+              }
+              else {
+                $dates[$date_time_field]['data'] = $parent->{$date_time_field}->value();
+                // @todo: why is this different on new records?
+              }
+            }
+          }
+        }
         $parent = $child_wrapper;
       }
       $fieldmap_type = salesforce_mapping_get_fieldmap_types($field_map['drupal_field']['fieldmap_type']);
@@ -364,9 +386,22 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       // Allow this value to be altered before assigning to the entity.
       drupal_alter('salesforce_pull_entity_value', $value, $field_map, $sf_object);
       if (isset($value)) {
-        // @TODO: might wrongly assumes an individual value wouldn't be an
-        // array.
-        if ($parent instanceof EntityListWrapper && !is_array($value)) {
+        // Datetime fields require special handling.
+        if (isset($date_time_field)) {
+          // If the incoming data is a SF date and the target is a date value,
+          // we convert the info to a date:
+          $datetypes = array('date', 'datetime');
+          if (in_array($field_map['salesforce_field']['type'], $datetypes) && in_array($drupal_field, array('value', 'value2'))) {
+            $dates[$date_time_field]['data'][$drupal_field] = date("Y-m-d H:i:s", $value);
+          }
+          // Otherwise we just set it directly and let the chips fall.
+          else {
+            $dates[$date_time_field]['data'][$drupal_field] = $value;
+          }
+          unset($date_time_field);
+        }
+        // @TODO: might wrongly assume an individual value wouldn't be an array.
+        elseif ($parent instanceof EntityListWrapper && !is_array($value)) {
           $parent->offsetSet(0, $value);
         }
         else {
@@ -374,5 +409,9 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
         }
       }
     }
+  }
+  // @todo support lists of dates
+  foreach ($dates as $date) {
+    $date['object']->set($date['data']);
   }
 }
