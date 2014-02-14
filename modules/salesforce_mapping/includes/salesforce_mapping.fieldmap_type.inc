@@ -464,7 +464,7 @@ function salesforce_mapping_token_fieldmap_value($fieldmap, $entity_wrapper) {
   $token = $fieldmap['drupal_field']['fieldmap_value'];
   $value = token_replace($token, array(
     $entity_wrapper->type() => $entity_wrapper->value(),
-  ));
+  ), array('clear' => TRUE));
   return $value;
 }
 
