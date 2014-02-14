@@ -447,6 +447,18 @@ class Salesforce {
     }
     else {
       $object = $this->apiCall("sobjects/{$name}/describe");
+      // Sort field properties, because salesforce API always provides them in a
+      // random order. We sort them so that stored and exported data are
+      // standardized and predictable.
+      foreach($object['fields'] as &$field) {
+        ksort($field);
+        if (!empty($field['picklistValues'])) {
+          foreach($field['picklistValues'] as &$picklist_value) {
+            ksort($picklist_value);
+          }
+        }
+      }
+
       // Allow the cache to clear at any time by not setting an expire time.
       cache_set($name, $object, 'cache_salesforce_object', CACHE_TEMPORARY);
       return $object;
