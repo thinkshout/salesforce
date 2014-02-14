@@ -75,10 +75,10 @@ class SalesforceSelectQuery {
     }
 
     if ($this->order) {
-      $query .= "+ORDER BY+";
+      $query .= "+ORDER+BY+";
       $fields = array();
       foreach ($this->order as $field => $direction) {
-        $fields[] = $field . ' ' . $direction;
+        $fields[] = $field . '+' . $direction;
       }
       $query .= implode(',+', $fields);
     }
