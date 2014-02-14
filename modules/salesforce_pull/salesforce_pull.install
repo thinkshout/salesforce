@@ -6,13 +6,6 @@
  */
 
 /**
- * Implements hook_install().
- */
-function salesforce_pull_install() {
-  variable_set('salesforce_pull_limit', 50);
-}
-
-/**
  * Implements hook_uninstall().
  */
 function salesforce_pull_uninstall() {
