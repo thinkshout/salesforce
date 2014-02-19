@@ -505,12 +505,6 @@ class Salesforce {
       unset($params[$key]);
     }
 
-    // External key values with punctuation need to be escaped.
-    $value = urlencode($value);
-    // For at least 'email' fields, periods also need to be escaped:
-    // https://developer.salesforce.com/forums?id=906F000000099xPIAQ
-    $value = str_replace('.', '%2E', $value);
-
     $data = $this->apiCall("sobjects/{$name}/{$key}/{$value}", $params, 'PATCH');
     if ($this->response->code == 300) {
       $data['message'] = t('The value provided is not unique.');

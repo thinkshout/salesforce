@@ -137,12 +137,19 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     try {
       // An external key has been specified, attempt an upsert().
       if (!empty($key_field)) {
-        $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $key_value, $params);
+
+        // External key values with punctuation need to be escaped.
+        $encoded_value = urlencode($key_value);
+        // For at least 'email' fields, periods also need to be escaped:
+        // https://developer.salesforce.com/forums?id=906F000000099xPIAQ
+        $encoded_value = str_replace('.', '%2E', $encoded_value);
+
+        $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $encoded_value, $params);
         // Handle upsert responses.
         switch ($sfapi->response->code) {
           // On Upsert:update retreive object.
           case '204':
-            $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $key_field, $key_value);
+            $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $key_field, $encoded_value);
             $data['id'] = $sf_object['Id'];
             break;
 
