@@ -71,9 +71,9 @@ function salesforce_pull_get_updated_records() {
         }
       }
 
-      if (!empty($mapped_fields) ) {
+      if (!empty($mapped_fields) && $mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
         foreach ($mapping->salesforce_record_types_allowed as $record_type) {
-          if ($record_type) { // && $record_type != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
+          if ($record_type) {
             $mapped_record_types[$record_type] = $record_type;
           }
         }
