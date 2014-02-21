@@ -150,6 +150,10 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         '#type' => 'hidden',
         '#value' => $salesforce_record_type_default,
       );
+      $form['salesforce_object']['salesforce_record_types_allowed'] = array(
+        '#type' => 'hidden',
+        '#value' => array($salesforce_record_type_default => $salesforce_record_type_default),
+      );
     }
   }
 
