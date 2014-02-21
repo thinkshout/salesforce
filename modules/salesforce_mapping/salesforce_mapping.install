@@ -247,6 +247,7 @@ function salesforce_mapping_update_7100(&$sandbox) {
 function salesforce_mapping_update_7301(&$sandbox) {
   $schemas = salesforce_mapping_schema();
   // Update Unique Keys to exclude salesforce_record_type:
+  db_drop_unique_key('salesforce_mapping', 'name');
   db_drop_unique_key('salesforce_mapping', 'name_sf_type_drupal_type');
   db_change_field('salesforce_mapping', 'salesforce_record_type', 'salesforce_record_type_default',
     $schemas['salesforce_mapping']['fields']['salesforce_record_type_default'], 
