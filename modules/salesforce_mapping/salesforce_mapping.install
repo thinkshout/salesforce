@@ -53,8 +53,14 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'salesforce_record_type' => array(
-        'description' => 'The Salesforce record type for this mapping.',
+      'salesforce_record_types_allowed' => array(
+        'description' => 'The Salesforce record types available for this mapping.',
+        'type' => 'blob',
+        'size' => 'big',
+        'serialize' => TRUE,
+      ),
+      'salesforce_record_type_default' => array(
+        'description' => 'The default Salesforce record type for this mapping.',
         'type' => 'varchar',
         'length' => 32,
         'not null' => TRUE,
@@ -144,7 +150,6 @@ function salesforce_mapping_schema() {
         'drupal_entity_type',
         'drupal_bundle',
         'salesforce_object_type',
-        'salesforce_record_type',
       ),
     ),
   );
@@ -234,4 +239,25 @@ function salesforce_mapping_update_7100(&$sandbox) {
     ),
   )
   );
+}
+
+/**
+ * Update Salesforce Mappings with new record type configuration.
+ */
+function salesforce_mapping_update_7101(&$sandbox) {
+  $schemas = salesforce_mapping_schema();
+  // Update Unique Keys to exclude salesforce_record_type:
+  db_drop_unique_key('salesforce_mapping', 'name_sf_type_drupal_type');
+  db_change_field('salesforce_mapping', 'salesforce_record_type', 'salesforce_record_type_default',
+    $schemas['salesforce_mapping']['fields']['salesforce_record_type_default'], 
+    array('unique keys' => $schemas['salesforce_mapping']['unique keys']));
+  // Add salesforce_record_types_allowed column to salesforce_mapping table.
+  db_add_field('salesforce_mapping', 'salesforce_record_types_allowed', $schemas['salesforce_mapping']['fields']['salesforce_record_types_allowed']);
+  $mappings = salesforce_mapping_load_multiple();
+  foreach($mappings as $mapping) {
+    $mapping->salesforce_record_types_allowed = array(
+      $mapping->salesforce_record_type_default => $mapping->salesforce_record_type_default,
+    );
+    $mapping->save();
+  }
 }
