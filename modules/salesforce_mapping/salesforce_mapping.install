@@ -244,7 +244,7 @@ function salesforce_mapping_update_7100(&$sandbox) {
 /**
  * Update Salesforce Mappings with new record type configuration.
  */
-function salesforce_mapping_update_7101(&$sandbox) {
+function salesforce_mapping_update_7301(&$sandbox) {
   $schemas = salesforce_mapping_schema();
   // Update Unique Keys to exclude salesforce_record_type:
   db_drop_unique_key('salesforce_mapping', 'name_sf_type_drupal_type');
