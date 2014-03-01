@@ -64,3 +64,10 @@ MODULES:
     Lightweight wrapper around the SOAP API, using the OAUTH access token, to
     fill in functional gaps missing in the REST API. Requires the Salesforce PHP
     Toolkit.
+
+NOTES:
+
+  Addressfield Options
+    Salesforce provides a formatting plugin for addressfield which converts the
+    "Thoroughfare" field to a text area. Enabling this option will make it much
+    easier to sync addressfield data to Salesforce multi-line addressfields.

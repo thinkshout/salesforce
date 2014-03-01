@@ -284,3 +284,12 @@ function salesforce_set_message($message = NULL, $type = 'status', $repeat = TRU
     drupal_set_message($message, $type, $repeat);
   }
 }
+
+/**
+ * Implements hook_ctools_plugin_directory().
+ */
+function salesforce_ctools_plugin_directory($module, $plugin_type) {
+  if ($module == 'addressfield') {
+    return 'plugins/addressfield/' . $plugin_type;
+  }
+}
