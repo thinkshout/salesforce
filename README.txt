@@ -71,3 +71,10 @@ NOTES:
     Salesforce provides a formatting plugin for addressfield which converts the
     "Thoroughfare" field to a text area. Enabling this option will make it much
     easier to sync addressfield data to Salesforce multi-line addressfields.
+
+  Dates
+    For Drupal date fields with start and end dates, salesforce_pull will fail
+    unless you are using a version of Date that includes commit 7faeea3.
+
+    To avoid potential timezone conversion errors, try setting your date field
+    to "No timezone conversion".
