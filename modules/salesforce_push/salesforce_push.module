@@ -240,6 +240,8 @@ function salesforce_push_cron() {
   $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
   $limit = variable_get('salesforce_push_limit', 50);
   $use_soap = module_exists('salesforce_soap');
+  $entity_ids = array();
+
   for ($delta = 0; $delta < $limit; $delta++) {
     $item = $queue->claimItem();
     // We do this after the "for()" so that when we reach the limit, we don't
@@ -249,14 +251,22 @@ function salesforce_push_cron() {
     }
     $mapping = $item->data['mapping'];
 
+    // Initialize array for the entity type if it isn't set yet.
+    if (!isset($entity_ids[$item->data['entity_type']])) {
+      $entity_ids[$item->data['entity_type']] = array();
+    }
+
     // Duplicate entity in the queue.
-    if ($item->data['entity_type'] == $entity_type && $item->data['entity_id'] == $entity_id) {
+    if (in_array($entity_id, $entity_ids[$item->data['entity_type']])) {
       $queue->deleteItem($item);
       continue;
     }
 
     $entity_type = $item->data['entity_type'];
     $entity_id = $item->data['entity_id'];
+    // Add entity id to array of pushed entities to check for duplicates later.
+    $entity_ids[$item->data['entity_type']][] = $entity_id;
+
     $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
     $entity = entity_load_single($entity_type, $entity_id);
     if ($use_soap) {
