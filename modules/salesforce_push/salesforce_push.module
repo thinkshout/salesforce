@@ -282,6 +282,15 @@ function salesforce_push_cron() {
           'mapped_objects' => $mapped_objects,
         );
 
+        // Setup SF record type.
+        if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
+          // Records without record types.
+          $objects_without_types = array('CampaignMember', 'User');
+          if (!in_array($mapping->salesforce_object_type, $objects_without_types)) {
+            $params['RecordTypeId'] = $mapping->salesforce_record_type_default;
+          }
+        }
+
         $sobject = new stdClass();
         $sobject->type = $mapping->salesforce_object_type;
         foreach ($params as $key => $value) {
