@@ -874,7 +874,9 @@ function _salesforce_mapping_get_drupal_entities(&$form_state, $include_select =
   }
   else {
     module_load_include('inc', 'entity', 'entity.info');
-    $property_info = entity_entity_property_info();
+    $property_info = entity_get_property_info();
+    $entity_info = entity_get_info();
+    $property_info = array_merge_recursive($entity_info, $property_info);
     $form_state['sfm_storage']['drupal_entity_property_info'] = $property_info;
   }
 
@@ -883,16 +885,14 @@ function _salesforce_mapping_get_drupal_entities(&$form_state, $include_select =
     $types[''] = '- ' . t('Select Drupal entity') . ' -';
   }
   foreach ($property_info as $type => $properties) {
-    if (!isset($properties['entity_info'])) {
-      $properties['entity_info'] = entity_get_info($type);
+    // Exclude Salesforce Mapping and Salesforce Object Mapping entities as
+    // these will never sync with Salesforce.
+    if (in_array($type, array('salesforce_mapping', 'salesforce_mapping_object'))) {
+      continue;
     }
-    if (!empty($properties['entity_info'])) {
-      // Exclude Salesforce Mapping and Salesforce Object Mapping entities as
-      // these will never sync with Salesforce.
-      if (in_array($type, array('salesforce_mapping', 'salesforce_mapping_object'))) {
-        continue;
-      }
-      $types[$type] = $properties['entity_info']['label'];
+
+    if (!empty($properties['label'])) {
+      $types[$type] = $properties['label'];
     }
   }
 
