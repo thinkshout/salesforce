@@ -367,14 +367,18 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
         $mapped_objects->delete();
       }
       else {
-        // Create mapping object, saved below.
-        $wrapper = $synced_entities[$key]['entity_wrapper'];
-        list($entity_id) = entity_extract_ids($wrapper->type(), $wrapper->value());
-        $mapped_objects = entity_create('salesforce_mapping_object', array(
-          'entity_id' => $entity_id,
-          'entity_type' => $wrapper->type(),
-          'salesforce_id' => $result->id,
-        ));
+        if (!$mapped_objects) {
+          // Create mapping object, saved below.
+          $wrapper = $synced_entities[$key]['entity_wrapper'];
+          list($entity_id) = entity_extract_ids($wrapper->type(), $wrapper->value());
+          $mapped_objects = entity_create('salesforce_mapping_object', array(
+            'entity_id' => $entity_id,
+            'entity_type' => $wrapper->type(),
+            'salesforce_id' => $result->id,
+          ));
+        }
+
+        $mapped_objects->last_sync = REQUEST_TIME;
         $mapped_objects->save();
       }
 
