@@ -245,9 +245,6 @@ function salesforce_mapping_update_7100(&$sandbox) {
  * Update Salesforce Mappings with new record type configuration.
  */
 function salesforce_mapping_update_7301(&$sandbox) {
-  // Sometimes the update will fail if you have exported mappings with features
-  // and they are sitting in the cache, so:
-  cache_clear_all();
   $schemas = salesforce_mapping_schema();
 
   // Update Unique Keys to exclude salesforce_record_type:
@@ -259,6 +256,11 @@ function salesforce_mapping_update_7301(&$sandbox) {
 
   // Add salesforce_record_types_allowed column to salesforce_mapping table.
   db_add_field('salesforce_mapping', 'salesforce_record_types_allowed', $schemas['salesforce_mapping']['fields']['salesforce_record_types_allowed']);
+
+  // Need to do some aggressive cache clearing, in particular the schema cache.
+  drupal_get_schema('salesforce_mapping', TRUE);
+  entity_info_cache_clear();
+
   $mappings = salesforce_mapping_load_multiple();
   foreach ($mappings as $mapping) {
     $mapping->salesforce_record_types_allowed = array(
