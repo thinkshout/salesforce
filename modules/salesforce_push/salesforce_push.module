@@ -261,11 +261,23 @@ function salesforce_push_cron() {
 
     $entity_type = $item->data['entity_type'];
     $entity_id = $item->data['entity_id'];
+
+    // Attempt to load our entity from the queue item.
+    $entity = entity_load_single($entity_type, $entity_id);
+
+    // If the entity fails to load, remove it from the queue. This can happen
+    // if we're processing records asynchronously and it was deleted from SF
+    // before cron ran.
+    if ($entity === FALSE) {
+      $queue->deleteItem($item);
+      continue;
+    }
+
     // Add entity id to array of pushed entities to check for duplicates later.
     $entity_ids[$item->data['entity_type']][] = $entity_id;
 
     $mapped_objects = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
-    $entity = entity_load_single($entity_type, $entity_id);
+
     if ($use_soap) {
       if ($item->data['trigger'] == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapped_objects) {
         $delete_list[$delta] = $mapped_objects->salesforce_id;
