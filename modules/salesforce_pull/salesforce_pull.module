@@ -326,19 +326,6 @@ function salesforce_pull_process_deleted_records() {
         if ($mapping_object) {
           // Load and wrap the Drupal entity linked to the SF object.
           $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
-              // Delete mapping object.
-              $transaction = db_transaction();
-              entity_delete('salesforce_mapping_object', $mapping_object->salesforce_mapping_object_id);
-              entity_delete($sf_mapping->drupal_entity_type, $mapping_object->entity_id);
-
-              watchdog('Salesforce Pull',
-                'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-                array(
-                  '%label' => $entity_label,
-                  '%id' => $mapping_object->entity_id,
-                  '%sfid' => $record->id,
-                )
-              );
           $entity_wrapper = entity_metadata_wrapper($mapping_object->entity_type, $entity);
 
           // Load the mapping that manages these mapped objects.
