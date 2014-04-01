@@ -300,6 +300,7 @@ function salesforce_pull_process_records($sf_object) {
  * Process deleted records from salesforce.
  */
 function salesforce_pull_process_deleted_records() {
+  // Only the SOAP API supports getting deleted records.
   if (!module_exists('salesforce_soap')) {
     salesforce_set_message('Enable Salesforce SOAP to process deleted records');
     return;
@@ -308,10 +309,11 @@ function salesforce_pull_process_deleted_records() {
   module_load_include('inc', 'salesforce_soap');
   $soap = new SalesforceSoapPartner($sfapi);
 
+  // Load all unique SF record types that we have mappings for.
   foreach (array_reverse(salesforce_mapping_get_mapped_objects()) as $type) {
-
     $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
     $now = time();
+
     // SOAP getDeleted() restraint: startDate must be at least one minute
     // greater than endDate.
     $now = $now > $last_delete_sync + 60 ? $now : $now + 60;
@@ -322,6 +324,7 @@ function salesforce_pull_process_deleted_records() {
       foreach ($deleted->deletedRecords as $record) {
         $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
         if ($mapping_object) {
+          // Load and wrap the Drupal entity linked to the SF object.
           $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
           $entity_label = entity_label($mapping_object->entity_type, $entity);
               // Delete mapping object.
@@ -351,6 +354,8 @@ function salesforce_pull_process_deleted_records() {
           if (!empty($sf_mapping) && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
             }
           }
+
+          // Delete mapping object.
           $mapping_object->delete();
         }
       }
