@@ -353,6 +353,9 @@ function salesforce_pull_process_deleted_records() {
           // Only delete the mapped Drupal entity if the
           // SALESFORCE_MAPPING_SYNC_SF_DELETE flag is set.
           if (!empty($sf_mapping) && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
+            // Prevent processing by salesforce_push. We hate circular logic.
+            $entity->salesforce_pull = TRUE;
+
             }
             watchdog('Salesforce Pull',
               'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
