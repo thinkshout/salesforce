@@ -319,16 +319,11 @@ function salesforce_pull_process_deleted_records() {
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
     $deleted = $soap->getDeleted($type, $last_delete_sync_sf, $now_sf);
     if (!empty($deleted->deletedRecords)) {
-      $sf_mappings = salesforce_mapping_load_multiple(
-        array('salesforce_object_type' => $type)
-      );
       foreach ($deleted->deletedRecords as $record) {
         $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
         if ($mapping_object) {
           $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
           $entity_label = entity_label($mapping_object->entity_type, $entity);
-          foreach ($sf_mappings as $sf_mapping) {
-            if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
               // Delete mapping object.
               $transaction = db_transaction();
               entity_delete('salesforce_mapping_object', $mapping_object->salesforce_mapping_object_id);
@@ -342,6 +337,18 @@ function salesforce_pull_process_deleted_records() {
                   '%sfid' => $record->id,
                 )
               );
+          // Load the mapping that manages these mapped objects.
+          $sf_mapping = reset(salesforce_mapping_load_multiple(
+            array(
+              'salesforce_object_type' => $type,
+              'drupal_entity_type' => $entity_wrapper->type(),
+              'drupal_bundle' => $entity_wrapper->getBundle(),
+            )
+          ));
+
+          // Only delete the mapped Drupal entity if the
+          // SALESFORCE_MAPPING_SYNC_SF_DELETE flag is set.
+          if (!empty($sf_mapping) && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
             }
           }
           $mapping_object->delete();
