@@ -97,6 +97,7 @@ function salesforce_mapping_entity_info() {
       'module' => 'salesforce_mapping',
       'entity keys' => array(
         'id' => 'salesforce_mapping_object_id',
+        'label' => 'salesforce_mapping_object_id',
       ),
       // Enable the entity API's admin UI.
       'admin ui' => array(
