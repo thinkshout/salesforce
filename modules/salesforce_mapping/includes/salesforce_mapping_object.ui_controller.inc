@@ -133,24 +133,24 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
    */
   public function overviewFormSubmit($form, &$form_state) {
     $values = $form_state['input'];
-    $lawmakers_ids = array();
+    $salesforce_mapping_object_ids = array();
 
     if (!empty($values['entities'])) {
       foreach ($values['entities'] as $index => $value) {
         if (!empty($value)) {
-          $lawmakers_ids[] = str_replace('lawmakers_id-', '', $value);
+          $salesforce_mapping_object_ids[] = str_replace('salesforce_mapping_object_id-', '', $value);
         }
       }
 
       switch ($values['operations']) {
         case 'delete':
-          drupal_goto('admin/content/lawmakers/bulk/delete/' . implode('|', $lawmakers_ids));
+          drupal_goto('admin/content/salesforce_mapping_object/bulk/delete/' . implode('|', $salesforce_mapping_object_ids));
           break;
       }
     }
 
     if (!empty($values['search_text'])) {
-      drupal_goto('admin/content/lawmakers', array('query' => array('search' => $values['search_text'])));
+      drupal_goto('admin/content/salesforce_mapping_object', array('query' => array('search' => $values['search_text'])));
     }
   }
 
