@@ -258,6 +258,19 @@ function salesforce_mapping_get_mapped_objects() {
 }
 
 /**
+ * Return a unique list of mapped Drupal entity types and bundles.
+ */
+function salesforce_mapping_get_mapped_entities() {
+  $entity_types = array();
+  $mappings = salesforce_mapping_load();
+  usort($mappings, 'salesforce_mapping_sort');
+  foreach ($mappings as $mapping) {
+    $entity_types[$mapping->drupal_entity_type][$mapping->drupal_bundle] = TRUE;
+  }
+  return $entity_types;
+}
+
+/**
  * Sort mappings by weight.
  */
 function salesforce_mapping_sort($mapping_a, $mapping_b) {
