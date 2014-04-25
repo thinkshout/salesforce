@@ -105,6 +105,7 @@ function salesforce_mapping_entity_info() {
         'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
         'controller class' => 'SalesforceMappingObjectUIController',
       ),
+      'access callback' => 'salesforce_mapping_object_access',
     ),
   );
 
