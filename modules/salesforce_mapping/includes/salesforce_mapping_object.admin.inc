@@ -9,7 +9,7 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
   // Get list of mapped entity types.
   $mapped_entities = salesforce_mapping_get_mapped_entities();
   $entity_options = array();
-  // Build an options array of entity types and bundles that have mappings.
+  // Build an options array of entity types that have mappings.
   foreach ($mapped_entities as $type => $bundles) {
     $info = entity_get_info($type);
     $entity_options[$type] = $info['label'];
