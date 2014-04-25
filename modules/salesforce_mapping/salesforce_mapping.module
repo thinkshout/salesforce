@@ -319,11 +319,46 @@ function salesforce_mapping_permission() {
       'restrict access' => TRUE,
     ),
     'view salesforce mapping' => array(
-      'title' => t('View Salesforce mapping'),
+      'title' => t('View Salesforce mapping object'),
       'description' => t('View Salesforce mapping data.'),
+    ),
+    'create salesforce mapping object' => array(
+      'title' => t('Create Salesforce mapping object'),
+      'description' => t('Allows a user to create Salesforce mapping object entities.'),
+      'restrict access' => TRUE,
+    ),
+    'edit salesforce mapping object' => array(
+      'title' => t('Edit Salesforce mapping object'),
+      'description' => t('Allows a user to edit Salesforce mapping object entities.'),
+      'restrict access' => TRUE,
+    ),
+    'delete salesforce mapping object' => array(
+      'title' => t('Delete Salesforce mapping object'),
+      'description' => t('Allows a user to delete Salesforce mapping object entities.'),
       'restrict access' => TRUE,
     ),
   );
+}
+
+/**
+ * Check access permission for Lawmakers Entity UI.
+ */
+function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL, $account = NULL) {
+  switch ($op) {
+    case 'view':
+      return user_access('view salesforce mapping', $account);
+
+    case 'create':
+      return user_access('create salesforce mapping object', $account);
+
+    case 'update':
+      return user_access('edit salesforce mapping object', $account);
+
+    case 'delete':
+      return user_access('delete salesforce mapping object', $account);
+  }
+
+  return FALSE;
 }
 
 /**
