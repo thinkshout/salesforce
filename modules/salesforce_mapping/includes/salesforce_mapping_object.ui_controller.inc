@@ -20,9 +20,22 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
     $form['pager'] = array('#theme' => 'pager');
 
     $header = array(
-      'entity' => array('data' => t('Drupal entity'), 'field' => 'entity_type'),
-      'salesforce_id' => array('data' => t('Salesforce object'), 'field' => 'salesforce_id'),
-      'last_sync' => array('data' => t('Last sync'), 'field' => 'last_sync'),
+      'entity_type' => array(
+        'data' => t('Drupal entity'),
+        'type' => 'property',
+        'specifier' => 'entity_type',
+      ),
+      'salesforce_id' => array(
+        'data' => t('Salesforce object'),
+        'type' => 'property',
+        'specifier' => 'salesforce_id',
+      ),
+      'last_sync' => array(
+        'data' => t('Last sync'),
+        'type' => 'property',
+        'specifier' => 'last_sync',
+        'sort' => 'desc',
+      ),
       'operations' => array('data' => t('Operations'), 'field' => 'operations'),
     );
 
@@ -32,15 +45,7 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
     $query
       ->entityCondition('entity_type', 'salesforce_mapping_object');
 
-    // Check for sort order and sort key.
-    if (!empty($_GET['sort']) && !empty($_GET['order'])) {
-      $sort = strtoupper($_GET['sort']);
-      $order = strtolower($_GET['order']);
-      $order = str_replace(' ', '_', $order);
-      if ($order != 'operations') {
-        $query->propertyOrderBy($order, $sort);
-      }
-    }
+    $query->tableSort($header);
 
     $query->pager(25);
 
@@ -70,26 +75,50 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       }
 
       $options['salesforce_mapping_object_id-' . $mapping_object_id] = array(
-        'entity' => $drupal_entity_link,
+        'entity_type' => $drupal_entity_link,
         'salesforce_id' => $sf_object_link,
         'last_sync' => format_date($mapping_object->last_sync),
         'operations' =>
-          l(t('edit'), $this->path . '/manage/' . $mapping_object_id),
+          l(t('edit'), $this->path . '/manage/' . $mapping_object_id) . ' ' .
           l(t('delete'), $this->path . '/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
       );
     }
 
     $form['search'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Basic Search'),
+      '#title' => t('Search'),
       '#collapsible' => TRUE,
       '#collapsed' => !empty($search_term) ? FALSE : TRUE,
     );
 
-    $form['search']['search_text'] = array(
+    // Get list of mapped entity types.
+    $mapped_entities = salesforce_mapping_get_mapped_entities();
+    $entity_options = array('' => '');
+    // Build an options array of entity types that have mappings.
+    foreach ($mapped_entities as $type => $bundles) {
+      $info = entity_get_info($type);
+      $entity_options[$type] = $info['label'];
+    }
+
+    $form['search']['entity_type'] = array(
+      '#type' => 'select',
+      '#title' => t('Entity type'),
+      '#options' => $entity_options,
+    );
+
+    $form['search']['entity_id'] = array(
       '#type' => 'textfield',
-      '#title' => t('Search Term'),
-      '#default_value' => !empty($search_term) ? $search_term : '',
+      '#title' => t('Drupal Entity Id'),
+      '#default_value' => '',
+      '#size' => 19,
+    );
+
+    $form['search']['salesforce_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Salesforce Id'),
+      '#default_value' => '',
+      '#size' => 19,
+      '#maxlength' => 18,
     );
 
     $form['search']['search_submit'] = array(
