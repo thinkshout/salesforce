@@ -20,6 +20,7 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
     '#title' => t('Entity type'),
     '#options' => $entity_options,
     '#default_value' => isset($mapped_object->entity_type) ? $mapped_object->entity_type : '',
+    '#required' => TRUE,
   );
 
   $form['entity_id'] = array(
