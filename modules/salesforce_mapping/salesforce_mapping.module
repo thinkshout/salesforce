@@ -101,7 +101,7 @@ function salesforce_mapping_entity_info() {
       ),
       // Enable the entity API's admin UI.
       'admin ui' => array(
-        'path' => 'admin/structure/salesforce/mapped-objects',
+        'path' => 'admin/content/salesforce/mapped-objects',
         'file' => 'salesforce_mapping_object.admin.inc',
         'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
         'controller class' => 'SalesforceMappingObjectUIController',

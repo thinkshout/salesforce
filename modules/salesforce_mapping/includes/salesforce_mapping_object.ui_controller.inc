@@ -9,7 +9,9 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
    */
   public function hook_menu() {
     $items = parent::hook_menu();
+    $items[$this->path]['title'] = t('Salesforce');
     $items[$this->path]['description'] = t('Manage mapped Salesforce objects.');
+    $items[$this->path]['type'] = MENU_LOCAL_TASK;
     return $items;
   }
 
