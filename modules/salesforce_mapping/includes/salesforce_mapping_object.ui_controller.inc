@@ -21,9 +21,12 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
 
     $header = array(
       'entity_type' => array(
-        'data' => t('Drupal entity'),
+        'data' => t('Entity type'),
         'type' => 'property',
         'specifier' => 'entity_type',
+      ),
+      'label' => array(
+        'data' => t('Entity label'),
       ),
       'salesforce_id' => array(
         'data' => t('Salesforce object'),
@@ -36,7 +39,7 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
         'specifier' => 'last_sync',
         'sort' => 'desc',
       ),
-      'operations' => array('data' => t('Operations'), 'field' => 'operations'),
+      'operations' => array('data' => t('Operations')),
     );
 
     $options = array();
@@ -74,8 +77,11 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
         $sf_object_link = $mapping_object->salesforce_id;
       }
 
+      // Get human readable entity label
+      $entity_info = entity_get_info($mapping_object->entity_type);
       $options['salesforce_mapping_object_id-' . $mapping_object_id] = array(
-        'entity_type' => $drupal_entity_link,
+        'entity_type' => $entity_info['label'],
+        'label' => $drupal_entity_link,
         'salesforce_id' => $sf_object_link,
         'last_sync' => format_date($mapping_object->last_sync),
         'operations' =>
