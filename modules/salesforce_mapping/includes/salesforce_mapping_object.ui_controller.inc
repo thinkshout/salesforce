@@ -50,6 +50,25 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
     $query
       ->entityCondition('entity_type', 'salesforce_mapping_object');
 
+    // Add conditions to the query.
+    // Entity type.
+    if (!empty($form_state['input']['entity_type'])) {
+      $query->propertyCondition('entity_type', $form_state['input']['entity_type']);
+      // Entity ID.
+      if (!empty($form_state['input']['entity_id'])) {
+        $query->propertyCondition('entity_id', $form_state['input']['entity_id']);
+      }
+    }
+    // Salesforce ID.
+    if (!empty($form_state['input']['salesforce_id'])) {
+      $operator = '=';
+      if (strlen($form_state['input']['salesforce_id']) < 18) {
+        // Match start of the Salesforce ID if less than the full 18 chars.
+        $operator = 'STARTS_WITH';
+      }
+      $query->propertyCondition('salesforce_id', $form_state['input']['salesforce_id'], $operator);
+    }
+
     $query->tableSort($header);
 
     $query->pager(25);
@@ -96,7 +115,7 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       '#type' => 'fieldset',
       '#title' => t('Search'),
       '#collapsible' => TRUE,
-      '#collapsed' => !empty($search_term) ? FALSE : TRUE,
+      '#collapsed' => !empty($form_state['input']) ? FALSE : TRUE,
     );
 
     // Get list of mapped entity types.
@@ -112,13 +131,18 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       '#type' => 'select',
       '#title' => t('Entity type'),
       '#options' => $entity_options,
+      '#empty_option' => t('- Select an entity type - '),
     );
 
     $form['search']['entity_id'] = array(
       '#type' => 'textfield',
       '#title' => t('Drupal Entity Id'),
-      '#default_value' => '',
       '#size' => 19,
+      '#states' => array(
+        'visible' => array(
+          ':input[name="entity_type"]' => array('!value' => key($entity_options))
+        )
+      )
     );
 
     $form['search']['salesforce_id'] = array(
@@ -172,6 +196,7 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
     $values = $form_state['input'];
     $salesforce_mapping_object_ids = array();
 
+    // @TODO - not implemented.
     if (!empty($values['entities'])) {
       foreach ($values['entities'] as $index => $value) {
         if (!empty($value)) {
@@ -186,9 +211,8 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       }
     }
 
-    if (!empty($values['search_text'])) {
-      drupal_goto('admin/content/salesforce_mapping_object', array('query' => array('search' => $values['search_text'])));
-    }
+    // Don't redirect search query.
+    $form_state['redirect'] = FALSE;
   }
 
 }
