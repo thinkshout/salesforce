@@ -356,7 +356,7 @@ function salesforce_mapping_permission() {
 }
 
 /**
- * Check access permission for Lawmakers Entity UI.
+ * Check access permission for Mapped Object Entity UI.
  */
 function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL, $account = NULL) {
   switch ($op) {
