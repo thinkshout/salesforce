@@ -206,8 +206,10 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
-      $mapped_objects->delete();
-      salesforce_set_message(t('Error message: "@msg".  The Salesforce link has been removed.', array(
+      salesforce_set_message(t('Error syncing @type @id to Salesforce record @sfid. Error message: "@msg".', array(
+        '@type' => $mapped_objects->entity_type,
+        '@id' => $mapped_objects->entity_id,
+        '@sfid' => $mapped_objects->salesforce_id,
         '@msg' => $e->getMessage(),
       )), 'error');
       return;
