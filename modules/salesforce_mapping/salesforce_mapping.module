@@ -91,6 +91,7 @@ function salesforce_mapping_entity_info() {
       'label' => t('Salesforce Object Mapping'),
       'controller class' => 'EntityAPIController',
       'entity class' => 'SalesforceMappingObject',
+      'metadata controller class' => 'SalesforceMappingObjectMetadataController',
       'base table' => 'salesforce_mapping_object',
       'fieldable' => FALSE,
       'exportable' => FALSE,
@@ -111,6 +112,26 @@ function salesforce_mapping_entity_info() {
   );
 
   return $return;
+}
+
+/**
+ * Implements hook_entity_property_info().
+ */
+function salesforce_mapping_entity_property_info() {
+  $info = array();
+
+  $entities = salesforce_mapping_get_mapped_entities();
+  foreach ($entities as $type => $bundles) {
+    $properties = &$info[$type]['properties'];
+    $properties['salesforce_mapping_object'] = array(
+      'label' => t("Salesforce mapping object"),
+      'type' => 'salesforce_mapping_object',
+      'description' => t("Salesforce mapping object"),
+      'getter callback' => 'salesforce_mapping_object_entity_property_get',
+    );
+  }
+
+  return $info;
 }
 
 /**
@@ -310,20 +331,6 @@ function salesforce_mapping_entity_delete($entity, $type) {
 }
 
 /**
- * Implements hook_entity_load().
- */
-function salesforce_mapping_entity_load($entities, $type) {
-  // Load the linked Salesforce ID into an entity.
-  foreach ($entities as $entity) {
-    list($entity_id) = entity_extract_ids($type, $entity);
-    $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-    if ($mapping) {
-      $entity->salesforce_id = $mapping->salesforce_id;
-    }
-  }
-}
-
-/**
  * Implements hook_permission().
  */
 function salesforce_mapping_permission() {
@@ -381,8 +388,10 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
  */
 function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
   // Render linked Salesforce data when viewing a mapped entity.
-  list($entity_id) = entity_extract_ids($type, $entity);
-  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+//  list($entity_id) = entity_extract_ids($type, $entity);
+//  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
+  $wrapper = entity_metadata_wrapper($type, $entity);
+  $mapping = $wrapper->salesforce_mapping_object->value();
   if ($mapping && user_access('view salesforce mapping')) {
     $sfapi = salesforce_get_api();
     $entity->content['salesforce_id'] = array(
@@ -500,4 +509,32 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
   elseif (isset($salesforce_mapping_fieldmap_type[$fieldmap_type])) {
     return $salesforce_mapping_fieldmap_type[$fieldmap_type];
   }
+}
+
+/**
+ * Callback to get $salesforce_mapping_object->entity.
+ */
+function salesforce_mapping_object_property_entity_get(SalesforceMappingObject $salesforce_mapping_object, array $options, $property_name, $entity_type) {
+  $entity = entity_load_single($salesforce_mapping_object->entity_type, $salesforce_mapping_object->entity_id);
+  return entity_metadata_wrapper($salesforce_mapping_object->entity_type, $entity);
+}
+
+/**
+ * Callback to set $salesforce_mapping_object->entity.
+ */
+function salesforce_mapping_object_property_entity_set(SalesforceMappingObject $salesforce_mapping_object, $name, $value, $lang, $type, $info) {
+  $salesforce_mapping_object->entity_type = $value->type();
+  $salesforce_mapping_object->entity_id = $value->getIdentifier();
+}
+
+/**
+ * Callback to get the salesforce mapping object for an entity.
+ */
+function salesforce_mapping_object_entity_property_get($entity, array $options, $property_name, $entity_type) {
+  $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, entity_id($entity_type, $entity));
+  if ($mapping_object) {
+    return entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
+  }
+
+  return FALSE;
 }

@@ -7,6 +7,7 @@ files[] = includes/salesforce_mapping.entity.inc
 files[] = includes/salesforce_mapping.ui_controller.inc
 files[] = includes/salesforce_mapping_object.entity.inc
 files[] = includes/salesforce_mapping_object.ui_controller.inc
+files[] = includes/salesforce_mapping_object.metadata.inc
 files[] = tests/salesforce_mapping.entities.test
 files[] = tests/salesforce_mapping.map.test
 files[] = tests/salesforce_mapping.test
