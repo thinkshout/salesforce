@@ -19,7 +19,6 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
    * Admin form for searching and doing bulk operations.
    */
   public function overviewForm($form, &$form_state) {
-    $form['pager'] = array('#theme' => 'pager');
 
     $header = array(
       'entity_type' => array(
@@ -81,7 +80,7 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       $drupal_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
       $uri = entity_uri($mapping_object->entity_type, $drupal_entity);
       $label = entity_label($mapping_object->entity_type, $drupal_entity);
-      $drupal_entity_link = l($label, $uri['path'], $uri['options']);
+      $drupal_entity_link = empty($uri) ? $label : l($label, $uri['path'], $uri['options']);
       // Salesforce object id.
       // If we have a valid SF link, make the SF object id a link.
       $sfapi = salesforce_get_api();
@@ -185,6 +184,8 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       '#attributes' => array('class' => array('entity-sort-table')),
       '#empty' => t('There are no mappings.'),
     );
+
+    $form['pager'] = array('#theme' => 'pager', '#weight' => 99);
 
     return $form;
   }
