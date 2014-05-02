@@ -388,8 +388,6 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
  */
 function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
   // Render linked Salesforce data when viewing a mapped entity.
-//  list($entity_id) = entity_extract_ids($type, $entity);
-//  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
   $wrapper = entity_metadata_wrapper($type, $entity);
   $mapping = $wrapper->salesforce_mapping_object->value();
   if ($mapping && user_access('view salesforce mapping')) {
