@@ -389,32 +389,34 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
 function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
   // Render linked Salesforce data when viewing a mapped entity.
   $wrapper = entity_metadata_wrapper($type, $entity);
-  $mapping = $wrapper->salesforce_mapping_object->value();
-  if ($mapping && user_access('view salesforce mapping')) {
-    $sfapi = salesforce_get_api();
-    $entity->content['salesforce_id'] = array(
-      '#theme' => 'salesforce_mapping_linked_object',
-      '#label' => t('Salesforce ID'),
-      '#items' => array(
-        array(
-          '#markup' => l(
-            $mapping->salesforce_id,
-            $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
-            array(
-              'attributes' => array('target' => '_blank'),
-            )
+  if (!empty($wrapper->salesforce_mapping_object)) {
+    $mapping = $wrapper->salesforce_mapping_object->value();
+    if ($mapping && user_access('view salesforce mapping')) {
+      $sfapi = salesforce_get_api();
+      $entity->content['salesforce_id'] = array(
+        '#theme' => 'salesforce_mapping_linked_object',
+        '#label' => t('Salesforce ID'),
+        '#items' => array(
+          array(
+            '#markup' => l(
+              $mapping->salesforce_id,
+              $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
+              array(
+                'attributes' => array('target' => '_blank'),
+              )
+            ),
           ),
         ),
-      ),
-      '#classes' => 'field field-label-inline clearfix',
-    );
-    $entity->content['salesforce_last_sync'] = array(
-      '#theme' => 'salesforce_mapping_linked_object',
-      '#label' => t('Salesforce last sync'),
-      '#items' => array(array('#markup' => format_date($mapping->last_sync))),
-      '#markup' => format_date($mapping->last_sync),
-      '#classes' => 'field field-label-inline clearfix',
-    );
+        '#classes' => 'field field-label-inline clearfix',
+      );
+      $entity->content['salesforce_last_sync'] = array(
+        '#theme' => 'salesforce_mapping_linked_object',
+        '#label' => t('Salesforce last sync'),
+        '#items' => array(array('#markup' => format_date($mapping->last_sync))),
+        '#markup' => format_date($mapping->last_sync),
+        '#classes' => 'field field-label-inline clearfix',
+      );
+    }
   }
 }
 
