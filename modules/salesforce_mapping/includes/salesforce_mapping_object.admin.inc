@@ -123,8 +123,9 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
 
         $record_type_allowed = FALSE;
         foreach ($mappings as $mapping) {
-          if (in_array($record_type, $mapping->salesforce_record_types_allowed)) {
+          if (in_array($record_type, $mapping->salesforce_record_types_allowed, TRUE)) {
             $record_type_allowed = TRUE;
+            continue;
           }
         }
 
