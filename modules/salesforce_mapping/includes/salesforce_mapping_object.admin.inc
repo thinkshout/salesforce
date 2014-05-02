@@ -59,6 +59,7 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
  */
 function salesforce_mapping_object_form_validate($form, &$form_state) {
   $values = &$form_state['values'];
+  $mapping_object = $form_state['salesforce_mapping_object'];
 
   $entity_type = $values['entity_type'];
   $entity = entity_load_single($entity_type, $values['entity_id']);
@@ -73,7 +74,7 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
     $mapping_object_drupal = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, TRUE);
 
     if ($mapping_object_drupal &&
-      (empty($form_state['salesforce_mapping_object']) || $mapping_object_drupal->salesforce_mapping_object_id != $form_state['salesforce_mapping_object']->salesforce_mapping_object_id)) {
+      (empty($mapping_object->salesforce_mapping_object_id) || $mapping_object_drupal->salesforce_mapping_object_id != $mapping_object->salesforce_mapping_object_id)) {
       form_set_error('entity_id', t('Drupal entity is already mapped to a Salesforce object.'));
     }
 
@@ -110,10 +111,10 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
         $values['salesforce_id'] = $sf_object['Id'];
 
         // Check for existing mapping based on the Salesforce Id.
-        $mapping_object = salesforce_mapping_object_load_by_sfid($values['salesforce_id'], TRUE);
+        $mapping_object_sf = salesforce_mapping_object_load_by_sfid($values['salesforce_id'], TRUE);
 
-        if ($mapping_object &&
-          (empty($form_state['salesforce_mapping_object']) || $mapping_object->salesforce_mapping_object_id != $form_state['salesforce_mapping_object']->salesforce_mapping_object_id)) {
+        if ($mapping_object_sf &&
+          (empty($mapping_object->salesforce_mapping_object_id) || $mapping_object_sf->salesforce_mapping_object_id != $mapping_object->salesforce_mapping_object_id)) {
           form_set_error('salesforce_id', t('Salesforce object is already mapped to a Drupal entity.'));
         }
 
