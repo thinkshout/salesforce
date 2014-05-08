@@ -194,7 +194,7 @@ function salesforce_mapping_schema() {
       'entity_updated' => array(
         'description' => 'The Unix timestamp when the mapped Drupal entity was last updated.',
         'type' => 'int',
-        'not null' => TRUE,
+        'not null' => FALSE,
         'default' => 0,
       ),
       'last_sync' => array(
