@@ -127,9 +127,10 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
   // Entity is not linked to an SF object.
   if (!$mapped_objects) {
-    // Setup SF record type.
+    // Setup SF record type. CampaignMember objects get their type from their Campaign.
     if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
-      && empty($params['RecordTypeId'])) {
+      && empty($params['RecordTypeId'])
+      && ($mapping->salesforce_object_type != 'CampaignMember')) {
       $params['RecordTypeId'] = $mapping->salesforce_record_type_default;
     }
 
@@ -293,9 +294,10 @@ function salesforce_push_cron() {
           'mapped_objects' => $mapped_objects,
         );
 
-        // Setup SF record type.
+        // Setup SF record type. CampaignMember objects get their type from their Campaign.
         if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
-          && empty($params['RecordTypeId'])) {
+          && empty($params['RecordTypeId'])
+          && ($mapping->salesforce_object_type != 'CampaignMember')) {
           $params['RecordTypeId'] = $mapping->salesforce_record_type_default;
         }
 
