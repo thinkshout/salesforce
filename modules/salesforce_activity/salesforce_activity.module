@@ -1,0 +1,345 @@
+<?php
+
+/**
+ * @file
+ * RedHen integration with the Message module
+ */
+
+module_load_include('inc', 'redhen', 'includes/redhen.forms');
+
+/**
+ * Implements hook_default_message_type_category().
+ */
+function salesforce_activity_default_message_type_category() {
+  $items = array();
+  $items['salesforce_activity_message'] = entity_import('message_type_category', '{
+    "category" : "salesforce_activity_message",
+    "description" : "A message produced when action is taken on an entity that is mapped to Salesforce.",
+    "language" : "",
+    "rdf_mapping" : []
+  }');
+  return $items;
+}
+
+/**
+ * Implements hook_default_message_type().
+ */
+function salesforce_activity_default_message_type() {
+  $items = array();
+
+  $items['salesforce_pull'] = entity_import('message_type', '{
+    "name" : "salesforce_pull",
+    "description" : "Salesforce Pull",
+    "argument_keys" : [],
+    "argument" : [],
+    "category" : "salesforce_activity_message",
+    "data" : { "purge" : { "override" : 0, "enabled" : 0, "quota" : "", "days" : "" } },
+    "language" : "",
+    "arguments" : null,
+    "message_order_display_name" : { "und" : [ { "value" : "Salesforce Mapping Object", "format" : null } ] },
+    "message_text" : { "und" : [
+        {
+          "value" : "Entity %name has been pushed to salesforce.",
+          "format" : "salesforce_activity_message"
+        }
+      ]
+    },
+    "rdf_mapping" : []
+  }');
+
+  return $items;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_activity_menu() {
+  $items = array();
+
+  $items['admin/content/salesforce/activity'] = array(
+    'title' => 'Salesforce Activity',
+    'page callback' => 'salesforce_activity_activity_page',
+    'access arguments' => array('view salesforce mapping'),
+    'description' => 'View Salesforce activity.',
+  );
+
+  $items['admin/content/salesforce/mapped-objects/manage/%salesforce_mapping_object/activity'] = array(
+    'title' => 'Activity',
+    'page callback' => 'salesforce_activity_activity_page',
+    'page arguments' => array(5),
+    'access arguments' => array('view salesforce mapping'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
+  );
+
+  return $items;
+}
+
+/**
+ * Refresh the fields attached to the message types we support.
+ */
+function salesforce_activity_field_refresh() {
+  $fields['message_salesforce_mapping_object']['field'] = array(
+    'type' => 'entityreference',
+    'module' => 'entityreference',
+    'cardinality' => '1',
+    'translatable' => FALSE,
+    'settings' => array(
+      'target_type' => 'salesforce_mapping_object',
+      'handler' => 'base',
+      'handler_settings' => array(
+        'target_bundles' => array(),
+        'sort' => array(
+          'type' => 'property',
+          'property' => 'salesforce_mapping_object_id',
+          'direction' => 'ASC',
+        ),
+      ),
+    ),
+    'locked' => TRUE,
+  );
+  $fields['message_salesforce_mapping_object']['instances'][] = array(
+    'entity_type' => 'message',
+    'bundles' => array(
+      'salesforce',
+    ),
+    'label' => 'Salesforce mapping object',
+    'required' => TRUE,
+    'widget' => array(
+      'type' => 'entityreference_autocomplete',
+      'module' => 'entityreference',
+      'settings' => array(
+        'match_operator' => 'CONTAINS',
+        'size' => '60',
+        'path' => '',
+      ),
+    ),
+    'settings' => array(),
+    'display' => array(
+      'default' => array(
+        'label' => 'above',
+        'type' => 'entityreference_label',
+        'settings' => array(
+          'link' => FALSE,
+        ),
+        'module' => 'entityreference',
+        'weight' => 0,
+      ),
+    ),
+  );
+
+  // Allow other modules to alter these fields.
+  drupal_alter('salesforce_activity_message_fields', $fields);
+
+  // Create the missing fields.
+  foreach ($fields as $field_name => $info) {
+    $field = $info['field'];
+    $field += array(
+      'field_name' => $field_name,
+    );
+    if (!field_info_field($field_name)) {
+      field_create_field($field);
+    }
+
+    foreach ($info['instances'] as $instance) {
+      foreach ($instance['bundles'] as $bundle) {
+        $instance['bundle'] = $bundle;
+        unset($instance['bundles']);
+        $instance['field_name'] = $field_name;
+        if (!field_info_instance($instance['entity_type'], $instance['field_name'], $instance['bundle'])) {
+          field_create_instance($instance);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_field_access().
+ */
+function salesforce_activity_field_access($op, $field, $entity_type, $entity, $account) {
+  if ($op == 'edit' && in_array($field['field_name'], array('message_salesforce_mapping_object'))) {
+    return FALSE;
+  }
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function salesforce_activity_flush_caches() {
+  salesforce_activity_field_refresh();
+}
+
+/**
+ * Save a message.
+ *
+ * @param $entity
+ * @param $type
+ * @param $op
+ */
+function salesforce_activity_message_save($mapping_object, $type, $op) {
+  switch ($type) {
+    case 'pull':
+      $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
+      $parent_entity = $wrapper->entity->value();
+      $message = message_create('pull', array(
+        'arguments' => array(
+          '%name' => $entity->label(),
+          '!op' => $op,
+          '%type' => $entity->type,
+          '%entity_name' => $parent_entity->label(),
+        ),
+      ));
+      $message_wrapper = entity_metadata_wrapper('message', $message);
+      $message_wrapper->message_salesforce_mapping_object->set($wrapper);
+      $message_wrapper->save();
+      break;
+
+    default:
+      return;
+  }
+}
+
+/**
+ * Page callback for a list of activities.
+ *
+ * @param $entity
+ * @param $entity_type
+ *
+ * @return array
+ */
+function salesforce_activity_activity_page($entity = NULL, $entity_type = NULL) {
+  global $language;
+  $header = array(
+    'timestamp' => array(
+      'field' => 'timestamp',
+      'type' => 'property',
+      'data' => t('Created'),
+      'specifier' => 'timestamp',
+      'sort' => 'desc',
+    ),
+    'type' => array(
+      'field' => 'Type',
+      'type' => 'property',
+      'data' => t('Type'),
+      'specifier' => 'type',
+    ),
+    'author' => array(
+      'data' => t('Author'),
+    ),
+    'source' => array(
+      'data' => t('Source'),
+    ),
+    'message' => array(
+      'data' => t('Message'),
+    ),
+  );
+
+
+  // Need to ensure the query doesn't execute when posing the form.
+  $result = FALSE;
+  if (!isset($_POST['form_id'])) {
+    $fields = array();
+    if ($entity && $entity_type) {
+      $fields = array(
+        "message_{$entity_type}" => array(
+          LANGUAGE_NONE => array(
+            array('target_id' => $entity->internalIdentifier()),
+          ),
+        ),
+      );
+    }
+
+    $bundle = isset($_GET['bundle']) ? $_GET['bundle'] : '';
+    $properties = isset($_GET['properties']) ? $_GET['properties'] : array();
+    $fields += isset($_GET['fields']) ? $_GET['fields'] : array();
+    $result = redhen_filter_query('message', $header, $bundle, $properties, $fields);
+  }
+
+  $messages = array();
+  $rows = array();
+  if ($result) {
+    $messages = message_load_multiple(array_keys($result['message']));
+
+    if (!empty($messages)) {
+      foreach ($messages as $message) {
+        $message_type = message_type_load($message->type);
+        $author = $message->user();
+        $url = user_uri($author);
+        $source_entity = salesforce_activity_source_entity($message);
+        if ($source_entity) {
+          $source_uri = entity_uri($source_entity->entityType(), $source_entity);
+          $source = l($source_entity->label(), $source_uri['path']);
+        }
+
+        $rows[$message->mid] = array(
+          'data' => array(
+            'timestamp' => redhen_format_date($message->timestamp),
+            'type' => $message_type->description,
+            'author' => array(
+              'data' => array(
+                '#type' => 'link',
+                '#title' => $author->name,
+                '#href' => $url['path'],
+              ),
+            ),
+            'source' => $source,
+            'message' => $message->getText($language->language),
+          ),
+        );
+      }
+    }
+  }
+
+  return array(
+    //ø'form' => drupal_get_form('redhen_filter_form', 'message'),
+    'messages' => array(
+      '#theme' => 'salesforce_activity_list',
+      '#messages' => $messages,
+      '#header' => $header,
+      '#rows' => $rows,
+    ),
+  );
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function salesforce_activity_entity_property_info_alter(&$info) {
+  $properties = &$info['message']['properties'];
+}
+
+/**
+ * Implements hook_theme().
+ */
+function salesforce_activity_theme() {
+  return array(
+    'salesforce_activity_list' => array(
+      'variables' => array('messages' => NULL, 'header' => NULL, 'rows' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme function for activity message list.
+ *
+ * @param $variables
+ *
+ * @return string
+ */
+function theme_salesforce_activity_list($variables) {
+  $rows = $variables['rows'];
+  $header = $variables['header'];
+
+  $render['table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('Sorry, there are no activities that match your criteria.'),
+  );
+  $render['pager'] = array(
+    '#theme' => 'pager',
+  );
+
+  return render($render);
+}

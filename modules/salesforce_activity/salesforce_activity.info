@@ -1,0 +1,10 @@
+name = Salesforce Activity
+description = Activity tracking for Salesforce leveraging the Message module.
+package = Salesforce
+core = 7.x
+
+dependencies[] = salesforce
+dependencies[] = salesforce_mapping
+
+dependencies[] = message
+dependencies[] = entityreference
