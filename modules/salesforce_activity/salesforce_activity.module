@@ -27,10 +27,29 @@ function salesforce_activity_default_message_type_category() {
 function salesforce_activity_default_message_type() {
   $items = array();
 
+  $items['salesforce_pull_error'] = entity_import('message_type', '{
+    "name" : "salesforce_pull_error",
+    "description" : "Salesforce Pull Error",
+    "argument_keys" :  [ "!sf_object", "@entity_type", "!entity_label" ],
+    "argument" : [],
+    "category" : "salesforce_activity_message",
+    "data" : { "purge" : { "override" : 0, "enabled" : 0, "quota" : "", "days" : "" } },
+    "language" : "",
+    "arguments" : "",
+    "message_order_display_name" : { "und" : [ { "value" : "Salesforce Mapping Object", "format" : null } ] },
+    "message_text" : { "und" : [
+        {
+          "value" : "Error pulling !sf_object to @entity_type !entity_label: [message:message_salesforce_error_message].",
+          "format" : "salesforce_activity_message"
+        }
+      ]
+    },
+    "rdf_mapping" : []
+  }');
   $items['salesforce_pull'] = entity_import('message_type', '{
     "name" : "salesforce_pull",
     "description" : "Salesforce Pull",
-    "argument_keys" : [],
+    "argument_keys" : [ "!sf_object", "@entity_type", "!entity_label" ],
     "argument" : [],
     "category" : "salesforce_activity_message",
     "data" : { "purge" : { "override" : 0, "enabled" : 0, "quota" : "", "days" : "" } },
@@ -39,7 +58,45 @@ function salesforce_activity_default_message_type() {
     "message_order_display_name" : { "und" : [ { "value" : "Salesforce Mapping Object", "format" : null } ] },
     "message_text" : { "und" : [
         {
-          "value" : "Entity %name has been pushed to salesforce.",
+          "value" : "Pulled !sf_object to @entity_type !entity_label.",
+          "format" : "salesforce_activity_message"
+        }
+      ]
+    },
+    "rdf_mapping" : []
+  }');
+  $items['salesforce_push_error'] = entity_import('message_type', '{
+    "name" : "salesforce_push_error",
+    "description" : "Salesforce Push Error",
+    "argument_keys" : [ "!sf_object", "@entity_type", "!entity_label" ],
+    "argument" : [],
+    "category" : "salesforce_activity_message",
+    "data" : { "purge" : { "override" : 0, "enabled" : 0, "quota" : "", "days" : "" } },
+    "language" : "",
+    "arguments" : null,
+    "message_order_display_name" : { "und" : [ { "value" : "Salesforce Mapping Object", "format" : null } ] },
+    "message_text" : { "und" : [
+        {
+          "value" : "Error pushing @entity_type !entity_label to !sf_object: [message:message_salesforce_error_message].",
+          "format" : "salesforce_activity_message"
+        }
+      ]
+    },
+    "rdf_mapping" : []
+  }');
+  $items['salesforce_push'] = entity_import('message_type', '{
+    "name" : "salesforce_push",
+    "description" : "Salesforce Push",
+    "argument_keys" : [ "!sf_object", "@entity_type", "!entity_label" ],
+    "argument" : [],
+    "category" : "salesforce_activity_message",
+    "data" : { "purge" : { "override" : 0, "enabled" : 0, "quota" : "", "days" : "" } },
+    "language" : "",
+    "arguments" : null,
+    "message_order_display_name" : { "und" : [ { "value" : "Salesforce Mapping Object", "format" : null } ] },
+    "message_text" : { "und" : [
+        {
+          "value" : "Pushed @entity_type !entity_label to !sf_object.",
           "format" : "salesforce_activity_message"
         }
       ]
@@ -128,6 +185,53 @@ function salesforce_activity_field_refresh() {
     ),
   );
 
+  // Error code field.
+  $fields['message_salesforce_error_code']['field'] = array(
+    'type' => 'text',
+    'locked' => TRUE,
+  );
+  $fields['message_salesforce_error_code']['instances'][] = array(
+    'entity_type' => 'message',
+    'bundles' => array(
+      'salesforce',
+    ),
+    'label' => 'Salesforce Error Code',
+    'required' => FALSE,
+    'widget' => array(
+      'type' => 'textfield',
+    ),
+    'settings' => array(),
+    'display' => array(
+      'default' => array(
+        'label' => 'inline',
+      ),
+    ),
+  );
+
+  // Error message field.
+  $fields['message_salesforce_error_message']['field'] = array(
+    'type' => 'text',
+    'locked' => TRUE,
+  );
+  $fields['message_salesforce_error_message']['instances'][] = array(
+    'entity_type' => 'message',
+    'bundles' => array(
+      'salesforce',
+    ),
+    'label' => 'Salesforce Error Message',
+    'required' => FALSE,
+    'widget' => array(
+      'type' => 'textfield',
+    ),
+    'settings' => array(),
+    'display' => array(
+      'default' => array(
+        'label' => 'inline',
+      ),
+    ),
+  );
+  
+
   // Allow other modules to alter these fields.
   drupal_alter('salesforce_activity_message_fields', $fields);
 
@@ -177,27 +281,48 @@ function salesforce_activity_flush_caches() {
  * @param $type
  * @param $op
  */
-function salesforce_activity_message_save($mapping_object, $type, $op) {
-  switch ($type) {
-    case 'pull':
-      $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
-      $parent_entity = $wrapper->entity->value();
-      $message = message_create('pull', array(
-        'arguments' => array(
-          '%name' => $entity->label(),
-          '!op' => $op,
-          '%type' => $entity->type,
-          '%entity_name' => $parent_entity->label(),
-        ),
-      ));
-      $message_wrapper = entity_metadata_wrapper('message', $message);
-      $message_wrapper->message_salesforce_mapping_object->set($wrapper);
-      $message_wrapper->save();
-      break;
+function salesforce_activity_message_save($mapping_object, $type, $error_code = NULL, $error_message = NULL) {
+  $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
+  $parent_entity = $wrapper->entity->value();
 
-    default:
-      return;
+  $uri = entity_uri($mapping_object->entity_type, $parent_entity);
+  $label = entity_label($mapping_object->entity_type, $parent_entity);
+  $drupal_entity_link = empty($uri) ? $label : l($label, $uri['path'], $uri['options']);
+  // Salesforce object id.
+  // If we have a valid SF link, make the SF object id a link.
+  $sfapi = salesforce_get_api();
+  if ($sfapi) {
+    $sf_object_link = l(
+      $mapping_object->salesforce_id,
+      $sfapi->getInstanceUrl() . '/' . $mapping_object->salesforce_id,
+      array(
+        'attributes' => array('target' => '_blank'),
+      )
+    );
   }
+  else {
+    $sf_object_link = $mapping_object->salesforce_id;
+  }
+
+  // Get human readable entity label
+  $entity_info = entity_get_info($mapping_object->entity_type);
+  $values = array(
+    'arguments' => array(
+      '!sf_object' => $sf_object_link,
+      '@entity_type' => $entity_info['label'],
+      '!entity_label' => $drupal_entity_link,
+    )
+  );
+  $message = message_create($type, $values);
+  $message_wrapper = entity_metadata_wrapper('message', $message);
+  $message_wrapper->message_salesforce_mapping_object->set($wrapper);
+  if ($error_code) {
+    $message_wrapper->message_salesforce_error_code->set(check_plain($error_code));
+  }
+  if ($error_message) {
+    $message_wrapper->message_salesforce_error_message->set(check_plain($error_message));
+  }
+  $message_wrapper->save();
 }
 
 /**
