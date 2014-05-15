@@ -262,7 +262,7 @@ function salesforce_activity_field_refresh() {
  * Implements hook_field_access().
  */
 function salesforce_activity_field_access($op, $field, $entity_type, $entity, $account) {
-  if ($op == 'edit' && in_array($field['field_name'], array('message_salesforce_mapping_object'))) {
+  if ($op == 'edit' && in_array($field['field_name'], array('message_salesforce_mapping_object', 'message_salesforce_error_code', 'message_salesforce_error_message'))) {
     return FALSE;
   }
 }
@@ -349,11 +349,9 @@ function salesforce_activity_activity_page($entity = NULL, $entity_type = NULL) 
       'data' => t('Type'),
       'specifier' => 'type',
     ),
-    'author' => array(
-      'data' => t('Author'),
-    ),
-    'source' => array(
-      'data' => t('Source'),
+
+    'mapping_object' => array(
+      'data' => t('Mapping object'),
     ),
     'message' => array(
       'data' => t('Message'),
