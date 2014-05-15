@@ -36,6 +36,15 @@ class SalesforceMappingObject extends Entity {
     if (!isset($this->last_sync) || !$this->last_sync) {
       $this->last_sync = REQUEST_TIME;
     }
+
+    if (!isset($this->is_new_revision)) {
+      $this->is_new_revision = TRUE;
+    }
+
+    if (!isset($this->default_revision)) {
+      $this->default_revision = TRUE;
+    }
+
     return parent::save();
   }
 

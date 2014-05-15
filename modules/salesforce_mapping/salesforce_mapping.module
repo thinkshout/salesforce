@@ -93,12 +93,14 @@ function salesforce_mapping_entity_info() {
       'entity class' => 'SalesforceMappingObject',
       'metadata controller class' => 'SalesforceMappingObjectMetadataController',
       'base table' => 'salesforce_mapping_object',
+      'revision table' => 'salesforce_mapping_object_revision',
       'fieldable' => FALSE,
       'exportable' => FALSE,
       'module' => 'salesforce_mapping',
       'entity keys' => array(
         'id' => 'salesforce_mapping_object_id',
         'label' => 'salesforce_mapping_object_id',
+        'revision' => 'revision_id',
       ),
       // Enable the entity API's admin UI.
       'admin ui' => array(
