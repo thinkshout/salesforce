@@ -332,10 +332,6 @@ function salesforce_mapping_schema() {
       'salesforce_object' => array('salesforce_id'),
       'salesforce_mapping_object_id' => array('salesforce_mapping_object_id'),
     ),
-    'unique keys' => array(
-      'salesforce' => array('salesforce_id'),
-      'salesforce_drupal' => array('entity_type', 'entity_id'),
-    ),
     'foreign keys' => array(
       'salesforce_mapping_object' => array(
         'table' => 'salesforce_mapping_object',
