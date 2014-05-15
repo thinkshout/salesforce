@@ -164,6 +164,88 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'description' => 'Primary Key: Unique salesforce_mapping_object entity ID.',
       ),
+      'revision_id' => array(
+        'description' => 'The current {salesforce_mapping_object_revision}.revision_id version identifier.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'salesforce_id' => array(
+        'description' => 'Salesforce object identifier',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'entity_id' => array(
+        'description' => 'Drupal entity Id.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_type' => array(
+        'description' => 'Drupal entity type.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the object mapping was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'entity_updated' => array(
+        'description' => 'The Unix timestamp when the mapped Drupal entity was last updated.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+      'last_sync' => array(
+        'description' => 'The Unix timestamp when the record was last synced with Salesforce.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('salesforce_mapping_object_id'),
+    'indexes' => array(
+      'drupal_entity' => array('entity_type', 'entity_id'),
+      'salesforce_object' => array('salesforce_id'),
+      'salesforce_mapping_object_revision' => array('revision_id'),
+    ),
+    'unique keys' => array(
+      'salesforce' => array('salesforce_id'),
+      'salesforce_drupal' => array('entity_type', 'entity_id'),
+      'revision_id' => array('revision_id'),
+    ),
+    'foreign keys' => array(
+      'salesforce_mapping_object_revision' => array(
+        'table' => 'salesforce_mapping_object_revision',
+        'columns' => array('revision_id' => 'revision_id'),
+      ),
+    ),
+  );
+
+  $schema['salesforce_mapping_object_revision'] = array(
+    'description' => 'Stores information about each saved version of a {salesforce_mapping_object}.',
+    'fields' => array(
+      'salesforce_mapping_object_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Primary Key: Unique salesforce_mapping_object entity ID.',
+      ),
+      'revision_id' => array(
+        'description' => 'The current {salesforce_mapping_object_revision}.revision_id version identifier.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
       'salesforce_id' => array(
         'description' => 'Salesforce object identifier',
         'type' => 'varchar',
@@ -204,14 +286,21 @@ function salesforce_mapping_schema() {
         'default' => 0,
       ),
     ),
-    'primary key' => array('salesforce_mapping_object_id'),
+    'primary key' => array('revision_id'),
     'indexes' => array(
       'drupal_entity' => array('entity_type', 'entity_id'),
       'salesforce_object' => array('salesforce_id'),
+      'salesforce_mapping_object_id' => array('salesforce_mapping_object_id'),
     ),
     'unique keys' => array(
       'salesforce' => array('salesforce_id'),
       'salesforce_drupal' => array('entity_type', 'entity_id'),
+    ),
+    'foreign keys' => array(
+      'salesforce_mapping_object' => array(
+        'table' => 'salesforce_mapping_object',
+        'columns' => array('salesforce_mapping_object_id' => 'salesforce_mapping_object_id'),
+      ),
     ),
   );
 
