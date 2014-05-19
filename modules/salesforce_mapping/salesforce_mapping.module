@@ -467,8 +467,11 @@ function salesforce_mapping_entity_update($entity, $type) {
     list($entity_id) = entity_extract_ids($type, $entity);
     $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
     if ($sf_mapping_object) {
-      // Update entity update property.
+      // Update entity updated property.
       $sf_mapping_object->entity_updated = REQUEST_TIME;
+      // No new revision needed for this change. If this generates a push, then
+      // a revision will be generated for that action.
+      $sf_mapping_object->is_new_revision = FALSE;
       $sf_mapping_object->save();
     }
   }
