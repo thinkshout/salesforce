@@ -41,6 +41,12 @@ define('SALESFORCE_MAPPING_ARRAY_DELIMITER', ';');
 define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
 
 /**
+ * Mapping object sync statuses.
+ */
+define('SALESFORCE_MAPPING_STATUS_SUCCESS', 1);
+define('SALESFORCE_MAPPING_STATUS_ERROR', 0);
+
+/**
  * Access callback for managing Salesforce mappings.
  */
 function salesforce_mappings_access() {
