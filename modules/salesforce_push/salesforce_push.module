@@ -178,6 +178,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         'entity_id' => $entity_id,
         'entity_type' => $entity_type,
         'salesforce_id' => $data['id'],
+        'last_sync_message' => t('Mapping created'),
+        'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS,
       ));
     }
     else {
@@ -213,18 +215,21 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         '@sfid' => $mapped_objects->salesforce_id,
         '@msg' => $e->getMessage(),
       )), 'error');
-      return;
+      $mapped_objects->last_sync_message = $e->getMessage();
+      $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
     }
 
-    $mapped_objects->last_sync = REQUEST_TIME;
+    $mapped_objects->last_sync_message = NULL;
+    $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
+    
+    salesforce_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
+      '%name' => $entity_wrapper->label(),
+      '%sfid' => $mapped_objects->salesforce_id,
+    )));
   }
 
-  salesforce_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
-    '%name' => $entity_wrapper->label(),
-    '%sfid' => $mapped_objects->salesforce_id,
-  )));
-
-  // Note that last_sync time is updated automatically.
+  $mapped_objects->last_sync_action = t('Push');
+  $mapped_objects->last_sync = REQUEST_TIME;
   $mapped_objects->save();
 }
 
@@ -385,10 +390,16 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
             'entity_id' => $entity_id,
             'entity_type' => $wrapper->type(),
             'salesforce_id' => $result->id,
+            'last_sync_message' => t('New mapping'),
           ));
+        }
+        else {
+          $mapped_objects->last_sync_message = NULL;
         }
 
         $mapped_objects->last_sync = REQUEST_TIME;
+        $mapped_objects->last_sync_action = t('Push');
+        $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
         $mapped_objects->save();
       }
 
@@ -407,6 +418,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
           ),
           WATCHDOG_ERROR
         );
+        // @TODO update mapping objects with errors based on the SF id.
       }
     }
   }
