@@ -34,11 +34,26 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
         'type' => 'property',
         'specifier' => 'salesforce_id',
       ),
+      'last_sync_action' => array(
+        'data' => t('Last sync action'),
+        'type' => 'property',
+        'specifier' => 'last_sync_action',
+      ),
       'last_sync' => array(
         'data' => t('Last sync'),
         'type' => 'property',
         'specifier' => 'last_sync',
         'sort' => 'desc',
+      ),
+      'last_sync_status' => array(
+        'data' => t('Last sync status'),
+        'type' => 'property',
+        'specifier' => 'last_sync_status',
+      ),
+      'last_sync_message' => array(
+        'data' => t('Last sync message'),
+        'type' => 'property',
+        'specifier' => 'last_sync_message',
       ),
       'operations' => array('data' => t('Operations')),
     );
@@ -103,8 +118,12 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
         'entity_type' => $entity_info['label'],
         'label' => $drupal_entity_link,
         'salesforce_id' => $sf_object_link,
+        'last_sync_action' => $mapping_object->last_sync_action,
         'last_sync' => format_date($mapping_object->last_sync),
+        'last_sync_status' => $mapping_object->last_sync_status,
+        'last_sync_message' => check_plain($mapping_object->last_sync_message),
         'operations' =>
+          l(t('view'), $this->path . '/manage/' . $mapping_object_id) . ' ' .
           l(t('edit'), $this->path . '/manage/' . $mapping_object_id) . ' ' .
           l(t('delete'), $this->path . '/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
       );
