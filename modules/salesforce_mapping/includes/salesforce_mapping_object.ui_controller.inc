@@ -83,6 +83,16 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       $query->propertyCondition('salesforce_id', $form_state['input']['salesforce_id'], $operator);
     }
 
+    // Last sync action.
+    if (!empty($form_state['input']['last_sync_action'])) {
+      $query->propertyCondition('last_sync_action', $form_state['input']['last_sync_action']);
+    }
+
+    // Last sync status.
+    if (!empty($form_state['input']['last_sync_status'])) {
+      $query->propertyCondition('last_sync_status', $form_state['input']['last_sync_status']);
+    }
+
     $query->tableSort($header);
 
     $query->pager(25);
@@ -169,6 +179,27 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       '#default_value' => '',
       '#size' => 19,
       '#maxlength' => 18,
+    );
+
+    $form['search']['last_sync_action'] = array(
+      '#type' => 'select',
+      '#title' => t('Last sync action'),
+      '#empty_option' => t('- Any - '),
+      // @TODO fix this options definition
+      '#options' => array(
+        t('Push') => t('Push'),
+        t('Push') => t('Pull'),
+      ),
+    );
+
+    $form['search']['last_sync_status'] = array(
+      '#type' => 'select',
+      '#title' => t('Last sync status'),
+      '#empty_option' => t('- Any - '),
+      '#options' => array(
+        SALESFORCE_MAPPING_STATUS_SUCCESS => t('Success'),
+        SALESFORCE_MAPPING_STATUS_ERROR => t('Error'),
+      ),
     );
 
     $form['search']['search_submit'] = array(
