@@ -152,7 +152,6 @@ function salesforce_mapping_schema() {
         'drupal_entity_type',
         'drupal_bundle',
         'salesforce_object_type',
-        'salesforce_record_type_default',
       ),
     ),
   );
@@ -286,7 +285,6 @@ function salesforce_mapping_update_7302(&$sandbox) {
     'drupal_entity_type',
     'drupal_bundle',
     'salesforce_object_type',
-    'salesforce_record_type_default',
   ));
 
 }
