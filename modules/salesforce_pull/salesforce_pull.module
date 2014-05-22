@@ -298,7 +298,7 @@ function salesforce_pull_process_records($sf_object) {
 
     // Save our mapped objects.
     if ($mapping_object) {
-      $mapping_object->last_sync_action = t('Pull');
+      $mapping_object->last_sync_action = 'pull';
       $mapping_object->save();
     }
   }

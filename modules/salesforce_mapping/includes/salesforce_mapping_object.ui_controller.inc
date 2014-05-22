@@ -84,12 +84,12 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
     }
 
     // Last sync action.
-    if (!empty($form_state['input']['last_sync_action'])) {
+    if ($form_state['input']['last_sync_action'] != '') {
       $query->propertyCondition('last_sync_action', $form_state['input']['last_sync_action']);
     }
 
     // Last sync status.
-    if (!empty($form_state['input']['last_sync_status'])) {
+    if ($form_state['input']['last_sync_status'] != '') {
       $query->propertyCondition('last_sync_status', $form_state['input']['last_sync_status']);
     }
 
@@ -187,8 +187,8 @@ class SalesforceMappingObjectUIController extends EntityDefaultUIController {
       '#empty_option' => t('- Any - '),
       // @TODO fix this options definition
       '#options' => array(
-        t('Push') => t('Push'),
-        t('Push') => t('Pull'),
+        'push' => t('Push'),
+        'pull' => t('Pull'),
       ),
     );
 
