@@ -520,6 +520,27 @@ function salesforce_mapping_form_validate($form, &$form_state) {
     form_set_error('salesforce_record_type_default', t('Default record type must be one of the Allowed Record Types.'));
   }
 
+  $properties = array(
+    'salesforce_object_type' => $values['salesforce_object_type'],
+    'drupal_entity_type' => $values['drupal_entity_type'],
+    'drupal_bundle' => $values['drupal_bundle'],
+  );
+
+  $existing_mappings = salesforce_mapping_load_multiple($properties);
+  foreach ($existing_mappings as $existing_mapping) {
+    // Existing mapping, ensure not using any other unique combo. Less
+    // efficient than using in the query, but works with
+    // salesforce_mapping_load_multiple().
+    if (isset($mapping->name) && $mapping->name == $existing_mapping->name) {
+      continue;
+    }
+    foreach ($values['sync_triggers'] as $trigger => $trigger_enabled) {
+      if ($trigger_enabled && $existing_mapping->sync_triggers & $trigger) {
+        form_set_error('sync_triggers[' . $trigger . ']', t('This Drupal bundle has already been mapped to a Salesforce object using this trigger.'));
+      }
+    }
+  }
+
   // If Salesforce Object Create is selected, ensure that at least one mapping
   // is set to sync or SF to Drupal to prevent "empty" entities.
   if ($values['sync_triggers'][SALESFORCE_MAPPING_SYNC_SF_CREATE] && isset($values['salesforce_field_mappings'])) {
