@@ -529,8 +529,8 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   $existing_mappings = salesforce_mapping_load_multiple($properties);
   foreach ($existing_mappings as $existing_mapping) {
     // Existing mapping, ensure not using any other unique combo. Less
-    // efficient than using in the query, but works with
-    // salesforce_mapping_load_multiple().
+    // efficient than adding a condition to the query, but works easily
+    // with salesforce_mapping_load_multiple().
     if (isset($mapping->name) && $mapping->name == $existing_mapping->name) {
       continue;
     }
