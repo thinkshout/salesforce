@@ -146,11 +146,12 @@ function salesforce_mapping_schema() {
     'primary key' => array('salesforce_mapping_id'),
     'unique keys' => array(
       'name' => array('name'),
+    ),
+    'indexes' => array(
       'name_sf_type_drupal_type' => array(
         'drupal_entity_type',
         'drupal_bundle',
         'salesforce_object_type',
-        'salesforce_record_type_default',
       ),
     ),
   );
@@ -394,4 +395,21 @@ function salesforce_mapping_update_7301(&$sandbox) {
     );
     $mapping->save();
   }
+}
+
+/**
+ * Change index on Salesforce mapping to be non-unique.
+ */
+function salesforce_mapping_update_7302(&$sandbox) {
+
+  // Remove unique key.
+  db_drop_unique_key('salesforce_mapping', 'name_sf_type_drupal_type');
+
+  // Add non-unique key back.
+  db_add_index('salesforce_mapping', 'name_sf_type_drupal_type', array(
+    'drupal_entity_type',
+    'drupal_bundle',
+    'salesforce_object_type',
+  ));
+
 }
