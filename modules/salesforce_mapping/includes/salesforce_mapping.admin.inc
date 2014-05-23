@@ -328,7 +328,6 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#description' => t('Select which actions on Drupal entities and Salesforce objects should trigger a synchronization. These settings are used by the salesforce_push and salesforce_pull modules respectively.'),
     '#default_value' => $trigger_defaults,
     '#options' => $trigger_options,
-    '#required' => TRUE,
   );
 
   $form['push_async'] = array(
@@ -520,22 +519,26 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   if (!in_array($values['salesforce_record_type_default'], $values['salesforce_record_types_allowed'])) {
     form_set_error('salesforce_record_type_default', t('Default record type must be one of the Allowed Record Types.'));
   }
-  $efq = new EntityFieldQuery();
-  $efq
-    ->entityCondition('entity_type', 'salesforce_mapping')
-    ->propertyCondition('salesforce_object_type', $values['salesforce_object_type'])
-    ->propertyCondition('drupal_entity_type', $values['drupal_entity_type'])
-    ->propertyCondition('drupal_bundle', $values['drupal_bundle']);
-  $efq->count();
 
-  // Existing mapping, ensure not using any other unique combo.
-  if (isset($mapping->name)) {
-    $efq->propertyCondition('name', $mapping->name, '<>');
-  }
+  $properties = array(
+    'salesforce_object_type' => $values['salesforce_object_type'],
+    'drupal_entity_type' => $values['drupal_entity_type'],
+    'drupal_bundle' => $values['drupal_bundle'],
+  );
 
-  $count = $efq->execute();
-  if ($count > 0) {
-    form_set_error('drupal_bundle', t('This Drupal bundle has already been mapped to a Salesforce object.'));
+  $existing_mappings = salesforce_mapping_load_multiple($properties);
+  foreach ($existing_mappings as $existing_mapping) {
+    // Existing mapping, ensure not using any other unique combo. Less
+    // efficient than adding a condition to the query, but works easily
+    // with salesforce_mapping_load_multiple().
+    if (isset($mapping->name) && $mapping->name == $existing_mapping->name) {
+      continue;
+    }
+    foreach ($values['sync_triggers'] as $trigger => $trigger_enabled) {
+      if ($trigger_enabled && $existing_mapping->sync_triggers & $trigger) {
+        form_set_error('sync_triggers[' . $trigger . ']', t('This Drupal bundle has already been mapped to a Salesforce object using this trigger.'));
+      }
+    }
   }
 
   // If Salesforce Object Create is selected, ensure that at least one mapping
