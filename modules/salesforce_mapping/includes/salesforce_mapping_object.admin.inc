@@ -148,3 +148,276 @@ function salesforce_mapping_object_form_submit($form, &$form_state) {
   drupal_set_message(t('Salesforce mapping has been saved.'));
   $form_state['redirect'] = 'admin/content/salesforce/mapped-objects';
 }
+
+function salesforce_mapping_object_filter_form($form, &$form_state) {
+  $form = array();
+
+  $values = !empty($_GET['search']) ? $_GET['search'] : NULL;
+
+  $form['search'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Search'),
+    '#collapsible' => TRUE,
+    '#collapsed' => empty($values),
+    '#tree' => TRUE,
+  );
+
+  // Get list of mapped entity types.
+  $mapped_entities = salesforce_mapping_get_mapped_entities();
+  $entity_options = array('' => '');
+  // Build an options array of entity types that have mappings.
+  foreach ($mapped_entities as $type => $bundles) {
+    $info = entity_get_info($type);
+    $entity_options[$type] = $info['label'];
+  }
+
+  $form['search']['entity_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Entity type'),
+    '#options' => $entity_options,
+    '#empty_option' => t('- Select an entity type - '),
+    '#default_value' => isset($values['entity_type']) ? $values['entity_type'] : '',
+  );
+
+  $form['search']['entity_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Drupal Entity Id'),
+    '#size' => 19,
+    '#default_value' => isset($values['entity_id']) ? $values['entity_id'] : '',
+    '#states' => array(
+      'visible' => array(
+        ':input[name="search[entity_type]"]' => array('!value' => key($entity_options))
+      )
+    )
+  );
+
+  $form['search']['salesforce_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Salesforce Id'),
+    '#default_value' => '',
+    '#size' => 19,
+    '#maxlength' => 18,
+    '#default_value' => isset($values['salesforce_id']) ? $values['salesforce_id'] : '',
+  );
+
+  $form['search']['last_sync_action'] = array(
+    '#type' => 'select',
+    '#title' => t('Last sync action'),
+    '#empty_option' => t('- Any - '),
+    // @TODO fix this options definition
+    '#options' => array(
+      'push' => t('Push'),
+      'pull' => t('Pull'),
+    ),
+    '#default_value' => isset($values['last_sync_action']) ? $values['last_sync_action'] : '',
+  );
+
+  $form['search']['last_sync_status'] = array(
+    '#type' => 'select',
+    '#title' => t('Last sync status'),
+    '#empty_option' => t('- Any - '),
+    '#options' => array(
+      SALESFORCE_MAPPING_STATUS_SUCCESS => t('Success'),
+      SALESFORCE_MAPPING_STATUS_ERROR => t('Error'),
+    ),
+    '#default_value' => isset($values['last_sync_status']) ? $values['last_sync_status'] : '',
+  );
+
+
+
+  $form['search']['search_submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Search'),
+  );
+
+  $form['search']['reset'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset'),
+    '#limit_validation_errors' => array(),
+    '#submit' => array('salesforce_mapping_object_filter_form_reset'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for salesforce_mapping_object_filter_form().
+ */
+function salesforce_mapping_object_filter_form_submit($form, &$form_state) {
+  $filters = array(
+    'search' => $form_state['values']['search'],
+  );
+  $form_state['redirect'] = array($_GET['q'], array('query' => $filters));
+}
+
+/**
+ * Submit handler to reset the filter form.
+ */
+function salesforce_mapping_object_filter_form_reset($form, &$form_state) {
+  $form_state['redirect'] = array($_GET['q']);
+}
+
+
+function salesforce_mapping_object_overview_page() {
+
+  $header = array(
+    'entity_type' => array(
+      'data' => t('Entity type'),
+      'type' => 'property',
+      'specifier' => 'entity_type',
+    ),
+    'label' => array(
+      'data' => t('Entity label'),
+    ),
+    'salesforce_id' => array(
+      'data' => t('Salesforce object'),
+      'type' => 'property',
+      'specifier' => 'salesforce_id',
+    ),
+    'last_sync_action' => array(
+      'data' => t('Last sync action'),
+      'type' => 'property',
+      'specifier' => 'last_sync_action',
+    ),
+    'last_sync' => array(
+      'data' => t('Last sync'),
+      'type' => 'property',
+      'specifier' => 'last_sync',
+      'sort' => 'desc',
+    ),
+    'last_sync_status' => array(
+      'data' => t('Last sync status'),
+      'type' => 'property',
+      'specifier' => 'last_sync_status',
+    ),
+    'last_sync_message' => array(
+      'data' => t('Last sync message'),
+      'type' => 'property',
+      'specifier' => 'last_sync_message',
+    ),
+    'operations' => array('data' => t('Operations')),
+  );
+
+  $options = array();
+
+  $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', 'salesforce_mapping_object');
+
+  $values = !empty($_GET['search']) ? $_GET['search'] : NULL;
+  
+  // Add conditions to the query.
+  // Entity type.
+  if (!empty($values['entity_type'])) {
+    $query->propertyCondition('entity_type', $values['entity_type']);
+    // Entity ID.
+    if (!empty($values['entity_id'])) {
+      $query->propertyCondition('entity_id', $values['entity_id']);
+    }
+  }
+  // Salesforce ID.
+  if (!empty($values['salesforce_id'])) {
+    $operator = '=';
+    if (strlen($values['salesforce_id']) < 18) {
+      // Match start of the Salesforce ID if less than the full 18 chars.
+      $operator = 'STARTS_WITH';
+    }
+    $query->propertyCondition('salesforce_id', $values['salesforce_id'], $operator);
+  }
+
+  // Last sync action.
+  if (isset($values['last_sync_action']) && ($values['last_sync_action'] != '')) {
+    $query->propertyCondition('last_sync_action', $values['last_sync_action']);
+  }
+
+  // Last sync status.
+  if (isset($values['last_sync_action']) && $values['last_sync_action'] != '') {
+    $query->propertyCondition('last_sync_status', $values['last_sync_status']);
+  }
+
+  $query->tableSort($header);
+
+  $query->pager(25);
+
+  $result = $query->execute();
+  $mapping_object_results = !empty($result['salesforce_mapping_object']) ? $result['salesforce_mapping_object'] : array();
+  $mapping_object_array = !empty($mapping_object_results) ? entity_load('salesforce_mapping_object', array_keys($mapping_object_results)) : array();
+  foreach ($mapping_object_array as $mapping_object_id => $mapping_object) {
+    // Drupal entity.
+    $drupal_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+    $uri = entity_uri($mapping_object->entity_type, $drupal_entity);
+    $label = entity_label($mapping_object->entity_type, $drupal_entity);
+    $drupal_entity_link = empty($uri) ? $label : l($label, $uri['path'], $uri['options']);
+    // Salesforce object id.
+    // If we have a valid SF link, make the SF object id a link.
+    $sfapi = salesforce_get_api();
+    if ($sfapi) {
+      $sf_object_link = l(
+        $mapping_object->salesforce_id,
+        $sfapi->getInstanceUrl() . '/' . $mapping_object->salesforce_id,
+        array(
+          'attributes' => array('target' => '_blank'),
+        )
+      );
+    }
+    else {
+      $sf_object_link = $mapping_object->salesforce_id;
+    }
+
+    // Get human readable entity label
+    $entity_info = entity_get_info($mapping_object->entity_type);
+    $options['salesforce_mapping_object_id-' . $mapping_object_id] = array(
+      'entity_type' => $entity_info['label'],
+      'label' => $drupal_entity_link,
+      'salesforce_id' => $sf_object_link,
+      'last_sync_action' => $mapping_object->last_sync_action,
+      'last_sync' => format_date($mapping_object->last_sync),
+      'last_sync_status' => $mapping_object->last_sync_status,
+      'last_sync_message' => check_plain($mapping_object->last_sync_message),
+      'operations' =>
+        l(t('view'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id) . ' ' .
+        l(t('edit'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id) . ' ' .
+        l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
+    );
+  }
+
+  $page['search'] = drupal_get_form('salesforce_mapping_object_filter_form');
+  $page['table'] = drupal_get_form('salesforce_mapping_object_table_form', $header, $options);
+  $page['pager'] = array('#theme' => 'pager', '#weight' => 99);
+
+  return $page;
+}
+
+function salesforce_mapping_object_table_form($form, &$form_state, $header, $options) {
+  $form = array();
+
+  $form['bulk_operations'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Bulk Operations'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  $form['bulk_operations']['operations'] = array(
+    '#type' => 'select',
+    '#options' => array(
+      0 => t('Select a bulk operation'),
+      'delete' => t('Delete selected mappings'),
+    ),
+  );
+
+  $form['bulk_operations']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Submit'),
+  );
+
+  $form['entities'] = array(
+    '#type' => 'tableselect',
+    '#header' => $header,
+    '#options' => $options,
+    '#attributes' => array('class' => array('entity-sort-table')),
+    '#empty' => t('There are no mappings.'),
+  );
+
+  return $form;
+}

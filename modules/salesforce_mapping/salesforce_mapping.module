@@ -113,7 +113,7 @@ function salesforce_mapping_entity_info() {
         'path' => 'admin/content/salesforce/mapped-objects',
         'file' => 'salesforce_mapping_object.admin.inc',
         'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
-        'controller class' => 'SalesforceMappingObjectUIController',
+        'controller class' => 'EntityContentUIController',
       ),
       'access callback' => 'salesforce_mapping_object_access',
     ),
@@ -140,6 +140,41 @@ function salesforce_mapping_entity_property_info() {
   }
 
   return $info;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_mapping_menu() {
+  $items = array();
+
+  $items['admin/content/salesforce'] = array(
+    'title' => t('Salesforce'),
+    'description' => t('Manage mapped Salesforce objects.'),
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'salesforce_mapping_object_overview_page',
+    'file' => 'includes/salesforce_mapping_object.admin.inc',
+    'access arguments' => array('view salesforce mapping')
+  );
+  $items['admin/content/salesforce/mapped-objects'] = array(
+    'title' => t('Mapped objects'),
+    'description' => t('Manage mapped Salesforce objects.'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/content/salesforce/activity'] = array(
+    'title' => t('Activity'),
+    'description' => t('Activity on mapped Salesforce objects.'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function salesforce_mapping_menu_alter(&$items) {
+  $items['admin/content/salesforce/mapped-objects/add']['title'] = t('Add mapped object');
 }
 
 /**
