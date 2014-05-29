@@ -229,6 +229,19 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#default_value' => isset($values['revisions']) ? $values['revisions'] : FALSE,
   );
 
+  $form['search']['limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Items per page'),
+    '#options' => array(
+      25 => 25,
+      50 => 50,
+      100 => 100,
+      150 => 150,
+      200 => 200
+    ),
+    '#default_value' => !empty($values['limit']) ? $values['limit'] : 25,
+  );
+
   $form['search']['search_submit'] = array(
     '#type' => 'submit',
     '#value' => t('Search'),
@@ -313,7 +326,13 @@ function salesforce_mapping_object_overview_page() {
       unset($values['revisions']);
     }
 
-    $mapping_object_array = salesforce_mapping_object_filter_query($header, $values, $revisions);
+    $limit = 25;
+    if (isset($values['limit'])) {
+      $limit = ($values['limit'] > 0) ? $values['limit'] : $limit;
+      unset($values['limit']);
+    }
+
+    $mapping_object_array = salesforce_mapping_object_filter_query($header, $values, $limit, $revisions);
   }
   foreach ($mapping_object_array as $id => $mapping_object) {
     $mapping_object_id = $mapping_object->salesforce_mapping_object_id;

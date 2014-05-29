@@ -591,13 +591,15 @@ function salesforce_mapping_object_entity_property_get($entity, array $options, 
  *  Table sort header array.
  * @param array $properties
  *  Array of properties to include in the query.
+ * @param int $limit
+ *  Number of results to return.
  * @param bool $revisions
  *  If all revisions should be returned.
  *
  * @return
  *  Array of loaded entities.
  */
-function salesforce_mapping_object_filter_query($header = FALSE, $properties = array(), $revisions = FALSE) {
+function salesforce_mapping_object_filter_query($header = FALSE, $properties = array(), $limit = 25, $revisions = FALSE) {
 
   $entities = FALSE;
   $table = 'salesforce_mapping_object';
@@ -607,10 +609,10 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     $table .= '_revision';
     $id = 'revision_id';
   }
-
+  $limit = (!empty($limit)) ? $limit : 25;
   $query = db_select($table, 'm')->extend('PagerDefault')->extend('TableSort')
     ->fields('m')
-    ->limit(25)
+    ->limit($limit)
     ->orderByHeader($header);
 
   // conditions
