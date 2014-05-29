@@ -584,3 +584,64 @@ function salesforce_mapping_object_entity_property_get($entity, array $options, 
 
   return FALSE;
 }
+
+/**
+ * Return loaded mapping objects from a query.
+ * @param array $header
+ *  Table sort header array.
+ * @param array $properties
+ *  Array of properties to include in the query.
+ * @param bool $revisions
+ *  If all revisions should be returned.
+ *
+ * @return
+ *  Array of loaded entities.
+ */
+function salesforce_mapping_object_filter_query($header = FALSE, $properties = array(), $revisions = FALSE) {
+
+  $entities = FALSE;
+  $table = 'salesforce_mapping_object';
+  $id = 'salesforce_mapping_object_id';
+
+  if ($revisions) {
+    $table .= '_revision';
+    $id = 'revision_id';
+  }
+
+  $query = db_select($table, 'm')->extend('PagerDefault')->extend('TableSort')
+    ->fields('m')
+    ->limit(25)
+    ->orderByHeader($header);
+
+  // conditions
+  foreach ($properties as $property => $value) {
+    if (isset($value) && ($value != '')) {
+      $operator = is_array($value) ? 'IN' : '=';
+      if ($property == 'salesforce_id') {
+        if (strlen($value) < 18) {
+          // Match start of the Salesforce ID if less than the full 18 chars.
+          $operator = 'STARTS_WITH';
+        }
+      }
+      $query->condition('m.' . $property, $value, $operator);
+    }
+  }
+
+  $results = $query
+    ->execute()
+    ->fetchAllAssoc($id);
+
+  if ($results) {
+    $entities = array();
+    if ($revisions) {
+      foreach ($results as $key => $entity) {
+        $entities[] = entity_revision_load('salesforce_mapping_object', $key);
+      }
+    }
+    else {
+      $entities = entity_load('salesforce_mapping_object', array_keys($results));
+    }
+  }
+
+  return $entities;
+}

@@ -223,7 +223,11 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#default_value' => isset($values['last_sync_status']) ? $values['last_sync_status'] : '',
   );
 
-
+  $form['search']['revisions'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include activity history'),
+    '#default_value' => isset($values['revisions']) ? $values['revisions'] : FALSE,
+  );
 
   $form['search']['search_submit'] = array(
     '#type' => 'submit',
@@ -263,37 +267,31 @@ function salesforce_mapping_object_overview_page() {
   $header = array(
     'entity_type' => array(
       'data' => t('Entity type'),
-      'type' => 'property',
-      'specifier' => 'entity_type',
+      'field' => 'entity_type',
     ),
     'label' => array(
       'data' => t('Entity label'),
     ),
     'salesforce_id' => array(
       'data' => t('Salesforce object'),
-      'type' => 'property',
-      'specifier' => 'salesforce_id',
+      'field' => 'salesforce_id',
     ),
     'last_sync_action' => array(
       'data' => t('Last sync action'),
-      'type' => 'property',
-      'specifier' => 'last_sync_action',
+      'field' => 'last_sync_action',
     ),
     'last_sync' => array(
       'data' => t('Last sync'),
-      'type' => 'property',
-      'specifier' => 'last_sync',
+      'field' => 'last_sync',
       'sort' => 'desc',
     ),
     'last_sync_status' => array(
       'data' => t('Last sync status'),
-      'type' => 'property',
-      'specifier' => 'last_sync_status',
+      'field' => 'last_sync_status',
     ),
     'last_sync_message' => array(
       'data' => t('Last sync message'),
-      'type' => 'property',
-      'specifier' => 'last_sync_message',
+      'field' => 'last_sync_message',
     ),
     'operations' => array('data' => t('Operations')),
   );
@@ -302,52 +300,23 @@ function salesforce_mapping_object_overview_page() {
 
   // Need to ensure the query doesn't execute when posing the form.
   $result = FALSE;
+  $mapping_object_array = array();
+
   if (!isset($_POST['form_id'])) {
-    $query = new EntityFieldQuery();
-    $query
-      ->entityCondition('entity_type', 'salesforce_mapping_object');
+    $values = !empty($_GET['search']) ? $_GET['search'] : array();
+    unset($values['search_submit']);
+    unset($values['reset']);
 
-    $values = !empty($_GET['search']) ? $_GET['search'] : NULL;
-
-    // Add conditions to the query.
-    // Entity type.
-    if (!empty($values['entity_type'])) {
-      $query->propertyCondition('entity_type', $values['entity_type']);
-      // Entity ID.
-      if (!empty($values['entity_id'])) {
-        $query->propertyCondition('entity_id', $values['entity_id']);
-      }
-    }
-    // Salesforce ID.
-    if (!empty($values['salesforce_id'])) {
-      $operator = '=';
-      if (strlen($values['salesforce_id']) < 18) {
-        // Match start of the Salesforce ID if less than the full 18 chars.
-        $operator = 'STARTS_WITH';
-      }
-      $query->propertyCondition('salesforce_id', $values['salesforce_id'], $operator);
+    $revisions = FALSE;
+    if (isset($values['revisions'])) {
+      $revisions = ($values['revisions'] == TRUE);
+      unset($values['revisions']);
     }
 
-    // Last sync action.
-    if (isset($values['last_sync_action']) && ($values['last_sync_action'] != '')) {
-      $query->propertyCondition('last_sync_action', $values['last_sync_action']);
-    }
-
-    // Last sync status.
-    if (isset($values['last_sync_status']) && $values['last_sync_status'] != '') {
-      $query->propertyCondition('last_sync_status', $values['last_sync_status']);
-    }
-
-    $query->tableSort($header);
-
-    $query->pager(25);
-
-    $result = $query->execute();
+    $mapping_object_array = salesforce_mapping_object_filter_query($header, $values, $revisions);
   }
-
-  $mapping_object_results = !empty($result['salesforce_mapping_object']) ? $result['salesforce_mapping_object'] : array();
-  $mapping_object_array = !empty($mapping_object_results) ? entity_load('salesforce_mapping_object', array_keys($mapping_object_results)) : array();
-  foreach ($mapping_object_array as $mapping_object_id => $mapping_object) {
+  foreach ($mapping_object_array as $id => $mapping_object) {
+    $mapping_object_id = $mapping_object->salesforce_mapping_object_id;
     // Drupal entity.
     $drupal_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
     $uri = entity_uri($mapping_object->entity_type, $drupal_entity);
@@ -371,7 +340,7 @@ function salesforce_mapping_object_overview_page() {
 
     // Get human readable entity label
     $entity_info = entity_get_info($mapping_object->entity_type);
-    $rows['salesforce_mapping_object_id-' . $mapping_object_id] = array(
+    $rows['salesforce_mapping_object_id-' . $mapping_object_id . '-' . $id] = array(
       'entity_type' => $entity_info['label'],
       'label' => $drupal_entity_link,
       'salesforce_id' => $sf_object_link,
