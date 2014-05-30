@@ -9,7 +9,16 @@ class SalesforceMappingObjectMetadataController extends EntityDefaultMetadataCon
     $info = parent::entityPropertyInfo();
     $properties = &$info[$this->type]['properties'];
 
-    // Entities
+    // Link to the salesforce object.
+    $properties['salesforce_url'] = array(
+      'label' => t('Salesforce object URL'),
+      'description' => t('URL for the Salesforce object'),
+      'type' => 'uri',
+      'getter callback' => 'salesforce_mapping_object_property_salesforce_url_get',
+      'computed' => TRUE,
+    );
+
+    // Drupal entity.
     $properties['entity'] = array(
       'label' => t("Entity"),
       'type' => 'entity',

@@ -336,18 +336,19 @@ function salesforce_mapping_object_overview_page() {
   }
   foreach ($mapping_object_array as $id => $mapping_object) {
     $mapping_object_id = $mapping_object->salesforce_mapping_object_id;
+    $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
     // Drupal entity.
-    $drupal_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+    $drupal_entity = $wrapper->entity->value();
     $uri = entity_uri($mapping_object->entity_type, $drupal_entity);
     $label = entity_label($mapping_object->entity_type, $drupal_entity);
     $drupal_entity_link = empty($uri) ? $label : l($label, $uri['path'], $uri['options']);
     // Salesforce object id.
     // If we have a valid SF link, make the SF object id a link.
-    $sfapi = salesforce_get_api();
-    if ($sfapi) {
+    $salesforce_object_url = $wrapper->salesforce_object_url->value();
+    if ($salesforce_object_url) {
       $sf_object_link = l(
         $mapping_object->salesforce_id,
-        $sfapi->getInstanceUrl() . '/' . $mapping_object->salesforce_id,
+        $salesforce_object_url,
         array(
           'attributes' => array('target' => '_blank'),
         )
@@ -368,8 +369,8 @@ function salesforce_mapping_object_overview_page() {
       'last_sync_status' => $mapping_object->last_sync_status,
       'last_sync_message' => check_plain($mapping_object->last_sync_message),
       'operations' =>
-        l(t('view'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id) . ' ' .
-        l(t('edit'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id) . ' ' .
+        l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
+        l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
         l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
     );
   }

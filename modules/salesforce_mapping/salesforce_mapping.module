@@ -98,6 +98,7 @@ function salesforce_mapping_entity_info() {
       'controller class' => 'EntityAPIController',
       'entity class' => 'SalesforceMappingObject',
       'metadata controller class' => 'SalesforceMappingObjectMetadataController',
+      'extra fields controller class' => 'EntityDefaultExtraFieldsController',
       'base table' => 'salesforce_mapping_object',
       'revision table' => 'salesforce_mapping_object_revision',
       'fieldable' => FALSE,
@@ -486,6 +487,21 @@ function salesforce_mapping_field_extra_fields() {
     );
   }
 
+//  $extra['salesforce_mapping_object']['salesforce_mapping_object'] = array(
+//    'display' => array(
+//      'entity' => array(
+//        'label' => t('Entity'),
+//        'description' => t('Drupal entity'),
+//        'weight' => 0,
+//      ),
+//      'salesforce_id' => array(
+//        'label' => t('Salesforce Id'),
+//        'description' => t('Salesforce Id'),
+//        'weight' => 0,
+//      ),
+//    ),
+//  );
+//
   return isset($extra) ? $extra : array();
 }
 
@@ -555,6 +571,20 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
   elseif (isset($salesforce_mapping_fieldmap_type[$fieldmap_type])) {
     return $salesforce_mapping_fieldmap_type[$fieldmap_type];
   }
+}
+
+/**
+ * Callback to get $salesforce_mapping_object->salesforce_url.
+ */
+function salesforce_mapping_object_property_salesforce_url_get(SalesforceMappingObject $salesforce_mapping_object, array $options, $property_name, $entity_type) {
+  $sfapi = salesforce_get_api();
+  if ($sfapi) {
+    $sf_object_link = $sfapi->getInstanceUrl() . '/' . $salesforce_mapping_object->salesforce_id;
+  }
+  else {
+    $sf_object_link = NULL;
+  }
+  return $sf_object_link;
 }
 
 /**
