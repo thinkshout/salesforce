@@ -9,7 +9,7 @@ class SalesforceMappingObjectMetadataController extends EntityDefaultMetadataCon
     $info = parent::entityPropertyInfo();
     $properties = &$info[$this->type]['properties'];
 
-    // Link to the salesforce object.
+    // URL for the Salesforce object.
     $properties['salesforce_url'] = array(
       'label' => t('Salesforce object URL'),
       'description' => t('URL for the Salesforce object'),
