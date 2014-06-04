@@ -646,17 +646,40 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     ->limit($limit)
     ->orderByHeader($header);
 
+  if (!$revisions) {
+    $query->join($table . '_revision', 'r', 'm.salesforce_mapping_object_id = r.salesforce_mapping_object_id');
+    $query->groupBy('m.salesforce_mapping_object_id');
+
+    // Add count columns for each status value.
+    foreach (salesforce_mapping_object_sync_status() as $status_id => $status) {
+      $query->addExpression('count(CASE WHEN r.last_sync_status = ' . $status_id . ' THEN TRUE ELSE NULL END)', 'status_' . $status_id);
+    }
+  }
+
   // conditions
   foreach ($properties as $property => $value) {
     if (isset($value) && ($value != '')) {
       $operator = is_array($value) ? 'IN' : '=';
-      if ($property == 'salesforce_id') {
-        if (strlen($value) < 18) {
-          // Match start of the Salesforce ID if less than the full 18 chars.
-          $operator = 'STARTS_WITH';
-        }
+      switch ($property) {
+        case 'last_sync':
+          // handle from/to
+          if (!empty($value['from'])) {
+            $query->condition('m.' . $property, strtotime($value['from']), '>=');
+          }
+          if (!empty($value['to'])) {
+            $query->condition('m.' . $property, strtotime($value['to']), '<=');
+          }
+          break;
+        case 'salesforce_id':
+          if (strlen($value) < 18) {
+            // Match start of the Salesforce ID if less than the full 18 chars.
+            $operator = 'STARTS_WITH';
+          }
+          // continue to the default case.
+
+        default:
+          $query->condition('m.' . $property, $value, $operator);
       }
-      $query->condition('m.' . $property, $value, $operator);
     }
   }
 
@@ -664,19 +687,20 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     ->execute()
     ->fetchAllAssoc($id);
 
-  if ($results) {
-    $entities = array();
-    if ($revisions) {
-      foreach ($results as $key => $entity) {
-        $entities[] = entity_revision_load('salesforce_mapping_object', $key);
-      }
-    }
-    else {
-      $entities = entity_load('salesforce_mapping_object', array_keys($results));
-    }
-  }
+//  if ($results) {
+//    $entities = array();
+//    if ($revisions) {
+//      foreach ($results as $key => $entity) {
+//        $entities[] = entity_revision_load('salesforce_mapping_object', $key);
+//      }
+//    }
+//    else {
+//      $entities = entity_load('salesforce_mapping_object', array_keys($results));
+//    }
+//  }
 
-  return $entities;
+
+  return $results;
 }
 
 /**

@@ -150,6 +150,7 @@ function salesforce_mapping_object_form_submit($form, &$form_state) {
 }
 
 function salesforce_mapping_object_filter_form($form, &$form_state) {
+
   $form = array();
 
   $values = !empty($_GET['search']) ? $_GET['search'] : NULL;
@@ -220,12 +221,47 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#default_value' => isset($values['last_sync_status']) ? $values['last_sync_status'] : '',
   );
 
-  $form['search']['revisions'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Include activity history'),
-    '#default_value' => isset($values['revisions']) ? $values['revisions'] : FALSE,
+  // Check to see if date_popup is installed so we can provide a friendlier UI.
+  $date_popup_installed = FALSE;
+  if (module_exists('date_popup')) {
+    $date_popup_installed = TRUE;
+  }
+
+  $form['search']['last_sync'] = array(
+    '#type' => 'item',
+    '#title' => t('Last sync'),
+    '#tree' => TRUE,
   );
 
+  $form['search']['last_sync']['from'] = array(
+    '#type' => 'textfield',
+    '#title' => t('From'),
+    '#default_value' => $values['last_sync']['from'],
+    '#description' => t('Format: %time.', array(
+      '%time' => format_date(time(), 'custom', 'Y-m-d H:i:s'),
+      )
+    ),
+  );
+
+  $form['search']['last_sync']['to'] = array(
+    '#type' => 'textfield',
+    '#title' => t('To'),
+    '#default_value' => $values['last_sync']['to'],
+    '#description' => t('Format: %time.', array(
+        '%time' => format_date(time(), 'custom', 'Y-m-d H:i:s'),
+      )
+    ),
+  );
+
+  if ($date_popup_installed) {
+    $form['search']['last_sync']['from']['#type'] = 'date_popup';
+    $form['search']['last_sync']['from']['#format'] = 'Y-m-d H:i:s O';
+    unset($form['search']['last_sync']['from']['#maxlength']);
+
+    $form['search']['last_sync']['to']['#type'] = 'date_popup';
+    $form['search']['last_sync']['to']['#format'] = 'Y-m-d H:i:s O';
+    unset($form['search']['last_sync']['to']['#maxlength']);
+  }
   $form['search']['limit'] = array(
     '#type' => 'select',
     '#title' => t('Items per page'),
@@ -303,8 +339,19 @@ function salesforce_mapping_object_overview_page() {
       'data' => t('Last sync message'),
       'field' => 'last_sync_message',
     ),
-    'operations' => array('data' => t('Operations')),
+
   );
+
+  $statuses = salesforce_mapping_object_sync_status();
+  foreach ($statuses as $status_id => $status) {
+    $field = 'status_' . $status_id;
+    $header[$field] = array(
+      'data' => $status . ' Count',
+      'field' => $field,
+    );
+  }
+
+  $header['operations'] = array('data' => t('Operations'));
 
   $rows = array();
 
@@ -313,18 +360,12 @@ function salesforce_mapping_object_overview_page() {
 
   // Need to ensure the query doesn't execute when posing the form.
   $result = FALSE;
-  $mapping_object_array = array();
+  $mapping_object_entities = array();
 
   if (!isset($_POST['form_id'])) {
     $values = !empty($_GET['search']) ? $_GET['search'] : array();
     unset($values['search_submit']);
     unset($values['reset']);
-
-    $revisions = FALSE;
-    if (isset($values['revisions'])) {
-      $revisions = ($values['revisions'] == TRUE);
-      unset($values['revisions']);
-    }
 
     $limit = 25;
     if (isset($values['limit'])) {
@@ -332,9 +373,10 @@ function salesforce_mapping_object_overview_page() {
       unset($values['limit']);
     }
 
-    $mapping_object_array = salesforce_mapping_object_filter_query($header, $values, $limit, $revisions);
+    $mapping_object_results = salesforce_mapping_object_filter_query($header, $values, $limit);
+    $mapping_object_entities = entity_load('salesforce_mapping_object', array_keys($mapping_object_results));
   }
-  foreach ($mapping_object_array as $id => $mapping_object) {
+  foreach ($mapping_object_entities as $id => $mapping_object) {
     $mapping_object_id = $mapping_object->salesforce_mapping_object_id;
     $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
     // Drupal entity.
@@ -360,7 +402,9 @@ function salesforce_mapping_object_overview_page() {
 
     // Get human readable entity label
     $entity_info = entity_get_info($mapping_object->entity_type);
-    $rows['salesforce_mapping_object_id-' . $mapping_object_id . '-' . $id] = array(
+
+    $row_id = 'salesforce_mapping_object_id-' . $mapping_object_id . '-' . $id;
+    $rows[$row_id] = array(
       'entity_type' => $entity_info['label'],
       'label' => $drupal_entity_link,
       'salesforce_id' => $sf_object_link,
@@ -368,10 +412,15 @@ function salesforce_mapping_object_overview_page() {
       'last_sync' => format_date($mapping_object->last_sync),
       'last_sync_status' => $statuses[$mapping_object->last_sync_status],
       'last_sync_message' => check_plain($mapping_object->last_sync_message),
-      'operations' =>
-        l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
-        l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
-        l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
+    );
+    foreach ($statuses as $status_id => $status) {
+      $field = 'status_' . $status_id;
+      $rows[$row_id][$field] = $mapping_object_results[$id]->{$field};
+    }
+    $rows[$row_id]['operations'] = array(
+      l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
+      l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
+      l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
     );
   }
 
