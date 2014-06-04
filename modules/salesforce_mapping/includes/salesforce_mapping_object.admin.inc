@@ -344,11 +344,11 @@ function salesforce_mapping_object_overview_page() {
     $drupal_entity_link = empty($uri) ? $label : l($label, $uri['path'], $uri['options']);
     // Salesforce object id.
     // If we have a valid SF link, make the SF object id a link.
-    $salesforce_object_url = $wrapper->salesforce_object_url->value();
-    if ($salesforce_object_url) {
+    $salesforce_url = $wrapper->salesforce_url->value();
+    if ($salesforce_url) {
       $sf_object_link = l(
         $mapping_object->salesforce_id,
-        $salesforce_object_url,
+        $salesforce_url,
         array(
           'attributes' => array('target' => '_blank'),
         )
