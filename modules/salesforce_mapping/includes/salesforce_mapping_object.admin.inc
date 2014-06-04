@@ -216,10 +216,7 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#type' => 'select',
     '#title' => t('Last sync status'),
     '#empty_option' => t('- Any - '),
-    '#options' => array(
-      SALESFORCE_MAPPING_STATUS_SUCCESS => t('Success'),
-      SALESFORCE_MAPPING_STATUS_ERROR => t('Error'),
-    ),
+    '#options' => salesforce_mapping_object_sync_status(),
     '#default_value' => isset($values['last_sync_status']) ? $values['last_sync_status'] : '',
   );
 
@@ -311,6 +308,9 @@ function salesforce_mapping_object_overview_page() {
 
   $rows = array();
 
+  // Get array of possible statuses.
+  $statuses = salesforce_mapping_object_sync_status();
+
   // Need to ensure the query doesn't execute when posing the form.
   $result = FALSE;
   $mapping_object_array = array();
@@ -366,7 +366,7 @@ function salesforce_mapping_object_overview_page() {
       'salesforce_id' => $sf_object_link,
       'last_sync_action' => drupal_ucfirst($mapping_object->last_sync_action),
       'last_sync' => format_date($mapping_object->last_sync),
-      'last_sync_status' => $mapping_object->last_sync_status,
+      'last_sync_status' => $statuses[$mapping_object->last_sync_status],
       'last_sync_message' => check_plain($mapping_object->last_sync_message),
       'operations' =>
         l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .

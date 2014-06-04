@@ -639,6 +639,7 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     $table .= '_revision';
     $id = 'revision_id';
   }
+
   $limit = (!empty($limit)) ? $limit : 25;
   $query = db_select($table, 'm')->extend('PagerDefault')->extend('TableSort')
     ->fields('m')
@@ -676,4 +677,19 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
   }
 
   return $entities;
+}
+
+/**
+ * Definition of allowed sync statuses. Integer keyed array.
+ * @TODO - rethink this structure.
+ *
+ * @return array
+ */
+function salesforce_mapping_object_sync_status() {
+  $statuses = array(
+    SALESFORCE_MAPPING_STATUS_ERROR => t('Error'),
+    SALESFORCE_MAPPING_STATUS_SUCCESS => t('Success'),
+  );
+
+  return $statuses;
 }
