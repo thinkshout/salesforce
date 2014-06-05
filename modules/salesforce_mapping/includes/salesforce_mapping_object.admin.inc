@@ -346,7 +346,7 @@ function salesforce_mapping_object_overview_page() {
   foreach ($statuses as $status_id => $status) {
     $field = 'status_' . $status_id;
     $header[$field] = array(
-      'data' => $status . ' Count',
+      'data' => t('@status Count', array('@status' => $status)),
       'field' => $field,
     );
   }
@@ -417,11 +417,9 @@ function salesforce_mapping_object_overview_page() {
       $field = 'status_' . $status_id;
       $rows[$row_id][$field] = $mapping_object_results[$id]->{$field};
     }
-    $rows[$row_id]['operations'] = array(
-      l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
+    $rows[$row_id]['operations'] = l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
       l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
-      l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination())),
-    );
+      l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination()));
   }
 
   $page['search'] = drupal_get_form('salesforce_mapping_object_filter_form');
