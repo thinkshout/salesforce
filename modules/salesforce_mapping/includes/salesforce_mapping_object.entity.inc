@@ -21,6 +21,34 @@ class SalesforceMappingObject extends Entity {
   }
 
   /**
+   * Override buildContent() to add properties.
+   */
+  public function buildContent($view_mode = 'full', $langcode = NULL) {
+    $content = array();
+    $content = entity_get_controller($this->entityType)
+      ->buildContent($this, $view_mode, $langcode, $content);
+
+    $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $this);
+
+    $salesforce_url = $wrapper->salesforce_url->value();
+    if ($salesforce_url) {
+      $sf_object_link = l(
+        $this->salesforce_id,
+        $salesforce_url,
+        array(
+          'attributes' => array('target' => '_blank'),
+        )
+      );
+    }
+    else {
+      $sf_object_link = $this->salesforce_id;
+    }
+    $content['salesforce_id']['content'] = $sf_object_link;
+
+    return $content;
+  }
+
+  /**
    * Save the entity.
    *
    * @return object
