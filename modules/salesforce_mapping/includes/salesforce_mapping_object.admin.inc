@@ -257,10 +257,12 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     $form['search']['last_sync']['from']['#type'] = 'date_popup';
     $form['search']['last_sync']['from']['#format'] = 'Y-m-d H:i:s O';
     unset($form['search']['last_sync']['from']['#maxlength']);
+    unset($form['search']['last_sync']['from']['#description']);
 
     $form['search']['last_sync']['to']['#type'] = 'date_popup';
     $form['search']['last_sync']['to']['#format'] = 'Y-m-d H:i:s O';
     unset($form['search']['last_sync']['to']['#maxlength']);
+    unset($form['search']['last_sync']['to']['#description']);
   }
   $form['search']['limit'] = array(
     '#type' => 'select',
