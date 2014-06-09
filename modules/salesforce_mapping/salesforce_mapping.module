@@ -95,7 +95,7 @@ function salesforce_mapping_entity_info() {
     ),
     'salesforce_mapping_object' => array(
       'label' => t('Salesforce Object Mapping'),
-      'controller class' => 'EntityAPIController',
+      'controller class' => 'SalesforceMappingObjectController',
       'entity class' => 'SalesforceMappingObject',
       'metadata controller class' => 'SalesforceMappingObjectMetadataController',
       'extra fields controller class' => 'EntityDefaultExtraFieldsController',
@@ -629,13 +629,13 @@ function salesforce_mapping_object_entity_property_get($entity, array $options, 
  * @return
  *  Array of loaded entities.
  */
-function salesforce_mapping_object_filter_query($header = FALSE, $properties = array(), $limit = 25, $revisions = FALSE) {
+function salesforce_mapping_object_filter_query($header = FALSE, $properties = array(), $limit = 25, $mapping_id = NULL) {
 
   $entities = FALSE;
   $table = 'salesforce_mapping_object';
   $id = 'salesforce_mapping_object_id';
 
-  if ($revisions) {
+  if ($mapping_id) {
     $table .= '_revision';
     $id = 'revision_id';
   }
@@ -646,7 +646,7 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     ->limit($limit)
     ->orderByHeader($header);
 
-  if (!$revisions) {
+  if (!$mapping_id) {
     $query->join($table . '_revision', 'r', 'm.salesforce_mapping_object_id = r.salesforce_mapping_object_id');
     $query->groupBy('m.salesforce_mapping_object_id');
 
@@ -654,6 +654,9 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     foreach (salesforce_mapping_object_sync_status() as $status_id => $status) {
       $query->addExpression('count(CASE WHEN r.last_sync_status = ' . $status_id . ' THEN TRUE ELSE NULL END)', 'status_' . $status_id);
     }
+  }
+  else {
+    $query->condition('m.salesforce_mapping_object_id', $mapping_id);
   }
 
   // conditions
@@ -687,19 +690,6 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
     ->execute()
     ->fetchAllAssoc($id);
 
-//  if ($results) {
-//    $entities = array();
-//    if ($revisions) {
-//      foreach ($results as $key => $entity) {
-//        $entities[] = entity_revision_load('salesforce_mapping_object', $key);
-//      }
-//    }
-//    else {
-//      $entities = entity_load('salesforce_mapping_object', array_keys($results));
-//    }
-//  }
-
-
   return $results;
 }
 
@@ -716,4 +706,71 @@ function salesforce_mapping_object_sync_status() {
   );
 
   return $statuses;
+}
+
+/**
+ * Helper method to return human readable versions of mapping properties.
+ *
+ * @param $name
+ * @param $property
+ */
+function salesforce_mapping_object_render_property($mapping, $name, $property) {
+
+  switch ($name) {
+    case 'salesforce_id':
+      $salesforce_url = $mapping->salesforce_url->value();
+      if ($salesforce_url) {
+        $content = l(
+          $mapping->salesforce_id->value(),
+          $salesforce_url,
+          array(
+            'attributes' => array('target' => '_blank'),
+          )
+        );
+      }
+      else {
+        $content = $mapping->salesforce_id->value();
+      }
+      break;
+
+    case 'created':
+    case 'last_sync':
+    case 'entity_updated':
+      $content = format_date($property->value());
+      break;
+
+    case 'last_sync_status':
+      $statuses = salesforce_mapping_object_sync_status();
+      $content = isset($statuses[$property->value()]) ? $statuses[$property->value()] : NULL;
+      break;
+
+    case 'last_sync_action':
+      $content = drupal_ucfirst($property->value());
+      break;
+
+    case 'entity':
+      if ($uri = entity_uri($property->type(), $property->value())) {
+        $content = l($property->label(), $uri['path'], $uri['options']);
+      }
+      else {
+       $content = check_plain($property->label());
+      }
+      break;
+
+    case 'entity_type':
+      // Get human readable entity label
+      $entity_info = entity_get_info($property->value());
+      $content = $entity_info['label'];
+      break;
+
+    case 'entity_id':
+    case 'last_sync_message':
+      $content = check_plain($property->value());
+      break;
+
+    default:
+      $content = NULL;
+  }
+
+  return $content;
 }

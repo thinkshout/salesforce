@@ -317,7 +317,7 @@ function salesforce_mapping_object_overview_page() {
       'data' => t('Entity type'),
       'field' => 'entity_type',
     ),
-    'label' => array(
+    'entity' => array(
       'data' => t('Entity label'),
     ),
     'salesforce_id' => array(
@@ -341,7 +341,6 @@ function salesforce_mapping_object_overview_page() {
       'data' => t('Last sync message'),
       'field' => 'last_sync_message',
     ),
-
   );
 
   $statuses = salesforce_mapping_object_sync_status();
@@ -355,6 +354,16 @@ function salesforce_mapping_object_overview_page() {
 
   $header['operations'] = array('data' => t('Operations'));
 
+  return salesforce_mapping_object_overview_table($header);
+}
+
+/**
+ * Generate the overview filter form/table for mappings.
+ *
+ * @param $header
+ * @return mixed
+ */
+function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
   $rows = array();
 
   // Get array of possible statuses.
@@ -375,60 +384,58 @@ function salesforce_mapping_object_overview_page() {
       unset($values['limit']);
     }
 
-    $mapping_object_results = salesforce_mapping_object_filter_query($header, $values, $limit);
-    $mapping_object_entities = entity_load('salesforce_mapping_object', array_keys($mapping_object_results));
+    $mapping_object_results = salesforce_mapping_object_filter_query($header, $values, $limit, $mapping_id);
+
+    if ($mapping_object_results) {
+      $mapping_object_entities = array();
+      if ($mapping_id) {
+        foreach ($mapping_object_results as $key => $entity) {
+          $mapping_object_entities[] = entity_revision_load('salesforce_mapping_object', $key);
+        }
+      }
+      else {
+        $mapping_object_entities = entity_load('salesforce_mapping_object', array_keys($mapping_object_results));
+      }
+    }
   }
   foreach ($mapping_object_entities as $id => $mapping_object) {
     $mapping_object_id = $mapping_object->salesforce_mapping_object_id;
-    $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
-    // Drupal entity.
-    $drupal_entity = $wrapper->entity->value();
-    $uri = entity_uri($mapping_object->entity_type, $drupal_entity);
-    $label = entity_label($mapping_object->entity_type, $drupal_entity);
-    $drupal_entity_link = empty($uri) ? $label : l($label, $uri['path'], $uri['options']);
-    // Salesforce object id.
-    // If we have a valid SF link, make the SF object id a link.
-    $salesforce_url = $wrapper->salesforce_url->value();
-    if ($salesforce_url) {
-      $sf_object_link = l(
-        $mapping_object->salesforce_id,
-        $salesforce_url,
-        array(
-          'attributes' => array('target' => '_blank'),
-        )
-      );
-    }
-    else {
-      $sf_object_link = $mapping_object->salesforce_id;
-    }
-
-    // Get human readable entity label
-    $entity_info = entity_get_info($mapping_object->entity_type);
-
     $row_id = 'salesforce_mapping_object_id-' . $mapping_object_id . '-' . $id;
-    $rows[$row_id] = array(
-      'entity_type' => $entity_info['label'],
-      'label' => $drupal_entity_link,
-      'salesforce_id' => $sf_object_link,
-      'last_sync_action' => drupal_ucfirst($mapping_object->last_sync_action),
-      'last_sync' => format_date($mapping_object->last_sync),
-      'last_sync_status' => $statuses[$mapping_object->last_sync_status],
-      'last_sync_message' => check_plain($mapping_object->last_sync_message),
-    );
-    foreach ($statuses as $status_id => $status) {
-      $field = 'status_' . $status_id;
-      $rows[$row_id][$field] = $mapping_object_results[$id]->{$field};
+
+    $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
+
+    foreach ($header as $property => $header_settings) {
+      if (!empty($wrapper->{$property})) {
+        $rows[$row_id][$property] = salesforce_mapping_object_render_property($wrapper, $property, $wrapper->{$property});
+      }
     }
-    $rows[$row_id]['operations'] = l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
-      l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
-      l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination()));
+
+    // Only add additional columns when no specific mapping id is provided.
+    if (!$mapping_id) {
+      foreach ($statuses as $status_id => $status) {
+        $field = 'status_' . $status_id;
+        $rows[$row_id][$field] = $mapping_object_results[$id]->{$field};
+      }
+      $rows[$row_id]['operations'] = l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
+        l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
+        l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination()));
+    }
   }
 
-  $page['search'] = drupal_get_form('salesforce_mapping_object_filter_form');
-  $page['table'] = drupal_get_form('salesforce_mapping_object_table_form', $header, $rows);
-  $page['pager'] = array('#theme' => 'pager', '#weight' => 99);
-
-  return $page;
+  $table['search'] = drupal_get_form('salesforce_mapping_object_filter_form');
+  if ($mapping_id) {
+    $table['table'] = array(
+      '#theme' => 'table',
+      '#header' => $header,
+      '#rows' => $rows,
+    );
+  }
+  else {
+    $table['table'] = drupal_get_form('salesforce_mapping_object_table_form', $header, $rows, $mapping_id);
+  }
+  $table['pager'] = array('#theme' => 'pager', '#weight' => 99);
+  
+  return $table;
 }
 
 function salesforce_mapping_object_table_form($form, &$form_state, $header, $options) {
