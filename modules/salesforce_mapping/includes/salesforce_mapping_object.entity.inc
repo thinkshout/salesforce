@@ -21,13 +21,24 @@ class SalesforceMappingObject extends Entity {
   }
 
   /**
-   * Retreive the default URI.
+   * Retrieve the default URI.
    *
    * @return array
    *   Associated array with the default URI on the 'path' key.
    */
   protected function defaultUri() {
     return array('path' => 'admin/content/salesforce/mapped-objects/' . $this->identifier());
+  }
+
+  /**
+   * Retrieve the default label.
+   */
+  protected function defaultLabel() {
+    $label = NULL;
+    $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $this);
+    $label = $wrapper->entity->label();
+    $label = ($label) ? $label : $this->entity_type . ':' . $this->entity_id;
+    return t('@label to @sf_id', array('@label' => $label, '@sf_id' => $this->salesforce_id));
   }
 
   /**

@@ -101,6 +101,7 @@ function salesforce_mapping_entity_info() {
       'extra fields controller class' => 'EntityDefaultExtraFieldsController',
       'base table' => 'salesforce_mapping_object',
       'revision table' => 'salesforce_mapping_object_revision',
+      'label callback' => 'entity_class_label',
       'uri callback' => 'entity_class_uri',
       'fieldable' => FALSE,
       'exportable' => FALSE,
