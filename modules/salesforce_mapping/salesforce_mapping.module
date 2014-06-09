@@ -101,6 +101,7 @@ function salesforce_mapping_entity_info() {
       'extra fields controller class' => 'EntityDefaultExtraFieldsController',
       'base table' => 'salesforce_mapping_object',
       'revision table' => 'salesforce_mapping_object_revision',
+      'uri callback' => 'entity_class_uri',
       'fieldable' => FALSE,
       'exportable' => FALSE,
       'module' => 'salesforce_mapping',
@@ -437,7 +438,7 @@ function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
   if (!empty($wrapper->salesforce_mapping_object)) {
     $mapping = $wrapper->salesforce_mapping_object->value();
     if ($mapping && user_access('view salesforce mapping')) {
-      $sfapi = salesforce_get_api();
+      $uri = entity_uri('salesforce_mapping_object', $mapping);
       $entity->content['salesforce_id'] = array(
         '#theme' => 'salesforce_mapping_linked_object',
         '#label' => t('Salesforce ID'),
@@ -445,10 +446,7 @@ function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
           array(
             '#markup' => l(
               $mapping->salesforce_id,
-              $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
-              array(
-                'attributes' => array('target' => '_blank'),
-              )
+              $uri['path']
             ),
           ),
         ),

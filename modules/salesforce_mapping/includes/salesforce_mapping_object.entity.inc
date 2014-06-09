@@ -21,6 +21,16 @@ class SalesforceMappingObject extends Entity {
   }
 
   /**
+   * Retreive the default URI.
+   *
+   * @return array
+   *   Associated array with the default URI on the 'path' key.
+   */
+  protected function defaultUri() {
+    return array('path' => 'admin/content/salesforce/mapped-objects/' . $this->identifier());
+  }
+
+  /**
    * Save the entity.
    *
    * @return object
