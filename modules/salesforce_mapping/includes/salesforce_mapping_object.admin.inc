@@ -151,9 +151,11 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
  */
 function salesforce_mapping_object_form_submit($form, &$form_state) {
   $mapped_object = entity_ui_form_submit_build_entity($form, $form_state);
+  // No new revision since we're not pushing data.
+  $mapped_object->is_new_revision = FALSE;
   $mapped_object->save();
   drupal_set_message(t('Salesforce mapping has been saved.'));
-  $form_state['redirect'] = 'admin/content/salesforce/mapped-objects';
+  $form_state['redirect'] = 'admin/content/salesforce/mapped-objects/' . $mapped_object->salesforce_mapping_object_id;
 }
 
 /**
@@ -432,7 +434,7 @@ function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
         $rows[$row_id][$field] = $mapping_object_results[$id]->{$field};
       }
       $rows[$row_id]['operations'] = l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
-        l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit') . ' ' .
+        l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit', array('query' => drupal_get_destination())) . ' ' .
         l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination()));
     }
   }
