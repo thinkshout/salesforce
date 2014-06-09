@@ -156,6 +156,14 @@ function salesforce_mapping_object_form_submit($form, &$form_state) {
   $form_state['redirect'] = 'admin/content/salesforce/mapped-objects';
 }
 
+/**
+ * Form definition for the mapping object filter form.
+ *
+ * @param $form
+ * @param $form_state
+ *
+ * @return array
+ */
 function salesforce_mapping_object_filter_form($form, &$form_state) {
 
   $form = array();
@@ -407,7 +415,7 @@ function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
   }
   foreach ($mapping_object_entities as $id => $mapping_object) {
     $mapping_object_id = $mapping_object->salesforce_mapping_object_id;
-    $row_id = 'salesforce_mapping_object_id-' . $mapping_object_id . '-' . $id;
+    $row_id = $mapping_object_id . '-' . $id;
 
     $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
 
@@ -459,9 +467,7 @@ function salesforce_mapping_object_table_form($form, &$form_state, $header, $opt
     '#type' => 'select',
     '#options' => array(
       0 => t('Select a bulk operation'),
-      'delete' => t('Delete mappings'),
       'push' => t('Push to Salesforce'),
-      'pull' => t('Pull from Salesforce'),
     ),
   );
 
@@ -479,4 +485,25 @@ function salesforce_mapping_object_table_form($form, &$form_state, $header, $opt
   );
 
   return $form;
+}
+
+/**
+ * Submit handle for the bulk operations form.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function salesforce_mapping_object_table_form_submit($form, &$form_state) {
+  $values = $form_state['values'];
+  if ($values['operations'] && count($values['entities']) > 0) {
+    // @TODO switch to using the Batch API for processing.
+    foreach ($values['entities'] as $value) {
+      list($mapping_id) = explode('-', $value);
+      $mapping = entity_load_single('salesforce_mapping_object', $mapping_id);
+      // Set entity_updated to now to ensure push occurs.
+      $mapping->entity_updated = REQUEST_TIME;
+      $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping);
+      salesforce_push_entity_crud($mapping->entity_type, $wrapper->entity->value(), SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE);
+    }
+  }
 }
