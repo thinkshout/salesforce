@@ -40,13 +40,6 @@ class SalesforceMappingObjectController extends EntityAPIController {
     module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping_object.admin');
 
     $header = array(
-      'entity_type' => array(
-        'data' => t('Entity type'),
-        'field' => 'entity_type',
-      ),
-      'entity' => array(
-        'data' => t('Entity label'),
-      ),
       'salesforce_id' => array(
         'data' => t('Salesforce object'),
         'field' => 'salesforce_id',

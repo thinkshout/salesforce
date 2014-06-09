@@ -417,6 +417,7 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
     case 'create':
       return user_access('create salesforce mapping object', $account);
 
+    case 'edit':
     case 'update':
       return user_access('edit salesforce mapping object', $account);
 
