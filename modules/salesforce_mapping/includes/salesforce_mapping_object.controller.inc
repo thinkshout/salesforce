@@ -45,20 +45,20 @@ class SalesforceMappingObjectController extends EntityAPIController {
         'field' => 'salesforce_id',
       ),
       'last_sync_action' => array(
-        'data' => t('Last sync action'),
+        'data' => t('Action'),
         'field' => 'last_sync_action',
       ),
       'last_sync' => array(
-        'data' => t('Last sync'),
+        'data' => t('Date/time'),
         'field' => 'last_sync',
         'sort' => 'desc',
       ),
       'last_sync_status' => array(
-        'data' => t('Last sync status'),
+        'data' => t('Sync status'),
         'field' => 'last_sync_status',
       ),
       'last_sync_message' => array(
-        'data' => t('Last sync message'),
+        'data' => t('Message'),
         'field' => 'last_sync_message',
       ),
     );

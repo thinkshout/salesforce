@@ -151,8 +151,7 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
  */
 function salesforce_mapping_object_form_submit($form, &$form_state) {
   $mapped_object = entity_ui_form_submit_build_entity($form, $form_state);
-  // No new revision since we're not pushing data.
-  $mapped_object->is_new_revision = FALSE;
+  $mapped_object->last_sync_message = t('Mapping edited');
   $mapped_object->save();
   drupal_set_message(t('Salesforce mapping has been saved.'));
   $form_state['redirect'] = 'admin/content/salesforce/mapped-objects/' . $mapped_object->salesforce_mapping_object_id;
@@ -342,20 +341,20 @@ function salesforce_mapping_object_overview_page() {
       'field' => 'salesforce_id',
     ),
     'last_sync_action' => array(
-      'data' => t('Last sync action'),
+      'data' => t('Action'),
       'field' => 'last_sync_action',
     ),
     'last_sync' => array(
-      'data' => t('Last sync'),
+      'data' => t('Date/time'),
       'field' => 'last_sync',
       'sort' => 'desc',
     ),
     'last_sync_status' => array(
-      'data' => t('Last sync status'),
+      'data' => t('Sync status'),
       'field' => 'last_sync_status',
     ),
     'last_sync_message' => array(
-      'data' => t('Last sync message'),
+      'data' => t('Message'),
       'field' => 'last_sync_message',
     ),
   );
