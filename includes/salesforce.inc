@@ -342,10 +342,21 @@ class Salesforce {
       throw new SalesforceException($error, $response->code);
     }
 
+    // Ensure all required attributes are returned. They can be omitted if the
+    // OAUTH scope is inadequate.
+    $required = array('refresh_token', 'access_token', 'id', 'instance_url');
+    foreach ($required as $key) {
+      if (!isset($data[$key])) {
+        return FALSE;
+      }
+    }
+
     $this->setRefreshToken($data['refresh_token']);
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);
     $this->setInstanceUrl($data['instance_url']);
+
+    return TRUE;
   }
 
   /**
