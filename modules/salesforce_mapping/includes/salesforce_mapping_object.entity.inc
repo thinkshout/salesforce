@@ -69,7 +69,7 @@ class SalesforceMappingObject extends Entity {
     if (isset($this->is_new) && $this->is_new) {
       $this->created = REQUEST_TIME;
     }
- 
+
     if (!isset($this->is_new_revision)) {
       $this->is_new_revision = TRUE;
     }
