@@ -260,14 +260,14 @@ function salesforce_push_cron() {
       $entity_ids[$item->data['entity_type']] = array();
     }
 
+    $entity_type = $item->data['entity_type'];
+    $entity_id = $item->data['entity_id'];
+
     // Duplicate entity in the queue.
     if (in_array($entity_id, $entity_ids[$item->data['entity_type']])) {
       $queue->deleteItem($item);
       continue;
     }
-
-    $entity_type = $item->data['entity_type'];
-    $entity_id = $item->data['entity_id'];
 
     // Attempt to load our entity from the queue item.
     $entity = entity_load_single($entity_type, $entity_id);
