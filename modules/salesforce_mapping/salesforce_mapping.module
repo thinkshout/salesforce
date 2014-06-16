@@ -174,13 +174,6 @@ function salesforce_mapping_menu() {
 }
 
 /**
- * Implements hook_menu_alter().
- */
-function salesforce_mapping_menu_alter(&$items) {
-  $items['admin/content/salesforce/mapped-objects/add']['title'] = t('Add mapped object');
-}
-
-/**
  * Loads a single salesforce_mapping or all of them if no name provided.
  *
  * @param null $name
