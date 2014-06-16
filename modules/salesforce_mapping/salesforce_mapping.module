@@ -152,7 +152,7 @@ function salesforce_mapping_menu() {
   $items = array();
 
   $items['admin/content/salesforce'] = array(
-    'title' => 'Salesforce',
+    'title' => 'Salesforce Mapped Objects',
     'description' => 'Manage mapped Salesforce objects.',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'salesforce_mapping_object_overview_page',
