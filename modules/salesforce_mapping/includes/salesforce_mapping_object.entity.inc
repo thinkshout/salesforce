@@ -10,6 +10,21 @@
  */
 class SalesforceMappingObject extends Entity {
 
+  // @codingStandardsIgnoreStart
+  public
+    $salesforce_mapping_object_id,
+    $revision_id,
+    $salesforce_id,
+    $entity_id,
+    $entity_type,
+    $created,
+    $entity_updated,
+    $last_sync,
+    $last_sync_action,
+    $last_sync_status,
+    $last_sync_message;
+  // @codingStandardsIgnoreEnd
+
   /**
    * Constructor for SalesforceMappingObject.
    *
