@@ -475,21 +475,6 @@ function salesforce_mapping_field_extra_fields() {
     );
   }
 
-//  $extra['salesforce_mapping_object']['salesforce_mapping_object'] = array(
-//    'display' => array(
-//      'entity' => array(
-//        'label' => t('Entity'),
-//        'description' => t('Drupal entity'),
-//        'weight' => 0,
-//      ),
-//      'salesforce_id' => array(
-//        'label' => t('Salesforce Id'),
-//        'description' => t('Salesforce Id'),
-//        'weight' => 0,
-//      ),
-//    ),
-//  );
-//
   return isset($extra) ? $extra : array();
 }
 
