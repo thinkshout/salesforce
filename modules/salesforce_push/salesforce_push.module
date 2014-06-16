@@ -178,7 +178,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         'entity_id' => $entity_id,
         'entity_type' => $entity_type,
         'salesforce_id' => $data['id'],
-        'last_sync_message' => t('Mapping created'),
+        'last_sync_message' => t('Mapping object created via %function.', array('%function' => __FUNCTION__)),
         'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS,
       ));
     }
@@ -206,7 +206,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     // Update SF object.
     try {
       $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
-      $mapped_objects->last_sync_message = NULL;
+      $mapped_objects->last_sync_message = t('Mapping object updated via %function.', array('%function' => __FUNCTION__));
       $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
 
       salesforce_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
@@ -389,11 +389,11 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
             'entity_id' => $entity_id,
             'entity_type' => $wrapper->type(),
             'salesforce_id' => $result->id,
-            'last_sync_message' => t('New mapping'),
+            'last_sync_message' => t('Mapping object created via %function.', array('%function' => __FUNCTION__)),
           ));
         }
         else {
-          $mapped_objects->last_sync_message = NULL;
+          $mapped_objects->last_sync_message = t('Mapping object updated via %function.', array('%function' => __FUNCTION__));
         }
 
         $mapped_objects->last_sync = REQUEST_TIME;
