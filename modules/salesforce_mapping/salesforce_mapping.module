@@ -692,6 +692,10 @@ function salesforce_mapping_object_sync_status() {
  *   Property value.
  */
 function salesforce_mapping_object_render_property($mapping, $name, $property) {
+  $value = $property->value();
+  if (empty($value)) {
+    return '';
+  }
 
   switch ($name) {
     case 'salesforce_id':
