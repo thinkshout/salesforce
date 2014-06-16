@@ -5,6 +5,9 @@
  */
 class SalesforceMappingObjectMetadataController extends EntityDefaultMetadataController {
 
+  /**
+   * Define entity metadata for SalesforceMappingObject.
+   */
   public function entityPropertyInfo() {
     $info = parent::entityPropertyInfo();
     $properties = &$info[$this->type]['properties'];
