@@ -152,21 +152,21 @@ function salesforce_mapping_menu() {
   $items = array();
 
   $items['admin/content/salesforce'] = array(
-    'title' => t('Salesforce'),
-    'description' => t('Manage mapped Salesforce objects.'),
+    'title' => 'Salesforce',
+    'description' => 'Manage mapped Salesforce objects.',
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'salesforce_mapping_object_overview_page',
     'file' => 'includes/salesforce_mapping_object.admin.inc',
-    'access arguments' => array('view salesforce mapping')
+    'access arguments' => array('view salesforce mapping'),
   );
   $items['admin/content/salesforce/mapped-objects'] = array(
-    'title' => t('Mapped objects'),
-    'description' => t('Manage mapped Salesforce objects.'),
+    'title' => 'Mapped objects',
+    'description' => 'Manage mapped Salesforce objects.',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   $items['admin/content/salesforce/activity'] = array(
-    'title' => t('Activity'),
-    'description' => t('Activity on mapped Salesforce objects.'),
+    'title' => 'Activity',
+    'description' => 'Activity on mapped Salesforce objects.',
     'type' => MENU_LOCAL_TASK,
   );
 
