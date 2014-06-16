@@ -693,7 +693,7 @@ function salesforce_mapping_object_sync_status() {
  */
 function salesforce_mapping_object_render_property($mapping, $name, $property) {
   $value = $property->value();
-  if (empty($value)) {
+  if ($value == '' or $value == NULL) {
     return '';
   }
 
