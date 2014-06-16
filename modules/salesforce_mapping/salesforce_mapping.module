@@ -266,8 +266,8 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
  * @param bool $reset
  *   Whether or not the cache should be cleared and fetch from current data.
  *
- * @return array
- *   The requested entity or FALSE if none was found.
+ * @return SalesforceMappingObject
+ *   The requested SalesforceMappingObject or FALSE if none was found.
  */
 function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $reset = FALSE) {
   $conditions = array(
