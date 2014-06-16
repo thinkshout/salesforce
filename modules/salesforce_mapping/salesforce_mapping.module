@@ -427,7 +427,7 @@ function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
   if (!empty($wrapper->salesforce_mapping_object)) {
     $mapping = $wrapper->salesforce_mapping_object->value();
     if ($mapping && user_access('view salesforce mapping')) {
-      $uri = entity_uri('salesforce_mapping_object', $mapping);
+      $uri = $mapping->uri();
       $entity->content['salesforce_id'] = array(
         '#theme' => 'salesforce_mapping_linked_object',
         '#label' => t('Salesforce ID'),
