@@ -69,11 +69,7 @@ class SalesforceMappingObject extends Entity {
     if (isset($this->is_new) && $this->is_new) {
       $this->created = REQUEST_TIME;
     }
-//    // @TODO make sense to autoset?
-//    if (!isset($this->last_sync) || !$this->last_sync) {
-//      $this->last_sync = REQUEST_TIME;
-//    }
-
+ 
     if (!isset($this->is_new_revision)) {
       $this->is_new_revision = TRUE;
     }
