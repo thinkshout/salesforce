@@ -53,7 +53,16 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
       '#value' => isset($mapped_object->salesforce_mapping_object_id) ? t('Update mapping') : t('Save mapping'),
     ),
     'delete_link' => array(
-      '#markup' => isset($mapped_object->salesforce_mapping_object_id) ? l(t('Delete'), 'admin/structure/salesforce/mapped-objects/manage/' . $mapped_object->salesforce_mapping_object_id . '/delete', array('attributes' => array('id' => array('mapped_object-delete-' . $mapped_object->salesforce_mapping_object_id), 'class' => array('button remove')), 'query' => array('destination' => 'admin/structure/salesforce/mapped-objects'))) : ''
+      '#markup' => l(t('Delete'), 'admin/structure/salesforce/mapped-objects/manage/' . $mapped_object->salesforce_mapping_object_id . '/delete',
+        array(
+          'attributes' => array(
+            'id' => array('mapped_object-delete-' . $mapped_object->salesforce_mapping_object_id),
+            'class' => array('button remove'),
+          ),
+          'query' => array('destination' => 'admin/structure/salesforce/mapped-objects'),
+        )
+      ),
+      '#access' => isset($mapped_object->salesforce_mapping_object_id),
     ),
   );
 
@@ -71,7 +80,7 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
   $entity = entity_load_single($entity_type, $entity_id);
 
   if (!$entity) {
-    // Invalid entity
+    // Invalid entity.
     form_set_error('entity_id', t('Entity is invalid.'));
     return;
   }
@@ -118,7 +127,8 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
   }
 
   if ($sf_object) {
-    // Use the returned Id to replace any 15 character Ids with the full 18 character one.
+    // Use the returned Id to replace any 15 character Ids with the full 18
+    // character one.
     $values['salesforce_id'] = $sf_object['Id'];
 
     // Check for existing mapping based on the Salesforce Id.
@@ -159,11 +169,6 @@ function salesforce_mapping_object_form_submit($form, &$form_state) {
 
 /**
  * Form definition for the mapping object filter form.
- *
- * @param $form
- * @param $form_state
- *
- * @return array
  */
 function salesforce_mapping_object_filter_form($form, &$form_state) {
 
@@ -203,15 +208,14 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#default_value' => isset($values['entity_id']) ? $values['entity_id'] : '',
     '#states' => array(
       'visible' => array(
-        ':input[name="search[entity_type]"]' => array('!value' => key($entity_options))
-      )
-    )
+        ':input[name="search[entity_type]"]' => array('!value' => key($entity_options)),
+      ),
+    ),
   );
 
   $form['search']['salesforce_id'] = array(
     '#type' => 'textfield',
     '#title' => t('Salesforce Id'),
-    '#default_value' => '',
     '#size' => 19,
     '#maxlength' => 18,
     '#default_value' => isset($values['salesforce_id']) ? $values['salesforce_id'] : '',
@@ -288,7 +292,7 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
       50 => 50,
       100 => 100,
       150 => 150,
-      200 => 200
+      200 => 200,
     ),
     '#default_value' => !empty($values['limit']) ? $values['limit'] : 25,
   );
@@ -325,7 +329,9 @@ function salesforce_mapping_object_filter_form_reset($form, &$form_state) {
   $form_state['redirect'] = array($_GET['q']);
 }
 
-
+/**
+ * Callback to render a list of mapping objects.
+ */
 function salesforce_mapping_object_overview_page() {
 
   $header = array(
@@ -375,9 +381,6 @@ function salesforce_mapping_object_overview_page() {
 
 /**
  * Generate the overview filter form/table for mappings.
- *
- * @param $header
- * @return mixed
  */
 function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
   $rows = array();
@@ -386,7 +389,6 @@ function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
   $statuses = salesforce_mapping_object_sync_status();
 
   // Need to ensure the query doesn't execute when posing the form.
-  $result = FALSE;
   $mapping_object_entities = array();
 
   if (!isset($_POST['form_id'])) {
@@ -450,10 +452,13 @@ function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
     $table['table'] = drupal_get_form('salesforce_mapping_object_table_form', $header, $rows, $mapping_id);
   }
   $table['pager'] = array('#theme' => 'pager', '#weight' => 99);
-  
+
   return $table;
 }
 
+/**
+ * Bulk operations form for Salesforce mapping objects.
+ */
 function salesforce_mapping_object_table_form($form, &$form_state, $header, $options) {
   $form = array();
 
@@ -490,9 +495,6 @@ function salesforce_mapping_object_table_form($form, &$form_state, $header, $opt
 
 /**
  * Submit handle for the bulk operations form.
- *
- * @param $form
- * @param $form_state
  */
 function salesforce_mapping_object_table_form_submit($form, &$form_state) {
   $values = $form_state['values'];
