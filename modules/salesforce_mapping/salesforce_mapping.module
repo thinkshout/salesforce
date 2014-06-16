@@ -164,11 +164,6 @@ function salesforce_mapping_menu() {
     'description' => 'Manage mapped Salesforce objects.',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/content/salesforce/activity'] = array(
-    'title' => 'Activity',
-    'description' => 'Activity on mapped Salesforce objects.',
-    'type' => MENU_LOCAL_TASK,
-  );
 
   return $items;
 }
