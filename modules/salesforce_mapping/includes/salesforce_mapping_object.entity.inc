@@ -49,11 +49,14 @@ class SalesforceMappingObject extends Entity {
    * Retrieve the default label.
    */
   protected function defaultLabel() {
+    if (isset($this->is_new) && $this->is_new === TRUE) {
+      return '';
+    }
     $label = NULL;
     $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $this);
     $label = $wrapper->entity->label();
     $label = ($label) ? $label : $this->entity_type . ':' . $this->entity_id;
-    return t('@label to @sf_id', array('@label' => $label, '@sf_id' => $this->salesforce_id));
+    return t('"@label" to "@sf_id"', array('@label' => $label, '@sf_id' => $this->salesforce_id));
   }
 
   /**
