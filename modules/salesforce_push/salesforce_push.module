@@ -298,7 +298,8 @@ function salesforce_push_cron() {
           'mapped_objects' => $mapped_objects,
         );
 
-        // Setup SF record type. CampaignMember objects get their type from their Campaign.
+        // Setup SF record type. CampaignMember objects get their type from
+        // their Campaign.
         if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
           && empty($params['RecordTypeId'])
           && ($mapping->salesforce_object_type != 'CampaignMember')) {
