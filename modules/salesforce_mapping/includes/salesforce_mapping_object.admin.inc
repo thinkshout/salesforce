@@ -151,9 +151,9 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
  */
 function salesforce_mapping_object_form_submit($form, &$form_state) {
   $mapped_object = entity_ui_form_submit_build_entity($form, $form_state);
-  $mapped_object->last_sync_message = t('Mapping edited');
+  $mapped_object->last_sync_message = t('Mapping object edited via the UI.');
   $mapped_object->save();
-  drupal_set_message(t('Salesforce mapping has been saved.'));
+  drupal_set_message(t('Salesforce mapping object has been saved.'));
   $form_state['redirect'] = 'admin/content/salesforce/mapped-objects/' . $mapped_object->salesforce_mapping_object_id;
 }
 
