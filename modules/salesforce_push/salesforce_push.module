@@ -147,7 +147,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $encoded_value, $params);
         // Handle upsert responses.
         switch ($sfapi->response->code) {
-          // On Upsert:update retreive object.
+          // On Upsert:update retrieve object.
           case '204':
             $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $key_field, $encoded_value);
             $data['id'] = $sf_object['Id'];
