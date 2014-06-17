@@ -112,12 +112,12 @@ function salesforce_mapping_entity_info() {
         'revision' => 'revision_id',
       ),
       // Enable the entity API's admin UI.
-      'admin ui' => array(
-        'path' => 'admin/content/salesforce/mapped-objects',
-        'file' => 'salesforce_mapping_object.admin.inc',
-        'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
-        'controller class' => 'EntityContentUIController',
-      ),
+//      'admin ui' => array(
+//        'path' => 'admin/content/salesforce/mapped-objects',
+//        'file' => 'salesforce_mapping_object.admin.inc',
+//        'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
+//        'controller class' => 'EntityContentUIController',
+//      ),
       'access callback' => 'salesforce_mapping_object_access',
     ),
   );
@@ -164,6 +164,57 @@ function salesforce_mapping_menu() {
     'description' => 'Manage mapped Salesforce objects.',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+
+  // Define SF activity local tasks for all mapped entities.
+  $defaults = array(
+    'file' => 'salesforce_mapping_object.admin.inc',
+    'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
+  );
+
+  $mappings = salesforce_mapping_load();
+  $mapped_entities = array();
+  foreach ($mappings as $mapping) {
+    $mapped_entities[$mapping->drupal_entity_type] = $mapping;
+  }
+  foreach ($mapped_entities as $type => $mapping) {
+    $entity = entity_create($type, array('type' => $mapping->drupal_bundle));
+    $uri = $entity->uri();
+    $path = $uri['path'] . '%' . $type . '/salesforce_activity/%salesforce_mapping_object';
+    $sf_object_arg = substr_count($path, '/');
+    $items[$path] = array(
+      'title' => 'Salesforce activity',
+      'description' => 'View Salesforce activity for this entity.',
+      'type' => MENU_LOCAL_TASK,
+      'page callback' => 'salesforce_mapping_object_view',
+      'page arguments' => array($sf_object_arg),
+      'access arguments' => array('view salesforce mapping object'),
+    );
+    $items[$path . '/view'] = array(
+      'title' => 'View',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[$path . '/edit'] = array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('salesforce_mapping_object_form', $sf_object_arg),
+      'access arguments' => array('edit salesforce mapping object'),
+      'title' => 'Edit',
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    ) + $defaults;
+    $items[$path . '/delete'] = array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array(
+        $type . '_operation_form',
+        $type,
+        'delete',
+      ),
+      'access arguments' => array('delete salesforce mapping object'),
+      'title' => 'Delete',
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+    ) + $defaults;
+  }
 
   return $items;
 }
