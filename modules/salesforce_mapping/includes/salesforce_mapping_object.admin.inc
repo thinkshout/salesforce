@@ -419,6 +419,7 @@ function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
   foreach ($mapping_object_entities as $id => $mapping_object) {
     $mapping_object_id = $mapping_object->salesforce_mapping_object_id;
     $row_id = $mapping_object_id . '-' . $id;
+    $uri = $mapping_object->uri();
 
     $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
 
@@ -434,9 +435,9 @@ function salesforce_mapping_object_overview_table($header, $mapping_id = NULL) {
         $field = 'status_' . $status_id;
         $rows[$row_id][$field] = $mapping_object_results[$id]->{$field};
       }
-      $rows[$row_id]['operations'] = l(t('view'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id) . ' ' .
-        l(t('edit'), 'admin/content/salesforce/mapped-objects/' . $mapping_object_id . '/edit', array('query' => drupal_get_destination())) . ' ' .
-        l(t('delete'), 'admin/content/salesforce/mapped-objects/manage/' . $mapping_object_id . '/delete', array('query' => drupal_get_destination()));
+      $rows[$row_id]['operations'] = l(t('view'), $uri['path']) . ' ' .
+        l(t('edit'), $uri['path'] . '/edit', array('query' => drupal_get_destination())) . ' ' .
+        l(t('delete'), $uri['path'] . '/delete', array('query' => drupal_get_destination()));
     }
   }
 
