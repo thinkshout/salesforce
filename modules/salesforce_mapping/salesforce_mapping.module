@@ -257,6 +257,32 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Display a contact.
+ *
+ * @param RedhenContact $contact
+ *   A Fully loaded contact object.
+ *
+ * @return array
+ *   Render array.
+ */
+function salesforce_mapping_object_view($sf_mapping_object, $view_mode = 'full') {
+  return $sf_mapping_object->view($view_mode);
+}
+
+/**
+ * Return a Salesforce Mapping Object.
+ *
+ * @see entity_load()
+ */
+function salesforce_mapping_object_load($salesforce_mapping_object_id, $conditions = array(), $reset = FALSE) {
+  if (!is_bool($salesforce_mapping_object_id)) {
+    $salesforce_mapping_object_id = array($salesforce_mapping_object_id);
+  }
+  $objects = entity_load('salesforce_mapping_object', $salesforce_mapping_object_id, $conditions, $reset);
+  return $objects ? reset($objects) : FALSE;
+}
+
+/**
  * Returns Salesforce object mappings for a given Drupal entity.
  *
  * @param string $entity_type
@@ -274,8 +300,7 @@ function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $res
     'entity_id' => $entity_id,
     'entity_type' => $entity_type,
   );
-  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
-  return !empty($results) ? reset($results) : FALSE;
+  return salesforce_mapping_object_load(FALSE, $conditions, $reset);
 }
 
 /**
@@ -293,8 +318,7 @@ function salesforce_mapping_object_load_by_sfid($salesforce_id, $reset = FALSE) 
   $conditions = array(
     'salesforce_id' => $salesforce_id,
   );
-  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
-  return !empty($results) ? reset($results) : FALSE;
+  return salesforce_mapping_object_load(FALSE, $conditions, $reset);
 }
 
 /**
