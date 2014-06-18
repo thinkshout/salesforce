@@ -506,40 +506,6 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
 }
 
 /**
- * Implements hook_entity_view().
- */
-function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
-  // Render linked Salesforce data when viewing a mapped entity.
-  $wrapper = entity_metadata_wrapper($type, $entity);
-  if (!empty($wrapper->salesforce_mapping_object)) {
-    $mapping = $wrapper->salesforce_mapping_object->value();
-    if ($mapping && user_access('view salesforce mapping')) {
-      $uri = $mapping->uri();
-      $entity->content['salesforce_id'] = array(
-        '#theme' => 'salesforce_mapping_linked_object',
-        '#label' => t('Salesforce ID'),
-        '#items' => array(
-          array(
-            '#markup' => l(
-              $mapping->salesforce_id,
-              $uri['path']
-            ),
-          ),
-        ),
-        '#classes' => 'field field-label-inline clearfix',
-      );
-      $entity->content['salesforce_last_sync'] = array(
-        '#theme' => 'salesforce_mapping_linked_object',
-        '#label' => t('Salesforce last sync'),
-        '#items' => array(array('#markup' => format_date($mapping->last_sync))),
-        '#markup' => format_date($mapping->last_sync),
-        '#classes' => 'field field-label-inline clearfix',
-      );
-    }
-  }
-}
-
-/**
  * Implements hook_field_extra_fields().
  */
 function salesforce_mapping_field_extra_fields() {
