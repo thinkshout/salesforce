@@ -111,13 +111,6 @@ function salesforce_mapping_entity_info() {
         'label' => 'salesforce_mapping_object_id',
         'revision' => 'revision_id',
       ),
-      // Enable the entity API's admin UI.
-//      'admin ui' => array(
-//        'path' => 'admin/content/salesforce/mapped-objects',
-//        'file' => 'salesforce_mapping_object.admin.inc',
-//        'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
-//        'controller class' => 'EntityContentUIController',
-//      ),
       'access callback' => 'salesforce_mapping_object_access',
     ),
   );
