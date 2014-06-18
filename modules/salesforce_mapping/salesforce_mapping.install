@@ -509,6 +509,7 @@ function salesforce_mapping_update_7303(&$sandbox) {
       ),
     );
     db_create_table('salesforce_mapping_object_revision', $sf_mapping_object_revision_schema);
+
     $revision_id_spec = array(
       'description' => 'The current {salesforce_mapping_object_revision}.revision_id version identifier.',
       'type' => 'int',
@@ -522,6 +523,36 @@ function salesforce_mapping_update_7303(&$sandbox) {
       ),
     );
     db_add_field('salesforce_mapping_object', 'revision_id', $revision_id_spec, $keys);
+
+    $last_sync_action_spec = array(
+      'description' => 'The last sync action (typically push or pull).',
+      'type' => 'varchar',
+      'length' => 128,
+      'not null' => FALSE,
+      'initial' => 'created',
+    );
+    db_add_field('salesforce_mapping_object', 'last_sync_action', $last_sync_action_spec);
+
+    $last_sync_status_spec = array(
+      'description' => 'The last sync status.',
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => TRUE,
+      'default' => 0,
+      'unsigned' => TRUE,
+      'initial' => 1,
+    );
+    db_add_field('salesforce_mapping_object', 'last_sync_status', $last_sync_status_spec);
+
+    $last_sync_message_spec = array(
+      'description' => 'The message returned from the last sync activity',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => FALSE,
+      'initial' => 'initializing version system',
+    );
+    db_add_field('salesforce_mapping_object', 'last_sync_message', $last_sync_message_spec);
+
     // Need to do some aggressive cache clearing, particularly the schema cache.
     drupal_get_schema('salesforce_mapping_object', TRUE);
     entity_info_cache_clear();
