@@ -159,11 +159,6 @@ function salesforce_mapping_menu() {
     'file' => 'includes/salesforce_mapping_object.admin.inc',
     'access arguments' => array('view salesforce mapping'),
   );
-  $items['admin/content/salesforce/mapped-objects'] = array(
-    'title' => 'Mapped objects',
-    'description' => 'Manage mapped Salesforce objects.',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-  );
 
   // Define SF activity local tasks for all mapped entities.
   $defaults = array(
