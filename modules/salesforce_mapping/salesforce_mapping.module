@@ -174,48 +174,51 @@ function salesforce_mapping_menu() {
   $mappings = salesforce_mapping_load();
   $mapped_entities = array();
   foreach ($mappings as $mapping) {
-    $mapped_entities[$mapping->drupal_entity_type] = $mapping;
+    // We grab the bundle now because it becomes inaccessible for some entities
+    // after it is put into the loop below:
+    $mapped_entities[$mapping->drupal_entity_type] = $mapping->drupal_bundle;
   }
-  foreach ($mapped_entities as $type => $mapping) {
-    $entity = entity_create($type, array('type' => $mapping->drupal_bundle));
-    $uri = $entity->uri();
-    $path = $uri['path'] . '%' . $type . '/salesforce_activity/%salesforce_mapping_object';
-    $sf_object_arg = substr_count($path, '/');
-    $items[$path] = array(
-      'title' => 'Salesforce activity',
-      'description' => 'View Salesforce activity for this entity.',
-      'type' => MENU_LOCAL_TASK,
-      'page callback' => 'salesforce_mapping_object_view',
-      'page arguments' => array($sf_object_arg),
-      'access arguments' => array('view salesforce mapping object'),
-    );
-    $items[$path . '/view'] = array(
-      'title' => 'View',
-      'type' => MENU_DEFAULT_LOCAL_TASK,
-      'weight' => -10,
-    );
-    $items[$path . '/edit'] = array(
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('salesforce_mapping_object_form', $sf_object_arg),
-      'access arguments' => array('edit salesforce mapping object'),
-      'title' => 'Edit',
-      'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-    ) + $defaults;
-    $items[$path . '/delete'] = array(
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array(
-        $type . '_operation_form',
-        $type,
-        'delete',
-      ),
-      'access arguments' => array('delete salesforce mapping object'),
-      'title' => 'Delete',
-      'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_INLINE,
-    ) + $defaults;
+  foreach ($mapped_entities as $type => $bundle) {
+    $entity = entity_create($type, array('type' => $bundle));
+    $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
+    if (!is_null($uri['path'])) {
+      $path = $uri['path'] . '%' . $type . '/salesforce_activity';
+      $entity_arg = substr_count($uri['path'], '/');
+      $items[$path] = array(
+        'title' => 'Salesforce activity',
+        'description' => 'View Salesforce activity for this entity.',
+        'type' => MENU_LOCAL_TASK,
+        'page callback' => 'salesforce_mapping_object_view',
+        'page arguments' => array($entity_arg, $type),
+        'access arguments' => array('view salesforce mapping object'),
+      );
+      $items[$path . '/view'] = array(
+        'title' => 'View',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'weight' => -10,
+      );
+      $items[$path . '/edit'] = array(
+        'page callback' => 'salesforce_mapping_object_edit',
+        'page arguments' => array($entity_arg, $type),
+        'access arguments' => array('edit salesforce mapping object'),
+        'title' => 'Edit',
+        'type' => MENU_LOCAL_TASK,
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+      ) + $defaults;
+      $items[$path . '/delete'] = array(
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array(
+          $type . '_operation_form',
+          $type,
+          'delete',
+        ),
+        'access arguments' => array('delete salesforce mapping object'),
+        'title' => 'Delete',
+        'type' => MENU_LOCAL_TASK,
+        'context' => MENU_CONTEXT_INLINE,
+      ) + $defaults;
+    }
   }
-
   return $items;
 }
 
@@ -308,16 +311,37 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
 }
 
 /**
- * Display a contact.
+ * Display a salesforce object mapping.
  *
- * @param RedhenContact $contact
- *   A Fully loaded contact object.
+ * @param Entity $entity
+ *   The mapped Entity.
+ * @param String $type
+ *   The mapped Entity's Type.
  *
  * @return array
  *   Render array.
  */
-function salesforce_mapping_object_view($sf_mapping_object, $view_mode = 'full') {
+function salesforce_mapping_object_view($entity, $type, $view_mode = 'full') {
+  $entity_wrapper = entity_metadata_wrapper($type, $entity);
+  $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
   return $sf_mapping_object->view($view_mode);
+}
+
+/**
+ * Edit a salesforce object mapping based only on the object.
+ *
+ * @param Entity $entity
+ *   The mapped Entity.
+ * @param String $type
+ *   The mapped Entity's Type.
+ *
+ * @return array
+ *   Render array.
+ */
+function salesforce_mapping_object_edit($entity, $type, $view_mode = 'full') {
+  $entity_wrapper = entity_metadata_wrapper($type, $entity);
+  $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
+  return drupal_get_form('salesforce_mapping_object_form', $sf_mapping_object);
 }
 
 /**
