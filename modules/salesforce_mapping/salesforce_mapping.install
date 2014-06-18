@@ -531,7 +531,7 @@ function salesforce_mapping_update_7303(&$sandbox) {
     $sandbox['position'] = 0;
     $sandbox['last'] = -1;
   }
-  $limit = 100;
+  $limit = 400;
   $query = db_select('salesforce_mapping_object', 'm')
     ->fields('m',
       array('salesforce_mapping_object_id',
