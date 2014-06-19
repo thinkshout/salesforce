@@ -229,6 +229,7 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#options' => array(
       'push' => t('Push'),
       'pull' => t('Pull'),
+      'created' => t('Created'),
     ),
     '#default_value' => isset($values['last_sync_action']) ? $values['last_sync_action'] : '',
   );
