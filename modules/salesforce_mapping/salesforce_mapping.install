@@ -523,6 +523,9 @@ function salesforce_mapping_update_7303(&$sandbox) {
       ),
     );
     db_add_field('salesforce_mapping_object', 'revision_id', $revision_id_spec, $keys);
+    db_update('salesforce_mapping_object')
+      ->expression('revision_id', 'salesforce_mapping_object_id')
+      ->execute();
 
     $last_sync_action_spec = array(
       'description' => 'The last sync action (typically push or pull).',
@@ -562,8 +565,21 @@ function salesforce_mapping_update_7303(&$sandbox) {
     $sandbox['position'] = 0;
     $sandbox['last'] = -1;
   }
-  $limit = 400;
-  $query = db_select('salesforce_mapping_object', 'm')
+  $limit = 500;
+  $insert_query = db_insert('salesforce_mapping_object_revision')->fields(array(
+    'salesforce_mapping_object_id',
+    'salesforce_id',
+    'entity_id',
+    'entity_type',
+    'created',
+    'entity_updated',
+    'last_sync',
+    'revision_id',
+    'last_sync_status',
+    'last_sync_action',
+    'last_sync_message',
+  ));
+  $object_query = db_select('salesforce_mapping_object', 'm')
     ->fields('m',
       array('salesforce_mapping_object_id',
         'salesforce_id',
@@ -572,38 +588,27 @@ function salesforce_mapping_update_7303(&$sandbox) {
         'created',
         'entity_updated',
         'last_sync',
+        'revision_id',
+        'last_sync_status',
+        'last_sync_action',
+        'last_sync_message',
       ))
     ->condition('m.salesforce_mapping_object_id', $sandbox['last'], '>')
     ->orderBy('m.salesforce_mapping_object_id')
     ->range(0, $limit);
-  $objects = $query->execute()->fetchAll();
-  foreach ($objects as $object) {
-    db_update('salesforce_mapping_object')
-      ->condition('salesforce_mapping_object_id', $object->salesforce_mapping_object_id)
-      ->fields(array('revision_id' => $object->salesforce_mapping_object_id))
-      ->execute();
-    db_insert('salesforce_mapping_object_revision')
-      ->fields(array(
-        'salesforce_mapping_object_id' => $object->salesforce_mapping_object_id,
-        'revision_id' => $object->salesforce_mapping_object_id,
-        'salesforce_id' => $object->salesforce_id,
-        'entity_id' => $object->entity_id,
-        'entity_type' => $object->entity_type,
-        'created' => $object->created,
-        'entity_updated' => $object->entity_updated,
-        'last_sync' => $object->last_sync,
-        'last_sync_status' => 1,
-        'last_sync_action' => 'created',
-        'last_sync_message' => 'initializing version system',
-      ))
-      ->execute();
+  $result = $object_query->execute();
+  while ($object = $result->fetchAssoc()) {
+    $insert_query->values($object);
+    $sandbox['last'] = $object['salesforce_mapping_object_id'];
   }
+  $insert_query->execute();
+
   $sandbox['position'] = min($sandbox['position'] + $limit, $sandbox['max']);
-  $sandbox['last'] = $object->salesforce_mapping_object_id;
   if ($sandbox['max'] > 0 && $sandbox['max'] > $sandbox['position']) {
     $sandbox['#finished'] = $sandbox['position'] / $sandbox['max'];
   }
   else {
     $sandbox['#finished'] = 1;
+    return $sandbox['max'] . " Salesforce sync records updated.";
   }
 }
