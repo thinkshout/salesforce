@@ -376,8 +376,8 @@ function salesforce_push_cron() {
  */
 function salesforce_push_process_soap_results($op, $results, $synced_entities) {
   foreach ($results as $key => $result) {
+    $mapped_objects = $synced_entities[$key]['mapped_objects'];
     if ($result->success) {
-      $mapped_objects = $synced_entities[$key]['mapped_objects'];
       if (drupal_strtolower($op) == 'delete' && $mapped_objects) {
         $mapped_objects->delete();
       }
@@ -398,6 +398,9 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
         }
 
         $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
+        $mapped_objects->last_sync = REQUEST_TIME;
+        $mapped_objects->last_sync_action = 'push';
+        $mapped_objects->save();
       }
 
       watchdog('salesforce_push', '%op: Salesforce object %id',
@@ -405,6 +408,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
       );
     }
     else {
+      $error_messages = array();
       foreach ($result->errors as $error) {
         watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
           array(
@@ -415,13 +419,19 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
           ),
           WATCHDOG_ERROR
         );
-        $mapped_objects->last_sync_message = "Processing failed";
+        $error_messages[] = $error->message;
+      }
+      if ($mapped_objects) {
+        $mapped_objects->last_sync = REQUEST_TIME;
+        $mapped_objects->last_sync_action = 'push';
         $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
+        $mapped_objects->last_sync_message = t('Push error via %function with the following messages: @message.', array(
+          '%function' => __FUNCTION__,
+          '@message' => implode(' | ', $error_messages),
+        ));
+        $mapped_objects->save();
       }
     }
-    $mapped_objects->last_sync = REQUEST_TIME;
-    $mapped_objects->last_sync_action = 'push';
-    $mapped_objects->save();
   }
 }
 
