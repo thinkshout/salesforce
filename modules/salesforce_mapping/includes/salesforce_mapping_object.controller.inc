@@ -42,6 +42,11 @@ class SalesforceMappingObjectController extends EntityAPIController {
     module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping_object.admin');
 
     $header = array(
+      'revision_id' => array(
+        'data' => t('Revision'),
+        'field' => 'revision_id',
+        'sort' => 'desc',
+      ),
       'salesforce_id' => array(
         'data' => t('Salesforce object'),
         'field' => 'salesforce_id',
@@ -50,11 +55,6 @@ class SalesforceMappingObjectController extends EntityAPIController {
         'data' => t('Action'),
         'field' => 'last_sync_action',
       ),
-      'last_sync' => array(
-        'data' => t('Date/time'),
-        'field' => 'last_sync',
-        'sort' => 'desc',
-      ),
       'last_sync_status' => array(
         'data' => t('Sync status'),
         'field' => 'last_sync_status',
@@ -62,6 +62,10 @@ class SalesforceMappingObjectController extends EntityAPIController {
       'last_sync_message' => array(
         'data' => t('Message'),
         'field' => 'last_sync_message',
+      ),
+      'last_sync' => array(
+        'data' => t('Last sync date'),
+        'field' => 'last_sync',
       ),
     );
 
