@@ -150,7 +150,7 @@ function salesforce_mapping_menu() {
     'type' => MENU_LOCAL_TASK,
     'page callback' => 'salesforce_mapping_object_overview_page',
     'file' => 'includes/salesforce_mapping_object.admin.inc',
-    'access arguments' => array('view salesforce mapping'),
+    'access arguments' => array('view salesforce mapping object'),
   );
 
   // Define SF activity local tasks for all mapped entities.
@@ -461,7 +461,7 @@ function salesforce_mapping_permission() {
       'description' => t('Administer Salesforce field maps.'),
       'restrict access' => TRUE,
     ),
-    'view salesforce mapping' => array(
+    'view salesforce mapping object' => array(
       'title' => t('View Salesforce mapping object'),
       'description' => t('View Salesforce mapping data.'),
     ),
@@ -489,7 +489,7 @@ function salesforce_mapping_permission() {
 function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL, $account = NULL) {
   switch ($op) {
     case 'view':
-      return user_access('view salesforce mapping', $account);
+      return user_access('view salesforce mapping object', $account);
 
     case 'create':
       return user_access('create salesforce mapping object', $account);
