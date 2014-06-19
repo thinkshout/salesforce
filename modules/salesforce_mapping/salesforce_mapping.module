@@ -650,8 +650,8 @@ function salesforce_mapping_object_entity_property_get($entity, array $options, 
  *   Array of properties to include in the query.
  * @param int $limit
  *   Number of results to return.
- * @param bool $mapping_id
- *   If all revisions should be returned.
+ * @param int $mapping_id
+ *   Entity ID for the mapping: limits results to a single mapping.
  *
  * @return array
  *   Array of loaded entities.
