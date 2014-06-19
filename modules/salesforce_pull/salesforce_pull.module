@@ -282,6 +282,8 @@ function salesforce_pull_process_records($sf_object) {
         'salesforce_id' => $sf_object['Id'],
         'entity_type' => $sf_mapping->drupal_entity_type,
         'entity_id' => $entity_id,
+        'entity_updated' => time(),
+        'last_sync' => time(),
         'last_sync_message' => t('Mapping created'),
         'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS,
       ));
@@ -299,6 +301,8 @@ function salesforce_pull_process_records($sf_object) {
     // Save our mapped objects.
     if ($mapping_object) {
       $mapping_object->last_sync_action = 'pull';
+      $mapping_object->last_sync_message = 'Retrieved updates from Salesforce';
+      $mapping_object->entity_updated = $mapping_object->last_sync = time();
       $mapping_object->save();
     }
   }
