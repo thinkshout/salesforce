@@ -169,7 +169,7 @@ function salesforce_mapping_menu() {
   foreach ($mapped_entities as $type => $bundle) {
     $entity = entity_create($type, array('type' => $bundle));
     $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
-    if (!is_null($uri['path'])) {
+    if (!empty($uri['path'])) {
       $path = $uri['path'] . '%' . $type . '/salesforce_activity';
       $entity_arg = substr_count($uri['path'], '/');
       $items[$path] = array(
