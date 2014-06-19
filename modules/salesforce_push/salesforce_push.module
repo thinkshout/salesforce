@@ -127,7 +127,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
   // Entity is not linked to an SF object.
   if (!$mapped_objects) {
-    // Setup SF record type. CampaignMember objects get their type from their Campaign.
+    // Setup SF record type. CampaignMember objects get their Campaign's type.
     if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
       && empty($params['RecordTypeId'])
       && ($mapping->salesforce_object_type != 'CampaignMember')) {
@@ -477,8 +477,6 @@ function salesforce_push_action_info() {
 
 /**
  * Push entity to Salesforce.
- *
- * @param $node
  */
 function salesforce_push_action(&$entity, $context) {
   $trigger = (!empty($entity->is_new) && $entity->is_new) ? SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE : SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE;
