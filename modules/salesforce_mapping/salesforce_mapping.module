@@ -98,7 +98,6 @@ function salesforce_mapping_entity_info() {
       'controller class' => 'SalesforceMappingObjectController',
       'entity class' => 'SalesforceMappingObject',
       'metadata controller class' => 'SalesforceMappingObjectMetadataController',
-      'extra fields controller class' => 'EntityDefaultExtraFieldsController',
       'base table' => 'salesforce_mapping_object',
       'revision table' => 'salesforce_mapping_object_revision',
       'label callback' => 'entity_class_label',
@@ -803,7 +802,7 @@ function salesforce_mapping_object_render_property($mapping, $name, $property) {
       break;
 
     default:
-      $content = NULL;
+      $content = $property->value();
   }
 
   return $content;

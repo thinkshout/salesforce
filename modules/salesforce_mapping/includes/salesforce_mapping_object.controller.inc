@@ -11,28 +11,30 @@
 class SalesforceMappingObjectController extends EntityAPIController {
 
   /**
-   * Override buildContent() to add properties.
+   * Override to include revision history and select properties.
    */
   public function buildContent($entity, $view_mode = 'full', $langcode = NULL, $content = array()) {
+    $build = parent::buildContent($entity, $view_mode, $langcode, $content);
 
-    $build = parent::buildContent($entity, $view_mode, $langcode);
-
+    $render_props = array(
+      'salesforce_id',
+      'last_sync_message',
+      'last_sync_action',
+      'last_sync_status',
+      'last_sync',
+    );
     $wrapper = entity_metadata_wrapper('salesforce_mapping_object', $entity);
+    foreach ($render_props as $name) {
+      $info = $wrapper->$name->info();
 
-    foreach ($wrapper as $name => $property) {
-      $info = $property->info();
+      $markup = salesforce_mapping_object_render_property($wrapper, $name, $wrapper->$name);
 
-      $content = salesforce_mapping_object_render_property($wrapper, $name, $property);
-
-      if ($content) {
+      if ($markup) {
         $build[$name] = array(
           '#type' => 'item',
           '#title' => $info['label'] . ':',
-          '#markup' => $content,
+          '#markup' => $markup,
         );
-      }
-      elseif ($content !== FALSE) {
-        unset($build[$name]);
       }
     }
 
@@ -40,6 +42,11 @@ class SalesforceMappingObjectController extends EntityAPIController {
     module_load_include('inc', 'salesforce_mapping', 'includes/salesforce_mapping_object.admin');
 
     $header = array(
+      'revision_id' => array(
+        'data' => t('Revision'),
+        'field' => 'revision_id',
+        'sort' => 'desc',
+      ),
       'salesforce_id' => array(
         'data' => t('Salesforce object'),
         'field' => 'salesforce_id',
@@ -47,11 +54,6 @@ class SalesforceMappingObjectController extends EntityAPIController {
       'last_sync_action' => array(
         'data' => t('Action'),
         'field' => 'last_sync_action',
-      ),
-      'last_sync' => array(
-        'data' => t('Date/time'),
-        'field' => 'last_sync',
-        'sort' => 'desc',
       ),
       'last_sync_status' => array(
         'data' => t('Sync status'),
@@ -61,11 +63,17 @@ class SalesforceMappingObjectController extends EntityAPIController {
         'data' => t('Message'),
         'field' => 'last_sync_message',
       ),
+      'last_sync' => array(
+        'data' => t('Last sync date'),
+        'field' => 'last_sync',
+      ),
     );
 
-    $build['history'] = salesforce_mapping_object_overview_table($header, $entity->salesforce_mapping_object_id);
+    $build['history'] = array(
+      '#type' => 'item',
+      'table' => salesforce_mapping_object_overview_table($header, $entity->salesforce_mapping_object_id),
+    );
 
     return $build;
   }
-
 }
