@@ -161,7 +161,7 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
  */
 function salesforce_mapping_object_form_submit($form, &$form_state) {
   $mapped_object = $form_state['salesforce_mapping_object'];
-  $mapped_object->salesforce_id = $form_state['input']['salesforce_id'];
+  $mapped_object->salesforce_id = $form_state['values']['salesforce_id'];
   // @todo this would be sensible but causes a DB explosion:
   // $mapped_object->last_sync->set(NULL);
   $mapped_object->last_sync_message = t('Mapping object edited via the UI.');
