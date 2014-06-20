@@ -170,7 +170,8 @@ function salesforce_mapping_object_form_submit($form, &$form_state) {
   $mapped_object->entity_updated = REQUEST_TIME;
   $mapped_object->save();
   drupal_set_message(t('Salesforce mapping object has been saved.'));
-  $form_state['redirect'] = $mapped_object->uri()['path'];
+  $uri = $mapped_object->uri();
+  $form_state['redirect'] = $uri['path'];
 }
 
 /**
