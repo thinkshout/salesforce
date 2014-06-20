@@ -45,7 +45,7 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
   );
 
   // @TODO options to trigger push or pull?
-
+  $uri = $mapped_object->uri();
   $form['actions'] = array(
     '#type' => 'actions',
     'submit' => array(
@@ -53,7 +53,7 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
       '#value' => isset($mapped_object->salesforce_mapping_object_id) ? t('Update mapping') : t('Save mapping'),
     ),
     'delete_link' => array(
-      '#markup' => l(t('Delete'), $mapped_object->uri()['path'] . '/delete',
+      '#markup' => l(t('Delete'), $uri['path'] . '/delete',
         array(
           'attributes' => array(
             'id' => array('mapped_object-delete-' . $mapped_object->salesforce_mapping_object_id),
