@@ -201,11 +201,7 @@ function salesforce_mapping_menu() {
     ) + $defaults;
     $items[$path . '/delete'] = array(
       'page callback' => 'drupal_get_form',
-      'page arguments' => array(
-        $type . '_operation_form',
-        $type,
-        'delete',
-      ),
+      'page arguments' => array('salesforce_mapping_object_delete_form', $entity_arg, $type),
       'access arguments' => array('delete salesforce mapping object'),
       'title' => 'Delete',
       'type' => MENU_LOCAL_TASK,
@@ -331,10 +327,59 @@ function salesforce_mapping_object_view($entity, $type, $view_mode = 'full') {
  * @return array
  *   Render array.
  */
-function salesforce_mapping_object_edit($entity, $type, $view_mode = 'full') {
+function salesforce_mapping_object_edit($entity, $type) {
   $entity_wrapper = entity_metadata_wrapper($type, $entity);
   $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
   return drupal_get_form('salesforce_mapping_object_form', $sf_mapping_object);
+}
+
+/**
+ * Edit a salesforce object mapping based only on the object.
+ *
+ * @param Entity $entity
+ *   The mapped Entity.
+ * @param String $type
+ *   The mapped Entity's Type.
+ *
+ * @return array
+ *   Render array.
+ */
+function salesforce_mapping_object_delete_form($form, &$form_state, $entity, $type) {
+  $entity_wrapper = entity_metadata_wrapper($type, $entity);
+  $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
+  $form_state['salesforce_mapping_object'] = $sf_mapping_object;
+  $form['#submit'][] = 'salesforce_mapping_object_delete_form_submit';
+
+  $form = confirm_form($form,
+    t('Are you sure you want to delete the mapping from !entity_label to Salesforce object %sf_id?',
+      array(
+        '!entity_label' => $entity_wrapper->label(),
+        '%sf_id' => $sf_mapping_object->salesforce_id,
+      )),
+    entity_uri('salesforce_mapping_object', $sf_mapping_object),
+    '<p>' . t('Deleting this link cannot be undone.') . '</p>',
+    t('Delete'),
+    t('Cancel'),
+    'confirm'
+  );
+
+  return $form;
+}
+
+/**
+ * Submit callback for salesforce_mapping_object_delete_form().
+ */
+function salesforce_mapping_object_delete_form_submit($form, &$form_state) {
+  $sfm_object = $form_state['salesforce_mapping_object'];
+$result = entity_delete('salesforce_mapping_object', $sfm_object->salesforce_mapping_object_id);
+  if ($result === FALSE) {
+    drupal_set_message(t('Object could not be deleted.'), 'error');
+  }
+  else {
+    drupal_set_message(t('Link has been deleted.'));
+    watchdog('salesforce', 'Deleted object link', array(), WATCHDOG_NOTICE);
+    $form_state['redirect'] = 'admin/content/salesforce';
+  }
 }
 
 /**

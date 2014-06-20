@@ -53,13 +53,13 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
       '#value' => isset($mapped_object->salesforce_mapping_object_id) ? t('Update mapping') : t('Save mapping'),
     ),
     'delete_link' => array(
-      '#markup' => l(t('Delete'), 'admin/structure/salesforce/mapped-objects/manage/' . $mapped_object->salesforce_mapping_object_id . '/delete',
+      '#markup' => l(t('Delete'), $mapped_object->uri()['path'] . '/delete',
         array(
           'attributes' => array(
             'id' => array('mapped_object-delete-' . $mapped_object->salesforce_mapping_object_id),
             'class' => array('button remove'),
           ),
-          'query' => array('destination' => 'admin/structure/salesforce/mapped-objects'),
+          'query' => array('destination' => 'admin/content/salesforce'),
         )
       ),
       '#access' => isset($mapped_object->salesforce_mapping_object_id),
