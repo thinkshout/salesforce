@@ -163,6 +163,9 @@ function salesforce_mapping_object_form_submit($form, &$form_state) {
   $mapped_object = $form_state['salesforce_mapping_object'];
   $mapped_object->salesforce_id = $form_state['input']['salesforce_id'];
   $mapped_object->last_sync_message = t('Mapping object edited via the UI.');
+  $mapped_object->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
+  $mapped_object->last_sync_action = 'relink';
+  $mapped_object->entity_updated = REQUEST_TIME;
   $mapped_object->save();
   drupal_set_message(t('Salesforce mapping object has been saved.'));
   $form_state['redirect'] = $mapped_object->uri()['path'];
