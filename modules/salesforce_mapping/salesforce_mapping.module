@@ -272,19 +272,23 @@ function salesforce_mapping_entity_delete($entity, $type) {
     return;
   }
 
-  // Only delete mapping if it won't be handled by the delete trigger in the
-  // mapping. We're avoiding the issue of mapping deleting the (the what?).
+  // Only delete the mapping object if it won't be handled by the delete
+  // trigger in the mapping. We're avoiding the issue of deleting a mapping
+  // object before deleting the mapped object.
   $mappings = salesforce_mapping_load_multiple(array(
     'drupal_entity_type' => $type,
     'drupal_bundle' => $bundle,
   ));
 
   foreach ($mappings as $mapping) {
-    if (!($mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE)) {
-      $mapping_object->delete();
+    // Look for any mapping with the delete trigger enabled.
+    if ($mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
       return;
     }
   }
+  // No mappings have the delete hook enabled, go ahead and delete the mapping
+  // object.
+  $mapping_object->delete();
 }
 
 /**
