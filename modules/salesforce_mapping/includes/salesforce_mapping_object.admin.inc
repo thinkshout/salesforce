@@ -3,11 +3,11 @@
 /**
  * Implements hook_form().
  */
-function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NULL) {
+function salesforce_mapping_object_form($form, &$form_state, $mapping_object = NULL, $entity_type = '', $entity_id = '') {
   $form = array();
 
   // Only allow editing entity type and id on new mappings.
-  if (!empty($mapped_object->is_new) && $mapped_object->is_new) {
+  if (!$mapping_object || (!empty($mapping_object->is_new) && $mapping_object->is_new)) {
     // Get list of mapped entity types.
     $mapped_entities = salesforce_mapping_get_mapped_entities();
     $entity_options = array();
@@ -21,16 +21,18 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
       '#type' => 'select',
       '#title' => t('Entity type'),
       '#options' => $entity_options,
-      '#default_value' => isset($mapped_object->entity_type) ? $mapped_object->entity_type : '',
+      '#default_value' => isset($mapping_object->entity_type) ? $mapping_object->entity_type : $entity_type,
       '#required' => TRUE,
+      '#access' => isset($mapping_object),
     );
 
     $form['entity_id'] = array(
       '#type' => 'textfield',
       '#title' => t('Drupal Entity Id'),
-      '#default_value' => isset($mapped_object->entity_id) ? $mapped_object->entity_id : '',
+      '#default_value' => isset($mapping_object->entity_id) ? $mapping_object->entity_id : $entity_id,
       '#size' => 19,
       '#required' => TRUE,
+      '#access' => isset($mapping_object),
     );
   }
 
@@ -38,34 +40,36 @@ function salesforce_mapping_object_form($form, &$form_state, $mapped_object = NU
     '#type' => 'textfield',
     '#title' => t('Salesforce Id'),
     '#description' => t('15 character Ids will be treated as case sensitive and will be converted to their 18 character counterpart before saving.'),
-    '#default_value' => isset($mapped_object->salesforce_id) ? $mapped_object->salesforce_id : '',
+    '#default_value' => isset($mapping_object->salesforce_id) ? $mapping_object->salesforce_id : '',
     '#size' => 19,
     '#maxlength' => 18,
     '#required' => TRUE,
   );
 
   // @TODO options to trigger push or pull?
-  $uri = $mapped_object->uri();
   $form['actions'] = array(
     '#type' => 'actions',
     'submit' => array(
       '#type' => 'submit',
-      '#value' => isset($mapped_object->salesforce_mapping_object_id) ? t('Update mapping') : t('Save mapping'),
+      '#value' => isset($mapping_object->salesforce_mapping_object_id) ? t('Update mapping') : t('Save mapping'),
     ),
-    'delete_link' => array(
+  );
+  if ($mapping_object && empty($mapping_object->is_new)) {
+    $uri = $mapping_object->uri();
+    $form['actions']['delete_link'] = array(
       '#markup' => l(t('Delete'), $uri['path'] . '/delete',
         array(
           'attributes' => array(
-            'id' => array('mapped_object-delete-' . $mapped_object->salesforce_mapping_object_id),
+            'id' => array('mapped_object-delete-' . $mapping_object->salesforce_mapping_object_id),
             'class' => array('button remove'),
           ),
           'query' => array('destination' => 'admin/content/salesforce'),
         )
       ),
-      '#access' => isset($mapped_object->salesforce_mapping_object_id),
-    ),
-  );
-  $form_state['salesforce_mapping_object'] = $mapped_object;
+      '#access' => isset($mapping_object->salesforce_mapping_object_id),
+    );
+  }
+  $form_state['salesforce_mapping_object'] = $mapping_object;
   return $form;
 }
 
@@ -160,17 +164,24 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
  * Implements hook_form_submit().
  */
 function salesforce_mapping_object_form_submit($form, &$form_state) {
-  $mapped_object = $form_state['salesforce_mapping_object'];
-  $mapped_object->salesforce_id = $form_state['values']['salesforce_id'];
+  $mapping_object = $form_state['salesforce_mapping_object'];
+  if (is_null($mapping_object)) {
+    $mapping_object = entity_create('salesforce_mapping_object', array(
+      'entity_id' => $form_state['values']['entity_id'],
+      'entity_type' => $form_state['values']['entity_type'],
+      'last_sync' => time(),
+    ));
+  }
+  $mapping_object->salesforce_id = $form_state['values']['salesforce_id'];
   // @todo this would be sensible but causes a DB explosion:
-  // $mapped_object->last_sync->set(NULL);
-  $mapped_object->last_sync_message = t('Mapping object edited via the UI.');
-  $mapped_object->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
-  $mapped_object->last_sync_action = 'relink';
-  $mapped_object->entity_updated = REQUEST_TIME;
-  $mapped_object->save();
+  // $mapping_object->last_sync->set(NULL);
+  $mapping_object->last_sync_message = t('Mapping object edited via the UI.');
+  $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
+  $mapping_object->last_sync_action = $form_state['values']['submit'] == 'Update mapping' ? 'relink' : 'created';
+  $mapping_object->entity_updated = REQUEST_TIME;
+  $mapping_object->save();
   drupal_set_message(t('Salesforce mapping object has been saved.'));
-  $uri = $mapped_object->uri();
+  $uri = $mapping_object->uri();
   $form_state['redirect'] = $uri['path'];
 }
 
