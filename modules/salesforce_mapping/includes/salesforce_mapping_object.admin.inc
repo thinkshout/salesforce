@@ -215,7 +215,7 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
     '#type' => 'select',
     '#title' => t('Entity type'),
     '#options' => $entity_options,
-    '#empty_option' => t('- Select an entity type - '),
+    '#empty_option' => t('- Select an entity type -'),
     '#default_value' => isset($values['entity_type']) ? $values['entity_type'] : '',
   );
 
@@ -242,7 +242,7 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
   $form['search']['last_sync_action'] = array(
     '#type' => 'select',
     '#title' => t('Last sync action'),
-    '#empty_option' => t('- Any - '),
+    '#empty_option' => t('- Any -'),
     // @TODO fix this options definition
     '#options' => array(
       'push' => t('Push'),
@@ -256,7 +256,7 @@ function salesforce_mapping_object_filter_form($form, &$form_state) {
   $form['search']['last_sync_status'] = array(
     '#type' => 'select',
     '#title' => t('Last sync status'),
-    '#empty_option' => t('- Any - '),
+    '#empty_option' => t('- Any -'),
     '#options' => salesforce_mapping_object_sync_status(),
     '#default_value' => isset($values['last_sync_status']) ? $values['last_sync_status'] : '',
   );

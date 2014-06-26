@@ -562,7 +562,7 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
 
 function salesforce_mapping_entity_mapping_accessible($op, $entity, $type, $account = NULL) {
   $wrapper = entity_metadata_wrapper($type, $entity);
-    return salesforce_mapping_object_access($op, $wrapper->salesforce_mapping_object, $account);
+  return salesforce_mapping_object_access($op, $wrapper->salesforce_mapping_object, $account);
 }
 
 /**
