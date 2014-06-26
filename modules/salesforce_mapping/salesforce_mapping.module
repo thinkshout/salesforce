@@ -317,7 +317,12 @@ function salesforce_mapping_object_view($entity, $type, $view_mode = 'full') {
     return $sf_mapping_object->view($view_mode);
   }
   else {
-    return array();
+    // @todo: can we show old revisions here if they exist?
+    return array(
+      'info' => array(
+        '#markup' => t('This entity is not mapped to Salesforce. Click "Edit" to force mapping.'),
+      ),
+    );
   }
 }
 
