@@ -26,6 +26,13 @@ function salesforce_views_views_data_alter(&$data) {
         'base' => 'salesforce_mapping_object',
         'base field' => 'entity_id',
         'relationship field' => $info['entity keys']['id'],
+        'extra' => array(
+          array(
+            'field' => 'entity_type',
+            'value' => $entity_type,
+            'numeric' => FALSE
+          ),
+        ),
       ),
     );
   }
