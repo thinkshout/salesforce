@@ -614,7 +614,7 @@ function salesforce_mapping_update_7303(&$sandbox) {
 }
 
 /**
- * Allow NULL in salesforce_mapping_object entity_updated column.
+ * Allow NULL in salesforce_mapping_object entity_updated and last_sync columns.
  */
 function salesforce_mapping_update_7304(&$sandbox) {
   $entity_updated_field = array(
