@@ -612,3 +612,26 @@ function salesforce_mapping_update_7303(&$sandbox) {
     return $sandbox['max'] . " Salesforce sync records updated.";
   }
 }
+
+/**
+ * Allow NULL in salesforce_mapping_object entity_updated column.
+ */
+function salesforce_mapping_update_7304(&$sandbox) {
+  $entity_updated_field = array(
+    'description' => 'The Unix timestamp when the mapped Drupal entity was last updated.',
+    'type' => 'int',
+    'not null' => FALSE,
+    'default' => 0,
+  );
+
+  db_change_field('salesforce_mapping_object', 'entity_updated', 'entity_updated', $entity_updated_field);
+
+  $last_sync_field = array(
+    'description' => 'The Unix timestamp when the record was last synced with Salesforce.',
+    'type' => 'int',
+    'not null' => FALSE,
+    'default' => 0,
+  );
+
+  db_change_field('salesforce_mapping_object', 'last_sync', 'last_sync', $last_sync_field);
+}
