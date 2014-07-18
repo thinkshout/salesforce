@@ -111,6 +111,8 @@ function salesforce_mapping_entity_info() {
         'revision' => 'revision_id',
       ),
       'access callback' => 'salesforce_mapping_object_access',
+      // Prevent Redirect alteration of the mapping object form.
+      'redirect' => FALSE,
     ),
   );
 
