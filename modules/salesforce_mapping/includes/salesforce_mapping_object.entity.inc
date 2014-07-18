@@ -42,8 +42,13 @@ class SalesforceMappingObject extends Entity {
    *   Associated array with the default URI on the 'path' key.
    */
   protected function defaultUri() {
+    $uri = NULL;
+
     $wrapper = entity_metadata_wrapper($this->entityType(), $this);
-    $uri = method_exists($wrapper->entity->value(), 'uri') ? $wrapper->entity->value()->uri() : entity_uri($this->entity_type, $wrapper->entity->value());
+    $entity = $wrapper->entity->value();
+    if ($entity) {
+      $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($this->entity_type, $entity);
+    }
     if (is_null($uri)) {
       $path = 'admin/content/salesforce/' . $this->entity_type . '/' . $this->entity_id;
     }

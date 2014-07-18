@@ -683,7 +683,11 @@ function salesforce_mapping_object_property_salesforce_url_get(SalesforceMapping
  */
 function salesforce_mapping_object_property_entity_get(SalesforceMappingObject $salesforce_mapping_object, array $options, $property_name, $entity_type) {
   $entity = entity_load_single($salesforce_mapping_object->entity_type, $salesforce_mapping_object->entity_id);
-  return entity_metadata_wrapper($salesforce_mapping_object->entity_type, $entity);
+  if ($entity) {
+    return entity_metadata_wrapper($salesforce_mapping_object->entity_type, $entity);
+  }
+
+  return FALSE;
 }
 
 /**
