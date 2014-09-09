@@ -127,7 +127,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
   // Entity is not linked to an SF object.
   if (!$mapped_objects) {
-    // Setup SF record type. CampaignMember objects get their type from their Campaign.
+    // Setup SF record type. CampaignMember objects get their Campaign's type.
     if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
       && empty($params['RecordTypeId'])
       && ($mapping->salesforce_object_type != 'CampaignMember')) {
@@ -147,7 +147,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $encoded_value, $params);
         // Handle upsert responses.
         switch ($sfapi->response->code) {
-          // On Upsert:update retreive object.
+          // On Upsert:update retrieve object.
           case '204':
             $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $key_field, $encoded_value);
             $data['id'] = $sf_object['Id'];
@@ -178,6 +178,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         'entity_id' => $entity_id,
         'entity_type' => $entity_type,
         'salesforce_id' => $data['id'],
+        'last_sync_message' => t('Mapping object created via !function.', array('!function' => __FUNCTION__)),
+        'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS,
       ));
     }
     else {
@@ -204,6 +206,13 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     // Update SF object.
     try {
       $sfapi->objectUpdate($mapping->salesforce_object_type, $mapped_objects->salesforce_id, $params);
+      $mapped_objects->last_sync_message = t('Mapping object updated via !function.', array('!function' => __FUNCTION__));
+      $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
+
+      salesforce_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
+        '%name' => $entity_wrapper->label(),
+        '%sfid' => $mapped_objects->salesforce_id,
+      )));
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
@@ -213,18 +222,13 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         '@sfid' => $mapped_objects->salesforce_id,
         '@msg' => $e->getMessage(),
       )), 'error');
-      return;
+      $mapped_objects->last_sync_message = $e->getMessage();
+      $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
     }
-
-    $mapped_objects->last_sync = REQUEST_TIME;
   }
 
-  salesforce_set_message(t('%name has been synchronized with Salesforce record %sfid.', array(
-    '%name' => $entity_wrapper->label(),
-    '%sfid' => $mapped_objects->salesforce_id,
-  )));
-
-  // Note that last_sync time is updated automatically.
+  $mapped_objects->last_sync_action = 'push';
+  $mapped_objects->last_sync = REQUEST_TIME;
   $mapped_objects->save();
 }
 
@@ -256,14 +260,14 @@ function salesforce_push_cron() {
       $entity_ids[$item->data['entity_type']] = array();
     }
 
+    $entity_type = $item->data['entity_type'];
+    $entity_id = $item->data['entity_id'];
+
     // Duplicate entity in the queue.
     if (in_array($entity_id, $entity_ids[$item->data['entity_type']])) {
       $queue->deleteItem($item);
       continue;
     }
-
-    $entity_type = $item->data['entity_type'];
-    $entity_id = $item->data['entity_id'];
 
     // Attempt to load our entity from the queue item.
     $entity = entity_load_single($entity_type, $entity_id);
@@ -294,7 +298,8 @@ function salesforce_push_cron() {
           'mapped_objects' => $mapped_objects,
         );
 
-        // Setup SF record type. CampaignMember objects get their type from their Campaign.
+        // Setup SF record type. CampaignMember objects get their type from
+        // their Campaign.
         if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
           && empty($params['RecordTypeId'])
           && ($mapping->salesforce_object_type != 'CampaignMember')) {
@@ -371,8 +376,8 @@ function salesforce_push_cron() {
  */
 function salesforce_push_process_soap_results($op, $results, $synced_entities) {
   foreach ($results as $key => $result) {
+    $mapped_objects = $synced_entities[$key]['mapped_objects'];
     if ($result->success) {
-      $mapped_objects = $synced_entities[$key]['mapped_objects'];
       if (drupal_strtolower($op) == 'delete' && $mapped_objects) {
         $mapped_objects->delete();
       }
@@ -385,10 +390,16 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
             'entity_id' => $entity_id,
             'entity_type' => $wrapper->type(),
             'salesforce_id' => $result->id,
+            'last_sync_message' => t('Mapping object created via !function.', array('!function' => __FUNCTION__)),
           ));
         }
+        else {
+          $mapped_objects->last_sync_message = t('Mapping object updated via !function.', array('!function' => __FUNCTION__));
+        }
 
+        $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
         $mapped_objects->last_sync = REQUEST_TIME;
+        $mapped_objects->last_sync_action = 'push';
         $mapped_objects->save();
       }
 
@@ -397,6 +408,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
       );
     }
     else {
+      $error_messages = array();
       foreach ($result->errors as $error) {
         watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
           array(
@@ -407,6 +419,17 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
           ),
           WATCHDOG_ERROR
         );
+        $error_messages[] = $error->message;
+      }
+      if ($mapped_objects) {
+        $mapped_objects->last_sync = REQUEST_TIME;
+        $mapped_objects->last_sync_action = 'push';
+        $mapped_objects->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
+        $mapped_objects->last_sync_message = t('Push error via %function with the following messages: @message.', array(
+          '%function' => __FUNCTION__,
+          '@message' => implode(' | ', $error_messages),
+        ));
+        $mapped_objects->save();
       }
     }
   }
@@ -447,4 +470,26 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
   drupal_alter('salesforce_push_params', $params, $mapping, $entity_wrapper);
 
   return $params;
+}
+
+/**
+ * Implements hook_action_info().
+ */
+function salesforce_push_action_info() {
+  return array(
+    'salesforce_push_action' => array(
+      'type' => 'entity',
+      'label' => t('Push entity to Salesforce'),
+      'configurable' => FALSE,
+      'triggers' => array('any'),
+    ),
+  );
+}
+
+/**
+ * Push entity to Salesforce.
+ */
+function salesforce_push_action(&$entity, $context) {
+  $trigger = (!empty($entity->is_new) && $entity->is_new) ? SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE : SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE;
+  salesforce_push_entity_crud($context['entity_type'], $entity, $trigger);
 }

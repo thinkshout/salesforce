@@ -41,6 +41,12 @@ define('SALESFORCE_MAPPING_ARRAY_DELIMITER', ';');
 define('SALESFORCE_MAPPING_NAME_LENGTH', 128);
 
 /**
+ * Mapping object sync statuses.
+ */
+define('SALESFORCE_MAPPING_STATUS_SUCCESS', 1);
+define('SALESFORCE_MAPPING_STATUS_ERROR', 0);
+
+/**
  * Access callback for managing Salesforce mappings.
  */
 function salesforce_mappings_access() {
@@ -89,19 +95,122 @@ function salesforce_mapping_entity_info() {
     ),
     'salesforce_mapping_object' => array(
       'label' => t('Salesforce Object Mapping'),
-      'controller class' => 'EntityAPIController',
+      'controller class' => 'SalesforceMappingObjectController',
       'entity class' => 'SalesforceMappingObject',
+      'metadata controller class' => 'SalesforceMappingObjectMetadataController',
       'base table' => 'salesforce_mapping_object',
+      'revision table' => 'salesforce_mapping_object_revision',
+      'label callback' => 'entity_class_label',
+      'uri callback' => 'entity_class_uri',
       'fieldable' => FALSE,
       'exportable' => FALSE,
       'module' => 'salesforce_mapping',
       'entity keys' => array(
         'id' => 'salesforce_mapping_object_id',
+        'label' => 'salesforce_mapping_object_id',
+        'revision' => 'revision_id',
       ),
+      'access callback' => 'salesforce_mapping_object_access',
+      // Prevent Redirect alteration of the mapping object form.
+      'redirect' => FALSE,
     ),
   );
 
   return $return;
+}
+
+/**
+ * Implements hook_entity_property_info().
+ */
+function salesforce_mapping_entity_property_info() {
+  $info = array();
+
+  $entities = salesforce_mapping_get_mapped_entities();
+  foreach ($entities as $type => $bundles) {
+    $properties = &$info[$type]['properties'];
+    $properties['salesforce_mapping_object'] = array(
+      'label' => t("Salesforce mapping object"),
+      'type' => 'salesforce_mapping_object',
+      'description' => t("Salesforce mapping object"),
+      'getter callback' => 'salesforce_mapping_object_entity_property_get',
+    );
+  }
+
+  return $info;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function salesforce_mapping_menu() {
+  $items = array();
+
+  $items['admin/content/salesforce'] = array(
+    'title' => 'Salesforce Mapped Objects',
+    'description' => 'Manage mapped Salesforce objects.',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'salesforce_mapping_object_overview_page',
+    'file' => 'includes/salesforce_mapping_object.admin.inc',
+    'access arguments' => array('view salesforce mapping object'),
+  );
+
+  // Define SF activity local tasks for all mapped entities.
+  $defaults = array(
+    'file' => 'salesforce_mapping_object.admin.inc',
+    'file path' => drupal_get_path('module', 'salesforce_mapping') . '/includes',
+  );
+
+  $mappings = salesforce_mapping_load();
+  $mapped_entities = array();
+  foreach ($mappings as $mapping) {
+    // We grab the bundle now because it becomes inaccessible for some entities
+    // after it is put into the loop below:
+    $mapped_entities[$mapping->drupal_entity_type] = $mapping->drupal_bundle;
+  }
+  foreach ($mapped_entities as $type => $bundle) {
+    $entity = entity_create($type, array('type' => $bundle));
+    $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
+    if (empty($uri['path'])) {
+      $path = 'admin/content/salesforce/' . $type . '/%' . $type . '/salesforce_activity';
+      $menu_type = MENU_NORMAL_ITEM;
+    }
+    else {
+      $path = $uri['path'] . '%' . $type . '/salesforce_activity';
+      $menu_type = MENU_LOCAL_TASK;
+    }
+    $entity_arg = substr_count($path, '/') - 1;
+    $items[$path] = array(
+      'title' => 'Salesforce activity',
+      'description' => 'View Salesforce activity for this entity.',
+      'type' => $menu_type,
+      'page callback' => 'salesforce_mapping_object_view',
+      'page arguments' => array($entity_arg, $type),
+      'access callback' => 'salesforce_mapping_entity_mapping_accessible',
+      'access arguments' => array('view', $entity_arg, $type),
+    );
+    $items[$path . '/view'] = array(
+      'title' => 'View',
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[$path . '/edit'] = array(
+      'page callback' => 'salesforce_mapping_object_edit',
+      'page arguments' => array($entity_arg, $type),
+      'access arguments' => array('edit salesforce mapping object'),
+      'title' => 'Edit',
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    ) + $defaults;
+    $items[$path . '/delete'] = array(
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('salesforce_mapping_object_delete_form', $entity_arg, $type),
+      'access arguments' => array('delete salesforce mapping object'),
+      'title' => 'Delete',
+      'type' => MENU_LOCAL_TASK,
+      'context' => MENU_CONTEXT_INLINE,
+    ) + $defaults;
+  }
+  return $items;
 }
 
 /**
@@ -153,7 +262,7 @@ function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE)
       $mappings = entity_load('salesforce_mapping', $salesforce_mapping_ids, array(), $reset);
     }
     if ($record_type) {
-      foreach($mappings as $id => $mapping) {
+      foreach ($mappings as $id => $mapping) {
         if (!$mapping->salesforce_record_types_allowed[$record_type]) {
           unset($mappings[$id]);
         }
@@ -193,6 +302,112 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
 }
 
 /**
+ * Display a salesforce object mapping.
+ *
+ * @param Entity $entity
+ *   The mapped Entity.
+ * @param String $type
+ *   The mapped Entity's Type.
+ *
+ * @return array
+ *   Render array.
+ */
+function salesforce_mapping_object_view($entity, $type, $view_mode = 'full') {
+  $entity_wrapper = entity_metadata_wrapper($type, $entity);
+  $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
+  if ($sf_mapping_object) {
+    return $sf_mapping_object->view($view_mode);
+  }
+  else {
+    // @todo: can we show old revisions here if they exist?
+    return array(
+      'info' => array(
+        '#markup' => t('This entity is not mapped to Salesforce. Click "Edit" to force mapping.'),
+      ),
+    );
+  }
+}
+
+/**
+ * Edit a salesforce object mapping based only on the object.
+ *
+ * @param Entity $entity
+ *   The mapped Entity.
+ * @param String $type
+ *   The mapped Entity's Type.
+ *
+ * @return array
+ *   Render array.
+ */
+function salesforce_mapping_object_edit($entity, $type) {
+  $entity_wrapper = entity_metadata_wrapper($type, $entity);
+  $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
+  return drupal_get_form('salesforce_mapping_object_form', $sf_mapping_object, $type, $entity_wrapper->getIdentifier());
+}
+
+/**
+ * Edit a salesforce object mapping based only on the object.
+ *
+ * @param Entity $entity
+ *   The mapped Entity.
+ * @param String $type
+ *   The mapped Entity's Type.
+ *
+ * @return array
+ *   Render array.
+ */
+function salesforce_mapping_object_delete_form($form, &$form_state, $entity, $type) {
+  $entity_wrapper = entity_metadata_wrapper($type, $entity);
+  $sf_mapping_object = $entity_wrapper->salesforce_mapping_object->value();
+  $form_state['salesforce_mapping_object'] = $sf_mapping_object;
+  $form['#submit'][] = 'salesforce_mapping_object_delete_form_submit';
+
+  $form = confirm_form($form,
+    t('Are you sure you want to delete the mapping from !entity_label to Salesforce object %sf_id?',
+      array(
+        '!entity_label' => $entity_wrapper->label(),
+        '%sf_id' => $sf_mapping_object->salesforce_id,
+      )),
+    entity_uri('salesforce_mapping_object', $sf_mapping_object),
+    '<p>' . t('Deleting this link cannot be undone.') . '</p>',
+    t('Delete'),
+    t('Cancel'),
+    'confirm'
+  );
+
+  return $form;
+}
+
+/**
+ * Submit callback for salesforce_mapping_object_delete_form().
+ */
+function salesforce_mapping_object_delete_form_submit($form, &$form_state) {
+  $sfm_object = $form_state['salesforce_mapping_object'];
+$result = entity_delete('salesforce_mapping_object', $sfm_object->salesforce_mapping_object_id);
+  if ($result === FALSE) {
+    drupal_set_message(t('Object could not be deleted.'), 'error');
+  }
+  else {
+    drupal_set_message(t('Link has been deleted.'));
+    watchdog('salesforce', 'Deleted object link', array(), WATCHDOG_NOTICE);
+    $form_state['redirect'] = 'admin/content/salesforce';
+  }
+}
+
+/**
+ * Return a Salesforce Mapping Object.
+ *
+ * @see entity_load()
+ */
+function salesforce_mapping_object_load($salesforce_mapping_object_id, $conditions = array(), $reset = FALSE) {
+  if (!is_bool($salesforce_mapping_object_id)) {
+    $salesforce_mapping_object_id = array($salesforce_mapping_object_id);
+  }
+  $objects = entity_load('salesforce_mapping_object', $salesforce_mapping_object_id, $conditions, $reset);
+  return $objects ? reset($objects) : FALSE;
+}
+
+/**
  * Returns Salesforce object mappings for a given Drupal entity.
  *
  * @param string $entity_type
@@ -202,16 +417,15 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
  * @param bool $reset
  *   Whether or not the cache should be cleared and fetch from current data.
  *
- * @return array
- *   The requested entity or FALSE if none was found.
+ * @return SalesforceMappingObject
+ *   The requested SalesforceMappingObject or FALSE if none was found.
  */
 function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $reset = FALSE) {
   $conditions = array(
     'entity_id' => $entity_id,
     'entity_type' => $entity_type,
   );
-  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
-  return !empty($results) ? reset($results) : FALSE;
+  return salesforce_mapping_object_load(FALSE, $conditions, $reset);
 }
 
 /**
@@ -220,8 +434,8 @@ function salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, $res
  * @param string $salesforce_id
  *   Unique Id provided by Salesforce for the Salesforce record.
  * @param bool $reset
- *   Whether to reset the cache and retreive a new record.
- *
+ *   Whether to reset the cache and retrieve a new record.
+ *s
  * @return array
  *   Entities that match the given $salesforce_id.
  */
@@ -229,8 +443,7 @@ function salesforce_mapping_object_load_by_sfid($salesforce_id, $reset = FALSE) 
   $conditions = array(
     'salesforce_id' => $salesforce_id,
   );
-  $results = entity_load('salesforce_mapping_object', FALSE, $conditions, $reset);
-  return !empty($results) ? reset($results) : FALSE;
+  return salesforce_mapping_object_load(FALSE, $conditions, $reset);
 }
 
 /**
@@ -246,6 +459,19 @@ function salesforce_mapping_get_mapped_objects() {
     $object_types[$mapping->salesforce_object_type] = $mapping->salesforce_object_type;
   }
   return $object_types;
+}
+
+/**
+ * Return a unique list of mapped Drupal entity types and bundles.
+ */
+function salesforce_mapping_get_mapped_entities() {
+  $entity_types = array();
+  $mappings = salesforce_mapping_load();
+  usort($mappings, 'salesforce_mapping_sort');
+  foreach ($mappings as $mapping) {
+    $entity_types[$mapping->drupal_entity_type][$mapping->drupal_bundle] = TRUE;
+  }
+  return $entity_types;
 }
 
 /**
@@ -292,20 +518,6 @@ function salesforce_mapping_entity_delete($entity, $type) {
 }
 
 /**
- * Implements hook_entity_load().
- */
-function salesforce_mapping_entity_load($entities, $type) {
-  // Load the linked Salesforce ID into an entity.
-  foreach ($entities as $entity) {
-    list($entity_id) = entity_extract_ids($type, $entity);
-    $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-    if ($mapping) {
-      $entity->salesforce_id = $mapping->salesforce_id;
-    }
-  }
-}
-
-/**
  * Implements hook_permission().
  */
 function salesforce_mapping_permission() {
@@ -315,47 +527,53 @@ function salesforce_mapping_permission() {
       'description' => t('Administer Salesforce field maps.'),
       'restrict access' => TRUE,
     ),
-    'view salesforce mapping' => array(
-      'title' => t('View Salesforce mapping'),
+    'view salesforce mapping object' => array(
+      'title' => t('View Salesforce mapping object'),
       'description' => t('View Salesforce mapping data.'),
+    ),
+    'create salesforce mapping object' => array(
+      'title' => t('Create Salesforce mapping object'),
+      'description' => t('Allows a user to create Salesforce mapping object entities.'),
+      'restrict access' => TRUE,
+    ),
+    'edit salesforce mapping object' => array(
+      'title' => t('Edit Salesforce mapping object'),
+      'description' => t('Allows a user to edit Salesforce mapping object entities.'),
+      'restrict access' => TRUE,
+    ),
+    'delete salesforce mapping object' => array(
+      'title' => t('Delete Salesforce mapping object'),
+      'description' => t('Allows a user to delete Salesforce mapping object entities.'),
       'restrict access' => TRUE,
     ),
   );
 }
 
 /**
- * Implements hook_entity_view().
+ * Check access permission for Mapped Object Entity UI.
  */
-function salesforce_mapping_entity_view($entity, $type, $view_mode, $langcode) {
-  // Render linked Salesforce data when viewing a mapped entity.
-  list($entity_id) = entity_extract_ids($type, $entity);
-  $mapping = salesforce_mapping_object_load_by_drupal($type, $entity_id);
-  if ($mapping && user_access('view salesforce mapping')) {
-    $sfapi = salesforce_get_api();
-    $entity->content['salesforce_id'] = array(
-      '#theme' => 'salesforce_mapping_linked_object',
-      '#label' => t('Salesforce ID'),
-      '#items' => array(
-        array(
-          '#markup' => l(
-            $mapping->salesforce_id,
-            $sfapi->getInstanceUrl() . '/' . $mapping->salesforce_id,
-            array(
-              'attributes' => array('target' => '_blank'),
-            )
-          ),
-        ),
-      ),
-      '#classes' => 'field field-label-inline clearfix',
-    );
-    $entity->content['salesforce_last_sync'] = array(
-      '#theme' => 'salesforce_mapping_linked_object',
-      '#label' => t('Salesforce last sync'),
-      '#items' => array(array('#markup' => format_date($mapping->last_sync))),
-      '#markup' => format_date($mapping->last_sync),
-      '#classes' => 'field field-label-inline clearfix',
-    );
+function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL, $account = NULL) {
+  switch ($op) {
+    case 'view':
+      return user_access('view salesforce mapping object', $account);
+
+    case 'create':
+      return user_access('create salesforce mapping object', $account);
+
+    case 'edit':
+    case 'update':
+      return user_access('edit salesforce mapping object', $account);
+
+    case 'delete':
+      return user_access('delete salesforce mapping object', $account);
   }
+
+  return FALSE;
+}
+
+function salesforce_mapping_entity_mapping_accessible($op, $entity, $type, $account = NULL) {
+  $wrapper = entity_metadata_wrapper($type, $entity);
+  return salesforce_mapping_object_access($op, $wrapper->salesforce_mapping_object, $account);
 }
 
 /**
@@ -403,8 +621,11 @@ function salesforce_mapping_entity_update($entity, $type) {
     list($entity_id) = entity_extract_ids($type, $entity);
     $sf_mapping_object = salesforce_mapping_object_load_by_drupal($type, $entity_id);
     if ($sf_mapping_object) {
-      // Update entity update property.
+      // Update entity updated property.
       $sf_mapping_object->entity_updated = REQUEST_TIME;
+      // No new revision needed for this change. If this generates a push, then
+      // a revision will be generated for that action.
+      $sf_mapping_object->is_new_revision = FALSE;
       $sf_mapping_object->save();
     }
   }
@@ -447,4 +668,218 @@ function salesforce_mapping_get_fieldmap_types($fieldmap_type = NULL) {
   elseif (isset($salesforce_mapping_fieldmap_type[$fieldmap_type])) {
     return $salesforce_mapping_fieldmap_type[$fieldmap_type];
   }
+}
+
+/**
+ * Callback to get $salesforce_mapping_object->salesforce_url.
+ */
+function salesforce_mapping_object_property_salesforce_url_get(SalesforceMappingObject $salesforce_mapping_object, array $options, $property_name, $entity_type) {
+  $sfapi = salesforce_get_api();
+  if ($sfapi) {
+    $sf_object_link = $sfapi->getInstanceUrl() . '/' . $salesforce_mapping_object->salesforce_id;
+  }
+  else {
+    $sf_object_link = NULL;
+  }
+  return $sf_object_link;
+}
+
+/**
+ * Callback to get $salesforce_mapping_object->entity.
+ */
+function salesforce_mapping_object_property_entity_get(SalesforceMappingObject $salesforce_mapping_object, array $options, $property_name, $entity_type) {
+  $entity = entity_load_single($salesforce_mapping_object->entity_type, $salesforce_mapping_object->entity_id);
+  if ($entity) {
+    return entity_metadata_wrapper($salesforce_mapping_object->entity_type, $entity);
+  }
+
+  return FALSE;
+}
+
+/**
+ * Callback to set $salesforce_mapping_object->entity.
+ */
+function salesforce_mapping_object_property_entity_set(SalesforceMappingObject $salesforce_mapping_object, $name, $value, $lang, $type, $info) {
+  $salesforce_mapping_object->entity_type = $value->type();
+  $salesforce_mapping_object->entity_id = $value->getIdentifier();
+}
+
+/**
+ * Callback to get the salesforce mapping object for an entity.
+ */
+function salesforce_mapping_object_entity_property_get($entity, array $options, $property_name, $entity_type) {
+  $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, entity_id($entity_type, $entity));
+  if ($mapping_object) {
+    return entity_metadata_wrapper('salesforce_mapping_object', $mapping_object);
+  }
+
+  return FALSE;
+}
+
+/**
+ * Return loaded mapping objects from a query.
+ *
+ * @param array $header
+ *   Table sort header array.
+ * @param array $properties
+ *   Array of properties to include in the query.
+ * @param int $limit
+ *   Number of results to return.
+ * @param int $mapping_id
+ *   Entity ID for the mapping: limits results to a single mapping.
+ *
+ * @return array
+ *   Array of loaded entities.
+ */
+function salesforce_mapping_object_filter_query($header = FALSE, $properties = array(), $limit = 25, $mapping_id = NULL) {
+  $table = 'salesforce_mapping_object';
+  $id = 'salesforce_mapping_object_id';
+
+  if ($mapping_id) {
+    $table .= '_revision';
+    $id = 'revision_id';
+  }
+
+  $limit = (!empty($limit)) ? $limit : 25;
+  $query = db_select($table, 'm')->extend('PagerDefault')->extend('TableSort')
+    ->fields('m')
+    ->limit($limit)
+    ->orderByHeader($header);
+
+  if (!$mapping_id) {
+    $query->join($table . '_revision', 'r', 'm.salesforce_mapping_object_id = r.salesforce_mapping_object_id');
+    $query->groupBy('m.salesforce_mapping_object_id');
+
+    // Add count columns for each status value.
+    foreach (salesforce_mapping_object_sync_status() as $status_id => $status) {
+      $query->addExpression('count(CASE WHEN r.last_sync_status = ' . $status_id . ' THEN TRUE ELSE NULL END)', 'status_' . $status_id);
+    }
+  }
+  else {
+    $query->condition('m.salesforce_mapping_object_id', $mapping_id);
+  }
+
+  // Add conditions.
+  foreach ($properties as $property => $value) {
+    if (isset($value) && ($value != '')) {
+      $operator = is_array($value) ? 'IN' : '=';
+      switch ($property) {
+        case 'last_sync':
+          // Handle from/to.
+          if (!empty($value['from'])) {
+            $query->condition('m.' . $property, strtotime($value['from']), '>=');
+          }
+          if (!empty($value['to'])) {
+            $query->condition('m.' . $property, strtotime($value['to']), '<=');
+          }
+          break;
+
+        case 'salesforce_id':
+          if (strlen($value) < 18) {
+            // Match start of the Salesforce ID if less than the full 18 chars.
+            $operator = 'STARTS_WITH';
+          }
+
+        default:
+          $query->condition('m.' . $property, $value, $operator);
+      }
+    }
+  }
+
+  $results = $query->execute()->fetchAllAssoc($id);
+
+  return $results;
+}
+
+/**
+ * Definition of allowed sync statuses. Integer keyed array.
+ *
+ * @return array
+ *   Associative array of statuses keyed by integer.
+ */
+function salesforce_mapping_object_sync_status() {
+  $statuses = array(
+    SALESFORCE_MAPPING_STATUS_ERROR => t('Error'),
+    SALESFORCE_MAPPING_STATUS_SUCCESS => t('Success'),
+  );
+
+  return $statuses;
+}
+
+/**
+ * Helper method to return human readable versions of mapping properties.
+ *
+ * @param SalesforceMappingObject $mapping
+ *   Fully loaded mapping object.
+ * @param string $name
+ *   Property name.
+ * @param string $property
+ *   Property value.
+ *
+ * @return string
+ *   Property value.
+ */
+function salesforce_mapping_object_render_property($mapping, $name, $property) {
+  $value = $property->value();
+  if ($value == '' or $value == NULL) {
+    return '';
+  }
+
+  switch ($name) {
+    case 'salesforce_id':
+      $salesforce_url = $mapping->salesforce_url->value();
+      if ($salesforce_url) {
+        $content = l(
+          $mapping->salesforce_id->value(),
+          $salesforce_url,
+          array(
+            'attributes' => array('target' => '_blank'),
+          )
+        );
+      }
+      else {
+        $content = $mapping->salesforce_id->value();
+      }
+      break;
+
+    case 'created':
+    case 'last_sync':
+    case 'entity_updated':
+      $content = format_date($property->value());
+      break;
+
+    case 'last_sync_status':
+      $statuses = salesforce_mapping_object_sync_status();
+      $content = isset($statuses[$property->value()]) ? $statuses[$property->value()] : NULL;
+      break;
+
+    case 'last_sync_action':
+      $content = drupal_ucfirst($property->value());
+      break;
+
+    case 'entity':
+      if ($uri = entity_uri($property->type(), $property->value())) {
+        $content = l($property->label(), $uri['path'], $uri['options']);
+      }
+      else {
+        $content = check_plain($property->label());
+      }
+      break;
+
+    case 'entity_type':
+      // Get human readable entity label.
+      $entity_info = entity_get_info($property->value());
+      $content = $entity_info['label'];
+      break;
+
+    case 'entity_id':
+    case 'last_sync_message':
+      $content = check_plain($property->value());
+      break;
+
+    default:
+      $content = $property->value();
+  }
+
+  return $content;
 }

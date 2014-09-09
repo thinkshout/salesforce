@@ -37,7 +37,7 @@ class SalesforceMappingTestCase extends SalesforceTestCase {
     ));
     $permissions = array_merge($permissions, array(
       'administer salesforce mapping',
-      'view salesforce mapping',
+      'view salesforce mapping object',
     ));
     parent::setUp($modules, $permissions);
   }

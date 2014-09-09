@@ -1,0 +1,11 @@
+name = Salesforce Views
+description = Salesforce Views integration
+package = Salesforce
+core = 7.x
+
+dependencies[] = salesforce
+dependencies[] = salesforce_mapping
+dependencies[] = views
+
+; Views: Salesforce Mapping Object
+files[] = includes/salesforce_views.views.inc
