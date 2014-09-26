@@ -28,6 +28,55 @@ function salesforce_drush_command() {
       'field-data' => 'Display information about a specific field that is part of an object',
     ),
   );
+  $items['sf-read-object'] = array(
+    'description' => 'Retrieve all the data for an object with a specific ID.',
+    'aliases' => array('sfro'),
+    'arguments' => array(
+      'object' => 'The object name in Salesforce (e.g. Account).',
+      'id' => 'The object ID in Salesforce.',
+    ),
+    'options' => array(
+      'format' => array(
+        'description' => 'Format to output the object. Use "print_r" for print_r (default), "export" for var_export, and "json" for JSON.',
+        'example-value' => 'export',
+      ),
+    ),
+  );
+  $items['sf-create-object'] = array(
+    'description' => 'Create an object with specified data.',
+    'aliases' => array('sfco'),
+    'arguments' => array(
+      'object' => 'The object type name in Salesforce (e.g. Account).',
+      'data' => 'The data to use when creating the object (default is JSON format). Use \'-\' to read the data from STDIN.',
+    ),
+    'options' => array(
+      'format' => array(
+        'description' => 'Format to parse the object. Use  "json" for JSON (default) or "query" for data formatted like a query string, e.g. \'Company=Foo&LastName=Bar\'.',
+        'example-value' => 'json',
+      ),
+    ),
+  );
+  $items['sf-query-object'] = array(
+    'description' => 'Query an object using SOQL with specified conditions.',
+    'aliases' => array('sfqo'),
+    'arguments' => array(
+      'object' => 'The object type name in Salesforce (e.g. Account).',
+    ),
+    'options' => array(
+      'format' => array(
+        'description' => 'Format to output the objects. Use "print_r" for print_r (default), "export" for var_export, and "json" for JSON.',
+        'example-value' => 'export',
+      ),
+      'where' =>array(
+        'description' => 'A WHERE clause to add to the SOQL query',
+        'example-value' => 'isDeleted = TRUE',
+      ),
+      'fields' =>array(
+        'description' => 'A comma-separated list fields to select in the SOQL query. If absent, an API call is used to find all fields',
+        'example-value' => 'Id, LastName',
+      ),
+    ),
+  );
   $items['sf-list-resources'] = array(
     'description' => 'Lists the resources available for the specified API version. It provides the name and URI of each resource.',
     'aliases' => array('sflr'),
@@ -192,4 +241,99 @@ function drush_salesforce_sf_list_objects() {
     drush_log('Could not load any information about available objects.', 'error');
   }
 
+}
+
+/**
+ * Read a Salesforce object available to the logged-in user.
+ *
+ * @param $name
+ *   The object type name, e.g. Account
+ * @param $id
+ *   The Salesforce ID
+ */
+function drush_salesforce_sf_read_object($name, $id) {
+  $salesforce = _drush_salesforce_drush_get_api();
+  try {
+    if ($object = $salesforce->objectRead($name, $id)) {
+      drush_print(drush_format($object));
+    }
+  }
+  catch (SalesforceException $e) {
+    drush_log($e->getMessage(), 'error');
+  }
+}
+
+/**
+ * Create a Salesforce object available to the logged-in user.
+ *
+ * @param $name
+ *   The object type name, e.g. Account
+ * @param $data
+ *   The object data, or '-' to read from stdin
+ */
+function drush_salesforce_sf_create_object($name, $data) {
+
+  if ($data == '-') {
+    $data = stream_get_contents(STDIN);
+  }
+  $format = drush_get_option('format', 'json');
+  $params = array();
+  switch ($format) {
+    case 'query':
+      parse_str($data, $params);
+      break;
+    case 'json':
+      $params = json_decode($data, TRUE);
+      break;
+    default:
+      drush_log(dt('Invalid format'), 'error');
+      return;
+  }
+  $salesforce = _drush_salesforce_drush_get_api();
+  try {
+    if ($result = $salesforce->objectCreate($name, $params)) {
+      drush_print_r($result);
+    }
+  }
+  catch (SalesforceException $e) {
+    drush_log($e->getMessage(), 'error');
+  }
+}
+
+/**
+ * Query Salesforce objects available to the logged-in user.
+ *
+ * @param $name
+ *   The object type name, e.g. Account
+ */
+function drush_salesforce_sf_query_object($name) {
+  $salesforce = _drush_salesforce_drush_get_api();
+  $fields = drush_get_option('fields', '');
+  if (!$fields) {
+    try {
+      $object = $salesforce->objectDescribe($name);
+    }
+    catch (SalesforceException $e) {
+      drush_log($e->getMessage(), 'error');
+      return;
+    }
+    $names = array();
+    foreach ($object['fields'] as $field) {
+      $names[] = $field['name'];
+    }
+    $fields = implode(',', $names);
+  }
+  try {
+    $where = drush_get_option('where', '');
+    if ($where) {
+      $where = ' WHERE ' . $where;
+    }
+    $query = 'SELECT ' . $fields . ' FROM ' . $name;
+    // @todo - figure how to leverage SalesforceSelectQuery.
+    $result = $salesforce->apiCall('query?q=' . urlencode($query . $where));
+    drush_print(drush_format($result));
+  }
+  catch (SalesforceException $e) {
+    drush_log($e->getMessage(), 'error');
+  }
 }
