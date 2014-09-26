@@ -291,7 +291,7 @@ function salesforce_push_cron() {
       }
       else {
         $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
-        $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value);
+        $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value, $use_soap);
 
         $synced_entities[$delta] = array(
           'entity_wrapper' => $wrapper,
@@ -450,7 +450,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
  * @return array
  *   Associative array of key value pairs.
  */
-function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value) {
+function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value, $use_soap = FALSE) {
   foreach ($mapping->field_mappings as $fieldmap) {
     // Skip fields that aren't being pushed to Salesforce.
     if (!in_array($fieldmap['direction'], array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC))) {
@@ -464,6 +464,10 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     if ($fieldmap['key']) {
       $key_field = $fieldmap['salesforce_field']['name'];
       $key_value = $value;
+      // If key is set, remove from $params to avoid UPSERT errors.
+      if (!$use_soap) {
+        unset($params[$key_field]);
+      }
     }
   }
 
