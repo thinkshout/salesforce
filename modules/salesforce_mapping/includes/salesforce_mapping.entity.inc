@@ -30,7 +30,6 @@ class SalesforceMapping extends Entity {
    *   The newly saved version of the entity.
    */
   public function save() {
-    $this->updated = REQUEST_TIME;
     if (isset($this->is_new) && $this->is_new) {
       $this->created = REQUEST_TIME;
     }

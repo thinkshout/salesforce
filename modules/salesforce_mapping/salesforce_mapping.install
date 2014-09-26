@@ -106,12 +106,6 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'updated' => array(
-        'description' => 'The Unix timestamp when the salesforce_mapping was most recently saved.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
       'weight' => array(
         'type' => 'int',
         'not null' => TRUE,
@@ -634,4 +628,12 @@ function salesforce_mapping_update_7304(&$sandbox) {
   );
 
   db_change_field('salesforce_mapping_object', 'last_sync', 'last_sync', $last_sync_field);
+}
+
+/**
+ * Drop unused and problematic updated column from mappings.
+ */
+function salesforce_mapping_update_7305(&$sandbox) {
+  db_drop_field('salesforce_mapping', 'updated');
+  cache_clear_all('schema', 'cache');
 }
