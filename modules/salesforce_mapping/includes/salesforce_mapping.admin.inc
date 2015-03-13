@@ -299,6 +299,9 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
 
     if ($has_token_type) {
       $info = token_get_info();
+      // Entity type machine names have underscores, not dashes.
+      // The token key can be either, so $token_type is set based on a match in
+      // $info['types'].
       if(isset($info['types'][$drupal_entity_type])) {
         $token_type = $drupal_entity_type;
       }
