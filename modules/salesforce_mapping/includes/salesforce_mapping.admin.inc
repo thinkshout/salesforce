@@ -298,11 +298,21 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     );
 
     if ($has_token_type) {
-      $form['salesforce_field_mappings_wrapper']['token_tree']['tree'] = array(
-        '#theme' => 'token_tree',
-        '#token_types' => array($drupal_entity_type),
-        '#global_types' => TRUE,
-      );
+      $info = token_get_info();
+      if(isset($info['types'][$drupal_entity_type])) {
+        $token_type = $drupal_entity_type;
+      }
+      else {
+        $token_type = str_replace("_", "-", $drupal_entity_type);
+      }
+
+      if(isset($info['types'][$token_type])) {
+        $form['salesforce_field_mappings_wrapper']['token_tree']['tree'] = array(
+          '#theme' => 'token_tree',
+          '#token_types' => array($token_type),
+          '#global_types' => TRUE,
+        );
+      }
     }
 
     $form['salesforce_field_mappings_wrapper']['salesforce_add_field'] = array(
