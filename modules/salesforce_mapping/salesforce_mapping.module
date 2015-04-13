@@ -284,18 +284,6 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
       'render element' => 'elements',
       'file' => 'includes/salesforce_mapping.admin.inc',
     ),
-    'salesforce_mapping_linked_object' => array(
-      'variables' => array(
-        'label_hidden' => FALSE,
-        'title_attributes' => NULL,
-        'label' => '',
-        'content_attributes' => NULL,
-        'items' => array(),
-        'item_attributes' => array(0 => ''),
-        'classes' => '',
-        'attributes' => '',
-      ),
-    ),
     'salesforce_mapping_overview_tabledrag_form' => array(
       'render element' => 'form',
       'file' => 'includes/salesforce_mapping.ui_controller.inc',
@@ -576,39 +564,6 @@ function salesforce_mapping_object_access($op, $salesforce_mapping_object = NULL
 function salesforce_mapping_entity_mapping_accessible($op, $entity, $type, $account = NULL) {
   $wrapper = entity_metadata_wrapper($type, $entity);
   return salesforce_mapping_object_access($op, $wrapper->salesforce_mapping_object, $account);
-}
-
-/**
- * Implements hook_field_extra_fields().
- */
-function salesforce_mapping_field_extra_fields() {
-  // Include Salesforce data for mapped entities.
-  $mappings = salesforce_mapping_load();
-  foreach ($mappings as $mapping) {
-    $extra[$mapping->drupal_entity_type][$mapping->drupal_bundle] = array(
-      'display' => array(
-        'salesforce_id' => array(
-          'label' => t('Salesforce Id'),
-          'description' => t('ID of a linked Salesforce object.'),
-          'weight' => 0,
-        ),
-        'salesforce_last_sync' => array(
-          'label' => t('Salesforce last sync'),
-          'description' => t('Timestamp for the latest sync with Salesforce.'),
-          'weight' => 0,
-        ),
-      ),
-    );
-  }
-
-  return isset($extra) ? $extra : array();
-}
-
-/**
- * Wrapper around theme_field() to format linked Salesforce data.
- */
-function theme_salesforce_mapping_linked_object($variables) {
-  return theme_field($variables);
 }
 
 /**
