@@ -779,7 +779,8 @@ function salesforce_mapping_object_filter_query($header = FALSE, $properties = a
         case 'salesforce_id':
           if (strlen($value) < 18) {
             // Match start of the Salesforce ID if less than the full 18 chars.
-            $operator = 'STARTS_WITH';
+            $operator = 'LIKE';
+            $value = db_like($value) . '%';
           }
 
         default:
