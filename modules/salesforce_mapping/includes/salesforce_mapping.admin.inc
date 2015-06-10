@@ -1068,6 +1068,7 @@ function _salesforce_mapping_get_salesforce_field_options($salesforce_object_typ
       $sf_fields[$sf_field['name']] = $sf_field['label'];
     }
   }
+  asort($sf_fields);
   return $sf_fields;
 }
 
