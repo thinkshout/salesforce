@@ -288,6 +288,10 @@ function salesforce_mapping_theme($existing, $type, $theme, $path) {
       'render element' => 'form',
       'file' => 'includes/salesforce_mapping.ui_controller.inc',
     ),
+    'salesforce_mapping_form_table_row' => array(
+      'render element' => 'elements',
+      'file' => 'includes/salesforce_mapping.admin.inc',
+    ),
   );
 }
 

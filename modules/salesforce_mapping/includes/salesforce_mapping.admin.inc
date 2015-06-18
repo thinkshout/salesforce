@@ -314,6 +314,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
           '#theme' => 'token_tree',
           '#token_types' => array($token_type),
           '#global_types' => TRUE,
+          '#dialog' => TRUE,
         );
       }
     }
@@ -441,17 +442,17 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
   $row = $form[$parents[0]][$parents[1]][$delta];
 
   // Render the row.  This requires rendering it as a table, then stripping away
-  // the table tags in order to leave only the HTML of a table row.  Finally,
+  // unwanted tags in order to leave only the HTML of a table row.  Finally,
   // all line breaks had to be removed in order to prevent the ajax replace from
   // wrapping the output in a div.
-  $table = array(
-    '#theme' => 'salesforce_fieldmap_form_table',
+  $table_row = array(
+    '#theme' => 'salesforce_mapping_form_table_row',
     '#tree' => TRUE,
     '#columns' => array_keys($form['salesforce_field_mappings_wrapper']['salesforce_field_mappings']['#header']),
-    0 => $row,
+    '#row' => $row,
   );
-  $rendered_table = render($table);
-  $rendered_row = str_replace(array("\r", "\n"), "", substr(substr($rendered_table, 17), 0, -18));
+  $rendered_table = render($table_row);
+  $rendered_row = str_replace(array("\r", "\n"), "", $rendered_table);
 
   $commands = array(
     // Replace the row.
@@ -467,6 +468,39 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
     '#type' => 'ajax',
     '#commands' => $commands,
   );
+}
+
+/**
+ * Theme a single row for our ajax callback to inject into an existing table.
+ * @see salesforce_mapping_form_field_callback()
+ * @see theme_table()
+ */
+function theme_salesforce_mapping_form_table_row($variables) {
+  $elements = $variables['elements'];
+
+  // Build the rows array.
+  $columns = !empty($elements['#columns']) ? $elements['#columns'] : array();
+  $row = !empty($elements['#row']) ? $elements['#row'] : array();
+  $attributes = !empty($elements['#attributes']) ? $elements['#attributes'] : array();
+
+  $output = '<tr' . drupal_attributes($attributes) . '>';
+
+  $data = array();
+  foreach ($columns as $column) {
+    if (isset($row[$column])) {
+      $cell = array(
+        'data' => drupal_render($row[$column]),
+      );
+      if (isset($row[$column]['#attributes'])) {
+        foreach ($row[$column]['#attributes'] as $key => $value) {
+          $cell[$key] = ($key == 'id') ? (is_array($value) ? array($value[0] . '-cell') : $value . '-cell') : $value;
+        }
+      }
+      $output .= _theme_table_cell($cell);
+    }
+  }
+  $output .= "</tr>";
+  return $output;  
 }
 
 /**
