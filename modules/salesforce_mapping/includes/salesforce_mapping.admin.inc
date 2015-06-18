@@ -476,12 +476,13 @@ function salesforce_mapping_form_field_callback($form, $form_state) {
  * @see theme_table()
  */
 function theme_salesforce_mapping_form_table_row($variables) {
+  watchdog('row', "<pre>" . var_export($variables, 1));
   $elements = $variables['elements'];
 
   // Build the rows array.
   $columns = !empty($elements['#columns']) ? $elements['#columns'] : array();
   $row = !empty($elements['#row']) ? $elements['#row'] : array();
-  $attributes = !empty($elements['#attributes']) ? $elements['#attributes'] : array();
+  $attributes = !empty($row['#attributes']) ? $row['#attributes'] : array();
 
   $output = '<tr' . drupal_attributes($attributes) . '>';
 
