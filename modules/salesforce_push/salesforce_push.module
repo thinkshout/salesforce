@@ -246,7 +246,8 @@ function salesforce_push_cron() {
   $use_soap = module_exists('salesforce_soap');
   $entity_ids = array();
 
-  for ($delta = 0; $delta < $limit; $delta++) {
+  $delta = 0;
+  for ($i = 0; $i < $limit; $i++) {
     $item = $queue->claimItem();
     // We do this after the "for()" so that when we reach the limit, we don't
     // incidentally claim a queue license on an item we aren't going to process.
@@ -332,6 +333,7 @@ function salesforce_push_cron() {
 
     // Remove item from queue.
     $queue->deleteItem($item);
+    $delta++;
   }
 
   // Use soap API to batch process records.
