@@ -256,10 +256,10 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
 
   // Load each related Drupal entity.
   foreach ($field_map['salesforce_field'] as $sf_field) {
-    $mapped_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
-    if ($mapped_object) {
-      $entity = entity_load_single($mapped_object->entity_type, $mapped_object->entity_id);
-      $values[] = entity_metadata_wrapper($mapped_object->entity_type, $entity);
+    $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object[$sf_field['name']]);
+    if ($mapping_object) {
+      $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+      $values[] = entity_metadata_wrapper($mapping_object->entity_type, $entity);
     }
   }
 
