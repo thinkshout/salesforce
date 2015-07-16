@@ -322,6 +322,7 @@ function salesforce_pull_process_deleted_records() {
     return;
   }
   $sfapi = salesforce_get_api();
+  module_load_include('inc', 'salesforce_soap');
   $soap = new SalesforceSoapPartner($sfapi);
 
   // Load all unique SF record types that we have mappings for.

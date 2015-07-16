@@ -96,5 +96,30 @@ function hook_salesforce_query_alter(SalesforceSelectQuery &$query) {
 }
 
 /**
+ * A salesforce push has failed: Implementations may wish to react, for
+ * example, by logging the failure or alerting an administrator.
+ *
+ * @param string $op
+ *   The salesforce operation: Create, Update, Upsert, or Delete
+ * @param object $result
+ *   The salesforce response
+ * @param array $synced_entity
+ *   Entity data for this push. This array has 3 keys
+ *     'entity_wrapper': entity_metadata_wrapper() for the Drupal entity 
+ *     'mapping_object': salesforce mapping object record, if it exists. 
+ *       Otherwise null
+ *     'queue_item': Drupal queue item corresponding to this push attempt
+ */
+function hook_salesforce_push_fail($op, $result, $synced_entity) {
+  
+}
+$synced_entities[$delta] = array(
+  'entity_wrapper' => $wrapper,
+  'mapping_object' => $mapping_object,
+  'queue_item' => $item,
+);
+  
+
+/**
  * @} salesforce_hooks
  */

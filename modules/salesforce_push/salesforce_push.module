@@ -69,6 +69,7 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
           'entity_id' => $entity_id,
           'mapping' => $mapping,
           'trigger' => $sf_sync_trigger,
+          'attempts' => 0,
         ));
         continue;
       }
@@ -249,6 +250,7 @@ function salesforce_push_cron() {
   $delta = 0;
   for ($i = 0; $i < $limit; $i++) {
     $item = $queue->claimItem();
+
     // We do this after the "for()" so that when we reach the limit, we don't
     // incidentally claim a queue license on an item we aren't going to process.
     if (!$item) {
@@ -296,7 +298,8 @@ function salesforce_push_cron() {
 
         $synced_entities[$delta] = array(
           'entity_wrapper' => $wrapper,
-          'mapped_objects' => $mapping_object,
+          'mapping_object' => $mapping_object,
+          'queue_item' => $item,
         );
 
         // Setup SF record type. CampaignMember objects get their type from
@@ -331,7 +334,7 @@ function salesforce_push_cron() {
       salesforce_push_sync_rest($entity_type, $entity, $mapping, $item->data['trigger']);
     }
 
-    // Remove item from queue.
+    // Remove item from queue. We'll re-create it later if we need to.
     $queue->deleteItem($item);
     $delta++;
   }
@@ -377,7 +380,7 @@ function salesforce_push_cron() {
  */
 function salesforce_push_process_soap_results($op, $results, $synced_entities) {
   foreach ($results as $key => $result) {
-    $mapping_object = $synced_entities[$key]['mapped_objects'];
+    $mapping_object = $synced_entities[$key]['mapping_object'];
     if ($result->success) {
       if (drupal_strtolower($op) == 'delete' && $mapping_object) {
         $mapping_object->delete();
@@ -409,30 +412,67 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
       );
     }
     else {
-      $error_messages = array();
-      foreach ($result->errors as $error) {
-        watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
-          array(
-            '%id' => $result->id,
-            '@code' => $error->statusCode,
-            '@message' => $error->message,
-            '%op' => $op,
-          ),
-          WATCHDOG_ERROR
-        );
-        $error_messages[] = $error->message;
-      }
-      if ($mapping_object) {
-        $mapping_object->last_sync = REQUEST_TIME;
-        $mapping_object->last_sync_action = 'push';
-        $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
-        $mapping_object->last_sync_message = t('Push error via %function with the following messages: @message.', array(
-          '%function' => __FUNCTION__,
-          '@message' => implode(' | ', $error_messages),
-        ));
-        $mapping_object->save();
-      }
+      // Otherwise, the item is considered failed.
+      module_invoke_all('salesforce_push_fail', $op, $result, $synced_entities[$key]);
     }
+  }
+}
+
+/**
+ * Implements hook_salesforce_push_fail()
+ *
+ * 1. Log errors messages to watchdog
+ * 2. Log errors to any existing mapping_object
+ * 3. Re-queue item for retry, as applicable
+ */
+function salesforce_push_salesforce_push_fail($op, $result, $synced_entity) {
+  $error_messages = array();
+  foreach ($result->errors as $error) {
+    watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
+      array(
+        '%id' => $result->id,
+        '@code' => $error->statusCode,
+        '@message' => $error->message,
+        '%op' => $op,
+      ),
+      WATCHDOG_ERROR
+    );
+    $error_messages[] = $error->message;
+  }
+  if (!empty($synced_entity['mapping_object'])) {
+    $mapping_object = $synced_entity['mapping_object'];
+    $mapping_object->last_sync = REQUEST_TIME;
+    $mapping_object->last_sync_action = 'push';
+    $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
+    $mapping_object->last_sync_message = t('Push error via %function with the following messages: @message.', array(
+      '%function' => __FUNCTION__,
+      '@message' => implode(' | ', $error_messages),
+    ));
+    $mapping_object->save();
+  }
+
+  // If our mapping is set up to retry, check the number of attempts and re-queue if under the threshold.
+  if (empty($synced_entity['queue_item'])) {
+    return;
+  }
+  $queue_item = $synced_entity['queue_item'];
+  if (empty($queue_item->data['mapping'])
+  || empty($queue_item->data['mapping']->retries)) {
+    return;
+  }
+  if (empty($queue_item->data['attempts'])) {
+    $queue_item->data['attempts'] = 0;
+  }
+  if ($queue_item->data['attempts'] < $queue_item->data['mapping']->retries) {
+    // If we're under the threshold, increment counter and re-queue.
+    $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
+    $queue->createItem(array(
+      'entity_type' => $queue_item->data['entity_type'],
+      'entity_id' => $queue_item->data['entity_id'],
+      'mapping' => $queue_item->data['mapping'],
+      'trigger' => $queue_item->data['trigger'],
+      'attempts' => $queue_item->data['attempts'] + 1,
+    ));
   }
 }
 
@@ -459,6 +499,7 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     }
 
     $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
+    
     $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $entity_wrapper);
     $params[$fieldmap['salesforce_field']['name']] = $value;
 
