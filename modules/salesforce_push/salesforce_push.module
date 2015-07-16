@@ -475,7 +475,6 @@ function salesforce_push_salesforce_push_success($op, $result, $synced_entity) {
  * 1. Log errors messages to watchdog
  * 2. Log errors to any existing mapping_object
  * 3. Re-queue item for retry, as applicable
-
  */
 function salesforce_push_salesforce_push_fail($op, $result, $synced_entity) {
   $error_messages = array();
@@ -551,7 +550,6 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     }
 
     $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
-
     $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $entity_wrapper);
     $params[$fieldmap['salesforce_field']['name']] = $value;
 
