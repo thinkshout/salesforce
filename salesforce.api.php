@@ -169,9 +169,14 @@ function hook_salesforce_push_success($op, $result, $synced_entity) {
  *     'queue_item': Drupal queue item corresponding to this push attempt
  */
 function hook_salesforce_push_fail($op, $result, $synced_entity) {
+  $synced_entities[$delta] = array(
+    'entity_wrapper' => $wrapper,
+    'mapping_object' => $mapping_object,
+    'queue_item' => $item,
+  );
   
 }
-
+  
 /**
  * @} salesforce_hooks
  */
