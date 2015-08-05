@@ -280,7 +280,8 @@ function salesforce_pull_process_records($sf_object) {
       // object. We are left with no choice but to throw an exception.
       list($entity_id) = entity_extract_ids($sf_mapping->drupal_entity_type, $entity);
       if (!$entity_id) {
-        throw new Exception('Failed to create Drupal entity when processing data from Salesforce.');
+        $sf_object_id = $sf_object['Id'];
+        throw new Exception("Failed to create Drupal entity when processing data from Salesforce object: $sf_object_id.");
       }
 
       // Create mapping object.
