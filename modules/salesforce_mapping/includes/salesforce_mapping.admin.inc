@@ -370,6 +370,20 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
   $push_batch_description = t('Push items will be processed in a single batch to the Salesforce API rather than one at a time. This may be preferable if API limits are of concern, although changes are not reflected immediately in Salesforce.');
   $form['push_batch']['#description'] = $requirements_description . ' ' . $push_batch_description;
 
+  $form['retries'] = array(
+    '#title' => t('Retries'),
+    '#description' => t('For failed push actions, number of re-attempts before a push is considered failed. Requires at least one Drupal entity action trigger to be enabled.'),
+    '#default_value' => _salesforce_mapping_get_default_value('retries', $form_state),
+    '#type' => 'textfield',
+    '#states' => array(
+      'disabled' => array(
+        ':input[name="sync_triggers[' . SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE . ']"]' => array('checked' => FALSE),
+        ':input[name="sync_triggers[' . SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE . ']"]' => array('checked' => FALSE),
+        ':input[name="sync_triggers[' . SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE . ']"]' => array('checked' => FALSE),
+      ),
+    ),
+  );
+
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
     '#value' => t('Save mapping'),
@@ -567,7 +581,9 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   if (!in_array($values['salesforce_record_type_default'], $values['salesforce_record_types_allowed'])) {
     form_set_error('salesforce_record_type_default', t('Default record type must be one of the Allowed Record Types.'));
   }
-
+  if ($values['retries'] === '' || !is_numeric($values['retries']) || $values['retries'] < 0 || intval($values['retries']) != $values['retries']) {
+    form_set_error('retries', t('Retries must be a non-negative integer.'));
+  }
   $properties = array(
     'salesforce_object_type' => $values['salesforce_object_type'],
     'drupal_entity_type' => $values['drupal_entity_type'],
@@ -716,6 +732,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     'sync_triggers' => $sync_triggers,
     'push_async' => $values['push_async'],
     'push_batch' => $values['push_batch'],
+    'retries' => $values['retries'],
   );
 
   if ($form_state['salesforce_mapping']->name) {
@@ -749,6 +766,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
  *   Value of the field that is appropriate for #default_value.
  */
 function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NULL) {
+
   $mapping = NULL;
   if (isset($form_state['salesforce_mapping'])) {
     $mapping = &$form_state['salesforce_mapping'];

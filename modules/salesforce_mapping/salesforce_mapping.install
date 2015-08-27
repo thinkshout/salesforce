@@ -100,6 +100,13 @@ function salesforce_mapping_schema() {
         'default' => 0,
         'description' => 'Indicates if SOAP API batch processing should be used during async processing.',
       ),
+      'retries' => array(
+        'description' => 'Number of retries for this mapping\'s push attempts.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'created' => array(
         'description' => 'The Unix timestamp when the salesforce_mapping was created.',
         'type' => 'int',
@@ -637,3 +644,20 @@ function salesforce_mapping_update_7305(&$sandbox) {
   db_drop_field('salesforce_mapping', 'updated');
   cache_clear_all('schema', 'cache');
 }
+
+/**
+ * Create a "retries" field for error handling.
+ */
+function salesforce_mapping_update_7306(&$sandbox) {
+  $retries_field = array(
+    'description' => 'Number of retries for this mapping\'s push attempts.',
+    'type' => 'int',
+    'size' => 'tiny',
+    'not null' => TRUE,
+    'default' => 0,
+    'initial' => 0,
+  );
+  db_add_field('salesforce_mapping', 'retries', $retries_field);
+}
+
+
