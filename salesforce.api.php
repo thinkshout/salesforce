@@ -51,7 +51,7 @@ function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) 
  *   The type of entity the push is for.
  * @param object $entity
  *   The entity object the push is for.
- * @param ing $sf_sync_trigger
+ * @param int $sf_sync_trigger
  *   Constant for the Drupal operation that triggered the sync.
  *
  * @return bool
@@ -59,6 +59,28 @@ function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) 
  *   $sf_sync_trigger operation.
  */
 function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_trigger) {
+
+}
+
+/**
+ * Similar to hook_salesforce_push_entity_allowed, but prevent push to SF for
+ * an entity for a given mapping. The additional granularity allows, for
+ * example, mapping a single Drupal object to multiple separate Salesforce
+ * objects, but only synching under certain conditions.
+ * 
+ * @param string $entity_type
+ *   The type of entity the push is for.
+ * @param object $entity
+ *   The entity object the push is for.
+ * @param int $sf_sync_trigger
+ *   Constant for the Drupal operation that triggered the sync.
+ * @param SalesforceMapping $mapping
+ *   Salesforce mapping object for which to allow/disallow sync.
+ *
+ * @return bool
+ *   FALSE if the entity should not be synced to Salesforce.
+ */
+function hook_salesforce_push_entity_allowed_by_mapping($entity_type, $entity, $sf_sync_trigger, $mapping) {
 
 }
 
@@ -93,6 +115,44 @@ function hook_salesforce_pull_entity_value_alter(&$value, $field_map, $sf_object
  */
 function hook_salesforce_query_alter(SalesforceSelectQuery &$query) {
 
+}
+
+/**
+ * A salesforce push has succeeded: Implementations may wish to react, for
+ * example, by alerting an administrator.
+ *
+ * @param string $op
+ *   The salesforce operation: Create, Update, Upsert, or Delete
+ * @param object $result
+ *   The salesforce response
+ * @param array $synced_entity
+ *   Entity data for this push. This array has 3 keys
+ *     'entity_wrapper': entity_metadata_wrapper() for the Drupal entity 
+ *     'mapping_object': salesforce mapping object record, if it exists. 
+ *       Otherwise null
+ *     'queue_item': Drupal queue item corresponding to this push attempt
+ */
+function hook_salesforce_push_success($op, $result, $synced_entity) {
+  
+}
+
+/**
+ * A salesforce push has failed: Implementations may wish to react, for
+ * example, by logging the failure or alerting an administrator.
+ *
+ * @param string $op
+ *   The salesforce operation: Create, Update, Upsert, or Delete
+ * @param object $result
+ *   The salesforce response
+ * @param array $synced_entity
+ *   Entity data for this push. This array has 3 keys
+ *     'entity_wrapper': entity_metadata_wrapper() for the Drupal entity 
+ *     'mapping_object': salesforce mapping object record, if it exists. 
+ *       Otherwise null
+ *     'queue_item': Drupal queue item corresponding to this push attempt
+ */
+function hook_salesforce_push_fail($op, $result, $synced_entity) {
+  
 }
 
 /**
