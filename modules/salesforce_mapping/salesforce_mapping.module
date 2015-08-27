@@ -167,19 +167,51 @@ function salesforce_mapping_menu() {
     // after it is put into the loop below:
     $mapped_entities[$mapping->drupal_entity_type] = $mapping->drupal_bundle;
   }
+
   foreach ($mapped_entities as $type => $bundle) {
     $info = entity_get_info($type);
-    $bundle_key = $info['entity keys']['bundle'] ?: 'type';
-    $entity = entity_create($type, array($bundle_key => $bundle));
-    $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
+    // Building a "stub" entity is fraught. Just load an example instance.
+    if (empty($info['base table']) || empty($info['entity keys']['id'])) {
+      continue;
+    }
+    $table = $info['base table'];
+    $id_key = $info['entity keys']['id'];
+    $sample_id = FALSE;
+    try {
+      $sample_id = db_query("SELECT `$id_key` from {$table} LIMIT 1")->fetchField();
+      if (empty($sample_id)) {
+        continue;
+      }
+      $entity = entity_load_single($type, $sample_id);
+      if (empty($entity)) {
+        continue;
+      }
+    }
+    catch (Exception $e) {
+      // NO LINK FOR YOU
+      continue;
+    }
+    try {
+      $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
+    }
+    catch (Exception $e) {
+      // entity_uri() has been known to throw exceptions. Don't let it block us.
+      continue;
+    }
+
+    // We only currently support entities that use a load function of the form
+    // type_load(), and an autoloader within the menu paths (if a path is
+    // available).
+    $autoloader = '%' . $type;
     if (empty($uri['path'])) {
-      $path = 'admin/content/salesforce/' . $type . '/%' . $type . '/salesforce_activity';
+      $path = 'admin/content/salesforce/' . $type . '/' . $autoloader . '/salesforce_activity';
       $menu_type = MENU_NORMAL_ITEM;
     }
     else {
-      $path = $uri['path'] . '%' . $type . '/salesforce_activity';
+      $path = str_replace('/' . $sample_id, '/' . $autoloader, $uri['path']) . '/salesforce_activity';
       $menu_type = MENU_LOCAL_TASK;
     }
+
     $entity_arg = substr_count($path, '/') - 1;
     $items[$path] = array(
       'title' => 'Salesforce activity',
