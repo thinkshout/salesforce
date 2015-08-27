@@ -62,6 +62,14 @@ function salesforce_push_entity_crud($entity_type, $entity, $sf_sync_trigger) {
 
   foreach ($mappings as $mapping) {
     if ($mapping->sync_triggers & $sf_sync_trigger) {
+
+      // Allow other modules to prevent a sync per-mapping.
+      foreach (module_implements('salesforce_push_entity_allowed_by_mapping') as $module) {
+        if (module_invoke($module, 'salesforce_push_entity_allowed_by_mapping', $entity_type, $entity, $sf_sync_trigger, $mapping) === FALSE) {
+          continue;
+        }
+      }
+
       if (isset($mapping->push_async) && $mapping->push_async) {
         $queue = DrupalQueue::get(SALESFORCE_PUSH_QUEUE);
         $queue->createItem(array(
@@ -297,10 +305,12 @@ function salesforce_push_cron() {
         $synced_entities[$delta] = array(
           'entity_wrapper' => $wrapper,
           'mapped_objects' => $mapping_object,
+          'queue_item' => $item,
         );
 
         // Setup SF record type. CampaignMember objects get their type from
         // their Campaign.
+        // @TODO: remove object-specific logic. Figure out how this works and implement generic support for recordtype inheritence, or objects that don't support recordtypes
         if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
           && empty($params['RecordTypeId'])
           && ($mapping->salesforce_object_type != 'CampaignMember')) {
@@ -379,60 +389,85 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
   foreach ($results as $key => $result) {
     $mapping_object = $synced_entities[$key]['mapped_objects'];
     if ($result->success) {
-      if (drupal_strtolower($op) == 'delete' && $mapping_object) {
-        $mapping_object->delete();
-      }
-      else {
-        if (!$mapping_object) {
-          // Create mapping object, saved below.
-          $wrapper = $synced_entities[$key]['entity_wrapper'];
-          list($entity_id) = entity_extract_ids($wrapper->type(), $wrapper->value());
-          $mapping_object = entity_create('salesforce_mapping_object', array(
-            'entity_id' => $entity_id,
-            'entity_type' => $wrapper->type(),
-            'salesforce_id' => $result->id,
-            'last_sync_message' => t('Mapping object created via !function.', array('!function' => __FUNCTION__)),
-          ));
-        }
-        else {
-          $mapping_object->last_sync_message = t('Mapping object updated via !function.', array('!function' => __FUNCTION__));
-        }
-
-        $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
-        $mapping_object->last_sync = REQUEST_TIME;
-        $mapping_object->last_sync_action = 'push';
-        $mapping_object->save();
-      }
-
-      watchdog('salesforce_push', '%op: Salesforce object %id',
-        array('%id' => $result->id, '%op' => $op)
-      );
+      module_invoke_all('salesforce_push_success', $op, $result, $synced_entities[$key]);
     }
     else {
-      $error_messages = array();
-      foreach ($result->errors as $error) {
-        watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
-          array(
-            '%id' => $result->id,
-            '@code' => $error->statusCode,
-            '@message' => $error->message,
-            '%op' => $op,
-          ),
-          WATCHDOG_ERROR
-        );
-        $error_messages[] = $error->message;
-      }
-      if ($mapping_object) {
-        $mapping_object->last_sync = REQUEST_TIME;
-        $mapping_object->last_sync_action = 'push';
-        $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
-        $mapping_object->last_sync_message = t('Push error via %function with the following messages: @message.', array(
-          '%function' => __FUNCTION__,
-          '@message' => implode(' | ', $error_messages),
-        ));
-        $mapping_object->save();
-      }
+      // Otherwise, the item is considered failed.
+      module_invoke_all('salesforce_push_fail', $op, $result, $synced_entities[$key]);
     }
+  }
+}
+
+/**
+ * Implements hook_salesforce_push_success()
+ *
+ * Create/Update/Delete any existing mapping object and log to watchdog
+ */
+function salesforce_push_salesforce_push_success($op, $result, $synced_entity) {
+  $mapping_object = FALSE;
+  if (!empty($synced_entity['mapping_object'])) {
+    $mapping_object = $synced_entity['mapping_object'];
+  }
+  if (drupal_strtolower($op) == 'delete' && $mapping_object) {
+    $mapping_object->delete();
+    return;
+  }
+
+  if (!$mapping_object) {
+    // Create mapping object, saved below.
+    $wrapper = $synced_entities[$key]['entity_wrapper'];
+    list($entity_id) = entity_extract_ids($wrapper->type(), $wrapper->value());
+    $mapping_object = entity_create('salesforce_mapping_object', array(
+      'entity_id' => $entity_id,
+      'entity_type' => $wrapper->type(),
+      'salesforce_id' => $result->id,
+      'last_sync_message' => t('Mapping object created via !function.', array('!function' => __FUNCTION__)),
+    ));
+  }
+  else {
+    $mapping_object->last_sync_message = t('Mapping object updated via !function.', array('!function' => __FUNCTION__));
+  }
+
+  $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
+  $mapping_object->last_sync = REQUEST_TIME;
+  $mapping_object->last_sync_action = 'push';
+  $mapping_object->save();
+
+  watchdog('salesforce_push', '%op: Salesforce object %id',
+    array('%id' => $result->id, '%op' => $op)
+  );
+}
+
+/**
+ * Implements hook_salesforce_push_fail()
+ *
+ * Log errors messages to watchdog
+ * Log errors to any existing mapping_object
+ */
+function salesforce_push_salesforce_push_fail($op, $result, $synced_entity) {
+  $error_messages = array();
+  foreach ($result->errors as $error) {
+    watchdog('salesforce_push', '%op error for Salesforce object %id. @code: @message',
+      array(
+        '%id' => $result->id,
+        '@code' => $error->statusCode,
+        '@message' => $error->message,
+        '%op' => $op,
+      ),
+      WATCHDOG_ERROR
+    );
+    $error_messages[] = $error->message;
+  }
+  if (!empty($synced_entity['mapping_object'])) {
+    $mapping_object = $synced_entity['mapping_object'];
+    $mapping_object->last_sync = REQUEST_TIME;
+    $mapping_object->last_sync_action = 'push';
+    $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
+    $mapping_object->last_sync_message = t('Push error via %function with the following messages: @message.', array(
+      '%function' => __FUNCTION__,
+      '@message' => implode(' | ', $error_messages),
+    ));
+    $mapping_object->save();
   }
 }
 
