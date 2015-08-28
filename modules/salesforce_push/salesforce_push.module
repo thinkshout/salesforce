@@ -304,7 +304,7 @@ function salesforce_push_cron() {
 
         $synced_entities[$delta] = array(
           'entity_wrapper' => $wrapper,
-          'mapped_objects' => $mapping_object,
+          'mapping_object' => $mapping_object,
           'queue_item' => $item,
         );
 
@@ -387,7 +387,7 @@ function salesforce_push_cron() {
  */
 function salesforce_push_process_soap_results($op, $results, $synced_entities) {
   foreach ($results as $key => $result) {
-    $mapping_object = $synced_entities[$key]['mapped_objects'];
+    $mapping_object = $synced_entities[$key]['mapping_object'];
     if ($result->success) {
       module_invoke_all('salesforce_push_success', $op, $result, $synced_entities[$key]);
     }
