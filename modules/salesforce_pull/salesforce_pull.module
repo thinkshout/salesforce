@@ -91,14 +91,7 @@ function salesforce_pull_get_updated_records() {
 
     $soql = new SalesforceSelectQuery($type);
     // Convert field mappings to SOQL.
-    $soql->fields = array('Id', 'LastModifiedDate');
-    foreach ($mapped_fields as $field) {
-      // Don't add the Id field to the SOQL query.
-      if ($field == 'Id') {
-        continue;
-      }
-      $soql->fields[] = $field;
-    }
+    $soql->fields = array_merge($mapped_fields, array('Id' => 'Id', 'LastModifiedDate' => 'LastModifiedDate'));
 
     // If no lastupdate, get all records, else get records since last pull.
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
