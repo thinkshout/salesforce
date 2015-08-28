@@ -6,35 +6,15 @@
 function salesforce_mapping_object_form($form, &$form_state, $mapping_object = NULL, $entity_type = '', $entity_id = '') {
   $form = array();
 
-  // Only allow editing entity type and id on new mappings.
-  if (!$mapping_object || (!empty($mapping_object->is_new) && $mapping_object->is_new)) {
-    // Get list of mapped entity types.
-    $mapped_entities = salesforce_mapping_get_mapped_entities();
-    $entity_options = array();
-    // Build an options array of entity types that have mappings.
-    foreach ($mapped_entities as $type => $bundles) {
-      $info = entity_get_info($type);
-      $entity_options[$type] = $info['label'];
-    }
+  $form['entity_type'] = array(
+    '#type' => 'value',
+    '#value' => $entity_type,
+  );
 
-    $form['entity_type'] = array(
-      '#type' => 'select',
-      '#title' => t('Entity type'),
-      '#options' => $entity_options,
-      '#default_value' => isset($mapping_object->entity_type) ? $mapping_object->entity_type : $entity_type,
-      '#required' => TRUE,
-      '#access' => isset($mapping_object),
-    );
-
-    $form['entity_id'] = array(
-      '#type' => 'textfield',
-      '#title' => t('Drupal Entity Id'),
-      '#default_value' => isset($mapping_object->entity_id) ? $mapping_object->entity_id : $entity_id,
-      '#size' => 19,
-      '#required' => TRUE,
-      '#access' => isset($mapping_object),
-    );
-  }
+  $form['entity_id'] = array(
+    '#type' => 'value',
+    '#value' => $entity_id,
+  );
 
   $form['salesforce_id'] = array(
     '#type' => 'textfield',
