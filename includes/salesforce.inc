@@ -33,6 +33,33 @@ class Salesforce {
   }
 
   /**
+   * Converts a 15-character case-sensitive Salesforce ID to 18-character
+   * case-insensitive ID. If input is not 15-characters, return input unaltered.
+   *
+   * @param string $sfid15
+   *   15-character case-sensitive Salesforce ID
+   * @return string
+   *   18-character case-insensitive Salesforce ID
+   */
+  public static function convertId($sfid15) {
+    if (strlen($sfid15) != 15) {
+      return $sfid15;
+    }
+    $chunks = str_split($sfid15, 5);
+    $extra = '';
+    foreach ($chunks as $chunk) {
+      $chars = str_split($chunk, 1);
+      $bits = '';
+      foreach ($chars as $char) {
+        $bits .= (!is_numeric($char) && $char == strtoupper($char)) ? '1' : '0';
+      }
+      $map = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
+      $extra .= substr($map, base_convert(strrev($bits), 2, 10), 1);
+    }
+    return $sfid15 . $extra;
+  }
+
+  /**
    * Determine if this SF instance is fully configured.
    *
    * @TODO: Consider making a test API call.
