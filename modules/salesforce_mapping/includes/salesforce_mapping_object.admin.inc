@@ -32,6 +32,8 @@ function salesforce_mapping_object_form($form, &$form_state, $mapping_object = N
     'submit' => array(
       '#type' => 'submit',
       '#value' => isset($mapping_object->salesforce_mapping_object_id) ? t('Update mapping') : t('Save mapping'),
+      '#submit' => array('salesforce_mapping_object_form_save_mapping_submit'),
+      '#validate' => array('salesforce_mapping_object_form_save_mapping_validate')
     ),
   );
   if ($mapping_object && empty($mapping_object->is_new)) {
@@ -93,57 +95,40 @@ function salesforce_mapping_object_form_validate($form, &$form_state) {
     }
   }
   $mapping = reset($mappings);
+
+  // Convert to 18-char if 15-char ID was given. 
+  $values['salesforce_id'] = Salesforce::convertId($values['salesforce_id']);
+
+  // Check for existing mapping based on the Salesforce Id.
+  $mapping_object_sf = salesforce_mapping_object_load_by_sfid($values['salesforce_id'], TRUE);
   $sf_object_type = $mapping->salesforce_object_type;
+
+  if ($mapping_object_sf &&
+    (empty($mapping_object->salesforce_mapping_object_id) || $mapping_object_sf->salesforce_mapping_object_id != $mapping_object->salesforce_mapping_object_id)) {
+    form_set_error('salesforce_id', t('Salesforce object is already mapped to a Drupal entity.'));
+  }
 
   $sfapi = salesforce_get_api();
   // Not authorized, we need to bail this time around.
   if (!$sfapi->isAuthorized()) {
     form_set_error('salesforce_id', t('Salesforce is not authorized.'));
   }
+}
 
-  // Attempt to retrieve the Salesforce object.
-  $sf_object = FALSE;
-  try {
-    $sf_object = $sfapi->objectRead($sf_object_type, $values['salesforce_id']);
+function salesforce_mapping_object_form_save_mapping_validate($form, &$form_state) {
+  if (empty($form_state['values']['salesforce_id'])) {
+    form_set_error('salesforce_id', t('Salesforce ID is required to save a new mapping.'));
   }
-  catch (Exception $e) {
-    form_set_error('salesforce_id', t('Error getting object from Salesforce: @message', array('@message' => $e->getMessage())));
-  }
-
-  if ($sf_object) {
-    // Use the returned Id to replace any 15 character Ids with the full 18
-    // character one.
-    $values['salesforce_id'] = $sf_object['Id'];
-
-    // Check for existing mapping based on the Salesforce Id.
-    $mapping_object_sf = salesforce_mapping_object_load_by_sfid($values['salesforce_id'], TRUE);
-
-    if ($mapping_object_sf &&
-      (empty($mapping_object->salesforce_mapping_object_id) || $mapping_object_sf->salesforce_mapping_object_id != $mapping_object->salesforce_mapping_object_id)) {
-      form_set_error('salesforce_id', t('Salesforce object is already mapped to a Drupal entity.'));
-    }
-
-    // Validate that Salesforce object is of an allowed type and record type.
-    $record_type = empty($sf_object['RecordTypeId']) ? 'default' : $sf_object['RecordTypeId'];
-
-    $record_type_allowed = FALSE;
-    foreach ($mappings as $mapping) {
-      if (in_array($record_type, $mapping->salesforce_record_types_allowed, TRUE)) {
-        $record_type_allowed = TRUE;
-        continue;
-      }
-    }
-
-    if (!$record_type_allowed) {
-      form_set_error('salesforce_id', t('Salesforce object record type is not allowed in any mappings.'));
-    }
+  $form_state['values']['salesforce_id'] = Salesforce::verifyId($form_state['values']['salesforce_id']);
+  if (strlen($form_state['values']['salesforce_id']) != 18) {
+    form_set_error('salesforce_id', t('Invalid Salesforce ID.'));
   }
 }
 
 /**
  * Implements hook_form_submit().
  */
-function salesforce_mapping_object_form_submit($form, &$form_state) {
+function salesforce_mapping_object_form_save_mapping_submit($form, &$form_state) {
   $mapping_object = $form_state['salesforce_mapping_object'];
   if (is_null($mapping_object)) {
     $mapping_object = entity_create('salesforce_mapping_object', array(
