@@ -178,7 +178,7 @@ function salesforce_mapping_menu() {
     $id_key = $info['entity keys']['id'];
     $sample_id = FALSE;
     try {
-      $sample_id = db_query("SELECT `$id_key` from {$table} LIMIT 1")->fetchField();
+      $sample_id = db_query("SELECT MAX(`$id_key`) from {$table} LIMIT 1")->fetchField();
       if (empty($sample_id)) {
         continue;
       }
