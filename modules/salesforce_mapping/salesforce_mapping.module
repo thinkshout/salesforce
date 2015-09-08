@@ -245,7 +245,6 @@ function salesforce_mapping_salesforce_mapping_entity_uris_alter(&$entity_uris) 
   $entity_uris['user'] = array(
     'path' => 'user/',
   );
-
 }
 
 /**
@@ -877,19 +876,4 @@ function salesforce_mapping_object_render_property($mapping, $name, $property) {
   }
 
   return $content;
-}
-
-/**
- * Implements hook_salesforce_mapping_entity_uris().
- *
- * Node and User, like most entities in core, don't respond well to entity_uri()
- * calls on unsaved entity stubs, which is what we need for our menu items.
- */
-function salesforce_mapping_salesforce_mapping_entity_uris_alter(&$entity_uris) {
-  $entity_uris['node'] = array(
-    'path' => 'node/',
-  );
-  $entity_uris['user'] = array(
-    'path' => 'user/',
-  );
 }
