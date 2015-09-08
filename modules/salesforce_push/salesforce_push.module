@@ -314,11 +314,11 @@ function salesforce_push_cron() {
 
     $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
 
-   if (!$use_soap) { {
+    if (!$use_soap) {
       salesforce_push_sync_rest($entity_type, $entity, $mapping, $item->data['trigger']);
       continue;
     }
- 
+
     if ($item->data['trigger'] == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapping_object) {
       $delete_list[$delta] = $mapping_object->salesforce_id;
       continue;
@@ -518,7 +518,7 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     }
 
     $fieldmap_type = salesforce_mapping_get_fieldmap_types($fieldmap['drupal_field']['fieldmap_type']);
-    
+
     $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $entity_wrapper);
     $params[$fieldmap['salesforce_field']['name']] = $value;
 
