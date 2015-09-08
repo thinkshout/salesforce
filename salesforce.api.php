@@ -45,6 +45,23 @@ function hook_salesforce_push_params_alter(&$params, $mapping, $entity_wrapper) 
 }
 
 /**
+ * Provide URIs manually for poorly-behaved entity types.
+ *
+ * Note that this hook is self-implemented in salesforce_mapping.module, where
+ * User and Node are both initialized.
+ *
+ * @param array $entity_uris
+ *   An array of items indexed as 'entity_type' => URI, where URI contains a
+ *   $path index.
+ */
+function hook_salesforce_mapping_entity_uris_alter(&$entity_uris) {
+  // For example:
+  $entity_uris['node'] = array(
+    'path' => 'node/',
+  );
+}
+
+/**
  * Prevent push to SF for an entity.
  *
  * @param string $entity_type

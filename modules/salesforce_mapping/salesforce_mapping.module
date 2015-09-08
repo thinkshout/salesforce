@@ -168,47 +168,32 @@ function salesforce_mapping_menu() {
     $mapped_entities[$mapping->drupal_entity_type] = $mapping->drupal_bundle;
   }
 
+  $manual_uris = array();
+  drupal_alter('salesforce_mapping_entity_uris', $manual_uris);
   foreach ($mapped_entities as $type => $bundle) {
-    $info = entity_get_info($type);
-    // Building a "stub" entity is fraught. Just load an example instance.
-    if (empty($info['base table']) || empty($info['entity keys']['id'])) {
-      continue;
+    $uri = array();
+    if (isset($manual_uris[$type])) {
+      $uri = $manual_uris[$type];
     }
-    $table = $info['base table'];
-    $id_key = $info['entity keys']['id'];
-    $sample_id = FALSE;
-    try {
-      $sample_id = db_query("SELECT MAX(`$id_key`) from {$table} LIMIT 1")->fetchField();
-      if (empty($sample_id)) {
-        continue;
+    else {
+      try {
+        $info = entity_get_info($type);
+        $bundle_key = $info['entity keys']['bundle'] ?: 'type';
+        $entity = entity_create($type, array($bundle_key => $bundle));
+        $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
+        print_r($uri);
       }
-      $entity = entity_load_single($type, $sample_id);
-      if (empty($entity)) {
-        continue;
+      catch (Exception $e) {
+        // Fall through to default behavior
       }
-    }
-    catch (Exception $e) {
-      // NO LINK FOR YOU
-      continue;
-    }
-    try {
-      $uri = method_exists($entity, 'uri') ? $entity->uri() : entity_uri($type, $entity);
-    }
-    catch (Exception $e) {
-      // entity_uri() has been known to throw exceptions. Don't let it block us.
-      continue;
     }
 
-    // We only currently support entities that use a load function of the form
-    // type_load(), and an autoloader within the menu paths (if a path is
-    // available).
-    $autoloader = '%' . $type;
     if (empty($uri['path'])) {
-      $path = 'admin/content/salesforce/' . $type . '/' . $autoloader . '/salesforce_activity';
+      $path = 'admin/content/salesforce/' . $type . '/%' . $type . '/salesforce_activity';
       $menu_type = MENU_NORMAL_ITEM;
     }
     else {
-      $path = str_replace('/' . $sample_id, '/' . $autoloader, $uri['path']) . '/salesforce_activity';
+      $path = $uri['path'] . '%' . $type . '/salesforce_activity';
       $menu_type = MENU_LOCAL_TASK;
     }
 
@@ -245,6 +230,22 @@ function salesforce_mapping_menu() {
     ) + $defaults;
   }
   return $items;
+}
+
+/**
+ * Implements hook_salesforce_mapping_entity_uris().
+ *
+ * Node and User, like most entities in core, don't respond well to entity_uri()
+ * calls on unsaved entity stubs, which is what we need for our menu items.
+ */
+function salesforce_mapping_salesforce_mapping_entity_uris_alter(&$entity_uris) {
+  $entity_uris['node'] = array(
+    'path' => 'node/',
+  );
+  $entity_uris['user'] = array(
+    'path' => 'user/',
+  );
+
 }
 
 /**
@@ -876,4 +877,19 @@ function salesforce_mapping_object_render_property($mapping, $name, $property) {
   }
 
   return $content;
+}
+
+/**
+ * Implements hook_salesforce_mapping_entity_uris().
+ *
+ * Node and User, like most entities in core, don't respond well to entity_uri()
+ * calls on unsaved entity stubs, which is what we need for our menu items.
+ */
+function salesforce_mapping_salesforce_mapping_entity_uris_alter(&$entity_uris) {
+  $entity_uris['node'] = array(
+    'path' => 'node/',
+  );
+  $entity_uris['user'] = array(
+    'path' => 'user/',
+  );
 }
