@@ -77,18 +77,22 @@ class Salesforce {
    *   Parameters to provide.
    * @param string $method
    *   Method to initiate the call, such as GET or POST.  Defaults to GET.
+   * @param string $type
+   *   Type of object to request. Defaults to 'rest'. Most common examples:
+   *   - rest - Call the standard Salesforce REST API.
+   *   - apexrest - Call a custom REST URL defined in Salesforce.
    *
    * @return mixed
    *   The requested response.
    *
    * @throws SalesforceException
    */
-  public function apiCall($path, $params = array(), $method = 'GET') {
+  public function apiCall($path, $params = array(), $method = 'GET', $type = 'rest') {
     if (!$this->getAccessToken()) {
       $this->refreshToken();
     }
 
-    $this->response = $this->apiHttpRequest($path, $params, $method);
+    $this->response = $this->apiHttpRequest($path, $params, $method, $type);
 
     switch ($this->response->code) {
       // The session ID or OAuth token used has expired or is invalid.
@@ -97,7 +101,7 @@ class Salesforce {
         $this->refreshToken();
 
         // Rebuild our request and repeat request.
-        $this->response = $this->apiHttpRequest($path, $params, $method);
+        $this->response = $this->apiHttpRequest($path, $params, $method, $type);
         // Throw an error if we still have bad response.
         if (!in_array($this->response->code, array(200, 201, 204))) {
           throw new SalesforceException($this->response->error, $this->response->code);
@@ -143,12 +147,16 @@ class Salesforce {
    *   Parameters to provide.
    * @param string $method
    *   Method to initiate the call, such as GET or POST.  Defaults to GET.
+   * @param string $type
+   *   Type of request. Examples include:
+   *   - rest (default)
+   *   - apexrest (custom REST written in APEX in Salesforce instance)
    *
    * @return object
    *   The requested data.
    */
-  protected function apiHttpRequest($path, $params, $method) {
-    $url = $this->getApiEndPoint() . $path;
+  protected function apiHttpRequest($path, $params, $method, $type = 'rest') {
+    $url = $this->getApiEndPoint($type) . $path;
     $headers = array(
       'Authorization' => 'OAuth ' . $this->getAccessToken(),
       'Content-type' => 'application/json',
@@ -195,8 +203,14 @@ class Salesforce {
   public function getApiEndPoint($api_type = 'rest') {
     $url = &drupal_static(__FUNCTION__ . $api_type);
     if (!isset($url)) {
-      $identity = $this->getIdentity();
-      $url = str_replace('{version}', $this->rest_api_version['version'], $identity['urls'][$api_type]);
+      // Special handling for apexrest, since it's not in the identity object.
+      if ($api_type == 'apexrest') {
+        $url = $this->getInstanceUrl() . '/services/apexrest/';
+      }
+      else {
+        $identity = $this->getIdentity();
+        $url = str_replace('{version}', $this->rest_api_version['version'], $identity['urls'][$api_type]);
+      }
     }
     return $url;
   }
