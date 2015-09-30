@@ -24,12 +24,11 @@ class Salesforce {
     $this->consumer_secret = $consumer_secret;
     $this->login_url = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
 
-    // @TODO: Does this need to be configurable?
-    $this->rest_api_version = array(
+    $this->rest_api_version = variable_get('salesforce_api_version', array(
       "label" => "Spring '13",
       "url" => "/services/data/v27.0/",
       "version" => "27.0",
-    );
+    ));
   }
 
   /**

@@ -105,6 +105,16 @@ function salesforce_menu() {
     'page arguments' => array('salesforce_oauth_form'),
     'access arguments' => array('administer salesforce'),
     'type' => MENU_NORMAL_ITEM,
+    'weight' => 0,
+  );
+  $items['admin/config/salesforce/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Additional settings for the Salesforce Suite.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('salesforce_settings_form'),
+    'access arguments' => array('administer salesforce'),
+    'type' => MENU_NORMAL_ITEM,
+    'weight' => 1,
   );
   $items['salesforce/oauth_callback'] = array(
     'title' => 'Salesforce oauth callback',
@@ -241,6 +251,65 @@ function salesforce_oauth_form_submit($form, &$form_state) {
 
   $salesforce = new Salesforce($consumer_key, $consumer_secret);
   $salesforce->getAuthorizationCode();
+}
+
+/**
+ * Generate the Salesforce settings form.
+ */
+function salesforce_settings_form($form, &$form_state) {
+  // Get the default or current setting.
+  $api_version = variable_get('salesforce_api_version', array(
+    "label" => "Spring '13",
+    "url" => "/services/data/v27.0/",
+    "version" => "27.0",
+  ));
+  $api_list = array($api_version);
+
+  // If we're authenticated, get the full list of available versions.
+  $salesforce = salesforce_get_api();
+  $instance = $salesforce->getInstanceUrl();
+  if ($instance) {
+    // Get all available API versions.
+    $api_list = drupal_http_request($instance . "/services/data");
+    $api_list = drupal_json_decode($api_list->data);
+  }
+  // Store api list for use in our validate callback.
+  $form_state['api_list'] = $api_list;
+
+  // Build the options array.
+  $options = array();
+  foreach ($api_list as $api) {
+    $options[$api['version']] = $api['label'] . ' (' . $api['version'] . ')';
+  }
+
+  $form['salesforce_api_version'] = array(
+    '#type' => 'select',
+    '#title' => t('API Version'),
+    '#description' => t('Select the version of the Salesforce API to use'),
+    '#default_value' => $api_version['version'],
+    '#options' => $options,
+  );
+
+  $form['#validate'][] = 'salesforce_settings_form_validate';
+
+  return system_settings_form($form);
+}
+
+/**
+ * Validation handler for salesforce_settings_form().
+ */
+function salesforce_settings_form_validate($form, &$form_state) {
+  // Convert version to the array of api info.
+  $version = $form_state['values']['salesforce_api_version'];
+  if ($version) {
+    // Loop through available api versions to find a match.
+    foreach ($form_state['api_list'] as $api) {
+      if ($api['version'] == $version) {
+        form_set_value($form['salesforce_api_version'], $api, $form_state);
+        break;
+      }
+    }
+  }
 }
 
 /**
