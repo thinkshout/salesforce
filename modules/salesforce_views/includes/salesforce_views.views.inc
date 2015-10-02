@@ -16,7 +16,7 @@ function salesforce_views_views_data_alter(&$data) {
     $mapped_entities[$mapping->drupal_entity_type] = $entity_info;
   }
   foreach ($mapped_entities as $entity_type => $info) {
-    $data[$entity_type]['salesforce_mapping_object'] = array(
+    $data[$info['base table']]['salesforce_mapping_object'] = array(
       'group' => t('Salesforce Mapping Object'),
       'title' => t('Salesforce Mapping'),
       'help' => t('The mapping object associated with the entity.'),
