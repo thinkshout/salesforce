@@ -338,6 +338,11 @@ function salesforce_mapping_property_fieldmap_push_value($fieldmap, $entity_wrap
     $value = format_date($value, 'custom', 'c');
   }
 
+  // Boolean SF fields only want real boolean values. NULL is also not allowed.
+  if ($fieldmap['salesforce_field']['type'] == 'boolean') {
+    $value = (bool) $value;
+  }
+
   return $value;
 }
 
