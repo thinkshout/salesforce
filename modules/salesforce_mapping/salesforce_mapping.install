@@ -86,6 +86,13 @@ function salesforce_mapping_schema() {
         'size' => 'big',
         'description' => 'A serialized object that stores the field mappings.',
       ),
+      'pull_trigger_date' => array(
+        'description' => 'The Saleforce field to trigger pulls from.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => 'LastModifiedDate',
+      ),
       'push_async' => array(
         'type' => 'int',
         'size' => 'tiny',
@@ -636,4 +643,18 @@ function salesforce_mapping_update_7304(&$sandbox) {
 function salesforce_mapping_update_7305(&$sandbox) {
   db_drop_field('salesforce_mapping', 'updated');
   cache_clear_all('schema', 'cache');
+}
+
+/**
+ * Add the configurable Pull Trigger Date field to mappings.
+ */
+function salesforce_mapping_update_7306(&$sandbox) {
+  $pull_date_field = array(
+    'description' => 'The Saleforce field to trigger pulls from.',
+    'type' => 'varchar',
+    'length' => 128,
+    'not null' => TRUE,
+    'default' => 'LastModifiedDate',
+  );
+  db_add_field('salesforce_mapping', 'pull_trigger_date', $pull_date_field);
 }

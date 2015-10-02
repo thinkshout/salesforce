@@ -97,7 +97,7 @@ function salesforce_pull_get_updated_records() {
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
     if ($sf_last_sync) {
       $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
-      $soql->addCondition('LastModifiedDate', $last_sync, '>');
+      $soql->addCondition($mapping->pull_trigger_date, $last_sync, '>');
     }
 
     // If Record Type is specified, restrict query.

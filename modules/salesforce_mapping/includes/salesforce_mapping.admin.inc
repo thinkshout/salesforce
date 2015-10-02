@@ -155,6 +155,20 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
         '#value' => array($salesforce_record_type_default => $salesforce_record_type_default),
       );
     }
+    $sf_date_fields = _salesforce_mapping_get_salesforce_field_options($salesforce_object_type, $form_state, FALSE, 'datetime');
+    $date_default = _salesforce_mapping_get_default_value('pull_trigger_date', $form_state);
+    if (!$date_default) {
+      $date_default = 'LastModifiedDate';
+    }
+    $form['salesforce_object']['pull_trigger_date'] = array(
+      '#title' => t('Date field to trigger pull'),
+      '#id' => 'edit-trigger-date',
+      '#type' => 'select',
+      '#description' => t('Select a date field to base pull triggers on. (Default of "Last Modified Date" is usually appropriate).'),
+      '#required' => TRUE,
+      '#default_value' => $date_default,
+      '#options' => $sf_date_fields,
+    );
   }
 
   $form['salesforce_field_mappings_wrapper'] = array(
@@ -714,6 +728,7 @@ function salesforce_mapping_form_submit($form, &$form_state) {
     'description' => '',
     'field_mappings' => $mappings,
     'sync_triggers' => $sync_triggers,
+    'pull_trigger_date' => $values['pull_trigger_date'],
     'push_async' => $values['push_async'],
     'push_batch' => $values['push_batch'],
   );
@@ -1092,7 +1107,7 @@ function _salesforce_mapping_get_salesforce_record_type_options($salesforce_obje
  *   An array of values keyed by machine name of the field with the label as
  *   the value, formatted to be appropriate as a value for #options.
  */
-function _salesforce_mapping_get_salesforce_field_options($salesforce_object_type, &$form_state, $include_select = TRUE) {
+function _salesforce_mapping_get_salesforce_field_options($salesforce_object_type, &$form_state, $include_select = TRUE, $type = NULL) {
   $sfobject = _salesforce_mapping_get_salesforce_object($salesforce_object_type, $form_state);
   $sf_fields = array();
   if (isset($sfobject['fields'])) {
@@ -1100,7 +1115,9 @@ function _salesforce_mapping_get_salesforce_field_options($salesforce_object_typ
       $sf_fields[''] = '- ' . t('Select') . ' -';
     }
     foreach ($sfobject['fields'] as $sf_field) {
-      $sf_fields[$sf_field['name']] = $sf_field['label'];
+      if ($type == NULL || $type == $sf_field['type']) {
+        $sf_fields[$sf_field['name']] = $sf_field['label'];
+      }
     }
   }
   asort($sf_fields);
