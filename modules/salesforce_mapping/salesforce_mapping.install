@@ -653,6 +653,7 @@ function salesforce_mapping_update_7305(&$sandbox) {
 }
 
 /**
+<<<<<<< HEAD
  * Add the configurable Pull Trigger Date field to mappings.
  */
 function salesforce_mapping_update_7306(&$sandbox) {
@@ -670,6 +671,11 @@ function salesforce_mapping_update_7306(&$sandbox) {
  * Create a "retries" field for error handling.
  */
 function salesforce_mapping_update_7307(&$sandbox) {
+=======
+ * Create a "retries" field for error handling.
+ */
+function salesforce_mapping_update_7306(&$sandbox) {
+>>>>>>> 95592ac7dca2df31b4b230565bb002a85038919c
   $retries_field = array(
     'description' => 'Number of retries for this mapping\'s push attempts.',
     'type' => 'int',
@@ -680,3 +686,8 @@ function salesforce_mapping_update_7307(&$sandbox) {
   );
   db_add_field('salesforce_mapping', 'retries', $retries_field);
 }
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 95592ac7dca2df31b4b230565bb002a85038919c
