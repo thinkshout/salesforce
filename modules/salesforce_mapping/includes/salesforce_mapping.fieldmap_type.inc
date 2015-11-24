@@ -269,12 +269,13 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
 
   // If the relationship is directional, ensure source/bundle are in the right
   // order.
+  $return_values = array();
   if ($relation_type->directional) {
     foreach ($values as $value) {
       foreach ($relation_type->source_bundles as $bundle_key) {
         list($source_entity_type) = explode(':', $bundle_key);
         if ($source_entity_type == $value->type()) {
-          $values[0] = $value;
+          $return_values[0] = $value;
           break;
         }
       }
@@ -282,14 +283,14 @@ function salesforce_mapping_relation_endpoints_fieldmap_pull_value($entity_wrapp
       foreach ($relation_type->target_bundles as $bundle_key) {
         list($target_entity_type) = explode(':', $bundle_key);
         if ($target_entity_type == $value->type()) {
-          $values[1] = $value;
+          $return_values[1] = $value;
           break;
         }
       }
     }
   }
 
-  return $values;
+  return empty($return_values) ? $values : $return_values;
 }
 
 /**
