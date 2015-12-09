@@ -1120,7 +1120,7 @@ function _salesforce_mapping_get_salesforce_field_options($salesforce_object_typ
       }
     }
   }
-  asort($sf_fields);
+  natcasesort($sf_fields);
   return $sf_fields;
 }
 
