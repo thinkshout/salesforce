@@ -411,12 +411,9 @@ function salesforce_push_cron() {
  */
 function salesforce_push_process_soap_results($op, $results, $synced_entities) {
   foreach ($results as $key => $result) {
-    $mapping_object = $synced_entities[$key]['mapping_object'];
+    $synced_entity = $synced_entities[$key];
+    $mapping_object = empty($synced_entity['mapping_object']) ? FALSE : $synced_entity['mapping_object'];
     if ($result->success) {
-      $mapping_object = FALSE;
-      if (!empty($synced_entity['mapping_object'])) {
-        $mapping_object = $synced_entity['mapping_object'];
-      }
       if (drupal_strtolower($op) == 'delete' && $mapping_object) {
         $mapping_object->delete();
         return;
@@ -424,7 +421,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
 
       if (!$mapping_object) {
         // Create mapping object, saved below.
-        $wrapper = $synced_entities[$key]['entity_wrapper'];
+        $wrapper = $synced_entity['entity_wrapper'];
         list($entity_id) = entity_extract_ids($wrapper->type(), $wrapper->value());
         $mapping_object = entity_create('salesforce_mapping_object', array(
           'entity_id' => $entity_id,
@@ -446,7 +443,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
         array('%id' => $result->id, '%op' => $op)
       );
 
-      module_invoke_all('salesforce_push_success', $op, $result, $synced_entities[$key]);
+      module_invoke_all('salesforce_push_success', $op, $result, $synced_entity);
     }
     else {
       // Otherwise, the item is considered failed.
@@ -463,8 +460,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
         );
         $error_messages[] = $error->message;
       }
-      if (!empty($synced_entity['mapping_object'])) {
-        $mapping_object = $synced_entity['mapping_object'];
+      if ($mapping_object) {
         $mapping_object->last_sync = REQUEST_TIME;
         $mapping_object->last_sync_action = 'push';
         $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
@@ -475,7 +471,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
         $mapping_object->save();
       }
 
-      module_invoke_all('salesforce_push_fail', $op, $result, $synced_entities[$key]);
+      module_invoke_all('salesforce_push_fail', $op, $result, $synced_entity);
     }
   }
 }
