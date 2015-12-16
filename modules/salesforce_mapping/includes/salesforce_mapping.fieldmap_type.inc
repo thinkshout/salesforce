@@ -371,14 +371,14 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
       }
       break;
 
+    case 'integer':
     case 'boolean':
-      if (isset($value)) {
-        $value = (int) $value;
-      }
+      $value = isset($value) ? (int) $value : 0;
       break;
 
     case 'text':
       $value = (string) $value;
+      break;
   }
 
   return $value;
