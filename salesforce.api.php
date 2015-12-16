@@ -62,29 +62,10 @@ function hook_salesforce_mapping_entity_uris_alter(&$entity_uris) {
 }
 
 /**
- * Prevent push to SF for an entity.
+ * Prevent push to SF for an entity for a given mapping. For example: mapping a
+ * single Drupal object to multiple separate Salesforce objects, but only
+ * syncing under certain conditions.
  *
- * @param string $entity_type
- *   The type of entity the push is for.
- * @param object $entity
- *   The entity object the push is for.
- * @param int $sf_sync_trigger
- *   Constant for the Drupal operation that triggered the sync.
- *
- * @return bool
- *   FALSE if the entity should not be synced to Salesforce for the
- *   $sf_sync_trigger operation.
- */
-function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_trigger) {
-
-}
-
-/**
- * Similar to hook_salesforce_push_entity_allowed, but prevent push to SF for
- * an entity for a given mapping. The additional granularity allows, for
- * example, mapping a single Drupal object to multiple separate Salesforce
- * objects, but only synching under certain conditions.
- * 
  * @param string $entity_type
  *   The type of entity the push is for.
  * @param object $entity
@@ -95,9 +76,9 @@ function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_tri
  *   Salesforce mapping object for which to allow/disallow sync.
  *
  * @return bool
- *   FALSE if the entity should not be synced to Salesforce.
+ *   FALSE if the entity should not be synced to Salesforce for this mapping/sync trigger.
  */
-function hook_salesforce_push_entity_allowed_by_mapping($entity_type, $entity, $sf_sync_trigger, $mapping) {
+function hook_salesforce_push_entity_allowed($entity_type, $entity, $sf_sync_trigger, $mapping) {
 
 }
 
