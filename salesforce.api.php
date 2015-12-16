@@ -106,13 +106,19 @@ function hook_salesforce_pull_entity_value_alter(&$value, $field_map, $sf_object
 }
 
 /**
- * Alter a SOQL select query before it is executed.
+ * Alter a SOQL select query before it is executed. For example, filter
+ * target SObjects by a date value, or add an additional field to the query.
  *
  * @param SalesforceSelectQuery $query
  *   The query object to alter.
+ *
+ * @see includes/salesforce.select_query.inc
  */
 function hook_salesforce_query_alter(SalesforceSelectQuery &$query) {
-
+  if ($query->objectType == 'Contact') {
+    $query->fields[] = 'Drupal_Field__c';
+    $query->addCondition('Email', "''", '!=');
+  }
 }
 
 /**
