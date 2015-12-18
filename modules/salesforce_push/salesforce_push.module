@@ -143,7 +143,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
   // Generate parameter array from field mappings.
   $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
-  $params = salesforce_push_map_params($mapping, $entity_wrapper, $key_field, $key_value);
+  $params = salesforce_push_map_params($mapping, $entity_wrapper, $key_field, $key_value, FALSE, !$mapping_object);
 
   // Entity is not linked to an SF object.
   if (!$mapping_object) {
@@ -316,7 +316,7 @@ function salesforce_push_cron() {
       continue;
     }
     $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
-    $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value, $use_soap);
+    $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value, $use_soap, !$mapping_object);
 
     $synced_entities[$delta] = array(
       'entity_wrapper' => $wrapper,
@@ -479,14 +479,23 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
  *   Unique identifier field.
  * @param string $key_value
  *   Value of the unique identifier field.
+ * @param bool $use_soap
+ *   Flag to enforce use of the SOAP API.
+ * @param bool $is_new
+ *   Indicates whether a mapping object for this entity already exists.
  *
  * @return array
  *   Associative array of key value pairs.
  */
-function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value, $use_soap = FALSE) {
+function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value, $use_soap = FALSE, $is_new = TRUE) {
   foreach ($mapping->field_mappings as $fieldmap) {
     // Skip fields that aren't being pushed to Salesforce.
     if (!in_array($fieldmap['direction'], array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC))) {
+      continue;
+    }
+
+    // Skip fields that aren't updateable when a mapped object already exists.
+    if (!$is_new && !$fieldmap['salesforce_field']['updateable']) {
       continue;
     }
 
