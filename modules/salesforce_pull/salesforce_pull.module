@@ -11,6 +11,33 @@
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
 
 /**
+ * Implements hook_menu().
+ */
+function salesforce_pull_menu() {
+  $items = array();
+
+  $items['salesforce/webhook/pull'] = array(
+    'title' => 'Salesforce pull webhook callback',
+    'page callback' => 'salesforce_pull_webhook',
+    'access callback' => 'salesforce_webhook_access',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Webhook callback for salesforce pull.
+ */
+function salesforce_pull_webhook() {
+  $sfapi = salesforce_get_api();
+  if ($sfapi->isAuthorized()) {
+    salesforce_pull_get_updated_records();
+    salesforce_pull_process_deleted_records();
+  }
+}
+
+/**
  * Implements hook_cron().
  */
 function salesforce_pull_cron() {
