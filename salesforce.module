@@ -149,6 +149,17 @@ function salesforce_permission() {
 }
 
 /**
+ * Access callback for salesforce webhooks.
+ */
+function salesforce_webhook_access() {
+  if (variable_get('salesforce_webhook_enable') && $_GET['key'] === variable_get('salesforce_webhook_key')) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
  * Implements hook_flush_caches().
  */
 function salesforce_flush_caches() {
@@ -290,6 +301,21 @@ function salesforce_settings_form($form, &$form_state) {
     '#options' => $options,
   );
 
+  $form['salesforce_webhook_enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable webhooks'),
+    '#description' => t('Allow external applications to trigger salesforce sync with a web request.'),
+    '#default_value' => variable_get('salesforce_webhook_enable', FALSE),
+  );
+
+  $form['salesforce_webhook_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Webhook key'),
+    '#description' => t('A secret key that is required in the webhook request url. Leave blank to auto-generate a new random key.'),
+    '#default_value' => variable_get('salesforce_webhook_key', ''),
+    '#access' => variable_get('salesforce_webhook_enable'),
+  );
+
   $form['#validate'][] = 'salesforce_settings_form_validate';
 
   return system_settings_form($form);
@@ -309,6 +335,11 @@ function salesforce_settings_form_validate($form, &$form_state) {
         break;
       }
     }
+  }
+
+  // Auto-generate a webhook key when there isn't one set.
+  if ($form_state['values']['salesforce_webhook_enable'] && !$form_state['values']['salesforce_webhook_key']) {
+    form_set_value($form['salesforce_webhook_key'], drupal_random_key(), $form_state);
   }
 }
 
