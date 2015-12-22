@@ -31,7 +31,7 @@ function salesforce_pull_menu() {
  */
 function salesforce_pull_webhook() {
   $sfapi = salesforce_get_api();
-  if ($sfapi->isAuthorized()) {
+  if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
     salesforce_pull_get_updated_records();
     salesforce_pull_process_deleted_records();
   }
@@ -42,7 +42,7 @@ function salesforce_pull_webhook() {
  */
 function salesforce_pull_cron() {
   $sfapi = salesforce_get_api();
-  if ($sfapi->isAuthorized()) {
+  if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
     salesforce_pull_get_updated_records();
     salesforce_pull_process_deleted_records();
   }
@@ -58,6 +58,42 @@ function salesforce_cron_queue_info() {
     'time' => 180,
   );
   return $queues;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function salesforce_pull_form_salesforce_settings_form_alter(&$form, &$form_state, $form_id) {
+  $form['salesforce_pull_throttle'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pull throttle (seconds)'),
+    '#description' => t('Number of seconds to wait between repeated salesforce pulls.<br>
+      Prevents the webserver from becoming overloaded in case of too many cron runs, or webhook usage.'),
+    '#default_value' => variable_get('salesforce_pull_throttle', 5),
+    '#element_validate' => array('element_validate_number'),
+  );
+}
+
+/**
+ * Determines if the salesforce pull should be allowed, or throttled.
+ *
+ * Prevents too many pull processes from running at once.
+ *
+ * @return bool
+ *    Returns false if the time elapsed between recent pulls is too short.
+ */
+function salesforce_pull_check_throttle() {
+  $pull_throttle = variable_get('salesforce_pull_throttle', 5);
+  $last_sync = variable_get('salesforce_pull_last_sync', 0);
+  $request_time = $_SERVER['REQUEST_TIME_FLOAT'] ? $_SERVER['REQUEST_TIME_FLOAT'] : $_SERVER['REQUEST_TIME'];
+
+  if ($request_time > $last_sync + $pull_throttle) {
+    variable_set('salesforce_pull_last_sync', $request_time);
+
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**
