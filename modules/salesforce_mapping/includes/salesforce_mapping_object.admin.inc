@@ -119,7 +119,7 @@ function salesforce_mapping_object_form_save_mapping_validate($form, &$form_stat
   if (empty($form_state['values']['salesforce_id'])) {
     form_set_error('salesforce_id', t('Salesforce ID is required to save a new mapping.'));
   }
-  $form_state['values']['salesforce_id'] = Salesforce::verifyId($form_state['values']['salesforce_id']);
+  $form_state['values']['salesforce_id'] = Salesforce::convertId($form_state['values']['salesforce_id']);
   if (strlen($form_state['values']['salesforce_id']) != 18) {
     form_set_error('salesforce_id', t('Invalid Salesforce ID.'));
   }
