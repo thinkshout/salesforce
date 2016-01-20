@@ -170,7 +170,10 @@ function salesforce_pull_get_updated_records() {
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
         // Exclude field mappings that are only drupal to SF.
-        if (in_array($field_map['direction'], array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL))) {
+        if (in_array($field_map['direction'], array(
+          SALESFORCE_MAPPING_DIRECTION_SYNC,
+          SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL
+        ))) {
           // Some field map types (Relation) store a collection of SF objects.
           if (is_array($field_map['salesforce_field']) && !isset($field_map['salesforce_field']['name'])) {
             foreach ($field_map['salesforce_field'] as $sf_field) {
@@ -204,7 +207,10 @@ function salesforce_pull_get_updated_records() {
 
     $soql = new SalesforceSelectQuery($type);
     // Convert field mappings to SOQL.
-    $soql->fields = array_merge($mapped_fields, array('Id' => 'Id', 'LastModifiedDate' => 'LastModifiedDate'));
+    $soql->fields = array_merge($mapped_fields, array(
+      'Id' => 'Id',
+      'LastModifiedDate' => 'LastModifiedDate'
+    ));
 
     // If no lastupdate, get all records, else get records since last pull.
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
@@ -314,8 +320,7 @@ function salesforce_pull_process_records($sf_object) {
             );
           }
         }
-      }
-      catch (Exception $e) {
+      } catch (Exception $e) {
         $message = t('Failed to update entity %label from Salesforce object %sfobjectid. Error: @msg',
           array(
             '%label' => $wrapper->label(),
@@ -341,7 +346,8 @@ function salesforce_pull_process_records($sf_object) {
         // Define values to pass to entity_create().
         $values = array();
         if (isset($entity_info['entity keys']['bundle']) &&
-          !empty($entity_info['entity keys']['bundle'])) {
+          !empty($entity_info['entity keys']['bundle'])
+        ) {
           $values[$entity_info['entity keys']['bundle']] = $sf_mapping->drupal_bundle;
         }
         else {
@@ -367,8 +373,7 @@ function salesforce_pull_process_records($sf_object) {
         $last_sync_message = t('Retrieved new record from Salesforce');
         $last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
         $entity_updated = time();
-      }
-      catch (Exception $e) {
+      } catch (Exception $e) {
         $message = $e->getMessage() . ' ' . t('Processing failed for entity %label associated with Salesforce Object ID: %sfobjectid',
             array(
               '%label' => $wrapper->label(),
@@ -472,8 +477,7 @@ function salesforce_pull_process_deleted_records() {
               // case of an error.
               try {
                 $entity_wrapper->delete();
-              }
-              catch(Exception $e) {
+              } catch (Exception $e) {
                 watchdog_exception('salesforce_pull', $e);
               }
 
