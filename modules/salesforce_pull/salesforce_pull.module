@@ -88,8 +88,8 @@ function salesforce_pull() {
     salesforce_pull_get_updated_records();
     salesforce_pull_process_deleted_records();
 
-    $request_time = $_SERVER['REQUEST_TIME_FLOAT'] ? $_SERVER['REQUEST_TIME_FLOAT'] : $_SERVER['REQUEST_TIME'];
-    variable_set('salesforce_pull_last_sync', $request_time);
+    // Store this request time for the throttle check.
+    variable_set('salesforce_pull_last_sync', REQUEST_TIME);
 
     return TRUE;
   }
@@ -174,9 +174,8 @@ function salesforce_pull_webhook_key_validate($element, &$form_state, $form) {
 function salesforce_pull_check_throttle() {
   $pull_throttle = variable_get('salesforce_pull_throttle', 5);
   $last_sync = variable_get('salesforce_pull_last_sync', 0);
-  $request_time = $_SERVER['REQUEST_TIME_FLOAT'] ? $_SERVER['REQUEST_TIME_FLOAT'] : $_SERVER['REQUEST_TIME'];
 
-  if ($request_time > $last_sync + $pull_throttle) {
+  if (REQUEST_TIME > $last_sync + $pull_throttle) {
     return TRUE;
   }
 
