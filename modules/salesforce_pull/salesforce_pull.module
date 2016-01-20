@@ -11,14 +11,91 @@
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
 
 /**
+ * Implements hook_menu().
+ */
+function salesforce_pull_menu() {
+  $items = array();
+
+  $items['salesforce/webhook/pull'] = array(
+    'title' => 'Salesforce pull webhook callback',
+    'page callback' => 'salesforce_pull_webhook',
+    'access callback' => 'salesforce_pull_webhook_access',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Access callback for Salesforce webhooks.
+ */
+function salesforce_pull_webhook_access() {
+  if (variable_get('salesforce_pull_webhook_enable') && $_GET['key'] === variable_get('salesforce_pull_webhook_key')) {
+    return user_access('access content');
+  }
+
+  return FALSE;
+}
+
+/**
+ * Webhook callback for salesforce pull. Returns status of 200 for successful
+ * attempt or 403 for a failed pull attempt (SF not authorized, threshhold
+ * reached, etc.
+ */
+function salesforce_pull_webhook() {
+  if (salesforce_pull()) {
+    $code = '200';
+    // Queue is populated, but not processed yet so we manually do some of what
+    // drupal_cron_run() does to trigger processing of our pull queue.
+    $queues = salesforce_cron_queue_info();
+    $info = $queues[SALESFORCE_PULL_QUEUE];
+    $callback = $info['worker callback'];
+    $end = time() + (isset($info['time']) ? $info['time'] : 15);
+    $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
+    while (time() < $end && ($item = $queue->claimItem())) {
+      try {
+        call_user_func($callback, $item->data);
+        $queue->deleteItem($item);
+      }
+      catch (Exception $e) {
+        // In case of exception log it and leave the item in the queue
+        // to be processed again later.
+        watchdog_exception('salesforce_pull', $e);
+      }
+    }
+  }
+  else {
+    $code = '403';
+  }
+
+  http_response_code($code);
+  drupal_exit();
+}
+
+/**
  * Implements hook_cron().
  */
 function salesforce_pull_cron() {
+  salesforce_pull();
+}
+
+/**
+ * Callback for the standard pull process used by webhooks and cron.
+ */
+function salesforce_pull() {
   $sfapi = salesforce_get_api();
-  if ($sfapi->isAuthorized()) {
+  if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
     salesforce_pull_get_updated_records();
     salesforce_pull_process_deleted_records();
+
+    // Store this request time for the throttle check.
+    variable_set('salesforce_pull_last_sync', REQUEST_TIME);
+
+    return TRUE;
   }
+
+  // No pull happened.
+  return FALSE;
 }
 
 /**
@@ -31,6 +108,78 @@ function salesforce_cron_queue_info() {
     'time' => 180,
   );
   return $queues;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function salesforce_pull_form_salesforce_settings_form_alter(&$form, &$form_state, $form_id) {
+  $form['salesforce_pull_throttle'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pull throttle (seconds)'),
+    '#description' => t('Number of seconds to wait between repeated salesforce pulls.<br>
+      Prevents the webserver from becoming overloaded in case of too many cron runs, or webhook usage.'),
+    '#default_value' => variable_get('salesforce_pull_throttle', 5),
+    '#element_validate' => array('element_validate_number'),
+  );
+
+  $webhooks_enabled = variable_get('salesforce_pull_webhook_enable', FALSE);
+  $form['salesforce_pull_webhook_enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable webhooks'),
+    '#description' => t('Allow external applications to trigger Salesforce sync with a web request.'),
+    '#default_value' => $webhooks_enabled,
+  );
+
+  $webhook_key = variable_get('salesforce_pull_webhook_key', drupal_random_key());
+  $url = url('salesforce/webhook/pull', array(
+    'query' => array('key' => $webhook_key),
+    'absolute' => TRUE
+  ));
+
+  $form['salesforce_pull_webhook_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Webhook key'),
+    '#description' => t('A secret key that is required in the webhook request url (@url).<br>
+      Leave blank to auto-generate a new random key.', array('@url' => $url)),
+    '#default_value' => $webhook_key,
+    '#states' => array(
+      // Only show this field when the 'webhook_enable' checkbox is enabled.
+      'visible' => array(
+        ':input[name="salesforce_pull_webhook_enable"]' => array('checked' => TRUE),
+      ),
+    ),
+    '#element_validate' => array('salesforce_pull_webhook_key_validate'),
+  );
+}
+
+/**
+ * Element validation callback for the webhook key.
+ */
+function salesforce_pull_webhook_key_validate($element, &$form_state, $form) {
+  // If there is no key set, generate a default key.
+  if (empty($element['#value'])) {
+    form_set_value($form['salesforce_pull_webhook_key'], drupal_random_key(), $form_state);
+  }
+}
+
+/**
+ * Determines if the Salesforce pull should be allowed, or throttled.
+ *
+ * Prevents too many pull processes from running at once.
+ *
+ * @return bool
+ *    Returns false if the time elapsed between recent pulls is too short.
+ */
+function salesforce_pull_check_throttle() {
+  $pull_throttle = variable_get('salesforce_pull_throttle', 5);
+  $last_sync = variable_get('salesforce_pull_last_sync', 0);
+
+  if (REQUEST_TIME > $last_sync + $pull_throttle) {
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**
@@ -57,7 +206,10 @@ function salesforce_pull_get_updated_records() {
     foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
       foreach ($mapping->field_mappings as $field_map) {
         // Exclude field mappings that are only drupal to SF.
-        if (in_array($field_map['direction'], array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL))) {
+        if (in_array($field_map['direction'], array(
+          SALESFORCE_MAPPING_DIRECTION_SYNC,
+          SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL
+        ))) {
           // Some field map types (Relation) store a collection of SF objects.
           if (is_array($field_map['salesforce_field']) && !isset($field_map['salesforce_field']['name'])) {
             foreach ($field_map['salesforce_field'] as $sf_field) {
@@ -91,7 +243,10 @@ function salesforce_pull_get_updated_records() {
 
     $soql = new SalesforceSelectQuery($type);
     // Convert field mappings to SOQL.
-    $soql->fields = array_merge($mapped_fields, array('Id' => 'Id', 'LastModifiedDate' => 'LastModifiedDate'));
+    $soql->fields = array_merge($mapped_fields, array(
+      'Id' => 'Id',
+      'LastModifiedDate' => 'LastModifiedDate'
+    ));
 
     // If no lastupdate, get all records, else get records since last pull.
     $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
@@ -201,8 +356,7 @@ function salesforce_pull_process_records($sf_object) {
             );
           }
         }
-      }
-      catch (Exception $e) {
+      } catch (Exception $e) {
         $message = t('Failed to update entity %label from Salesforce object %sfobjectid. Error: @msg',
           array(
             '%label' => $wrapper->label(),
@@ -228,7 +382,8 @@ function salesforce_pull_process_records($sf_object) {
         // Define values to pass to entity_create().
         $values = array();
         if (isset($entity_info['entity keys']['bundle']) &&
-          !empty($entity_info['entity keys']['bundle'])) {
+          !empty($entity_info['entity keys']['bundle'])
+        ) {
           $values[$entity_info['entity keys']['bundle']] = $sf_mapping->drupal_bundle;
         }
         else {
@@ -254,8 +409,7 @@ function salesforce_pull_process_records($sf_object) {
         $last_sync_message = t('Retrieved new record from Salesforce');
         $last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
         $entity_updated = time();
-      }
-      catch (Exception $e) {
+      } catch (Exception $e) {
         $message = $e->getMessage() . ' ' . t('Processing failed for entity %label associated with Salesforce Object ID: %sfobjectid',
             array(
               '%label' => $wrapper->label(),
@@ -359,8 +513,7 @@ function salesforce_pull_process_deleted_records() {
               // case of an error.
               try {
                 $entity_wrapper->delete();
-              }
-              catch(Exception $e) {
+              } catch (Exception $e) {
                 watchdog_exception('salesforce_pull', $e);
               }
 
