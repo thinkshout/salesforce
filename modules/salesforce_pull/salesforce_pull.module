@@ -93,12 +93,16 @@ function salesforce_pull_form_salesforce_settings_form_alter(&$form, &$form_stat
   );
 
   $webhook_key = variable_get('salesforce_pull_webhook_key', drupal_random_key());
+  $url = url('salesforce/webhook/pull', array(
+    'query' => array('key' => $webhook_key),
+    'absolute' => TRUE
+  ));
 
   $form['salesforce_pull_webhook_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Webhook key'),
-    '#description' => t('A secret key that is required in the webhook request url (https://host/webhook-url?key=KEY).<br>
-      Leave blank to auto-generate a new random key.'),
+    '#description' => t('A secret key that is required in the webhook request url (@url).<br>
+      Leave blank to auto-generate a new random key.', array('@url' => $url)),
     '#default_value' => $webhook_key,
     '#states' => array(
       // Only show this field when the 'webhook_enable' checkbox is enabled.
