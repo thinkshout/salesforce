@@ -45,6 +45,24 @@ function salesforce_pull_webhook_access() {
 function salesforce_pull_webhook() {
   if (salesforce_pull()) {
     $code = '200';
+    // Queue is populated, but not processed yet so we manually do some of what
+    // drupal_cron_run() does to trigger processing of our pull queue.
+    $queues = salesforce_cron_queue_info();
+    $info = $queues[SALESFORCE_PULL_QUEUE];
+    $callback = $info['worker callback'];
+    $end = time() + (isset($info['time']) ? $info['time'] : 15);
+    $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
+    while (time() < $end && ($item = $queue->claimItem())) {
+      try {
+        call_user_func($callback, $item->data);
+        $queue->deleteItem($item);
+      }
+      catch (Exception $e) {
+        // In case of exception log it and leave the item in the queue
+        // to be processed again later.
+        watchdog_exception('salesforce_pull', $e);
+      }
+    }
   }
   else {
     $code = '403';
@@ -75,7 +93,7 @@ function salesforce_pull() {
 
     return TRUE;
   }
-  
+
   // No pull happened.
   return FALSE;
 }
