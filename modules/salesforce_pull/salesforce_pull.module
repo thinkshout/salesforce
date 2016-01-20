@@ -38,25 +38,46 @@ function salesforce_pull_webhook_access() {
 }
 
 /**
- * Webhook callback for salesforce pull.
+ * Webhook callback for salesforce pull. Returns status of 200 for successful
+ * attempt or 403 for a failed pull attempt (SF not authorized, threshhold
+ * reached, etc.
  */
 function salesforce_pull_webhook() {
-  $sfapi = salesforce_get_api();
-  if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
-    salesforce_pull_get_updated_records();
-    salesforce_pull_process_deleted_records();
+  if (salesforce_pull()) {
+    $code = '200';
   }
+  else {
+    $code = '403';
+  }
+
+  http_response_code($code);
+  drupal_exit();
 }
 
 /**
  * Implements hook_cron().
  */
 function salesforce_pull_cron() {
+  salesforce_pull();
+}
+
+/**
+ * Callback for the standard pull process used by webhooks and cron.
+ */
+function salesforce_pull() {
   $sfapi = salesforce_get_api();
   if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
     salesforce_pull_get_updated_records();
     salesforce_pull_process_deleted_records();
+
+    $request_time = $_SERVER['REQUEST_TIME_FLOAT'] ? $_SERVER['REQUEST_TIME_FLOAT'] : $_SERVER['REQUEST_TIME'];
+    variable_set('salesforce_pull_last_sync', $request_time);
+
+    return TRUE;
   }
+  
+  // No pull happened.
+  return FALSE;
 }
 
 /**
@@ -138,8 +159,6 @@ function salesforce_pull_check_throttle() {
   $request_time = $_SERVER['REQUEST_TIME_FLOAT'] ? $_SERVER['REQUEST_TIME_FLOAT'] : $_SERVER['REQUEST_TIME'];
 
   if ($request_time > $last_sync + $pull_throttle) {
-    variable_set('salesforce_pull_last_sync', $request_time);
-
     return TRUE;
   }
 
