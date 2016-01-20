@@ -19,11 +19,22 @@ function salesforce_pull_menu() {
   $items['salesforce/webhook/pull'] = array(
     'title' => 'Salesforce pull webhook callback',
     'page callback' => 'salesforce_pull_webhook',
-    'access callback' => 'salesforce_webhook_access',
+    'access callback' => 'salesforce_pull_webhook_access',
     'type' => MENU_CALLBACK,
   );
 
   return $items;
+}
+
+/**
+ * Access callback for Salesforce webhooks.
+ */
+function salesforce_pull_webhook_access() {
+  if (variable_get('salesforce_pull_webhook_enable') && $_GET['key'] === variable_get('salesforce_pull_webhook_key')) {
+    return user_access('access content');
+  }
+
+  return FALSE;
 }
 
 /**
@@ -72,10 +83,45 @@ function salesforce_pull_form_salesforce_settings_form_alter(&$form, &$form_stat
     '#default_value' => variable_get('salesforce_pull_throttle', 5),
     '#element_validate' => array('element_validate_number'),
   );
+
+  $webhooks_enabled = variable_get('salesforce_pull_webhook_enable', FALSE);
+  $form['salesforce_pull_webhook_enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable webhooks'),
+    '#description' => t('Allow external applications to trigger Salesforce sync with a web request.'),
+    '#default_value' => $webhooks_enabled,
+  );
+
+  $webhook_key = variable_get('salesforce_pull_webhook_key', drupal_random_key());
+
+  $form['salesforce_pull_webhook_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Webhook key'),
+    '#description' => t('A secret key that is required in the webhook request url (https://host/webhook-url?key=KEY).<br>
+      Leave blank to auto-generate a new random key.'),
+    '#default_value' => $webhook_key,
+    '#states' => array(
+      // Only show this field when the 'webhook_enable' checkbox is enabled.
+      'visible' => array(
+        ':input[name="salesforce_pull_webhook_enable"]' => array('checked' => TRUE),
+      ),
+    ),
+    '#element_validate' => array('salesforce_pull_webhook_key_validate'),
+  );
 }
 
 /**
- * Determines if the salesforce pull should be allowed, or throttled.
+ * Element validation callback for the webhook key.
+ */
+function salesforce_pull_webhook_key_validate($element, &$form_state, $form) {
+  // If there is no key set, generate a default key.
+  if (empty($element['#value'])) {
+    form_set_value($form['salesforce_pull_webhook_key'], drupal_random_key(), $form_state);
+  }
+}
+
+/**
+ * Determines if the Salesforce pull should be allowed, or throttled.
  *
  * Prevents too many pull processes from running at once.
  *
