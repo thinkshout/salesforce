@@ -296,7 +296,7 @@ function salesforce_mapping_load_multiple($properties = array(), $reset = FALSE)
     }
     if ($record_type) {
       foreach ($mappings as $id => $mapping) {
-        if (!isset($mapping->salesforce_record_types_allowed[$record_type])) {
+        if (empty($mapping->salesforce_record_types_allowed[$record_type])) {
           unset($mappings[$id]);
         }
       }
