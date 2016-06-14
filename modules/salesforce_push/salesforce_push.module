@@ -308,6 +308,7 @@ function salesforce_push_cron() {
 
     if (!$use_soap) {
       salesforce_push_sync_rest($entity_type, $entity, $mapping, $item->data['trigger']);
+      $queue->deleteItem($item);
       continue;
     }
 
