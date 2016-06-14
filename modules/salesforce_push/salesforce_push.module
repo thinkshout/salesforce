@@ -317,6 +317,7 @@ function salesforce_push_cron() {
       continue;
     }
     $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
+    $key_field = $key_value = NULL;
     $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value, $use_soap, !$mapping_object);
 
     $synced_entities[$delta] = array(
