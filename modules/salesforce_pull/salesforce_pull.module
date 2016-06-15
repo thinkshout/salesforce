@@ -385,6 +385,13 @@ function salesforce_pull_process_records($sf_object) {
           !empty($entity_info['entity keys']['bundle'])
         ) {
           $values[$entity_info['entity keys']['bundle']] = $sf_mapping->drupal_bundle;
+
+          // Because creating term via entities actually needs vid and won't be
+          // fixed in Entity API (https://www.drupal.org/node/1409256).
+          if (isset($values['vocabulary_machine_name'])) {
+            $vocabulary = taxonomy_vocabulary_machine_name_load($values['vocabulary_machine_name']);
+            $values['vid'] = $vocabulary->vid;
+          }
         }
         else {
           // Not all entities will have bundle defined under entity keys,
