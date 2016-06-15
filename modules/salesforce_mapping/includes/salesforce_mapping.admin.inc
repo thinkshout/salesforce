@@ -690,7 +690,8 @@ function salesforce_mapping_form_submit($form, &$form_state) {
         if (isset($field_map['salesforce_multiple_fields']) && $field_map['salesforce_multiple_fields']) {
           $sf_field = array();
           foreach ($mapping['salesforce_field'] as $field) {
-            $sf_field[] = reset(array_filter($sf_fields, salesforce_field_filter($field)));
+            $filtered = array_filter($sf_fields, salesforce_field_filter($field));
+            $sf_field[] = reset($filtered);
           }
         }
         else {
