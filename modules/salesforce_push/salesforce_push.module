@@ -149,7 +149,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   if (!$mapping_object) {
     // Setup SF record type. CampaignMember objects get their Campaign's type.
     if ($mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE
-      && empty($params['RecordTypeId'])
+      && !array_key_exists('RecordTypeId', $params)
       && ($mapping->salesforce_object_type != 'CampaignMember')) {
       $params['RecordTypeId'] = $mapping->salesforce_record_type_default;
     }
