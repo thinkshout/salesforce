@@ -38,3 +38,18 @@ function salesforce_update_7300() {
     db_create_table($schema_name, $schema[$schema_name]);
   }
 }
+
+/**
+ * Update API version to 29.0 for getUpdated() support.
+ */
+function salesforce_update_7301() {
+  $version = variable_get('salesforce_api_version', array());
+  if (empty($version) || version_compare($version['version'], "29.0") < 0) {
+    variable_set('salesforce_api_version', array(
+      "label" => "Winter '14",
+      "url" => "/services/data/v29.0/",
+      "version" => "29.0",
+    ));
+  }
+}
+

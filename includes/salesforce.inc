@@ -25,9 +25,9 @@ class Salesforce {
     $this->login_url = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
 
     $this->rest_api_version = variable_get('salesforce_api_version', array(
-      "label" => "Spring '13",
-      "url" => "/services/data/v27.0/",
-      "version" => "27.0",
+      "label" => "Winter '14",
+      "url" => "/services/data/v29.0/",
+      "version" => "29.0",
     ));
   }
 
@@ -655,6 +655,43 @@ class Salesforce {
       $items[$key] = $path;
     }
     return $items;
+  }
+
+  /**
+   * Return a list of SFIDs for the given object, which have been created or
+   * updated in the given timeframe. 
+   *
+   * @param int $start
+   *   unix timestamp for older timeframe for updates. 
+   *   Defaults to "-29 days" if empty.
+   *
+   * @param int $end
+   *   unix timestamp for end of timeframe for updates. 
+   *   Defaults to now if empty
+   *
+   * @return array
+   *   return array has 2 indexes:
+   *     "ids": a list of SFIDs of those records which have been created or
+   *       updated in the given timeframe.
+   *     "latestDateCovered": ISO 8601 format timestamp (UTC) of the last date
+   *       covered in the request.
+   *
+   * @see https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/resources_getupdated.htm
+   *
+   * @addtogroup salesforce_apicalls
+   */
+  public function getUpdated($name, $start = null, $end = null) {
+    if (empty($start)) {
+      $start = strtotime('-29 days');
+    }
+    $start = urlencode(gmdate(DATE_ATOM, $start));
+  
+    if (empty($end)) {
+      $end = time();
+    }
+    $end = urlencode(gmdate(DATE_ATOM, $end));
+  
+    return $this->apiCall("sobjects/{$name}/updated/?start=$start&end=$end");
   }
 }
 
