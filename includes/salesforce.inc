@@ -59,6 +59,29 @@ class Salesforce {
   }
 
   /**
+   * Given a Salesforce ID, return the corresponding SObject name. (Based on
+   *  keyPrefix from object definition, @see
+   *  https://developer.salesforce.com/forums/?id=906F0000000901ZIAQ )
+   *
+   * @param string $sfid
+   *   15- or 18-character Salesforce ID
+   * @return string
+   *   sObject name, e.g. "Account", "Contact", "my__Custom_Object__c" or FALSE
+   *   if no match could be found.
+   * @throws SalesforceException
+   */
+  public function getSobjectType($sfid) {
+    $objects = $this->objects(array('keyPrefix' => substr($sfid, 0, 3)));
+    if (count($objects) == 1) {
+      // keyPrefix is unique across objects. If there is exactly one return value from objects(), then we have a match.
+      $object = reset($objects);
+      return $object['name'];
+    }
+    // Otherwise, we did not find a match.
+    return FALSE;
+  }
+
+  /**
    * Determine if this SF instance is fully configured.
    *
    * @TODO: Consider making a test API call.
@@ -445,7 +468,7 @@ class Salesforce {
     if (!empty($conditions)) {
       foreach ($result['sobjects'] as $key => $object) {
         foreach ($conditions as $condition => $value) {
-          if (!$object[$condition] == $value) {
+          if ($object[$condition] != $value) {
             unset($result['sobjects'][$key]);
           }
         }
