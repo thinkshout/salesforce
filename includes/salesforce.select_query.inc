@@ -91,6 +91,9 @@ class SalesforceSelectQuery {
     if ($this->offset) {
       $query .= "+OFFSET+" . (int) $this->offset;
     }
+    
+    // Replaces spaces with + signs for custom filters.
+    $query = str_replace(" ", "+", $query);
 
     return $query;
   }
