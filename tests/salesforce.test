@@ -58,6 +58,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
     $salesforce_vars = array(
       'salesforce_consumer_key',
       'salesforce_consumer_secret',
+      'salesforce_endpoint',
       'salesforce_instance_url',
       'salesforce_refresh_token',
       'salesforce_identity',
