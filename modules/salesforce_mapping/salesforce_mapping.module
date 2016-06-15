@@ -50,11 +50,24 @@ define('SALESFORCE_MAPPING_STATUS_ERROR', 0);
  * Access callback for managing Salesforce mappings.
  */
 function salesforce_mappings_access() {
+  if (!module_exists('salesforce_pull') && !module_exists('salesforce_push')) {
+    return FALSE;
+  }
+
   if (user_access('administer salesforce mapping')) {
     $sfapi = salesforce_get_api();
     return $sfapi->isAuthorized();
   }
   return FALSE;
+}
+
+/**
+ * Implements hook_page_alter().
+ */
+function salesforce_mapping_page_alter(&$page) {
+  if (current_path() == 'admin/structure/salesforce' && !module_exists('salesforce_pull') && !module_exists('salesforce_push')) {
+    drupal_set_message(t('At least one sync method (Push or Pull) must be <a href="/admin/modules">enabled</a> to configure Salesforce Mappings.'), 'error', FALSE);
+  }
 }
 
 /**

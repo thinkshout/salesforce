@@ -276,11 +276,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
       $row['direction'] = array(
         '#id' => 'edit-direction-' . $delta,
         '#type' => 'radios',
-        '#options' => array(
-          SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
-          SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL => t('SF to Drupal'),
-          SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
-        ),
+        '#options' => _salesforce_mapping_get_direction_options(),
         '#required' => TRUE,
         '#default_value' => _salesforce_mapping_get_default_value('direction', $form_state, $delta),
       );
@@ -903,7 +899,8 @@ function _salesforce_mapping_get_default_value($field, &$form_state, $delta = NU
 
       case 'direction':
         // Set default for direction, which cannot be NULL like the others.
-        $value = SALESFORCE_MAPPING_DIRECTION_SYNC;
+        $keys = array_keys(_salesforce_mapping_get_direction_options());
+        $value = end($keys);
         // No break for this case, should carry onto the default case.
       default:
         if (isset($form_state['input']['salesforce_field_mappings'][$delta][$field])) {
@@ -1015,10 +1012,16 @@ function _salesforce_mapping_get_salesforce_object_type_options(&$form_state, $i
   else {
     $sfapi = salesforce_get_api();
     // Note that we're filtering SF object types to a reasonable subset.
-    $sfobjects = $sfapi->objects(array(
-      'updateable' => TRUE,
+    $sf_object_filter = array(
       'triggerable' => TRUE,
-    ));
+    );
+
+    //TODO: Handle this somewhere else to validate we can push to this object.
+    // if (module_exists('salesforce_push')) {
+    //   $sf_object_filter['updateable'] = TRUE;
+    // }
+    
+    $sfobjects = $sfapi->objects($sf_object_filter);
     $form_state['sfm_storage']['salesforce_object_type'] = $sfobjects;
   }
 
@@ -1152,18 +1155,49 @@ function _salesforce_mapping_get_drupal_type_options($include_select = TRUE) {
  * Return form options for available sync triggers.
  *
  * @return array
- *   Array of sync trigger options keyed by their machine name with their lable
+ *   Array of sync trigger options keyed by their machine name with their label
  *   as the value.
  */
 function _salesforce_mapping_get_sync_trigger_options() {
-  return array(
-    SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE => t('Drupal entity create'),
-    SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE => t('Drupal entity update'),
-    SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE => t('Drupal entity delete'),
-    SALESFORCE_MAPPING_SYNC_SF_CREATE => t('Salesforce object create'),
-    SALESFORCE_MAPPING_SYNC_SF_UPDATE => t('Salesforce object update'),
-    SALESFORCE_MAPPING_SYNC_SF_DELETE => t('Salesforce object delete'),
-  );
+  $options = array();
+  if (module_exists('salesforce_push')) {
+    $options += array(
+      SALESFORCE_MAPPING_SYNC_DRUPAL_CREATE => t('Drupal entity create'),
+      SALESFORCE_MAPPING_SYNC_DRUPAL_UPDATE => t('Drupal entity update'),
+      SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE => t('Drupal entity delete'),
+    );
+  }
+  if (module_exists('salesforce_pull')) {
+    $options += array(
+      SALESFORCE_MAPPING_SYNC_SF_CREATE => t('Salesforce object create'),
+      SALESFORCE_MAPPING_SYNC_SF_UPDATE => t('Salesforce object update'),
+      SALESFORCE_MAPPING_SYNC_SF_DELETE => t('Salesforce object delete'),
+    );
+  }
+  return $options;
+}
+
+/**
+ * Return form options for available direction options.
+ *
+ * @return array
+ *   Array of direction options keyed by their machine name with their label
+ *   as the value.
+ */
+function _salesforce_mapping_get_direction_options() {
+  $options = array();
+  if (module_exists('salesforce_pull')) {
+    $options += array(
+      SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL => t('SF to Drupal'),
+    );
+  }
+  if (module_exists('salesforce_push')) {
+    $options += array(
+      SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
+      SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
+    );
+  }
+  return $options;
 }
 
 /**
@@ -1213,6 +1247,6 @@ function _salesforce_mapping_get_empty_field_map_row() {
     'drupal_field' => '',
     'salesforce_field' => '',
     'key' => '',
-    'direction' => SALESFORCE_MAPPING_DIRECTION_SYNC,
+    'direction' => end(array_keys(_salesforce_mapping_get_direction_options())),
   );
 }

@@ -15,7 +15,7 @@ function salesforce_help($path, $arg) {
     case 'admin/structure/salesforce':
       $output = '';
       if (!module_exists('salesforce_mapping')) {
-        $output .= '<p>' . t('In order to configure Salesforce Mappings, you must first enable the <a href="/admin/modules">Salesforce Mapping</a> module.') . '</p>';
+        $output .= '<p>' . t('In order to configure Salesforce Mappings, you must first enable the <a href="/admin/modules">Salesforce Mapping</a> module and at least one sync method (Push or Pull).') . '</p>';
       }
       if (!variable_get('salesforce_consumer_secret', NULL) || !variable_get('salesforce_consumer_key', NULL) || !variable_get('salesforce_refresh_token', NULL)) {
         $output .= '<p>' . t('You must !authorize in order to configure Salesforce Mappings.', array('!authorize' => l(t('authorize your account with Salesforce'), 'admin/config/salesforce/authorize'))) . '</p>';
