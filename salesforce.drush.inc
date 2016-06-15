@@ -81,6 +81,13 @@ function salesforce_drush_command() {
     'description' => 'Lists the resources available for the specified API version. It provides the name and URI of each resource.',
     'aliases' => array('sflr'),
   );
+  $items['sf-execute-query'] = array(
+    'description' => 'Execute a SOQL query.',
+    'aliases' => array('sfeq'),
+    'arguments' => array(
+      'query' => 'The query to execute.',
+    ),
+  );
   return $items;
 }
 
@@ -331,6 +338,26 @@ function drush_salesforce_sf_query_object($name) {
     $query = 'SELECT ' . $fields . ' FROM ' . $name;
     // @todo - figure how to leverage SalesforceSelectQuery.
     $result = $salesforce->apiCall('query?q=' . urlencode($query . $where));
+    drush_print(drush_format($result));
+  }
+  catch (SalesforceException $e) {
+    drush_log($e->getMessage(), 'error');
+  }
+}
+
+/**
+ * Execute a SOQL query.
+ *
+ * @param $query
+ *   The query to execute
+ */
+function drush_salesforce_sf_execute_query($query = NULL) {
+  if (!$query) {
+    return drush_log('Please specify a query as an argument.', 'error');
+  }
+  $salesforce = _drush_salesforce_drush_get_api();
+  try {
+    $result = $salesforce->apiCall('query?q=' . urlencode($query));
     drush_print(drush_format($result));
   }
   catch (SalesforceException $e) {
