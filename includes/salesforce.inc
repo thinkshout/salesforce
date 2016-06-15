@@ -203,6 +203,13 @@ class Salesforce {
    *   Salesforce response object.
    */
   protected function httpRequest($url, $data, $headers = array(), $method = 'GET') {
+
+    // If method is GET, data should not be sent otherwise drupal_http_request()
+    // will set Content-Length header which confuses some proxies like Squid.
+    if ($method === 'GET') {
+      $data = NULL;
+    }
+
     // Build the request, including path and headers. Internal use.
     $options = array(
       'method' => $method,
