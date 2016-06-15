@@ -149,7 +149,7 @@ class Salesforce {
       $data = $data[0];
     }
 
-    if (isset($data['error'])) {
+    if (is_array($data) && isset($data['error'])) {
       throw new SalesforceException($data['error_description'], $data['error']);
     }
 
