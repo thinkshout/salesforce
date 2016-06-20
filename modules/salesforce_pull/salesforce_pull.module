@@ -311,6 +311,8 @@ function salesforce_pull_process_records($sf_object) {
   foreach ($sf_mappings as $sf_mapping) {
     // Mapping object exists?
     $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object['Id']);
+    // Allow other modules to define or alter the mapping object.
+    drupal_alter('salesforce_pull_mapping_object', $mapping_object, $sf_object, $sf_mapping);
     $exists = $mapping_object ? TRUE : FALSE;
     if ($exists && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_UPDATE)) {
       try {

@@ -120,6 +120,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
   list($entity_id) = entity_extract_ids($entity_type, $entity);
   $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, TRUE);
+  // Allow other modules to define or alter the mapping object.
+  drupal_alter('salesforce_push_mapping_object', $mapping_object, $entity, $mapping);
 
   // Delete SF object.
   if ($sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
@@ -304,13 +306,15 @@ function salesforce_push_cron() {
     // Add entity id to array of pushed entities to check for duplicates later.
     $entity_ids[$item->data['entity_type']][] = $entity_id;
 
-    $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
-
     if (!$use_soap) {
       salesforce_push_sync_rest($entity_type, $entity, $mapping, $item->data['trigger']);
       $queue->deleteItem($item);
       continue;
     }
+    
+    $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id);
+    // Allow other modules to define or alter the mapping object.
+    drupal_alter('salesforce_push_mapping_object', $mapping_object, $entity, $mapping);
 
     if ($item->data['trigger'] == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE && $mapping_object) {
       $delete_list[$delta] = $mapping_object->salesforce_id;
