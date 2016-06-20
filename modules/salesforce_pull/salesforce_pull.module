@@ -485,77 +485,92 @@ function salesforce_pull_process_records($sf_object) {
  * Process deleted records from salesforce.
  */
 function salesforce_pull_process_deleted_records() {
-  // Only the SOAP API supports getting deleted records.
-  if (!module_exists('salesforce_soap')) {
-    salesforce_set_message('Enable Salesforce SOAP to process deleted records');
-    return;
-  }
+  // Calculate which client to use. We default to the REST client but also
+  // support SOAP if enabled. Note that deletions can only be queried via REST
+  // with an API version >= 29.0.
   $sfapi = salesforce_get_api();
-  $soap = new SalesforceSoapPartner($sfapi);
+  $client = $sfapi;
+  if (class_exists('SalesforceSoapPartner')) {
+    $client = new SalesforceSoapPartner($sfapi);
+  }
 
   // Load all unique SF record types that we have mappings for.
   foreach (array_reverse(salesforce_mapping_get_mapped_objects()) as $type) {
     $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
+    variable_set('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
+
     $now = time();
 
-    // SOAP getDeleted() restraint: startDate must be at least one minute
-    // greater than endDate.
+    // getDeleted() constraint: startDate cannot be more than 30 days ago
+    // (using an incompatible data may lead to exceptions).
+    $last_delete_sync = $last_delete_sync > REQUEST_TIME - 2505600 ? $last_delete_sync : REQUEST_TIME - 2505600;
+
+    // getDeleted() constraint: startDate must be at least one minute greater
+    // than endDate.
     $now = $now > $last_delete_sync + 60 ? $now : $now + 60;
     $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
-    $deleted = $soap->getDeleted($type, $last_delete_sync_sf, $now_sf);
-    if (!empty($deleted->deletedRecords)) {
-      foreach ($deleted->deletedRecords as $record) {
-        $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
-        if ($mapping_object) {
-          // Load and wrap the Drupal entity linked to the SF object.
-          $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
-          // Check if entity exists before processing delete.
-          if ($entity) {
-            $entity_wrapper = entity_metadata_wrapper($mapping_object->entity_type, $entity);
 
-            // Load the mapping that manages these mapped objects.
-            $sf_mapping = reset(salesforce_mapping_load_multiple(
-              array(
-                'salesforce_object_type' => $type,
-                'drupal_entity_type' => $entity_wrapper->type(),
-                'drupal_bundle' => $entity_wrapper->getBundle(),
-              )
-            ));
+    // SOAP getDeleted() returns an object while the REST getDeleted() returns
+    // an array, so cast all checked values to an object to avoid additional
+    // conditional logic.
+    $deleted = (object) $client->getDeleted($type, $last_delete_sync_sf, $now_sf);
+    if (empty($deleted->deletedRecords)) {
+      continue;
+    }
+    foreach ($deleted->deletedRecords as $record) {
+      $record = (object) $record;
+      $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
+      if (!$mapping_object) {
+        continue;
+      }
 
-            // Only delete the mapped Drupal entity if the
-            // SALESFORCE_MAPPING_SYNC_SF_DELETE flag is set.
-            if (!empty($sf_mapping) && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
-              // Prevent processing by salesforce_push. We hate circular logic.
-              $entity->salesforce_pull = TRUE;
+      // Load and wrap the Drupal entity linked to the SF object.
+      $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
 
-              // Delete the mapped Drupal entity. Catch any exceptions as
-              // we want to ensure the mapping object is deleted even in
-              // case of an error.
-              try {
-                $entity_wrapper->delete();
-              } catch (Exception $e) {
-                watchdog_exception('salesforce_pull', $e);
-              }
+      // Check if entity exists before processing delete.
+      if ($entity) {
+        $entity_wrapper = entity_metadata_wrapper($mapping_object->entity_type, $entity);
 
-              watchdog('Salesforce Pull',
-                'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-                array(
-                  '%label' => $entity_wrapper->label(),
-                  '%id' => $mapping_object->entity_id,
-                  '%sfid' => $record->id,
-                )
-              );
-            }
+        // Load the mapping that manages these mapped objects.
+        $sf_mapping = reset(salesforce_mapping_load_multiple(
+          array(
+            'salesforce_object_type' => $type,
+            'drupal_entity_type' => $entity_wrapper->type(),
+            'drupal_bundle' => $entity_wrapper->getBundle(),
+          )
+        ));
+
+        // Only delete the mapped Drupal entity if the
+        // SALESFORCE_MAPPING_SYNC_SF_DELETE flag is set.
+        if (!empty($sf_mapping) && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
+          // Prevent processing by salesforce_push. We hate circular logic.
+          $entity->salesforce_pull = TRUE;
+
+          // Delete the mapped Drupal entity. Catch any exceptions as
+          // we want to ensure the mapping object is deleted even in
+          // case of an error.
+          try {
+            $entity_wrapper->delete();
+          }
+          catch (Exception $e) {
+            watchdog_exception('salesforce_pull', $e);
           }
 
-
-          // Delete mapping object.
-          $mapping_object->delete();
+          watchdog('Salesforce Pull',
+            'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+            array(
+              '%label' => $entity_wrapper->label(),
+              '%id' => $mapping_object->entity_id,
+              '%sfid' => $record->id,
+            )
+          );
         }
       }
+
+      // Delete mapping object.
+      $mapping_object->delete();
     }
-    variable_set('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
   }
 }
 

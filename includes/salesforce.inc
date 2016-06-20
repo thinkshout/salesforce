@@ -672,6 +672,22 @@ class Salesforce {
   }
 
   /**
+   * Retrieves the list of individual objects that have been deleted within the
+   * given timespan for a specified object type.
+   *
+   * @param string $type
+   *   Object type name, E.g., Contact, Account.
+   * @param string $startDate
+   *   Start date to check for deleted objects (in ISO 8601 format).
+   * @param string $endDate
+   *   End date to check for deleted objects (in ISO 8601 format).
+   * @return GetDeletedResult
+   */
+  public function getDeleted($type, $startDate, $endDate) {
+    return $this->apiCall("sobjects/{$type}/deleted/?start={$startDate}&end={$endDate}");
+  }
+
+  /**
    * Return a list of available resources for the configured API version.
    *
    * @return array
