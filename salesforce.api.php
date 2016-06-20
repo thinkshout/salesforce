@@ -160,5 +160,87 @@ function hook_salesforce_push_fail($op, $result, $synced_entity) {
 }
 
 /**
+ * Act on an entity just before it is saved by a salesforce pull operation.
+ * Implementations should throw a SalesforcePullException to prevent the pull.
+ *
+ * @param $entity
+ *   The Drupal entity object.
+ * @param array $sf_object
+ *   The Salesforce query result array.
+ * @param SalesforceMapping $sf_object
+ *   The Salesforce Mapping being used to pull this record
+ *
+ * @throws SalesforcePullException
+ */
+function hook_salesforce_pull_entity_presave($entity, $sf_object, $sf_mapping) {
+  if (!some_entity_validation_mechanism($entity)) {
+    throw new SalesforcePullException('Refused to pull invalid entity.');
+  }
+  // Set a fictional property using a fictional Salesforce result object.
+  $entity->example_property = $sf_object['Lookup__r']['Data__c'];
+}
+
+/**
+ * Act on an entity after it is inserted by a salesforce pull operation.
+ * Implementations may throw SalesforcePullException to prevent updating of the
+ * Salesforce Mapping Object, but the entity will already have been saved.
+ *
+ * @param $entity
+ *   The Drupal entity object.
+ * @param array $sf_object
+ *   The SObject from the pull query (as an array).
+ * @param SalesforceMapping $sf_object
+ *   The Salesforce Mapping being used to pull this record
+ *
+ * @throws SalesforcePullException
+ */
+function hook_salesforce_pull_entity_insert($entity, $sf_object, $sf_mapping) {
+  // Insert the new entity into a fictional table of all Salesforce-sourced
+  // entities.
+  $type = $sf_mapping->drupal_entity_type;
+  $info = entity_get_info($type);
+  list($id) = entity_extract_ids($type, $entity);
+  db_insert('example_sf_entity')
+    ->fields(array(
+      'type' => $type,
+      'id' => $id,
+      'sf_name' => $sf_object['Name'],
+      'created' => REQUEST_TIME,
+      'updated' => REQUEST_TIME,
+    ))
+    ->execute();
+}
+
+/**
+ * Act on an entity after it is updated by a salesforce pull operation.
+ * Implementations may throw SalesforcePullException to prevent updating of the
+ * Salesforce Mapping Object, but the entity will already have been saved.
+ *
+ * @param $entity
+ *   The Drupal entity object.
+ * @param array $sf_object
+ *   The SObject from the pull query (as an array).
+ * @param SalesforceMapping $sf_object
+ *   The Salesforce Mapping being used to pull this record
+ *
+ * @throws SalesforcePullException
+ */
+function hook_salesforce_pull_entity_update($entity, $sf_object, $sf_mapping) {
+  // Update the entity's entry in a fictional table of all Salesforce-sourced
+  // entities.
+  $type = $sf_mapping->drupal_entity_type;
+  $info = entity_get_info($type);
+  list($id) = entity_extract_ids($type, $entity);
+  db_update('example_sf_entity')
+    ->fields(array(
+      'sf_name' => $sf_object['Name'],
+      'updated' => REQUEST_TIME,
+    ))
+    ->condition('type', $type)
+    ->condition('id', $id)
+    ->execute();
+}
+
+/**
  * @} salesforce_hooks
  */

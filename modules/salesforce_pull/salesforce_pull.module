@@ -340,8 +340,14 @@ function salesforce_pull_process_records($sf_object) {
             // Set fields values on the Drupal entity.
             salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
 
+            // Allow modules to react just prior to entity save.
+            module_invoke_all('salesforce_pull_entity_presave', $wrapper->value(), $sf_object, $sf_mapping);
+
             // Update entity.
             $wrapper->save();
+
+            // Allow modules to react to entity update.
+            module_invoke_all('salesforce_pull_entity_update', $wrapper->value(), $sf_object, $sf_mapping);
 
             // Update mapping object.
             $mapping_object->last_sync_message = t('Retrieved updates from Salesforce');
@@ -411,7 +417,15 @@ function salesforce_pull_process_records($sf_object) {
         $wrapper = entity_metadata_wrapper($sf_mapping->drupal_entity_type, $entity);
 
         salesforce_pull_map_fields($sf_mapping->field_mappings, $wrapper, $sf_object);
+
+        // Allow modules to react just prior to entity save.
+        module_invoke_all('salesforce_pull_entity_presave', $wrapper->value(), $sf_object, $sf_mapping);
+
         $wrapper->save();
+
+        // Allow modules to react to entity creation.
+        module_invoke_all('salesforce_pull_entity_insert', $wrapper->value(), $sf_object, $sf_mapping);
+
         // Update mapping object.
         $last_sync_message = t('Retrieved new record from Salesforce');
         $last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
