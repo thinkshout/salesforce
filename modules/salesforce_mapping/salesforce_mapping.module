@@ -257,6 +257,12 @@ function salesforce_mapping_salesforce_mapping_entity_uris_alter(&$entity_uris) 
   $entity_uris['user'] = array(
     'path' => 'user/',
   );
+  $entity_uris['taxonomy_term'] = array(
+    'path' => 'taxonomy/term/',
+  );
+  $entity_uris['relation'] = array(
+    'path' => 'relation/',
+  );
 }
 
 /**
