@@ -245,7 +245,7 @@ function salesforce_mapping_menu() {
 }
 
 /**
- * Implements hook_salesforce_mapping_entity_uris().
+ * Implements hook_salesforce_mapping_entity_uris_alter().
  *
  * Node and User, like most entities in core, don't respond well to entity_uri()
  * calls on unsaved entity stubs, which is what we need for our menu items.
