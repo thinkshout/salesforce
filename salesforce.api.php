@@ -38,13 +38,13 @@ function hook_salesforce_mapping_fieldmap_type_alter($fieldmap_type) {
  *   if no exisitng mapping object exists.
  * @param array $sf_object
  *   The salesforce object data that will be used in this pull.
- * @param object $mapping
+ * @param SalesforceMapping $mapping
  *   The salesforce mapping that will be used during the pull.
  */
 function hook_salesforce_pull_mapping_object_alter(&$mapping_object, $sf_object, $mapping) {
   // Do some prematching for incoming user pulls if we don't already have a
   // match.
-  if (!$mapping_object && $sf_mapping->drupal_entity_type == 'user') {
+  if (!$mapping_object && $mapping->drupal_entity_type == 'user') {
     // Run some complex custom prematching logic that searches for an existing
     // Drupal user that is a match to the incoming Salesforce data.
     $matched_user = mymodule_custom_sf_pull_prematch($sf_object, $mapping);
@@ -54,8 +54,8 @@ function hook_salesforce_pull_mapping_object_alter(&$mapping_object, $sf_object,
       // user instead of creating a new one.
       entity_create('salesforce_mapping_object', array(
         'salesforce_id' => $sf_object['Id'],
-        'entity_type' => $sf_mapping->drupal_entity_type,
-        'entity_id' => $match->uid,
+        'entity_type' => $mapping->drupal_entity_type,
+        'entity_id' => $matched_user->uid,
         'last_sync_message' => t('User prematch on pull'),
         'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS
       ))->save();
@@ -72,13 +72,13 @@ function hook_salesforce_pull_mapping_object_alter(&$mapping_object, $sf_object,
  *   if no exisitng mapping object exists.
  * @param object $entity
  *   The Drupal entity that is being pushed.
- * @param object $mapping
+ * @param SalesforceMapping $mapping
  *   The salesforce mapping that will be used during the push.
  */
 function hook_salesforce_push_mapping_object_alter(&$mapping_object, $entity, $mapping) {
   // Do some prematching for outgoing user pushes if we don't already have a
   // match.
-  if (!$mapping_object && $sf_mapping->drupal_entity_type == 'user') {
+  if (!$mapping_object && $mapping->drupal_entity_type == 'user') {
     // Run some complex custom prematching logic that queries Salesforce for an
     // existing contact (beyond a basic external key comparison) that is a match
     // to this Drupal user.
@@ -88,9 +88,9 @@ function hook_salesforce_push_mapping_object_alter(&$mapping_object, $entity, $m
       // This means that the rest of the push logic will target this matched
       // contact instead of creating a new one.
       entity_create('salesforce_mapping_object', array(
-        'salesforce_id' => $sf_object['Id'],
-        'entity_type' => $sf_mapping->drupal_entity_type,
-        'entity_id' => $match->uid,
+        'salesforce_id' => $matched_contact['Id'],
+        'entity_type' => $mapping->drupal_entity_type,
+        'entity_id' => $entity->uid,
         'last_sync_message' => t('User prematch on push'),
         'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS
       ))->save();
