@@ -30,7 +30,7 @@ function salesforce_pull_menu() {
  * Access callback for Salesforce webhooks.
  */
 function salesforce_pull_webhook_access() {
-  if (variable_get('salesforce_pull_webhook_enable') && $_GET['key'] === variable_get('salesforce_pull_webhook_key')) {
+  if (variable_get('salesforce_pull_webhook_enable') && isset($_GET['key']) && $_GET['key'] === variable_get('salesforce_pull_webhook_key')) {
     return user_access('access content');
   }
 
