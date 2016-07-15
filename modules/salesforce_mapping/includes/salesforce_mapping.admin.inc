@@ -1195,9 +1195,15 @@ function _salesforce_mapping_get_direction_options() {
   if (module_exists('salesforce_push')) {
     $options += array(
       SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF => t('Drupal to SF'),
+    );
+  }
+
+  if (module_exists('salesforce_pull') && module_exists('salesforce_push')) {
+    $options += array(
       SALESFORCE_MAPPING_DIRECTION_SYNC => t('Sync'),
     );
   }
+
   return $options;
 }
 
