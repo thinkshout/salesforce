@@ -236,7 +236,7 @@ function hook_salesforce_push_fail($op, $result, $synced_entity) {
  *   The Drupal entity object.
  * @param array $sf_object
  *   The Salesforce query result array.
- * @param SalesforceMapping $sf_object
+ * @param SalesforceMapping $sf_mapping
  *   The Salesforce Mapping being used to pull this record
  *
  * @throws SalesforcePullException
@@ -258,7 +258,7 @@ function hook_salesforce_pull_entity_presave($entity, $sf_object, $sf_mapping) {
  *   The Drupal entity object.
  * @param array $sf_object
  *   The SObject from the pull query (as an array).
- * @param SalesforceMapping $sf_object
+ * @param SalesforceMapping $sf_mapping
  *   The Salesforce Mapping being used to pull this record
  *
  * @throws SalesforcePullException
@@ -289,7 +289,7 @@ function hook_salesforce_pull_entity_insert($entity, $sf_object, $sf_mapping) {
  *   The Drupal entity object.
  * @param array $sf_object
  *   The SObject from the pull query (as an array).
- * @param SalesforceMapping $sf_object
+ * @param SalesforceMapping $sf_mapping
  *   The Salesforce Mapping being used to pull this record
  *
  * @throws SalesforcePullException
