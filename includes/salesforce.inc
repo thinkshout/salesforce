@@ -705,7 +705,10 @@ class Salesforce {
 
   /**
    * Return a list of SFIDs for the given object, which have been created or
-   * updated in the given timeframe. 
+   * updated in the given timeframe.
+   *
+   * @param string $name
+   *   Object type name, E.g., Contact, Account.
    *
    * @param int $start
    *   unix timestamp for older timeframe for updates. 
