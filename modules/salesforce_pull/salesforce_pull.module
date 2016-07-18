@@ -367,9 +367,10 @@ function salesforce_pull_process_records($sf_object) {
           }
         }
       } catch (Exception $e) {
-        $message = t('Failed to update entity %label from Salesforce object %sfobjectid. Error: @msg',
+        $message = t('Failed to update entity %label %id from Salesforce object %sfobjectid. Error: @msg',
           array(
-            '%label' => $wrapper->label(),
+            '%label' => $mapping_object->entity_type,
+            '%id' => $mapping_object->entity_id,
             '%sfobjectid' => $sf_object['Id'],
             '@msg' => $e->getMessage(),
           )
