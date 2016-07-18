@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Simple tests for salesforce_mapping
+ * Simple tests for salesforce_mapping.
  */
 
 module_load_include('test', 'salesforce_mapping', 'tests/salesforce_mapping');
@@ -37,6 +37,7 @@ class SalesforceMappingEntitiesTestCase extends SalesforceMappingTestCase {
       'sync_triggers' => 0x0002,
       'salesforce_object_type' => 'bar',
       'salesforce_record_type' => 'baz',
+      'salesforce_record_types_allowed' => array("baz" => "baz", "bogus" => "0"),
       'drupal_entity_type' => 'node',
       'drupal_bundle' => 'story',
       'field_mappings' => array(
@@ -162,6 +163,34 @@ class SalesforceMappingEntitiesTestCase extends SalesforceMappingTestCase {
   }
 
   /**
+   * Tests API for interacting with salesforce_mapping.
+   */
+  public function testObjectTypeMapSalesforceMappingLoadMultipleInvalidType() {
+    // Create an invalid mapping entity to work with.
+    $this->example_map_invalid = $this->example_map;
+    $this->example_map_invalid['name'] = 'bogus_record';
+    $this->example_map_invalid['salesforce_record_type'] = 'bogus';
+    $example_map_invalid = entity_create('salesforce_mapping', $this->example_map_invalid);
+    entity_save('salesforce_mapping', $example_map_invalid);
+
+    // salesforce_mapping_load() to prove mapping saved.
+    $result = salesforce_mapping_load($example_map_invalid->name);
+    $this->assertTrue(is_object($result), 'Loading maps stating a specific name returned an object.');
+    $this->assertEqual($example_map_invalid->label, $result->label, 'Loading maps stating a specific name returned the requested map.');
+
+    // salesforce_mapping_load_multiple() shows no parameters loads the mapping.
+    $result = salesforce_mapping_load_multiple();
+    $this->assertTrue(is_array($result), 'Loading maps without stating a specific property returned an array.');
+    $this->assertEqual(1, count($result), 'Loading maps without stating a specific property returned 1 maps.');
+
+    // salesforce_mapping_load_multiple() excludes invalid types.
+    $result = salesforce_mapping_load_multiple(array('salesforce_record_type' => 'bogus'));
+    $this->assertTrue(is_array($result), 'Loading maps stating the drupal_bundle returned an array.');
+    $this->assertEqual(0, count($result), 'Loading maps stating the drupal_bundle property returned 0 map.');
+    $map = reset($result);
+  }
+
+  /**
    * Test the salesforce_mapping_object entity.
    */
   public function testRecordMapEntity() {
@@ -227,4 +256,5 @@ class SalesforceMappingEntitiesTestCase extends SalesforceMappingTestCase {
     $result = salesforce_mapping_object_load_by_sfid('nothing');
     $this->assertFalse($result, 'Loading map by salesforce_id for something that does not exist returns FALSE.');
   }
+
 }
