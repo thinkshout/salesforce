@@ -609,11 +609,25 @@ function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
       if (isset($value)) {
         // @TODO: might wrongly assumes an individual value wouldn't be an
         // array.
-        if ($parent instanceof EntityListWrapper && !is_array($value)) {
-          $parent->offsetSet(0, $value);
+        try {
+          if ($parent instanceof EntityListWrapper && !is_array($value)) {
+            $parent->offsetSet(0, $value);
+          }
+          else {
+            $parent->set($value);
+          }
         }
-        else {
-          $parent->set($value);
+        catch (Exception $e) {
+          $message = t('Exception during pull for @sfobj.@sffield @sfid to @dobj.@dprop @did with value @v: @e', array(
+            '@sfobj' => $sf_object['attributes']['type'],
+            '@sffield' =>  $field_map['salesforce_field']['name'],
+            '@sfid' => $sf_object['Id'],
+            '@dobj' => $entity_wrapper->type(),
+            '@dprop' => $field_map['drupal_field']['fieldmap_value'],
+            '@did' => $entity_wrapper->getIdentifier(),
+            '@v' => $value,
+            '@e' => $e->getMessage()));
+          throw new Exception($message, $e->getCode(), $e);
         }
       }
     }
