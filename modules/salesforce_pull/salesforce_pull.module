@@ -308,6 +308,8 @@ function salesforce_pull_process_records($sf_object) {
 
   $sf_mappings = salesforce_mapping_load_multiple($mapping_conditions);
 
+  $hold_exceptions = count($sf_mappings) > 1;
+  $exception = FALSE;
   foreach ($sf_mappings as $sf_mapping) {
     // Mapping object exists?
     $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object['Id']);
@@ -377,6 +379,16 @@ function salesforce_pull_process_records($sf_object) {
         $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
         $mapping_object->last_sync_message = t('Processing failed');
         $mapping_object->last_sync = time();
+        if (!$hold_exceptions) {
+          throw $e;
+        }
+        if (empty($exception)) {
+          $exception = $e;
+        }
+        else {
+          $my_class = get_class($e);
+          $exception = new $my_class($e->getMessage(), $e->getCode(), $exception);
+        }
       }
     }
     else {
@@ -444,6 +456,16 @@ function salesforce_pull_process_records($sf_object) {
         $last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
         $last_sync_message = t('Processing failed for new record');
         $entity_updated = NULL;
+        if (!$hold_exceptions) {
+          throw $e;
+        }
+        if (empty($exception)) {
+          $exception = $e;
+        }
+        else {
+          $my_class = get_class($e);
+          $exception = new $my_class($e->getMessage(), $e->getCode(), $exception);
+        }
       }
 
       // If no id exists, the insert failed and we cannot create a mapping
@@ -480,6 +502,9 @@ function salesforce_pull_process_records($sf_object) {
       $mapping_object->last_sync_action = 'pull';
       $mapping_object->save();
     }
+  }
+  if (!empty($exception)) {
+    throw $exception;
   }
 }
 
