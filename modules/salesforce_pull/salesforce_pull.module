@@ -613,48 +613,56 @@ function salesforce_pull_process_deleted_records() {
  *   sObject of the Salesforce record.
  */
 function salesforce_pull_map_fields($field_maps, &$entity_wrapper, $sf_object) {
-  foreach ($field_maps as $field_map) {
-    if ($field_map['direction'] == 'sync' || $field_map['direction'] == 'sf_drupal') {
+  $types = salesforce_mapping_get_fieldmap_types();
 
-      $drupal_fields_array = explode(':', $field_map['drupal_field']['fieldmap_value']);
-      $parent = $entity_wrapper;
-      foreach ($drupal_fields_array as $drupal_field) {
-        if ($parent instanceof EntityListWrapper) {
-          $child_wrapper = $parent->get(0)->{$drupal_field};
+  foreach ($field_maps as $field_map) {
+
+    $fieldmap_type = $field_map['drupal_field']['fieldmap_type'];
+    if (!isset($types[$fieldmap_type]['pull_value_callback'])
+      || !in_array($field_map['direction'], array('sync', 'sf_drupal'))
+      || !function_exists($types[$fieldmap_type]['pull_value_callback'])
+    ) {
+      continue;
+    }
+
+    $drupal_fields_array = explode(':', $field_map['drupal_field']['fieldmap_value']);
+    $parent = $entity_wrapper;
+    foreach ($drupal_fields_array as $drupal_field) {
+      if ($parent instanceof EntityListWrapper) {
+        $child_wrapper = $parent->get(0)->{$drupal_field};
+      }
+      else {
+        $child_wrapper = $parent->{$drupal_field};
+      }
+      $parent = $child_wrapper;
+    }
+    $fieldmap_type = salesforce_mapping_get_fieldmap_types($field_map['drupal_field']['fieldmap_type']);
+    $value = call_user_func($fieldmap_type['pull_value_callback'], $parent, $sf_object, $field_map);
+
+    // Allow this value to be altered before assigning to the entity.
+    drupal_alter('salesforce_pull_entity_value', $value, $field_map, $sf_object);
+    if (isset($value)) {
+      // @TODO: might wrongly assumes an individual value wouldn't be an
+      // array.
+      try {
+        if ($parent instanceof EntityListWrapper && !is_array($value)) {
+          $parent->offsetSet(0, $value);
         }
         else {
-          $child_wrapper = $parent->{$drupal_field};
+          $parent->set($value);
         }
-        $parent = $child_wrapper;
       }
-      $fieldmap_type = salesforce_mapping_get_fieldmap_types($field_map['drupal_field']['fieldmap_type']);
-      $value = call_user_func($fieldmap_type['pull_value_callback'], $parent, $sf_object, $field_map);
-
-      // Allow this value to be altered before assigning to the entity.
-      drupal_alter('salesforce_pull_entity_value', $value, $field_map, $sf_object);
-      if (isset($value)) {
-        // @TODO: might wrongly assumes an individual value wouldn't be an
-        // array.
-        try {
-          if ($parent instanceof EntityListWrapper && !is_array($value)) {
-            $parent->offsetSet(0, $value);
-          }
-          else {
-            $parent->set($value);
-          }
-        }
-        catch (Exception $e) {
-          $message = t('Exception during pull for @sfobj.@sffield @sfid to @dobj.@dprop @did with value @v: @e', array(
-            '@sfobj' => $sf_object['attributes']['type'],
-            '@sffield' =>  $field_map['salesforce_field']['name'],
-            '@sfid' => $sf_object['Id'],
-            '@dobj' => $entity_wrapper->type(),
-            '@dprop' => $field_map['drupal_field']['fieldmap_value'],
-            '@did' => $entity_wrapper->getIdentifier(),
-            '@v' => $value,
-            '@e' => $e->getMessage()));
-          throw new Exception($message, $e->getCode(), $e);
-        }
+      catch (Exception $e) {
+        $message = t('Exception during pull for @sfobj.@sffield @sfid to @dobj.@dprop @did with value @v: @e', array(
+          '@sfobj' => $sf_object['attributes']['type'],
+          '@sffield' =>  $field_map['salesforce_field']['name'],
+          '@sfid' => $sf_object['Id'],
+          '@dobj' => $entity_wrapper->type(),
+          '@dprop' => $field_map['drupal_field']['fieldmap_value'],
+          '@did' => $entity_wrapper->getIdentifier(),
+          '@v' => $value,
+          '@e' => $e->getMessage()));
+        throw new Exception($message, $e->getCode(), $e);
       }
     }
   }
