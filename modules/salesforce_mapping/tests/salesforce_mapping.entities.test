@@ -163,7 +163,7 @@ class SalesforceMappingEntitiesTestCase extends SalesforceMappingTestCase {
   }
 
   /**
-   * Tests API for interacting with salesforce_mapping.
+   * Tests API for salesforce_mapping_load_multiple with limited type.
    */
   public function testObjectTypeMapSalesforceMappingLoadMultipleInvalidType() {
     // Create an invalid mapping entity to work with.
