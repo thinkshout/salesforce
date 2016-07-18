@@ -245,7 +245,7 @@ function salesforce_pull_get_updated_records() {
     // Convert field mappings to SOQL.
     $soql->fields = array_merge($mapped_fields, array(
       'Id' => 'Id',
-      'LastModifiedDate' => 'LastModifiedDate'
+      $mapping->pull_trigger_date => $mapping->pull_trigger_date
     ));
 
     // If no lastupdate, get all records, else get records since last pull.
@@ -337,7 +337,7 @@ function salesforce_pull_process_records($sf_object) {
           $entity->salesforce_pull = TRUE;
           $entity_updated = isset($entity->updated) ? $entity->updated : $mapping_object->entity_updated;
 
-          $sf_object_updated = strtotime($sf_object['LastModifiedDate']);
+          $sf_object_updated = strtotime($sf_object[$sf_mapping->pull_trigger_date]);
           if ($sf_object_updated > $entity_updated) {
             $wrapper = entity_metadata_wrapper($sf_mapping->drupal_entity_type, $entity);
 
