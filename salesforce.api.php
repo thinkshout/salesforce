@@ -202,11 +202,13 @@ function hook_salesforce_query_alter(SalesforceSelectQuery &$query) {
  * @param object $result
  *   The salesforce response
  * @param array $synced_entity
- *   Entity data for this push. This array has 3 keys
+ *   Entity data for this push. This array has 4 keys
  *     'entity_wrapper': entity_metadata_wrapper() for the Drupal entity 
  *     'mapping_object': salesforce mapping object record, if it exists. 
  *       Otherwise null
- *     'queue_item': Drupal queue item corresponding to this push attempt
+ *     'queue_item': If this is a SOAP push, Drupal queue item corresponding to
+ *       this push attempt. Otherwise FALSE.
+ *     'mapping': SalesforceMapping being used for this push
  */
 function hook_salesforce_push_success($op, $result, $synced_entity) {
   $mapping_object = FALSE;
@@ -252,11 +254,13 @@ function hook_salesforce_push_success($op, $result, $synced_entity) {
  * @param object $result
  *   The salesforce response
  * @param array $synced_entity
- *   Entity data for this push. This array has 3 keys
+ *   Entity data for this push. This array has 4 keys
  *     'entity_wrapper': entity_metadata_wrapper() for the Drupal entity 
  *     'mapping_object': salesforce mapping object record, if it exists. 
  *       Otherwise null
- *     'queue_item': Drupal queue item corresponding to this push attempt
+ *     'queue_item': If this is a SOAP push, Drupal queue item corresponding to
+ *       this push attempt. Otherwise FALSE.
+ *     'mapping': SalesforceMapping being used for this push
  */
 function hook_salesforce_push_fail($op, $result, $synced_entity) {
   $error_messages = array();

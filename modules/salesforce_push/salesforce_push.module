@@ -119,32 +119,44 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   }
 
   list($entity_id) = entity_extract_ids($entity_type, $entity);
+  $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+
   $mapping_object = salesforce_mapping_object_load_by_drupal($entity_type, $entity_id, TRUE);
   // Allow other modules to define or alter the mapping object.
   drupal_alter('salesforce_push_mapping_object', $mapping_object, $entity, $mapping);
 
+  $synced_entity = array(
+    'entity_wrapper' => $entity_wrapper,
+    'mapping_object' => $mapping_object,
+    'queue_item' => FALSE,
+    'mapping' => $mapping,
+  );
+
+  $op = '';
   // Delete SF object.
   if ($sf_sync_trigger == SALESFORCE_MAPPING_SYNC_DRUPAL_DELETE) {
     if ($mapping_object) {
+      $op = 'Delete';
       try {
         $sfapi->objectDelete($mapping->salesforce_object_type, $mapping_object->salesforce_id);
       }
       catch(SalesforceException $e) {
         watchdog_exception('salesforce_push', $e);
         salesforce_set_message($e->getMessage(), 'error');
+        module_invoke_all('salesforce_push_fail', $op, $sfapi->response, $synced_entity);
       }
 
       salesforce_set_message(t('Salesforce object %sfid has been deleted.', array(
         '%sfid' => $mapping_object->salesforce_id,
       )));
       $mapping_object->delete();
+      module_invoke_all('salesforce_push_success', $op, $sfapi->response, $synced_entity);
     }
     // No mapped object or object was deleted.
     return;
   }
 
   // Generate parameter array from field mappings.
-  $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
   $params = salesforce_push_map_params($mapping, $entity_wrapper, $key_field, $key_value, FALSE, !$mapping_object);
 
   // Entity is not linked to an SF object.
@@ -166,6 +178,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         // https://developer.salesforce.com/forums?id=906F000000099xPIAQ
         $encoded_value = str_replace('.', '%2E', $encoded_value);
 
+        $op = 'Upsert';
         $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $encoded_value, $params);
         // Handle upsert responses.
         switch ($sfapi->response->code) {
@@ -184,12 +197,14 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       }
       // No key or mapping, create a new object in Salesforce.
       else {
+        $op = 'Create';
         $data = $sfapi->objectCreate($mapping->salesforce_object_type, $params);
       }
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
       salesforce_set_message($e->getMessage(), 'error');
+      module_invoke_all('salesforce_push_fail', $op, $sfapi->response, $synced_entity);
       return;
     }
 
@@ -203,6 +218,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         'last_sync_message' => t('Mapping object created via !function.', array('!function' => __FUNCTION__)),
         'last_sync_status' => SALESFORCE_MAPPING_STATUS_SUCCESS,
       ));
+      module_invoke_all('salesforce_push_success', $op, $sfapi->response, $synced_entity);
     }
     else {
       $message = t('Failed to sync %label with Salesforce. @code: @message',
@@ -214,6 +230,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       );
       salesforce_set_message($message, 'error');
       watchdog('salesforce_push', $message);
+      module_invoke_all('salesforce_push_fail', $op, $sfapi->response, $synced_entity);
       return;
     }
   }
@@ -227,6 +244,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
     // Update SF object.
     try {
+      $op = 'Update';
       $sfapi->objectUpdate($mapping->salesforce_object_type, $mapping_object->salesforce_id, $params);
       $mapping_object->last_sync_message = t('Mapping object updated via !function.', array('!function' => __FUNCTION__));
       $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_SUCCESS;
@@ -235,6 +253,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         '%name' => $entity_wrapper->label(),
         '%sfid' => $mapping_object->salesforce_id,
       )));
+      module_invoke_all('salesforce_push_success', $op, $sfapi->response, $synced_entity);
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
@@ -246,6 +265,7 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       )), 'error');
       $mapping_object->last_sync_message = $e->getMessage();
       $mapping_object->last_sync_status = SALESFORCE_MAPPING_STATUS_ERROR;
+      module_invoke_all('salesforce_push_fail', $op, $sfapi->response, $synced_entity);
     }
   }
 
@@ -328,6 +348,7 @@ function salesforce_push_cron() {
       'entity_wrapper' => $wrapper,
       'mapping_object' => $mapping_object,
       'queue_item' => $item,
+      'mapping' => $mapping,
     );
 
     // Setup SF record type. CampaignMember objects get their type from
