@@ -379,6 +379,18 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
     case 'text':
       $value = (string) $value;
       break;
+
+    case 'uri':
+      if (!empty($value) &&!valid_url($value, TRUE)) {
+        $parsed_value = parse_url($value);
+        // Salesforce tacks on an http:// to the front of URLs as necessary, but
+        // it still passes the naked version to the API, so we correct it.
+        if (!isset($parsed_value['scheme'])) {
+          $value = 'http://' . $value;
+        }
+      }
+
+      break;
   }
 
   return $value;
