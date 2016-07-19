@@ -364,6 +364,7 @@ function salesforce_mapping_property_fieldmap_pull_value($entity_wrapper, $sf_ob
     $value = explode(SALESFORCE_MAPPING_ARRAY_DELIMITER, $value);
   }
 
+  // Marshalling for data types that are formatted differently on Salesforce.
   switch ($entity_wrapper->type()) {
     case 'date':
       if (isset($value) && ($field_map['salesforce_field']['type'] == 'date' || $field_map['salesforce_field']['type'] == 'datetime')) {
