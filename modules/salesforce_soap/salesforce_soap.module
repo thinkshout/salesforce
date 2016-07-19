@@ -9,6 +9,32 @@
  * Implements hook_init().
  */
 function salesforce_soap_init() {
-  $path = libraries_get_path('salesforce');
-  require_once $path . '/soapclient/SforcePartnerClient.php';
+  libraries_load('salesforce');
+}
+
+/**
+ * Implements hook_libraries_info
+ */
+function salesforce_soap_libraries_info() {
+  return array(
+    'salesforce' => array(
+      'name' => 'salesforce',
+      'version callback' => 'salesforce_soap_libraries_version_callback',
+      'path' => 'soapclient',
+      'vendor url' => 'https://github.com/developerforce/Force.com-Toolkit-for-PHP/',
+      'download url' => 'https://github.com/developerforce/Force.com-Toolkit-for-PHP/archive/master.zip',
+      'files' => array(
+        'php' => array(
+          'SforcePartnerClient.php',
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Dummy version callback for hook_libraries_info
+ */
+function salesforce_soap_libraries_version_callback() {
+  return TRUE;
 }

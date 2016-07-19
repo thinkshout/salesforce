@@ -13,7 +13,15 @@ function salesforce_soap_requirements($phase) {
   // Ensure translations don't break at install time.
   $t = get_t();
 
-  if ($phase == 'runtime' && !libraries_get_path('salesforce')) {
+  if ($phase == 'runtime') {
+    $library = libraries_detect('salesforce');
+    $library_available = !empty($library['installed']);
+  }
+  else if ($phase == 'install') {
+    $library_available = libraries_get_path('salesforce');
+  }
+
+  if (!$library_available) {
     $requirements['salesforce'] = array(
       'title' => $t('Salesforce PHP Toolkit'),
       'description' => $t(
