@@ -212,7 +212,7 @@ class SalesforceMappingEntitiesTestCase extends SalesforceMappingTestCase {
 
     // Save the entity again and see it be updated.
     $result = entity_save('salesforce_mapping_object', $test_map);
-    $this->assertEqual(SAVED_UPDATED, $result, 'Re-saved entity saved as updated.');
+    $this->assertEqual(SAVED_UPDATED, $test_map->revision_id, 'Re-saved entity saved as updated.');
 
     // Delete the entity from the database.
     entity_delete('salesforce_mapping_object', $test_map_db->salesforce_mapping_object_id);
