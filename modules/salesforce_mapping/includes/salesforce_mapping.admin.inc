@@ -574,7 +574,7 @@ function salesforce_mapping_form_validate($form, &$form_state) {
   if (strlen($values['name']) > SALESFORCE_MAPPING_NAME_LENGTH) {
     form_set_error('name', t('Name must not exceed @max characters.', array('@max' => SALESFORCE_MAPPING_NAME_LENGTH)));
   }
-  if (!in_array($values['salesforce_record_type_default'], $values['salesforce_record_types_allowed'])) {
+  if (isset($values['salesforce_record_type_default']) && !in_array($values['salesforce_record_type_default'], $values['salesforce_record_types_allowed'])) {
     form_set_error('salesforce_record_type_default', t('Default record type must be one of the Allowed Record Types.'));
   }
 
