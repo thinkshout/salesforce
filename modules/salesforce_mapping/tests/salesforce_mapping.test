@@ -152,6 +152,11 @@ class SalesforceMappingTestCase extends SalesforceTestCase {
       }
     }
 
+    // Submit form unsuccessfully.
+    $this->drupalPost(NULL, $edit, 'Save mapping');
+    $this->assertText('Salesforce field Email is not configured as an external id.', 'Invalid key not allowed');
+    unset($edit['key']);
+
     // Submit form.
     $this->drupalPost(NULL, $edit, 'Save mapping');
     $this->assertText('Salesforce field mapping saved.', 'Form posted as expected.');
