@@ -1,0 +1,42 @@
+<?php
+/**
+ * @file
+ * Objects, properties, and methods to communicate with the Salesforce REST API
+ */
+
+/**
+ * Ability to authorize and communicate with the Salesforce REST API.
+ */
+class SalesforceTest extends Salesforce {
+  /**
+   * Constructor which initializes the consumer.
+   *
+   * @param string $consumer_key
+   *   Salesforce key to connect to your Salesforce instance.
+   * @param string $consumer_secret
+   *   Salesforce secret to connect to your Salesforce instance.
+   */
+  public function __construct($consumer_key, $consumer_secret = '') {
+    parent::__construct($consumer_key, $consumer_secret = '');
+    variable_set('drupal_http_request_function', 'salesforce_rest_http_test_function');
+  }
+
+  /**
+   * Ignore authorizing for our tests.
+   */
+  public function isAuthorized() {
+    return TRUE;
+  }
+}
+
+/**
+ * Overwrites drupal_http_request() for our tests.
+ *
+ * @param $url
+ * @param array $options
+ */
+function salesforce_rest_http_test_function($url, array $options = array()) {
+  $to_return = drupal_json_decode(file_get_contents(drupal_get_path('module', 'salesforce') . '/tests/mocks/' . $url));
+
+  return $to_return;
+}

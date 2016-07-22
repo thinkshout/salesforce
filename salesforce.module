@@ -370,3 +370,21 @@ function salesforce_ctools_plugin_directory($module, $plugin_type) {
     return 'plugins/addressfield/' . $plugin_type;
   }
 }
+
+/**
+ * Overwrites drupal_http_request() for our tests.
+ *
+ * @param $url
+ * @param array $options
+ */
+function salesforce_rest_http_test_generate_mocks_function($url, array $options = array()) {
+  variable_set('drupal_http_request_function', FALSE);
+  $to_return = drupal_http_request($url, $options);
+  $to_return->original_string = $url;
+  $file_to_save = getcwd() . '/' . drupal_get_path('module', 'salesforce') . '/tests/mocks/' . sha1($url);
+  if (!file_exists($file_to_save)) {
+    file_put_contents($file_to_save, drupal_json_encode($to_return));
+  }
+  variable_set('drupal_http_request_function', __FUNCTION__);
+  return $to_return;
+}
