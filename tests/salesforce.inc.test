@@ -36,7 +36,15 @@ class SalesforceTest extends Salesforce {
  * @param array $options
  */
 function salesforce_rest_http_test_function($url, array $options = array()) {
-  $to_return = drupal_json_decode(file_get_contents(drupal_get_path('module', 'salesforce') . '/tests/mocks/' . $url));
+  $file_to_load = _salesforce_mocks_file_path($url);
+
+  if (file_exists($file_to_load)) {
+    $to_return = drupal_json_decode(file_get_contents($file_to_load));
+  }
+  else {
+    $to_return->code = 503;
+    $to_return->error = 'Missing mock file for this request';
+  }
 
   return $to_return;
 }
