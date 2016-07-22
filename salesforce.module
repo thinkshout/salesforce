@@ -168,6 +168,16 @@ function salesforce_oauth_form() {
   $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
   $salesforce_endpoint = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
 
+  if (module_exists('encrypt')) {
+    // Add try catch in case data was not yet encrypted.
+    try {
+      $consumer_key = decrypt($consumer_key);
+      $consumer_secret = decrypt($consumer_secret);
+    }
+    catch (Exception $e) {
+    }
+  }
+
   $form['message'] = array(
     '#type' => 'item',
     '#markup' => t('Authorize this website to communicate with Salesforce by entering the consumer key and secret from a remote application. Clicking authorize will redirect you to Salesforce where you will be asked to grant access.'),
@@ -206,7 +216,7 @@ function salesforce_oauth_form() {
 
   // If we're authenticated, show a list of available REST resources.
   if ($consumer_key && $consumer_secret) {
-    $sfapi = new Salesforce($consumer_key, $consumer_secret);
+    $sfapi = salesforce_get_api();
     // If fully configured, attempt to connect to Salesforce and return a list
     // of resources.
     if ($sfapi->isAuthorized()) {
@@ -245,11 +255,15 @@ function salesforce_oauth_form_submit($form, &$form_state) {
   $consumer_key = $form_state['values']['salesforce_consumer_key'];
   $consumer_secret = $form_state['values']['salesforce_consumer_secret'];
   $salesforce_endpoint = $form_state['values']['salesforce_endpoint'];
+  if (module_exists('encrypt')) {
+    $consumer_key = encrypt($consumer_key);
+    $consumer_secret = encrypt($consumer_secret);
+  }
   variable_set('salesforce_consumer_key', $consumer_key);
   variable_set('salesforce_consumer_secret', $consumer_secret);
   variable_set('salesforce_endpoint', $salesforce_endpoint);
 
-  $salesforce = new Salesforce($consumer_key, $consumer_secret);
+  $salesforce = salesforce_get_api();
   $salesforce->getAuthorizationCode();
 }
 
@@ -344,9 +358,17 @@ function salesforce_oauth_callback() {
  *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
+  $consumer_key = variable_get('salesforce_consumer_key', '');
+  $consumer_secret = variable_get('salesforce_consumer_secret', '');
+
+  if (module_exists('encrypt')) {
+    $consumer_key = decrypt($consumer_key);
+    $consumer_secret = decrypt($consumer_secret);
+  }
+
   return new Salesforce(
-    variable_get('salesforce_consumer_key', ''),
-    variable_get('salesforce_consumer_secret', '')
+    $consumer_key,
+    $consumer_secret
   );
 }
 
