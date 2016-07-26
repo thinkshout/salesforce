@@ -25,7 +25,10 @@ class SalesforceTest extends Salesforce {
    * Ignore authorizing for our tests.
    */
   public function isAuthorized() {
-    return TRUE;
+    $is_auth = parent::isAuthorized();
+    if ($is_auth) {
+      return $this->getRefreshToken() == variable_get('salesforce_refresh_token', FALSE);
+    }
   }
 }
 
