@@ -366,14 +366,6 @@ function salesforce_get_api() {
     $consumer_secret = decrypt($consumer_secret);
   }
 
-  $test_info = $GLOBALS['drupal_test_info'];
-  if (!empty($test_info['test_run_id'])) {
-    return new SalesforceTest(
-      $consumer_key,
-      $consumer_secret
-    );
-  }
-
   return new Salesforce(
     $consumer_key,
     $consumer_secret
@@ -410,11 +402,64 @@ function salesforce_ctools_plugin_directory($module, $plugin_type) {
 function salesforce_rest_http_test_generate_mocks_function($url, array $options = array()) {
   variable_set('drupal_http_request_function', FALSE);
   $to_return = drupal_http_request($url, $options);
-  $to_return->original_string = $url;
-  $file_to_save = getcwd() . '/' . drupal_get_path('module', 'salesforce') . '/tests/mocks/' . sha1($url);
+
+  $return_values_to_save = new stdClass();
+  $return_values_to_save->data = $to_return->data;
+  $return_values_to_save->code = $to_return->code;
+  $return_values_to_save->status_message = $to_return->code->status_message;
+
+  $generic_url = str_replace(variable_get('salesforce_endpoint'), SALESFORCE_FAKE_ENDPOINT, $url);
+  $return_values_to_save->original_string = $generic_url;
+
+  $file_to_save = _salesforce_get_mocks_file_path($generic_url);
   if (!file_exists($file_to_save)) {
-    file_put_contents($file_to_save, drupal_json_encode($to_return));
+    $clean_file = _salesforce_clean_up_mocks_values(drupal_json_encode($to_return));
+    file_put_contents($file_to_save, drupal_json_encode($clean_file));
   }
   variable_set('drupal_http_request_function', __FUNCTION__);
   return $to_return;
+}
+
+/**
+ * Saves the path of our mocks based on the url.
+ *
+ * @param $url
+ * @return string
+ */
+function _salesforce_get_mocks_file_path($url) {
+  $real_url = variable_get('salesforce_endpoint', SALESFORCE_FAKE_ENDPOINT);
+  return getcwd() . '/' . drupal_get_path('module', 'salesforce') . '/tests/mocks/' . sha1($real_url, SALESFORCE_FAKE_ENDPOINT, $url);
+}
+
+/**
+ * Remove key strings in the files saved for mock purposes.
+ *
+ * Strings replaces are potentially sensitive but at least inconsistent between
+ * installations, so tests need clean values.
+ *
+ * @param $string
+ */
+function _salesforce_clean_up_mocks_values($string) {
+  $fake_data_strings = _salesforce_get_testing_variables();
+  $real_data = array();
+
+  foreach ($fake_data_strings as $variable_name => $fake_value) {
+    $real_data[$variable_name] = variable_get($variable_name, '');
+  }
+
+  str_replace($real_data, $fake_data_strings, $string);
+}
+
+/**
+ * Translates real variable names into fake variables for testing purposes.
+ * @return array
+ */
+function _salesforce_get_testing_variables() {
+  return array(
+    'salesforce_endpoint' => 'https://fake.salesforce.com',
+    'salesforce_instance_url'  => 'https://fake.salesforce.com',
+    'salesforce_consumer_key' => 'VERY_LONG_FAKE_CONSUMER_KEY',
+    'salesforce_consumer_secret' => '19191919191919191',
+    'salesforce_refresh_token' => 'Long.Fake.Refresh.Token.Here',
+  );
 }

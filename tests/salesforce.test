@@ -9,12 +9,6 @@
  * Sets up basic tools for testing Salesforce integration.
  */
 class SalesforceTestCase extends DrupalWebTestCase {
-
-  // Settings for mocking authorization.
-  protected $salesforceConsumerKey = 'VERY_LONG_FAKE_CONSUMER_KEY';
-  protected $salesforceConsumerSecret = 19191919191919191;
-  protected $salesforceRefreshToken = 'Long.Fake.Refresh.Token.Here';
-
   /**
    * Implementation of getInfo().
    */
@@ -40,6 +34,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
     ));
     $this->admin_user = $this->drupalCreateUser($permissions);
     $this->drupalLogin($this->admin_user);
+    variable_set('drupal_http_request_function', 'salesforce_rest_http_test_function');
   }
 
   /**
@@ -57,9 +52,11 @@ class SalesforceTestCase extends DrupalWebTestCase {
    *   Salesforce Object
    */
   protected function salesforceConnect() {
-    variable_set('salesforce_consumer_key', $this->salesforceConsumerKey);
-    variable_set('salesforce_consumer_secret', $this->salesforceConsumerSecret);
-    variable_set('salesforce_refresh_token', $this->salesforceRefreshToken);
+    $testing_variable_values = _salesforce_get_testing_variables();
+
+    foreach ($testing_variable_values as $variable_name => $fake_value) {
+      variable_set($variable_name, $fake_value);
+    }
 
     // Test the connection.
     $sfapi = salesforce_get_api();
@@ -77,4 +74,26 @@ class SalesforceTestCase extends DrupalWebTestCase {
 
     return $sfapi;
   }
+}
+
+
+/**
+ * Overwrites drupal_http_request() for our tests.
+ *
+ * @param $url
+ * @param array $options
+ */
+function salesforce_rest_http_test_function($url, array $options = array()) {
+  $file_to_load = _salesforce_mocks_file_path($url);
+
+  if (file_exists($file_to_load)) {
+    $to_return = drupal_json_decode(file_get_contents($file_to_load));
+  }
+  else {
+    $to_return = new stdClass();
+    $to_return->code = 503;
+    $to_return->error = 'Missing mock file for this request for the url:' . $url;
+  }
+
+  return $to_return;
 }
