@@ -9,6 +9,7 @@
  * Implements hook_requirements().
  */
 function salesforce_soap_requirements($phase) {
+  $library_available = FALSE;
   $requirements = array();
   // Ensure translations don't break at install time.
   $t = get_t();
@@ -18,6 +19,9 @@ function salesforce_soap_requirements($phase) {
     $library_available = !empty($library['installed']);
   }
   else if ($phase == 'install') {
+    if (!function_exists('libraries_get_path')) {
+      module_load_include('module', 'libraries');
+    }
     $library_available = libraries_get_path('salesforce');
   }
 
