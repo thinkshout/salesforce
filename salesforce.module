@@ -366,6 +366,14 @@ function salesforce_get_api() {
     $consumer_secret = decrypt($consumer_secret);
   }
 
+  $test_info = $GLOBALS['drupal_test_info'];
+  if (!empty($test_info['test_run_id'])) {
+    return new SalesforceTest(
+      $consumer_key,
+      $consumer_secret
+    );
+  }
+
   return new Salesforce(
     $consumer_key,
     $consumer_secret
