@@ -284,11 +284,7 @@ class Salesforce {
    * Get refresh token.
    */
   protected function getRefreshToken() {
-    $salesforce_refresh_token = variable_get('salesforce_refresh_token', '');
-    if (module_exists('encrypt')) {
-      $salesforce_refresh_token = decrypt($salesforce_refresh_token);
-    }
-    return $salesforce_refresh_token;
+    return variable_get('salesforce_refresh_token', '');
   }
 
   /**
@@ -298,9 +294,6 @@ class Salesforce {
    *   Refresh token from Salesforce.
    */
   protected function setRefreshToken($token) {
-    if (module_exists('encrypt')) {
-      $token = encrypt($token);
-    }
     variable_set('salesforce_refresh_token', $token);
   }
 
