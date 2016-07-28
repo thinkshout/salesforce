@@ -392,7 +392,7 @@ function salesforce_push_cron() {
   }
 
   // Use soap API to batch process records.
-  $soap = new SalesforceSoapPartner($sfapi);
+  $soap = new SalesforceSoapPartner($sfapi, variable_get('salesforce_partner_wsdl', libraries_get_path('salesforce') . '/soapclient/partner.wsdl.xml'));
   if (!empty($delete_list)) {
     $results = $soap->delete($delete_list);
     salesforce_push_process_soap_results('Delete', $results, $synced_entities);

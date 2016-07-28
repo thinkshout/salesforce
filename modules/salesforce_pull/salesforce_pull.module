@@ -519,7 +519,7 @@ function salesforce_pull_process_deleted_records() {
   $sfapi = salesforce_get_api();
   $client = $sfapi;
   if (class_exists('SalesforceSoapPartner')) {
-    $client = new SalesforceSoapPartner($sfapi);
+    $client = new SalesforceSoapPartner($sfapi, variable_get('salesforce_partner_wsdl', libraries_get_path('salesforce') . '/soapclient/partner.wsdl.xml'));
   }
 
   // Load all unique SF record types that we have mappings for.
