@@ -14,7 +14,7 @@ function salesforce_soap_requirements($phase) {
   // Ensure translations don't break at install time.
   $t = get_t();
 
-  if ($phase == 'runtime') {
+  if ($phase == 'runtime' || $phase == 'update') {
     $library = libraries_detect('salesforce');
     $library_available = !empty($library['installed']);
   }
