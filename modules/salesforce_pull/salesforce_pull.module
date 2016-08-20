@@ -194,6 +194,13 @@ function salesforce_pull_get_updated_records() {
   // Avoid overloading the processing queue and pass this time around if it's
   // over a configurable limit.
   if ($queue->numberOfItems() > variable_get('salesforce_pull_max_queue_size', 100000)) {
+    watchdog('salesforce_pull', 'Salesforce Pull aborted pulling updated records due to queue size being > %limit. Current queue size is %current',
+      array(
+        '%limit' => variable_get('salesforce_pull_max_queue_size', 100000),
+        '%current' => $queue->numberOfItems(),
+      ),
+      WATCHDOG_WARNING
+    );
     return;
   }
 
