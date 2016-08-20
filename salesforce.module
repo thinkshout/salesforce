@@ -5,6 +5,8 @@
  * API and module for Salesforce integration.
  */
 
+define('SALESFORCE_DEFAULT_ENDPOINT', 'https://login.salesforce.com');
+
 module_load_include('inc', 'salesforce', 'includes/salesforce');
 
 /**
@@ -166,7 +168,7 @@ function salesforce_oauth_form() {
 
   $consumer_key = variable_get('salesforce_consumer_key', FALSE);
   $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
-  $salesforce_endpoint = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
+  $salesforce_endpoint = variable_get('salesforce_endpoint', SALESFORCE_DEFAULT_ENDPOINT);
 
   $form['message'] = array(
     '#type' => 'item',
@@ -244,7 +246,7 @@ function salesforce_oauth_form() {
 function salesforce_oauth_form_submit($form, &$form_state) {
   $consumer_key = $form_state['values']['salesforce_consumer_key'];
   $consumer_secret = $form_state['values']['salesforce_consumer_secret'];
-  $salesforce_endpoint = $form_state['values']['salesforce_endpoint'];
+  $salesforce_endpoint = empty($form_state['values']['salesforce_endpoint']) ? SALESFORCE_DEFAULT_ENDPOINT : $form_state['values']['salesforce_endpoint'];
   variable_set('salesforce_consumer_key', $consumer_key);
   variable_set('salesforce_consumer_secret', $consumer_secret);
   variable_set('salesforce_endpoint', $salesforce_endpoint);
