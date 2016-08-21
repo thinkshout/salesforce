@@ -438,6 +438,7 @@ class Salesforce {
   protected function redirectUrl() {
     return url('salesforce/oauth_callback', array(
       'absolute' => TRUE,
+      'language' => (object)array('language' => FALSE),
       'https' => TRUE,
     ));
   }
