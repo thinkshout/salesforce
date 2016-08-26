@@ -895,3 +895,33 @@ function salesforce_mapping_object_render_property($mapping, $name, $property) {
 
   return $content;
 }
+
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function salesforce_mapping_form_salesforce_settings_form_alter(&$form, &$form_state, $form_id) {
+  $form['sf_object_filters'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Salesforce object filters'),
+    '#weight' => 5,
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#description' => t('Allows you to limit which objects show up in the "Salesforce object" dropdown on the Salesforce mapping form.'),
+    '#prefix' => l('', '', array('attributes' => array('name' => 'sf_object_filters_anchor'), 'external' => TRUE,)),
+  );
+
+  $form['sf_object_filters']['salesforce_limit_to_triggerable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Only show triggerable Salesforce objects'),
+    '#description' => t('When pulling in a list of Salesforce objects to map, only show ones with the property "triggerable"'),
+    '#default_value' => variable_get('salesforce_limit_to_triggerable', TRUE),
+  );
+
+  $form['sf_object_filters']['salesforce_limit_to_updateable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Only show updateable Salesforce objects'),
+    '#description' => t('When pulling in a list of Salesforce objects to map, only show ones with the property "updateable"'),
+    '#default_value' => variable_get('salesforce_limit_to_updateable', TRUE),
+  );
+}
