@@ -224,7 +224,7 @@ function salesforce_oauth_form() {
         );
       }
       catch(SalesforceException $e) {
-        salesforce_set_message($e->getMessage(), 'warning');
+        salesforce_set_message(t('Salesforce Exception during @event : @exception', array('@event' => 'oauth', '@exception' => $e->getMessage())), 'warning');
       }
     }
     else {
@@ -355,12 +355,26 @@ function salesforce_get_api() {
 /**
  * Salesforce set message.
  *
- * Wrapper around drupal_set_message(), checks for proper permissions.
+ * Wrapper around drupal_set_message(), adding check for administer salesforce
+ * permission.
+ *
+ * @param string $message
+ *   (optional) The translated message to be displayed to the user.
+ * @param string $type
+ *   (optional) The message's type. Defaults to 'status'.
+ * @param bool $repeat
+ *   (optional) If this is FALSE and the message is already set, then the
+ *   message won't be repeated. Defaults to TRUE.
+ *
+ * @return array|null
+ *   results of drupal_set_message(), if current user has permissions, or null.
+ *
+ * @see drupal_set_message()
  */
 function salesforce_set_message($message = NULL, $type = 'status', $repeat = TRUE) {
   global $user;
   if ($user->uid == 1 || user_access('administer salesforce', $user)) {
-    drupal_set_message($message, $type, $repeat);
+    return drupal_set_message($message, $type, $repeat);
   }
 }
 

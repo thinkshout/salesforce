@@ -142,7 +142,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
       }
       catch(SalesforceException $e) {
         watchdog_exception('salesforce_push', $e);
-        salesforce_set_message($e->getMessage(), 'error');
+        salesforce_set_message(t('Salesforce Exception during @event : @exception', array('@event' => 'push', '@exception' => $e->getMessage())), 'error');
+
         module_invoke_all('salesforce_push_fail', $op, $sfapi->response, $synced_entity);
       }
 
@@ -203,7 +204,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
     }
     catch(SalesforceException $e) {
       watchdog_exception('salesforce_push', $e);
-      salesforce_set_message($e->getMessage(), 'error');
+      salesforce_set_message(t('Salesforce Exception during @event : @exception', array('@event' => 'push', '@exception' => $e->getMessage())), 'error');
+
       module_invoke_all('salesforce_push_fail', $op, $sfapi->response, $synced_entity);
       return;
     }
