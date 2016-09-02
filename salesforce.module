@@ -261,9 +261,9 @@ function salesforce_oauth_form_submit($form, &$form_state) {
 function salesforce_settings_form($form, &$form_state) {
   // Get the default or current setting.
   $api_version = variable_get('salesforce_api_version', array(
-    "label" => "Spring '13",
-    "url" => "/services/data/v27.0/",
-    "version" => "27.0",
+    "label" => "Winter '14",
+    "url" => "/services/data/v29.0/",
+    "version" => "29.0",
   ));
   $api_list = array($api_version);
 
