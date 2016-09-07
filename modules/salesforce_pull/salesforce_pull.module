@@ -86,7 +86,7 @@ function salesforce_pull() {
   $sfapi = salesforce_get_api();
   if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
     salesforce_pull_get_updated_records();
-    salesforce_pull_get_deleted_records();
+    //salesforce_pull_get_deleted_records();
 
     // Store this request time for the throttle check.
     variable_set('salesforce_pull_last_sync', REQUEST_TIME);
@@ -732,6 +732,7 @@ function salesforce_pull_check_merged_records() {
     }
 
     return $merged_records;
+  }
 }
 /**
  * Map field values.
