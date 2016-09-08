@@ -581,7 +581,7 @@ function salesforce_pull_get_deleted_records() {
  */
 function salesforce_pull_process_deleted_records($sf_objects) {
   //todo DEFINE $type
-
+  // call check merged here and use them below
   foreach ($sf_objects as $sf_object) {
     $record = (object) $sf_object;
     $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
