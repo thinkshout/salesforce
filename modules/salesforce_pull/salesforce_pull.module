@@ -86,7 +86,7 @@ function salesforce_pull() {
   $sfapi = salesforce_get_api();
   if ($sfapi->isAuthorized() && salesforce_pull_check_throttle()) {
     salesforce_pull_get_updated_records();
-    //salesforce_pull_get_deleted_records();
+    salesforce_pull_get_deleted_records();
 
     // Store this request time for the throttle check.
     variable_set('salesforce_pull_last_sync', REQUEST_TIME);
@@ -553,22 +553,22 @@ function salesforce_pull_get_deleted_records() {
     if (empty($results->deletedRecords)) {
       continue;
     }
-    if (!isset($results['errorCode'])) {
+    if (!isset($results->errorCode)) {
       // Write items to the queue.
-      $queue->createItem($results['records']);
+      $queue->createItem($results->deletedRecords);
 
       // Handle requests larger than the batch limit (usually 2000).
-      $next_records_url = isset($results['nextRecordsUrl']) ?
-        str_replace($version_path, '', $results['nextRecordsUrl']) :
+      $next_records_url = isset($results->nextRecordsUrl) ?
+        str_replace($version_path, '', $results->nextRecordsUrl) :
         FALSE;
       while ($next_records_url) {
-        $new_result = $sfapi->apiCall($next_records_url);
-        if (!isset($new_result['errorCode'])) {
+        $new_result = (object) $sfapi->apiCall($next_records_url);
+        if (!isset($new_result->errorCode)) {
           // Write items to the queue.
-          $queue->createItem($new_result['records']);
+          $queue->createItem($new_result->deletedRecords);
         }
-        $next_records_url = isset($new_result['nextRecordsUrl']) ?
-          str_replace($version_path, '', $new_result['nextRecordsUrl']) : FALSE;
+        $next_records_url = isset($new_result->nextRecordsUrl) ?
+          str_replace($version_path, '', $new_result->nextRecordsUrl) : FALSE;
       }
 
       variable_set('salesforce_pull_last_sync_' . $type, REQUEST_TIME);
