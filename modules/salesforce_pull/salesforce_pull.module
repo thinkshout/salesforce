@@ -9,6 +9,8 @@
  * Define pull queue name.
  */
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
+define('SALESFORCE_DELETE_QUEUE', 'salesforce_delete');
+
 
 /**
  * Implements hook_menu().
@@ -103,7 +105,13 @@ function salesforce_pull() {
  */
 function salesforce_cron_queue_info() {
   $queues[SALESFORCE_PULL_QUEUE] = array(
-    'worker callback' => 'salesforce_pull_process_records',
+    'worker callback' => 'salesforce_pull_process_updated_records',
+    // Set to a high max timeout in case pulling in lots of data from SF.
+    'time' => 180,
+  );
+
+  $queues[SALESFORCE_DELETE_QUEUE] = array(
+    'worker callback' => 'salesforce_pull_process_deleted_records',
     // Set to a high max timeout in case pulling in lots of data from SF.
     'time' => 180,
   );
@@ -304,7 +312,7 @@ function salesforce_pull_get_updated_records() {
 /**
  * Process records in the queue.
  */
-function salesforce_pull_process_records($sf_object) {
+function salesforce_pull_process_updated_records($sf_object) {
   // Get Mapping.
   $mapping_conditions = array(
     'salesforce_object_type' => $sf_object['attributes']['type'],
@@ -533,7 +541,7 @@ function salesforce_pull_get_deleted_records() {
     $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
     variable_set('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
     $version_path = parse_url($sfapi->getApiEndPoint(), PHP_URL_PATH);
-    $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
+    $queue = DrupalQueue::get(SALESFORCE_DELETE_QUEUE);
     $now = time();
 
     // getDeleted() constraint: startDate cannot be more than 30 days ago
@@ -555,7 +563,7 @@ function salesforce_pull_get_deleted_records() {
     }
     if (!isset($results->errorCode)) {
       // Write items to the queue.
-      $queue->createItem($results->deletedRecords);
+      $queue->createItem($results);
 
       // Handle requests larger than the batch limit (usually 2000).
       $next_records_url = isset($results->nextRecordsUrl) ?
@@ -565,7 +573,7 @@ function salesforce_pull_get_deleted_records() {
         $new_result = (object) $sfapi->apiCall($next_records_url);
         if (!isset($new_result->errorCode)) {
           // Write items to the queue.
-          $queue->createItem($new_result->deletedRecords);
+          $queue->createItem($new_result);
         }
         $next_records_url = isset($new_result->nextRecordsUrl) ?
           str_replace($version_path, '', $new_result->nextRecordsUrl) : FALSE;
@@ -584,7 +592,7 @@ function salesforce_pull_process_deleted_records($sf_objects) {
   foreach (array_reverse(salesforce_mapping_get_mapped_objects()) as $type) {
 
     // call check merged here and use them below
-    foreach ($sf_objects as $sf_object) {
+    foreach ($sf_objects->deletedRecords as $sf_object) {
       $record = (object) $sf_object;
       $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
       if (!$mapping_object) {
