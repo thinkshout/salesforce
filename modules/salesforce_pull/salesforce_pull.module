@@ -588,6 +588,10 @@ function salesforce_pull_get_deleted_records() {
  * Process deleted records from salesforce.
  */
 function salesforce_pull_process_deleted_records($sf_objects) {
+
+  // Before we delete any records, we must check for merged records.
+  $merged_results = salesforce_pull_check_merged_records();
+
   // Load all unique SF record types that we have mappings for.
   foreach (array_reverse(salesforce_mapping_get_mapped_objects()) as $type) {
 
@@ -621,6 +625,14 @@ function salesforce_pull_process_deleted_records($sf_objects) {
           // Prevent processing by salesforce_push. We hate circular logic.
           $entity->salesforce_pull = TRUE;
 
+          if (in_array($entity, $merged_results)) {
+            $parent = salesforce_pull_get_merged_parent($merged);
+            $parent = entity_load_single($mapping_object->entity_type, $parent->entity_id);
+
+            // Allow other modules to respond to the merge
+            module_invoke_all('salesforce_pull_entity_merge', $parent, $entity);
+          }
+
           // Delete the mapped Drupal entity. Catch any exceptions as
           // we want to ensure the mapping object is deleted even in
           // case of an error.
@@ -649,7 +661,6 @@ function salesforce_pull_process_deleted_records($sf_objects) {
 
 /**
  * Get all the merged records since the last delete.
- * Greg
  */
 function salesforce_pull_check_merged_records() {
   $type = 'Merged_Contact__c';
