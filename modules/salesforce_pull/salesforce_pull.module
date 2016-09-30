@@ -275,7 +275,8 @@ function salesforce_pull_get_updated_records() {
     if (!isset($results['errorCode'])) {
       // Write items to the queue.
       foreach ($results['records'] as $result) {
-        $queue->createItem($result);
+        $queue_item = array('create' => $result);
+        $queue->createItem($queue_item);
       }
 
       // Handle requests larger than the batch limit (usually 2000).
@@ -287,7 +288,8 @@ function salesforce_pull_get_updated_records() {
         if (!isset($new_result['errorCode'])) {
           // Write items to the queue.
           foreach ($new_result['records'] as $result) {
-            $queue->createItem($result);
+            $queue_item = array('create' => $result);
+            $queue->createItem($queue_item);
           }
         }
         $next_records_url = isset($new_result['nextRecordsUrl']) ?
@@ -556,7 +558,8 @@ function salesforce_pull_get_deleted_records() {
     }
     if (!isset($results->errorCode)) {
       // Write items to the queue.
-      $queue->createItem($results);
+      $queue_item = array('delete' => $results);
+      $queue->createItem($queue_item);
 
       // Handle requests larger than the batch limit (usually 2000).
       $next_records_url = isset($results->nextRecordsUrl) ?
@@ -566,7 +569,8 @@ function salesforce_pull_get_deleted_records() {
         $new_result = (object) $sfapi->apiCall($next_records_url);
         if (!isset($new_result->errorCode)) {
           // Write items to the queue.
-          $queue->createItem($new_result);
+          $queue_item = array('delete' => $results);
+          $queue->createItem($queue_item);
         }
         $next_records_url = isset($new_result->nextRecordsUrl) ?
           str_replace($version_path, '', $new_result->nextRecordsUrl) : FALSE;
