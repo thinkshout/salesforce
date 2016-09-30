@@ -9,8 +9,6 @@
  * Define pull queue name.
  */
 define('SALESFORCE_PULL_QUEUE', 'salesforce_pull');
-define('SALESFORCE_DELETE_QUEUE', 'salesforce_delete');
-
 
 /**
  * Implements hook_menu().
@@ -110,11 +108,6 @@ function salesforce_cron_queue_info() {
     'time' => 180,
   );
 
-  $queues[SALESFORCE_DELETE_QUEUE] = array(
-    'worker callback' => 'salesforce_pull_process_deleted_records',
-    // Set to a high max timeout in case pulling in lots of data from SF.
-    'time' => 180,
-  );
   return $queues;
 }
 
@@ -541,7 +534,7 @@ function salesforce_pull_get_deleted_records() {
     $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
     variable_set('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
     $version_path = parse_url($sfapi->getApiEndPoint(), PHP_URL_PATH);
-    $queue = DrupalQueue::get(SALESFORCE_DELETE_QUEUE);
+    $queue = DrupalQueue::get(SALESFORCE_PULL_QUEUE);
     $now = time();
 
     // getDeleted() constraint: startDate cannot be more than 30 days ago
@@ -626,6 +619,7 @@ function salesforce_pull_process_deleted_records($sf_objects) {
           $entity->salesforce_pull = TRUE;
 
           if (in_array($entity, $merged_results)) {
+            TODO: // get merged parent
             $parent = salesforce_pull_get_merged_parent($merged);
             $parent = entity_load_single($mapping_object->entity_type, $parent->entity_id);
 
