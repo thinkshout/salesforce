@@ -554,34 +554,42 @@ function salesforce_pull_get_deleted_records() {
     $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
 
-    // SOAP getDeleted() returns an object while the REST getDeleted() returns
-    // an array, so cast all checked values to an object to avoid additional
-    // conditional logic.
-    $results = (object) $client->getDeleted($type, $last_delete_sync_sf, $now_sf);
-    if (empty($results->deletedRecords)) {
-      continue;
-    }
-    if (!isset($results->errorCode)) {
-      // Write items to the queue.
-      $queue_item = array('delete' => $results);
-      $queue->createItem($queue_item);
+    // Load the mapping that manages these mapped objects.
+    $sf_mapping = reset(salesforce_mapping_load_multiple(
+      array('salesforce_object_type' => $type)
+    ));
 
-      // Handle requests larger than the batch limit (usually 2000).
-      $next_records_url = isset($results->nextRecordsUrl) ?
-        str_replace($version_path, '', $results->nextRecordsUrl) :
-        FALSE;
-      while ($next_records_url) {
-        $new_result = (object) $sfapi->apiCall($next_records_url);
-        if (!isset($new_result->errorCode)) {
-          // Write items to the queue.
-          $queue_item = array('delete' => $results);
-          $queue->createItem($queue_item);
-        }
-        $next_records_url = isset($new_result->nextRecordsUrl) ?
-          str_replace($version_path, '', $new_result->nextRecordsUrl) : FALSE;
+    if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
+
+      // SOAP getDeleted() returns an object while the REST getDeleted() returns
+      // an array, so cast all checked values to an object to avoid additional
+      // conditional logic.
+      $results = (object) $client->getDeleted($type, $last_delete_sync_sf, $now_sf);
+      if (empty($results->deletedRecords)) {
+        continue;
       }
+      if (!isset($results->errorCode)) {
+        // Write items to the queue.
+        $queue_item = array('delete' => $results);
+        $queue->createItem($queue_item);
 
-      variable_set('salesforce_pull_last_sync_' . $type, REQUEST_TIME);
+        // Handle requests larger than the batch limit (usually 2000).
+        $next_records_url = isset($results->nextRecordsUrl) ?
+          str_replace($version_path, '', $results->nextRecordsUrl) :
+          FALSE;
+        while ($next_records_url) {
+          $new_result = (object) $sfapi->apiCall($next_records_url);
+          if (!isset($new_result->errorCode)) {
+            // Write items to the queue.
+            $queue_item = array('delete' => $results);
+            $queue->createItem($queue_item);
+          }
+          $next_records_url = isset($new_result->nextRecordsUrl) ?
+            str_replace($version_path, '', $new_result->nextRecordsUrl) : FALSE;
+        }
+
+        variable_set('salesforce_pull_last_sync_' . $type, REQUEST_TIME);
+      }
     }
   }
 }
@@ -594,72 +602,53 @@ function salesforce_pull_process_deleted_records($sf_objects) {
   // Before we delete any records, we must check for merged records.
   $merged_results = salesforce_pull_check_merged_records();
 
-  // Load all unique SF record types that we have mappings for.
-  foreach (array_reverse(salesforce_mapping_get_mapped_objects()) as $type) {
+  // call check merged here and use them below
+  foreach ($sf_objects->deletedRecords as $sf_object) {
+    $record = (object) $sf_object;
 
-    // call check merged here and use them below
-    foreach ($sf_objects->deletedRecords as $sf_object) {
-      $record = (object) $sf_object;
-      $mapping_object = salesforce_mapping_object_load_by_sfid($record->id);
-      if (!$mapping_object) {
-        return;
-      }
+    $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object->id);
 
-      // Load and wrap the Drupal entity linked to the SF object.
-      $entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+    // Load and wrap the Drupal entity linked to the SF object.
+    $deleted_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
 
-      // Check if entity exists before processing delete.
-      if ($entity) {
-        $entity_wrapper = entity_metadata_wrapper($mapping_object->entity_type, $entity);
+    // Check if entity exists before processing delete.
+    if ($deleted_entity) {
+      $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $deleted_entity);
 
-        // Load the mapping that manages these mapped objects.
-        $sf_mapping = reset(salesforce_mapping_load_multiple(
-          array(
-            'salesforce_object_type' => $type,
-            'drupal_entity_type' => $entity_wrapper->type(),
-            'drupal_bundle' => $entity_wrapper->getBundle(),
-          )
-        ));
+      // Prevent processing by salesforce_push. We hate circular logic.
+      $deleted_entity->salesforce_pull = TRUE;
+      $entity_id = $wrapper->getIdentifier();
+      $old_contact = 'Old_Contact__c';
+      $merged_entity = 'Contact__c';
 
-        // Only delete the mapped Drupal entity if the
-        // SALESFORCE_MAPPING_SYNC_SF_DELETE flag is set.
-        if (!empty($sf_mapping) && ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE)) {
-          // Prevent processing by salesforce_push. We hate circular logic.
-          $entity->salesforce_pull = TRUE;
-
-          if (in_array($entity, $merged_results)) {
-            TODO: // get merged parent
-            $parent = salesforce_pull_get_merged_parent($merged);
-            $parent = entity_load_single($mapping_object->entity_type, $parent->entity_id);
-
-            // Allow other modules to respond to the merge
-            module_invoke_all('salesforce_pull_entity_merge', $parent, $entity);
-          }
-
-          // Delete the mapped Drupal entity. Catch any exceptions as
-          // we want to ensure the mapping object is deleted even in
-          // case of an error.
-          try {
-            $entity_wrapper->delete();
-          } catch (Exception $e) {
-            watchdog_exception('salesforce_pull', $e);
-          }
-
-          watchdog('Salesforce Pull',
-            'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-            array(
-              '%label' => $entity_wrapper->label(),
-              '%id' => $mapping_object->entity_id,
-              '%sfid' => $record->id,
-            )
-          );
+      foreach ($merged_results['records'] as $record) {
+        if($entity_id == $record[$old_contact]) {
+          $parent = salesforce_mapping_object_load_by_sfid($record[$merged_entity]);
+          module_invoke_all('salesforce_pull_entity_merge', $parent, $deleted_entity);
         }
       }
 
-      // Delete mapping object.
-      $mapping_object->delete();
+      // Delete the mapped Drupal entity. Catch any exceptions as
+      // we want to ensure the mapping object is deleted even in
+      // case of an error.
+      try {
+        $wrapper->delete();
+      } catch (Exception $e) {
+        watchdog_exception('salesforce_pull', $e);
+      }
+
+      watchdog('Salesforce Pull',
+        'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+        array(
+          '%label' => $wrapper->label(),
+          '%id' => $mapping_object->entity_id,
+          '%sfid' => $record->id,
+        )
+      );
     }
   }
+  // Delete mapping object.
+  $mapping_object->delete();
 }
 
 /**
