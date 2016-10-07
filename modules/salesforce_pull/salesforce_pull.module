@@ -609,7 +609,9 @@ function salesforce_pull_process_deleted_records($sf_objects) {
     $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object->id);
 
     // Load and wrap the Drupal entity linked to the SF object.
-    $deleted_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+    if ($mapping_object) {
+      $deleted_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+    }
 
     // Check if entity exists before processing delete.
     if ($deleted_entity) {
@@ -648,7 +650,9 @@ function salesforce_pull_process_deleted_records($sf_objects) {
     }
   }
   // Delete mapping object.
-  $mapping_object->delete();
+  if ($mapping_object) {
+    $mapping_object->delete();
+  }
 }
 
 /**
