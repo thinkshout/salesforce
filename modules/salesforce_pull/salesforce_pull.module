@@ -623,6 +623,9 @@ function salesforce_pull_process_deleted_records($sf_objects) {
       $old_contact = 'Old_Contact__c';
       $merged_entity = 'Contact__c';
 
+      // TODO: Temporary HOOK To set field names until we have UI
+      module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact, $merged_entity);
+
       foreach ($merged_results['records'] as $record) {
         if($entity_id == $record[$old_contact]) {
           $parent = salesforce_mapping_object_load_by_sfid($record[$merged_entity]);
@@ -663,6 +666,10 @@ function salesforce_pull_check_merged_records() {
   $merged_contact = 'Contact__c';
   $old_contact = 'Old_Contact__c';
   $modified_date = 'LastModifiedDate';
+
+  // TODO: Temporary HOOK To set field names until we have UI
+  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact, $merged_entity, $modified_date);
+
   $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
 
   $sfapi = salesforce_get_api();
