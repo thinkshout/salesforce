@@ -668,7 +668,7 @@ function salesforce_pull_check_merged_records() {
   $modified_date = 'LastModifiedDate';
 
   // TODO: Temporary HOOK To set field names until we have UI
-  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact, $merged_entity, $type, $modified_date);
+  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact, $merged_contact, $type, $modified_date);
 
   $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
 
