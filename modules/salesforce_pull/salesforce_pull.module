@@ -554,6 +554,7 @@ function salesforce_pull_get_deleted_records() {
     $last_delete_sync_sf = gmdate('Y-m-d\TH:i:s\Z', $last_delete_sync);
     $now_sf = gmdate('Y-m-d\TH:i:s\Z', $now);
 
+    // TODO are we checking the current type for deletes. This should either get the current mapping, or checking every mapping
     // Load the mapping that manages these mapped objects.
     $sf_mapping = reset(salesforce_mapping_load_multiple(
       array('salesforce_object_type' => $type)
