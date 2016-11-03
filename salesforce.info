@@ -8,6 +8,5 @@ configure = admin/config/salesforce
 files[] = includes/salesforce.inc
 files[] = includes/salesforce.select_query.inc
 files[] = tests/salesforce.test
-files[] = tests/salesforce.inc.test
 
 php = 5.3
