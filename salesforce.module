@@ -5,6 +5,8 @@
  * API and module for Salesforce integration.
  */
 
+define('SALESFORCE_DEFAULT_ENDPOINT', 'https://login.salesforce.com');
+
 module_load_include('inc', 'salesforce', 'includes/salesforce');
 
 /**
@@ -166,17 +168,7 @@ function salesforce_oauth_form() {
 
   $consumer_key = variable_get('salesforce_consumer_key', FALSE);
   $consumer_secret = variable_get('salesforce_consumer_secret', FALSE);
-  $salesforce_endpoint = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
-
-  if (module_exists('encrypt')) {
-    // Add try catch in case data was not yet encrypted.
-    try {
-      $consumer_key = decrypt($consumer_key);
-      $consumer_secret = decrypt($consumer_secret);
-    }
-    catch (Exception $e) {
-    }
-  }
+  $salesforce_endpoint = variable_get('salesforce_endpoint', SALESFORCE_DEFAULT_ENDPOINT);
 
   $form['message'] = array(
     '#type' => 'item',
@@ -216,7 +208,7 @@ function salesforce_oauth_form() {
 
   // If we're authenticated, show a list of available REST resources.
   if ($consumer_key && $consumer_secret) {
-    $sfapi = salesforce_get_api();
+    $sfapi = new Salesforce($consumer_key, $consumer_secret);
     // If fully configured, attempt to connect to Salesforce and return a list
     // of resources.
     if ($sfapi->isAuthorized()) {
@@ -232,7 +224,7 @@ function salesforce_oauth_form() {
         );
       }
       catch(SalesforceException $e) {
-        salesforce_set_message($e->getMessage(), 'warning');
+        salesforce_set_message(t('Salesforce Exception during @event : @exception', array('@event' => 'oauth', '@exception' => $e->getMessage())), 'warning');
       }
     }
     else {
@@ -254,16 +246,12 @@ function salesforce_oauth_form() {
 function salesforce_oauth_form_submit($form, &$form_state) {
   $consumer_key = $form_state['values']['salesforce_consumer_key'];
   $consumer_secret = $form_state['values']['salesforce_consumer_secret'];
-  $salesforce_endpoint = $form_state['values']['salesforce_endpoint'];
-  if (module_exists('encrypt')) {
-    $consumer_key = encrypt($consumer_key);
-    $consumer_secret = encrypt($consumer_secret);
-  }
+  $salesforce_endpoint = empty($form_state['values']['salesforce_endpoint']) ? SALESFORCE_DEFAULT_ENDPOINT : $form_state['values']['salesforce_endpoint'];
   variable_set('salesforce_consumer_key', $consumer_key);
   variable_set('salesforce_consumer_secret', $consumer_secret);
   variable_set('salesforce_endpoint', $salesforce_endpoint);
 
-  $salesforce = salesforce_get_api();
+  $salesforce = new Salesforce($consumer_key, $consumer_secret);
   $salesforce->getAuthorizationCode();
 }
 
@@ -273,9 +261,9 @@ function salesforce_oauth_form_submit($form, &$form_state) {
 function salesforce_settings_form($form, &$form_state) {
   // Get the default or current setting.
   $api_version = variable_get('salesforce_api_version', array(
-    "label" => "Spring '13",
-    "url" => "/services/data/v27.0/",
-    "version" => "27.0",
+    "label" => "Winter '14",
+    "url" => "/services/data/v29.0/",
+    "version" => "29.0",
   ));
   $api_list = array($api_version);
 
@@ -358,29 +346,35 @@ function salesforce_oauth_callback() {
  *   Returns a Salesforce class object.
  */
 function salesforce_get_api() {
-  $consumer_key = variable_get('salesforce_consumer_key', '');
-  $consumer_secret = variable_get('salesforce_consumer_secret', '');
-
-  if (module_exists('encrypt')) {
-    $consumer_key = decrypt($consumer_key);
-    $consumer_secret = decrypt($consumer_secret);
-  }
-
   return new Salesforce(
-    $consumer_key,
-    $consumer_secret
+    variable_get('salesforce_consumer_key', ''),
+    variable_get('salesforce_consumer_secret', '')
   );
 }
 
 /**
  * Salesforce set message.
  *
- * Wrapper around drupal_set_message(), checks for proper permissions.
+ * Wrapper around drupal_set_message(), adding check for administer salesforce
+ * permission.
+ *
+ * @param string $message
+ *   (optional) The translated message to be displayed to the user.
+ * @param string $type
+ *   (optional) The message's type. Defaults to 'status'.
+ * @param bool $repeat
+ *   (optional) If this is FALSE and the message is already set, then the
+ *   message won't be repeated. Defaults to TRUE.
+ *
+ * @return array|null
+ *   results of drupal_set_message(), if current user has permissions, or null.
+ *
+ * @see drupal_set_message()
  */
 function salesforce_set_message($message = NULL, $type = 'status', $repeat = TRUE) {
   global $user;
   if ($user->uid == 1 || user_access('administer salesforce', $user)) {
-    drupal_set_message($message, $type, $repeat);
+    return drupal_set_message($message, $type, $repeat);
   }
 }
 

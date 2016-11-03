@@ -22,7 +22,7 @@ class Salesforce {
   public function __construct($consumer_key, $consumer_secret = '') {
     $this->consumer_key = $consumer_key;
     $this->consumer_secret = $consumer_secret;
-    $this->login_url = variable_get('salesforce_endpoint', 'https://login.salesforce.com');
+    $this->login_url = variable_get('salesforce_endpoint', SALESFORCE_DEFAULT_ENDPOINT);
 
     $this->rest_api_version = variable_get('salesforce_api_version', array(
       "label" => "Winter '14",
@@ -284,11 +284,7 @@ class Salesforce {
    * Get refresh token.
    */
   protected function getRefreshToken() {
-    $salesforce_refresh_token = variable_get('salesforce_refresh_token', '');
-    if (module_exists('encrypt')) {
-      $salesforce_refresh_token = decrypt($salesforce_refresh_token);
-    }
-    return $salesforce_refresh_token;
+    return variable_get('salesforce_refresh_token', '');
   }
 
   /**
@@ -298,9 +294,6 @@ class Salesforce {
    *   Refresh token from Salesforce.
    */
   protected function setRefreshToken($token) {
-    if (module_exists('encrypt')) {
-      $token = encrypt($token);
-    }
     variable_set('salesforce_refresh_token', $token);
   }
 
@@ -445,6 +438,7 @@ class Salesforce {
   protected function redirectUrl() {
     return url('salesforce/oauth_callback', array(
       'absolute' => TRUE,
+      'language' => (object)array('language' => FALSE),
       'https' => TRUE,
     ));
   }

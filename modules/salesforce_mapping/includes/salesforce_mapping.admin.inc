@@ -103,7 +103,7 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#title' => t('Salesforce object'),
     '#id' => 'edit-salesforce-object-type',
     '#type' => 'select',
-    '#description' => t('Select a Salesforce object to map.'),
+    '#description' => t('Select a Salesforce object to map. Not seeing an object? !settings_link', array('!settings_link' => l(t('Check your Salesforce object filters settings.'), 'admin/config/salesforce/settings', array('fragment' => 'sf_object_filters_anchor')))),
     '#default_value' => $salesforce_object_type,
     '#options' => _salesforce_mapping_get_salesforce_object_type_options($form_state),
     '#ajax' => array(
@@ -1012,16 +1012,16 @@ function _salesforce_mapping_get_salesforce_object_type_options(&$form_state, $i
   }
   else {
     $sfapi = salesforce_get_api();
-    // Note that we're filtering SF object types to a reasonable subset.
-    $sf_object_filter = array(
-      'triggerable' => TRUE,
-    );
 
-    //TODO: Handle this somewhere else to validate we can push to this object.
-    // if (module_exists('salesforce_push')) {
-    //   $sf_object_filter['updateable'] = TRUE;
-    // }
-    
+    // Note that we're filtering SF object types to a reasonable subset.
+    $sf_object_filter = array();
+    if (variable_get('salesforce_limit_to_updateable', TRUE)) {
+      $sf_object_filter['updateable'] = TRUE;
+    }
+    if (variable_get('salesforce_limit_to_triggerable', TRUE)) {
+      $sf_object_filter['triggerable'] = TRUE;
+    }
+
     $sfobjects = $sfapi->objects($sf_object_filter);
     $form_state['sfm_storage']['salesforce_object_type'] = $sfobjects;
   }
@@ -1033,6 +1033,7 @@ function _salesforce_mapping_get_salesforce_object_type_options(&$form_state, $i
   foreach ($sfobjects as $object) {
     $sfobject_options[$object['name']] = $object['label'];
   }
+  natsort($sfobject_options);
   return $sfobject_options;
 }
 
