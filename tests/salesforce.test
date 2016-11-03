@@ -70,9 +70,17 @@ class SalesforceTestCase extends DrupalWebTestCase {
     // Make a call to Salesforce that will do nothing just so we can get an
     // access token into our session.  This is dumb, but I can't think of any
     // other way to get an access token because refreshToken() is protected.
-    $sfapi->apiCall('');
+    $sfapi->apiCall($testing_variable_values['salesforce_endpoint'] . '/services/oauth2/token');
 
     return $sfapi;
+  }
+
+  /**
+   * Tests to see if an access token was set.
+   */
+  public function testSalesforceConnect() {
+    $sfapi = $this->salesforceConnect();
+    $this->assertTrue($sfapi->getAccessToken());
   }
 }
 
@@ -87,7 +95,7 @@ function salesforce_rest_http_test_function($url, array $options = array()) {
   $file_to_load = _salesforce_get_mocks_file_path($url);
 
   if (file_exists($file_to_load)) {
-    $to_return = drupal_json_decode(file_get_contents($file_to_load));
+    $to_return = json_decode(file_get_contents($file_to_load));
   }
   else {
     $to_return = new stdClass();
