@@ -53,7 +53,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
    *   Salesforce Object
    */
   protected function salesforceConnect() {
-    $testing_variable_values = _salesforce_get_testing_variables();
+    $testing_variable_values = _salesforce_testing_get_testing_variables();
 
     foreach ($testing_variable_values as $variable_name => $fake_value) {
       variable_set($variable_name, $fake_value);
@@ -93,7 +93,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
  * @param array $options
  */
 function salesforce_rest_http_test_function($url, array $options = array()) {
-  $file_to_load = _salesforce_testing_get_mocks_file_path($url);
+  $file_to_load = _salesforce_testing_testing_get_mocks_file_path($url);
 
   if (file_exists($file_to_load)) {
     $to_return = json_decode(file_get_contents($file_to_load));
