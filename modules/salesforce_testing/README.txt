@@ -9,7 +9,9 @@ This allows Salesforce integration behavior to be testable without requiring ext
 1) Enable this module.
 
 2) Set the variable "drupal_http_request_function" to "salesforce_testing_rest_http_test_generate_mocks_function". Do
-   this with drush: drush vset drupal_http_request_function=salesforce_testing_rest_http_test_generate_mocks_function
+   this with drush:
+
+   drush vset drupal_http_request_function salesforce_testing_rest_http_test_generate_mocks_function
 
 3) Run a Salesforce sync as necessary.
 

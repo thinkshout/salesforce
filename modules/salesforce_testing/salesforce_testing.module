@@ -15,18 +15,20 @@ function salesforce_testing_rest_http_test_generate_mocks_function($url, array $
   variable_set('drupal_http_request_function', FALSE);
   $to_return = drupal_http_request($url, $options);
 
-  $return_values_to_save = new stdClass();
-  $return_values_to_save->data = $to_return->data;
-  $return_values_to_save->code = $to_return->code;
-  $return_values_to_save->status_message = $to_return->status_message;
+  if (strpos($url, variable_get('salesforce_instance_url')) === 0) {
+    $return_values_to_save = new stdClass();
+    $return_values_to_save->data = $to_return->data;
+    $return_values_to_save->code = $to_return->code;
+    $return_values_to_save->status_message = $to_return->status_message;
 
-  $generic_url = _salesforce_testing_clean_up_mocks_values($url);
-  $return_values_to_save->original_string = $generic_url;
+    $generic_url = _salesforce_testing_clean_up_mocks_values($url);
+    $return_values_to_save->original_string = $generic_url;
 
-  $file_to_save = _salesforce_testing_get_mocks_file_path($generic_url);
-  if (!file_exists($file_to_save)) {
-    $clean_file = _salesforce_testing_clean_up_mocks_values(drupal_json_encode($return_values_to_save));
-    file_put_contents($file_to_save, $clean_file);
+    $file_to_save = _salesforce_testing_get_mocks_file_path($generic_url);
+    if (!file_exists($file_to_save)) {
+      $clean_file = _salesforce_testing_clean_up_mocks_values(drupal_json_encode($return_values_to_save));
+      file_put_contents($file_to_save, $clean_file);
+    }
   }
   variable_set('drupal_http_request_function', __FUNCTION__);
   return $to_return;
