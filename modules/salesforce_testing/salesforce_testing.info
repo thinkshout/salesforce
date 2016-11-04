@@ -1,0 +1,6 @@
+name = Salesforce API Testing
+description = Generates mocks for Salesforce tests
+package = Salesforce
+core = 7.x
+
+dependencies[] = salesforce

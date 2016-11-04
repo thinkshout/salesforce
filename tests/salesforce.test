@@ -26,6 +26,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
   public function setUp($modules = array(), $permissions = array()) {
     $modules = array_merge($modules, array(
       'salesforce',
+      'salesforce_testing'
     ));
     parent::setUp($modules);
 
@@ -92,7 +93,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
  * @param array $options
  */
 function salesforce_rest_http_test_function($url, array $options = array()) {
-  $file_to_load = _salesforce_get_mocks_file_path($url);
+  $file_to_load = _salesforce_testing_get_mocks_file_path($url);
 
   if (file_exists($file_to_load)) {
     $to_return = json_decode(file_get_contents($file_to_load));
