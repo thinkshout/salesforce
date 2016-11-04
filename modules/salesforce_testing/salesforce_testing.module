@@ -39,7 +39,7 @@ function salesforce_testing_rest_http_test_generate_mocks_function($url, array $
  * @return string
  */
 function _salesforce_testing_get_mocks_file_path($url) {
-  return getcwd() . '/' . drupal_get_path('module', 'salesforce') . '/tests/mocks/' . sha1($url);
+  return getcwd() . '/' . drupal_get_path('module', 'salesforce_testing') . '/mocks/' . sha1($url);
 }
 
 /**
