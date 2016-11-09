@@ -206,69 +206,14 @@ function salesforce_pull_get_updated_records() {
 
   $sfapi = salesforce_get_api();
   foreach (salesforce_mapping_get_mapped_objects() as $type) {
-    $mapped_fields = array();
-    $mapped_record_types = array();
 
-    // Iterate over each field mapping to determine our query parameters.
-    foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
-      foreach ($mapping->field_mappings as $field_map) {
-        // Exclude field mappings that are only drupal to SF.
-        if (in_array($field_map['direction'], array(
-          SALESFORCE_MAPPING_DIRECTION_SYNC,
-          SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL
-        ))) {
-          // Some field map types (Relation) store a collection of SF objects.
-          if (is_array($field_map['salesforce_field']) && !isset($field_map['salesforce_field']['name'])) {
-            foreach ($field_map['salesforce_field'] as $sf_field) {
-              $mapped_fields[$sf_field['name']] = $sf_field['name'];
-            }
-          }
-          // The rest of are just a name/value pair.
-          else {
-            $mapped_fields[$field_map['salesforce_field']['name']] = $field_map['salesforce_field']['name'];
-          }
-        }
-      }
-
-      if (!empty($mapped_fields) && $mapping->salesforce_record_type_default != SALESFORCE_MAPPING_DEFAULT_RECORD_TYPE) {
-        foreach ($mapping->salesforce_record_types_allowed as $record_type) {
-          if ($record_type) {
-            $mapped_record_types[$record_type] = $record_type;
-          }
-        }
-        // Add the RecordTypeId field so we can use it when processing the
-        // queued SF objects.
-        $mapped_fields['RecordTypeId'] = 'RecordTypeId';
-      }
-    }
-
-    // There are no field mappings configured to pull data from Salesforce so
-    // move on to the next mapped object. Prevents querying unmapped data.
-    if (empty($mapped_fields)) {
+    $soql = salesforce_pull_get_pull_query($type);
+    if (empty($soql)) {
       continue;
     }
-
-    $soql = new SalesforceSelectQuery($type);
-    // Convert field mappings to SOQL.
-    $soql->fields = array_merge($mapped_fields, array(
-      'Id' => 'Id',
-      $mapping->pull_trigger_date => $mapping->pull_trigger_date
-    ));
-
-    // If no lastupdate, get all records, else get records since last pull.
-    $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
-    if ($sf_last_sync) {
-      $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
-      $soql->addCondition($mapping->pull_trigger_date, $last_sync, '>');
-    }
-
-    // If Record Type is specified, restrict query.
-    if (count($mapped_record_types) > 0) {
-      $soql->addCondition('RecordTypeId', $mapped_record_types, 'IN');
-    }
-
-    // Execute query.
+    
     $results = $sfapi->query($soql);
+
     $version_path = parse_url($sfapi->getApiEndPoint(), PHP_URL_PATH);
 
     if (!isset($results['errorCode'])) {
@@ -299,6 +244,57 @@ function salesforce_pull_get_updated_records() {
       watchdog('Salesforce Pull', $results['errorCode'] . ':' . $results['message'], array(), WATCHDOG_ERROR);
     }
   }
+}
+
+/**
+ * Given a SObject type name, build an SOQL query to include all fields for all
+ * SalesforceMappings mapped to that SObject.
+ *
+ * @param string $type
+ *   e.g. "Contact", "Account", etc.
+ *
+ * @return SalesforceSelectQuery or NULL if no mappings or no mapped fields
+ *   were found.
+ *
+ * @see SalesforceMapping::getMappedFields
+ * @see SalesforceMapping::getMappedRecordTypes
+ */
+function salesforce_pull_get_pull_query($type) {
+  $mapped_fields = array();
+  $mapped_record_types = array();
+
+  // Iterate over each field mapping to determine our query parameters.
+  foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
+    $mapped_fields = array_merge($mapped_fields, $mapping->getMappedFields(array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL)));
+  }
+
+  // There are no field mappings configured to pull data from Salesforce so
+  // move on to the next mapped object. Prevents querying unmapped data.
+  if (empty($mapped_fields)) {
+    return NULL;
+  }
+
+  $soql = new SalesforceSelectQuery($type);
+  // Convert field mappings to SOQL.
+  $soql->fields = array_merge($mapped_fields, array(
+    'Id' => 'Id',
+    $mapping->pull_trigger_date => $mapping->pull_trigger_date
+  ));
+
+  // If no lastupdate, get all records, else get records since last pull.
+  $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
+  if ($sf_last_sync) {
+    $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
+    $soql->addCondition($mapping->pull_trigger_date, $last_sync, '>');
+  }
+
+  // If Record Type is specified, restrict query.
+  $mapped_record_types = $mapping->getMappedRecordTypes();
+  if (count($mapped_record_types) > 0) {
+    $soql->addCondition('RecordTypeId', $mapped_record_types, 'IN');
+  }
+
+  return $soql;
 }
 
 /**
