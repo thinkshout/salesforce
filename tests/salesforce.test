@@ -9,7 +9,6 @@
  * Sets up basic tools for testing Salesforce integration.
  */
 class SalesforceTestCase extends DrupalWebTestCase {
-
   /**
    * Implementation of getInfo().
    */
@@ -27,6 +26,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
   public function setUp($modules = array(), $permissions = array()) {
     $modules = array_merge($modules, array(
       'salesforce',
+      'salesforce_testing'
     ));
     parent::setUp($modules);
 
@@ -35,6 +35,7 @@ class SalesforceTestCase extends DrupalWebTestCase {
     ));
     $this->admin_user = $this->drupalCreateUser($permissions);
     $this->drupalLogin($this->admin_user);
+    variable_set('drupal_http_request_function', 'salesforce_rest_http_test_function');
   }
 
   /**
@@ -52,22 +53,10 @@ class SalesforceTestCase extends DrupalWebTestCase {
    *   Salesforce Object
    */
   protected function salesforceConnect() {
-    // Steal the Salesforce configuration from the live database.
-    global $db_prefix;
-    $table = empty($db_prefix) ? 'variable' : $db_prefix . '_variable';
-    $salesforce_vars = array(
-      'salesforce_consumer_key',
-      'salesforce_consumer_secret',
-      'salesforce_endpoint',
-      'salesforce_instance_url',
-      'salesforce_refresh_token',
-      'salesforce_identity',
-    );
-    $vars = "'" . implode("', '", $salesforce_vars) . "'";
-    $sql = "SELECT v.name, v.value FROM $table v WHERE v.name IN ($vars)";
-    $result = db_query($sql);
-    foreach ($result as $record) {
-      variable_set($record->name, unserialize($record->value));
+    $testing_variable_values = _salesforce_testing_get_testing_variables();
+
+    foreach ($testing_variable_values as $variable_name => $fake_value) {
+      variable_set($variable_name, $fake_value);
     }
 
     // Test the connection.
@@ -82,8 +71,38 @@ class SalesforceTestCase extends DrupalWebTestCase {
     // Make a call to Salesforce that will do nothing just so we can get an
     // access token into our session.  This is dumb, but I can't think of any
     // other way to get an access token because refreshToken() is protected.
-    $sfapi->apiCall('');
+    $sfapi->apiCall($testing_variable_values['salesforce_endpoint'] . '/services/oauth2/token');
 
     return $sfapi;
   }
+
+  /**
+   * Tests to see if an access token was set.
+   */
+  public function testSalesforceConnect() {
+    $sfapi = $this->salesforceConnect();
+    $this->assertTrue($sfapi->getAccessToken());
+  }
+}
+
+
+/**
+ * Overwrites drupal_http_request() for our tests.
+ *
+ * @param $url
+ * @param array $options
+ */
+function salesforce_rest_http_test_function($url, array $options = array()) {
+  $file_to_load = _salesforce_testing_get_mocks_file_path($url);
+
+  if (file_exists($file_to_load)) {
+    $to_return = json_decode(file_get_contents($file_to_load));
+  }
+  else {
+    $to_return = new stdClass();
+    $to_return->code = 503;
+    $to_return->error = 'Missing mock file for this request for the url:' . $url;
+  }
+
+  return $to_return;
 }
