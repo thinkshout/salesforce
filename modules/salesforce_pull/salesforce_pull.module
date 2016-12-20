@@ -642,30 +642,31 @@ function salesforce_pull_process_merged_records($sf_object) {
   // Load and wrap the Drupal entity linked to the SF object.
   if ($mapping_object) {
     $merged_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+
+    // Check if entity exists before processing delete.
+    if ($merged_entity) {
+      $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $merged_entity);
+
+      // Prevent processing by salesforce_push. We hate circular logic.
+      $merged_entity->salesforce_pull = TRUE;
+
+      // Delete the mapped Drupal entity. Catch any exceptions as
+      // we want to ensure the mapping object is deleted even in
+      // case of an error.
+      $parent = salesforce_mapping_object_load_by_sfid($sf_object->id);
+      module_invoke_all('salesforce_pull_entity_merge', $parent, $merged_entity);
+
+      watchdog('Salesforce Pull',
+        'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+        array(
+          '%label' => $wrapper->label(),
+          '%id' => $mapping_object->entity_id,
+          '%sfid' => $sf_object->id,
+        )
+      );
+    }
   }
 
-  // Check if entity exists before processing delete.
-  if ($merged_entity) {
-    $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $merged_entity);
-
-    // Prevent processing by salesforce_push. We hate circular logic.
-    $merged_entity->salesforce_pull = TRUE;
-
-    // Delete the mapped Drupal entity. Catch any exceptions as
-    // we want to ensure the mapping object is deleted even in
-    // case of an error.
-    $parent = salesforce_mapping_object_load_by_sfid($sf_object->id);
-    module_invoke_all('salesforce_pull_entity_merge', $parent, $merged_entity);
-
-    watchdog('Salesforce Pull',
-      'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-      array(
-        '%label' => $wrapper->label(),
-        '%id' => $mapping_object->entity_id,
-        '%sfid' => $sf_object->id,
-      )
-    );
-  }
   // Delete mapping object.
   if ($mapping_object) {
     $mapping_object->delete();
