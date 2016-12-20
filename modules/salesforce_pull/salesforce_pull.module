@@ -564,9 +564,10 @@ function salesforce_pull_get_deleted_records() {
 
     // TODO are we checking the current type for deletes. This should either get the current mapping, or checking every mapping
     // Load the mapping that manages these mapped objects.
-    $sf_mapping = reset(salesforce_mapping_load_multiple(
+    $sf_mappings = salesforce_mapping_load_multiple(
       array('salesforce_object_type' => $type)
-    ));
+    );
+    $sf_mapping = reset($sf_mappings);
 
     if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
 
