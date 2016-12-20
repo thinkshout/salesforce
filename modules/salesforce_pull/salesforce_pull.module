@@ -653,8 +653,7 @@ function salesforce_pull_process_merged_records($sf_object) {
       // Delete the mapped Drupal entity. Catch any exceptions as
       // we want to ensure the mapping object is deleted even in
       // case of an error.
-      $parent = salesforce_mapping_object_load_by_sfid($sf_object->id);
-      module_invoke_all('salesforce_pull_entity_merge', $parent, $merged_entity);
+      module_invoke_all('salesforce_pull_entity_merge', $mapping_object, $merged_entity);
 
       watchdog('Salesforce Pull',
         'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid',
