@@ -611,7 +611,7 @@ function salesforce_pull_get_deleted_records() {
             foreach ($results->deletedRecords as $result) {
               foreach ($merged_results['records'] as $merged_result) {
                 if ($result->id == $merged_result[$old_contact]) {
-                  $queue_item = array('merge' => $result);
+                  $queue_item = array('merge' => $merged_result);
                   $queue->createItem($queue_item);
                 }
               }
@@ -637,39 +637,40 @@ function salesforce_pull_get_deleted_records() {
  * Process merged records from salesforce.
  */
 function salesforce_pull_process_merged_records($sf_object) {
-  $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object->id);
+  // Handle merges from Salesforce
+  $old_contact_key = 'Old_Contact__c';
+  $merged_contact_key = 'Contact__c';
+
+  // TODO: Temporary HOOK To set field names until we have UI
+  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact_key, $merged_contact_key);
+
+  $entity_to_delete = salesforce_mapping_object_load_by_sfid($sf_object[$old_contact_key]);
+  $merged_entity = salesforce_mapping_object_load_by_sfid($sf_object[$merged_contact_key]);
 
   // Load and wrap the Drupal entity linked to the SF object.
-  if ($mapping_object) {
-    $merged_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
+  if ($entity_to_delete && $merged_entity) {
+    $wrapper = entity_metadata_wrapper($entity_to_delete->entity_type, $entity_to_delete);
 
-    // Check if entity exists before processing delete.
-    if ($merged_entity) {
-      $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $merged_entity);
+    // Prevent processing by salesforce_push. We hate circular logic.
+    $merged_entity->salesforce_pull = TRUE;
 
-      // Prevent processing by salesforce_push. We hate circular logic.
-      $merged_entity->salesforce_pull = TRUE;
+    // Delete the mapped Drupal entity. Catch any exceptions as
+    // we want to ensure the mapping object is deleted even in
+    // case of an error.
+    module_invoke_all('salesforce_pull_entity_merge', $entity_to_delete, $merged_entity);
 
-      // Delete the mapped Drupal entity. Catch any exceptions as
-      // we want to ensure the mapping object is deleted even in
-      // case of an error.
-      module_invoke_all('salesforce_pull_entity_merge', $mapping_object, $merged_entity);
-
-      watchdog('Salesforce Pull',
-        'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-        array(
-          '%label' => $wrapper->label(),
-          '%id' => $mapping_object->entity_id,
-          '%sfid' => $sf_object->id,
-        )
-      );
-    }
+    watchdog('Salesforce Pull',
+      'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid to %label with ID: %newid associated with Salesforce Object ID: %newsfid',
+      array(
+        '%label' => $wrapper->label(),
+        '%id' => $entity_to_delete->entity_id,
+        '%sfid' => $sf_object[$old_contact_key],
+        '%newid' => $merged_entity->entity_id,
+        '%newsfid' => $sf_object[$merged_contact_key]
+      )
+    );
   }
-
-  // Delete mapping object.
-  if ($mapping_object) {
-    $mapping_object->delete();
-  }
+  // TODO: Do we need to delete the mapping item here? Won't that happen on the delete?
 }
 /**
  * Process deleted records from salesforce.
