@@ -589,7 +589,7 @@ function salesforce_pull_get_deleted_records() {
         foreach ($results->deletedRecords as $result) {
           foreach ($merged_results['records'] as $merged_result) {
             if ($result->id == $merged_result[$old_contact]) {
-              $queue_item = array('merge' => $result);
+              $queue_item = array('merge' => $merged_result);
               $queue->createItem($queue_item);
             }
           }
