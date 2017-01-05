@@ -564,9 +564,10 @@ function salesforce_pull_get_deleted_records() {
 
     // TODO are we checking the current type for deletes. This should either get the current mapping, or checking every mapping
     // Load the mapping that manages these mapped objects.
-    $sf_mapping = reset(salesforce_mapping_load_multiple(
+    $sf_mappings = salesforce_mapping_load_multiple(
       array('salesforce_object_type' => $type)
-    ));
+    );
+    $sf_mapping = reset($sf_mappings);
 
     if ($sf_mapping->sync_triggers & SALESFORCE_MAPPING_SYNC_SF_DELETE) {
 
@@ -588,7 +589,7 @@ function salesforce_pull_get_deleted_records() {
         foreach ($results->deletedRecords as $result) {
           foreach ($merged_results['records'] as $merged_result) {
             if ($result->id == $merged_result[$old_contact]) {
-              $queue_item = array('merge' => $result);
+              $queue_item = array('merge' => $merged_result);
               $queue->createItem($queue_item);
             }
           }
@@ -610,7 +611,7 @@ function salesforce_pull_get_deleted_records() {
             foreach ($results->deletedRecords as $result) {
               foreach ($merged_results['records'] as $merged_result) {
                 if ($result->id == $merged_result[$old_contact]) {
-                  $queue_item = array('merge' => $result);
+                  $queue_item = array('merge' => $merged_result);
                   $queue->createItem($queue_item);
                 }
               }
@@ -636,16 +637,19 @@ function salesforce_pull_get_deleted_records() {
  * Process merged records from salesforce.
  */
 function salesforce_pull_process_merged_records($sf_object) {
-  $mapping_object = salesforce_mapping_object_load_by_sfid($sf_object->id);
+  // Handle merges from Salesforce
+  $old_contact_key = 'Old_Contact__c';
+  $merged_contact_key = 'Contact__c';
+
+  // TODO: Temporary HOOK To set field names until we have UI
+  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact_key, $merged_contact_key);
+
+  $entity_to_delete = salesforce_mapping_object_load_by_sfid($sf_object[$old_contact_key]);
+  $merged_entity = salesforce_mapping_object_load_by_sfid($sf_object[$merged_contact_key]);
 
   // Load and wrap the Drupal entity linked to the SF object.
-  if ($mapping_object) {
-    $merged_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
-  }
-
-  // Check if entity exists before processing delete.
-  if ($merged_entity) {
-    $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $merged_entity);
+  if ($entity_to_delete && $merged_entity) {
+    $wrapper = entity_metadata_wrapper($entity_to_delete->entity_type, $entity_to_delete);
 
     // Prevent processing by salesforce_push. We hate circular logic.
     $merged_entity->salesforce_pull = TRUE;
@@ -653,22 +657,20 @@ function salesforce_pull_process_merged_records($sf_object) {
     // Delete the mapped Drupal entity. Catch any exceptions as
     // we want to ensure the mapping object is deleted even in
     // case of an error.
-    $parent = salesforce_mapping_object_load_by_sfid($sf_object->id);
-    module_invoke_all('salesforce_pull_entity_merge', $parent, $merged_entity);
+    module_invoke_all('salesforce_pull_entity_merge', $entity_to_delete, $merged_entity);
 
     watchdog('Salesforce Pull',
-      'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+      'Merged entity %label with ID: %id associated with Salesforce Object ID: %sfid to %label with ID: %newid associated with Salesforce Object ID: %newsfid',
       array(
         '%label' => $wrapper->label(),
-        '%id' => $mapping_object->entity_id,
-        '%sfid' => $sf_object->id,
+        '%id' => $entity_to_delete->entity_id,
+        '%sfid' => $sf_object[$old_contact_key],
+        '%newid' => $merged_entity->entity_id,
+        '%newsfid' => $sf_object[$merged_contact_key]
       )
     );
   }
-  // Delete mapping object.
-  if ($mapping_object) {
-    $mapping_object->delete();
-  }
+  // TODO: Do we need to delete the mapping item here? Won't that happen on the delete?
 }
 /**
  * Process deleted records from salesforce.
@@ -679,35 +681,34 @@ function salesforce_pull_process_deleted_records($sf_object) {
   // Load and wrap the Drupal entity linked to the SF object.
   if ($mapping_object) {
     $deleted_entity = entity_load_single($mapping_object->entity_type, $mapping_object->entity_id);
-  }
 
-  // Check if entity exists before processing delete.
-  if ($deleted_entity) {
-    $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $deleted_entity);
+    // Check if entity exists before processing delete.
+    if ($deleted_entity) {
+      $wrapper = entity_metadata_wrapper($mapping_object->entity_type, $deleted_entity);
 
-    // Prevent processing by salesforce_push. We hate circular logic.
-    $deleted_entity->salesforce_pull = TRUE;
+      // Prevent processing by salesforce_push. We hate circular logic.
+      $deleted_entity->salesforce_pull = TRUE;
 
-    // Delete the mapped Drupal entity. Catch any exceptions as
-    // we want to ensure the mapping object is deleted even in
-    // case of an error.
-    try {
-      $wrapper->delete();
-    } catch (Exception $e) {
-      watchdog_exception('salesforce_pull', $e);
+      // Delete the mapped Drupal entity. Catch any exceptions as
+      // we want to ensure the mapping object is deleted even in
+      // case of an error.
+      try {
+        $wrapper->delete();
+      } catch (Exception $e) {
+        watchdog_exception('salesforce_pull', $e);
+      }
+
+      watchdog('Salesforce Pull',
+        'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
+        array(
+          '%label' => $wrapper->label(),
+          '%id' => $mapping_object->entity_id,
+          '%sfid' => $sf_object->id,
+        )
+      );
     }
 
-    watchdog('Salesforce Pull',
-      'Deleted entity %label with ID: %id associated with Salesforce Object ID: %sfid',
-      array(
-        '%label' => $wrapper->label(),
-        '%id' => $mapping_object->entity_id,
-        '%sfid' => $sf_object->id,
-      )
-    );
-  }
-  // Delete mapping object.
-  if ($mapping_object) {
+    // Delete mapping object.
     $mapping_object->delete();
   }
 }
