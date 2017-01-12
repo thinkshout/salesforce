@@ -372,5 +372,25 @@ function hook_salesforce_pull_entity_update($entity, $sf_object, $sf_mapping) {
 }
 
 /**
+ * Change Salesforce merge object name / field names before sync.
+ *
+ * @param string $old_contact
+ *   The SF field name representing the original contact.
+ * @param string $merged_contact
+ *   The SF field name representing the merged contact.
+ * @param string $type
+ *   The SF object name representing the merge.
+ * @param string $modified_date
+ *   The SF field name representing last modified date of the contacts being
+ *   merged.
+ */
+function hook_salesforce_pull_entity_merge_fields($old_contact, $merged_contact, $type, $modified_date) {
+  $old_contact = 'Old_Contact__c';
+  $merged_contact = 'Contact__c';
+  $type = 'Merged_Contact__c';
+  $modified_date = 'LastModifiedDate';
+}
+
+/**
  * @} salesforce_hooks
  */
