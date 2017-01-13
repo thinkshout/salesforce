@@ -580,15 +580,17 @@ function salesforce_pull_get_deleted_records() {
       }
       if (!isset($results->errorCode)) {
 
-        // Handle merges from Salesforce
-        $old_contact = 'Old_Contact__c';
-        $merged_entity = 'Contact__c';
+        // Handle merges from Salesforce.
+        $merge_fields = array(
+          'old_contact' => 'Old_Contact__c',
+          'merged_entity' => 'Contact__c',
+        );
 
-        // TODO: Temporary HOOK To set field names until we have UI
-        module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact, $merged_entity);
+        // TODO: Temporary HOOK To set field names until we have UI.
+        drupal_alter('salesforce_pull_entity_merge_fields', $merge_fields);
         foreach ($results->deletedRecords as $result) {
           foreach ($merged_results['records'] as $merged_result) {
-            if ($result->id == $merged_result[$old_contact]) {
+            if ($result->id == $merged_result[$merge_fields['old_contact']]) {
               $queue_item = array('merge' => $merged_result);
               $queue->createItem($queue_item);
             }
@@ -610,7 +612,7 @@ function salesforce_pull_get_deleted_records() {
           if (!isset($new_result['errorCode'])) {
             foreach ($results->deletedRecords as $result) {
               foreach ($merged_results['records'] as $merged_result) {
-                if ($result->id == $merged_result[$old_contact]) {
+                if ($result->id == $merged_result[$merge_fields['old_contact']]) {
                   $queue_item = array('merge' => $merged_result);
                   $queue->createItem($queue_item);
                 }
@@ -637,15 +639,17 @@ function salesforce_pull_get_deleted_records() {
  * Process merged records from salesforce.
  */
 function salesforce_pull_process_merged_records($sf_object) {
-  // Handle merges from Salesforce
-  $old_contact_key = 'Old_Contact__c';
-  $merged_contact_key = 'Contact__c';
+  // Handle merges from Salesforce.
+  $merge_fields = array(
+    'old_contact_key' => 'Old_Contact__c',
+    'merged_contact_key' => 'Contact__c',
+  );
 
-  // TODO: Temporary HOOK To set field names until we have UI
-  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact_key, $merged_contact_key);
+  // TODO: Temporary HOOK To set field names until we have UI.
+  drupal_alter('salesforce_pull_entity_merge_fields', $merge_fields);
 
-  $entity_to_delete = salesforce_mapping_object_load_by_sfid($sf_object[$old_contact_key]);
-  $merged_entity = salesforce_mapping_object_load_by_sfid($sf_object[$merged_contact_key]);
+  $entity_to_delete = salesforce_mapping_object_load_by_sfid($sf_object[$merge_fields['old_contact_key']]);
+  $merged_entity = salesforce_mapping_object_load_by_sfid($sf_object[$merge_fields['merged_contact_key']]);
 
   // Load and wrap the Drupal entity linked to the SF object.
   if ($entity_to_delete && $merged_entity) {
@@ -664,9 +668,9 @@ function salesforce_pull_process_merged_records($sf_object) {
       array(
         '%label' => $wrapper->label(),
         '%id' => $entity_to_delete->entity_id,
-        '%sfid' => $sf_object[$old_contact_key],
+        '%sfid' => $sf_object[$merge_fields['old_contact_key']],
         '%newid' => $merged_entity->entity_id,
-        '%newsfid' => $sf_object[$merged_contact_key]
+        '%newsfid' => $sf_object[$merge_fields['merged_contact_key']]
       )
     );
   }
@@ -717,31 +721,33 @@ function salesforce_pull_process_deleted_records($sf_object) {
  * Get all the merged records since the last delete.
  */
 function salesforce_pull_check_merged_records() {
-  $type = 'Merged_Contact__c';
-  $merged_contact = 'Contact__c';
-  $old_contact = 'Old_Contact__c';
-  $modified_date = 'LastModifiedDate';
+  $merge_fields = array(
+    'type' => 'Merged_Contact__c',
+    'merged_contact' => 'Contact__c',
+    'old_contact' => 'Old_Contact__c',
+    'modified_date' => 'LastModifiedDate',
+  );
 
   // TODO: Temporary HOOK To set field names until we have UI
-  module_invoke_all('salesforce_pull_entity_merge_fields', $old_contact, $merged_contact, $type, $modified_date);
+  drupal_alter('salesforce_pull_entity_merge_fields', $merge_fields);
 
-  $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $type, REQUEST_TIME);
+  $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $merge_fields['type'], REQUEST_TIME);
 
   $sfapi = salesforce_get_api();
 
-  $soql = new SalesforceSelectQuery($type);
+  $soql = new SalesforceSelectQuery($merge_fields['type']);
 
   // Convert field mappings to SOQL.
   $soql->fields = array(
     'Id' => 'Id',
-    $merged_contact => $merged_contact,
-    $old_contact => $old_contact,
-    $modified_date => $modified_date,
+    $merge_fields['merged_contact'] => $merge_fields['merged_contact'],
+    $merge_fields['old_contact'] => $merge_fields['old_contact'],
+    $merge_fields['modified_date'] => $merge_fields['modified_date'],
   );
 
   // TODO: Make sure this code is pulling the correct merge records by date.
   // If no lastupdate, get all records, else get records since last pull.
-  $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $type, NULL);
+  $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $merge_fields['type'], NULL);
   if ($sf_last_sync) {
     $last_sync = gmdate('Y-m-d\TH:i:s\Z', $sf_last_sync);
     $soql->addCondition($last_delete_sync, $last_sync, '>');

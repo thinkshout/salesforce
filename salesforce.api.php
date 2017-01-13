@@ -384,7 +384,7 @@ function hook_salesforce_pull_entity_update($entity, $sf_object, $sf_mapping) {
  *   The SF field name representing last modified date of the contacts being
  *   merged.
  */
-function hook_salesforce_pull_entity_merge_fields($old_contact, $merged_contact, $type, $modified_date) {
+function hook_salesforce_pull_entity_merge_fields_alter(&$old_contact, &$merged_contact, &$type, &$modified_date) {
   $old_contact = 'Old_Contact__c';
   $merged_contact = 'Contact__c';
   $type = 'Merged_Contact__c';
