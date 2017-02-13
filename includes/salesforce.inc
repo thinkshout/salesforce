@@ -773,7 +773,7 @@ class Salesforce {
     $query->fields = array('Id', 'Name', 'DeveloperName', 'SobjectType');
     $result = $this->query($query);
     $record_types = array();
-    foreach ($result as $rt) {
+    foreach ($result['records'] as $rt) {
       $record_types[$rt['SobjectType']][$rt['DeveloperName']] = $rt;
     }
     cache_set('salesforce_record_types', $record_types, 'cache', CACHE_TEMPORARY);
