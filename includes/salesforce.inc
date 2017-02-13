@@ -761,7 +761,7 @@ class Salesforce {
    * @return string SFID
    *   The Salesforce ID of the given Record Type, or null.
    */
-  public function getRecordTypeIdByDeveloperName($name, $devname) {
+  public function getRecordTypeIdByDeveloperName($name, $devname, $reset = FALSE) {
     $cache = cache_get('salesforce_record_types');
     // Force the recreation of the cache when it is older than 5 minutes.
     if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
