@@ -674,7 +674,6 @@ function salesforce_pull_process_merged_records($sf_object) {
       )
     );
   }
-  // TODO: Do we need to delete the mapping item here? Won't that happen on the delete?
 }
 /**
  * Process deleted records from salesforce.
