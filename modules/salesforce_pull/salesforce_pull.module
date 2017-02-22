@@ -586,7 +586,6 @@ function salesforce_pull_get_deleted_records() {
           'merged_entity' => 'Contact__c',
         );
 
-        // TODO: Temporary HOOK To set field names until we have UI.
         drupal_alter('salesforce_pull_entity_merge_fields', $merge_fields);
         foreach ($results->deletedRecords as $result) {
           foreach ($merged_results['records'] as $merged_result) {
@@ -645,7 +644,6 @@ function salesforce_pull_process_merged_records($sf_object) {
     'merged_contact_key' => 'Contact__c',
   );
 
-  // TODO: Temporary HOOK To set field names until we have UI.
   drupal_alter('salesforce_pull_entity_merge_fields', $merge_fields);
 
   $entity_to_delete = salesforce_mapping_object_load_by_sfid($sf_object[$merge_fields['old_contact_key']]);
@@ -727,7 +725,6 @@ function salesforce_pull_check_merged_records() {
     'modified_date' => 'LastModifiedDate',
   );
 
-  // TODO: Temporary HOOK To set field names until we have UI
   drupal_alter('salesforce_pull_entity_merge_fields', $merge_fields);
 
   $last_delete_sync = variable_get('salesforce_pull_delete_last_' . $merge_fields['type'], REQUEST_TIME);
