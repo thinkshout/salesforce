@@ -532,15 +532,18 @@ class Salesforce {
       // Sort field properties, because salesforce API always provides them in a
       // random order. We sort them so that stored and exported data are
       // standardized and predictable.
-      foreach($object['fields'] as &$field) {
+      $fields = array();
+      foreach($object['fields'] as $field) {
         ksort($field);
         if (!empty($field['picklistValues'])) {
           foreach($field['picklistValues'] as &$picklist_value) {
             ksort($picklist_value);
           }
         }
+        $fields[$field['name']] = $field;
       }
-
+      ksort($fields);
+      $object['fields'] = $fields;
       // Allow the cache to clear at any time by not setting an expire time.
       cache_set($name, $object, 'cache_salesforce_object', CACHE_TEMPORARY);
       return $object;
@@ -742,6 +745,41 @@ class Salesforce {
     $end = urlencode(gmdate(DATE_ATOM, $end));
   
     return $this->apiCall("sobjects/{$name}/updated/?start=$start&end=$end");
+  }
+
+  /**
+   * Given a DeveloperName and SObject Name, return the SFID of the
+   * corresponding RecordType. DeveloperName doesn't change between Salesforce
+   * environments, so it's safer to rely on compared to SFID.
+   *
+   * @param string $name
+   *   Object type name, E.g., Contact, Account.
+   *
+   * @param string $devname 
+   *   RecordType DeveloperName, e.g. Donation, Membership, etc.
+   *
+   * @return string SFID
+   *   The Salesforce ID of the given Record Type, or null.
+   */
+  public function getRecordTypeIdByDeveloperName($name, $devname, $reset = FALSE) {
+    $cache = cache_get('salesforce_record_types');
+    // Force the recreation of the cache when it is older than 5 minutes.
+    if ($cache && REQUEST_TIME < ($cache->created + 300) && !$reset) {
+      return !empty($cache->data[$name][$devname])
+        ? $cache->data[$name][$devname]['Id']
+        : NULL;
+    }
+    $query = new SalesforceSelectQuery('RecordType');
+    $query->fields = array('Id', 'Name', 'DeveloperName', 'SobjectType');
+    $result = $this->query($query);
+    $record_types = array();
+    foreach ($result['records'] as $rt) {
+      $record_types[$rt['SobjectType']][$rt['DeveloperName']] = $rt;
+    }
+    cache_set('salesforce_record_types', $record_types, 'cache', CACHE_TEMPORARY);
+    return !empty($record_types[$name][$devname])
+      ? $record_types[$name][$devname]['Id']
+      : NULL;
   }
 }
 
