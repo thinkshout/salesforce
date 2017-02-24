@@ -746,7 +746,6 @@ function salesforce_pull_check_merged_records() {
     $merge_fields['modified_date'] => $merge_fields['modified_date'],
   );
 
-  // TODO: Make sure this code is pulling the correct merge records by date.
   // If no lastupdate, get all records, else get records since last pull.
   $sf_last_sync = variable_get('salesforce_pull_last_sync_' . $merge_fields['type'], NULL);
   if ($sf_last_sync) {
