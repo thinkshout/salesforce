@@ -536,10 +536,6 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
     if ($fieldmap['key']) {
       $key_field = $fieldmap['salesforce_field']['name'];
       $key_value = $value;
-      // If key is set, remove from $params to avoid UPSERT errors.
-      if (!$use_soap) {
-        unset($params[$key_field]);
-      }
     }
   }
 
