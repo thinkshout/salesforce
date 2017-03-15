@@ -175,7 +175,12 @@ function salesforce_mapping_form($form, &$form_state, SalesforceMapping $mapping
     '#title' => t('Field map'),
     '#type' => 'fieldset',
     '#id' => 'edit-salesforce-field-mappings-wrapper',
-    '#description' => '* Key refers to an property mapped to a Salesforce external ID. if specified an UPSERT will be used to avoid duplicate data when possible.',
+    '#description' => '* Key refers to an property mapped to a Salesforce external ID. if specified an UPSERT will be used to avoid duplicate data when possible. <a href="javascript:;" id="salesforce-field-mappings-reset-key">Reset key</a>',
+  );
+  $form['#attached'] = array(
+    'js' => array(
+      drupal_get_path('module', 'salesforce_mapping') . '/includes/salesforce_mapping_admin.js',
+    )
   );
 
   // Check to see if we have enough information to allow mapping fields.  If
