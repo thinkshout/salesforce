@@ -584,7 +584,9 @@ function salesforce_pull_get_deleted_records() {
       }
 
       // Write items to the queue.
-      foreach ($results->deletedRecords as (array) $result) {
+      foreach ($results->deletedRecords as $result) {
+        // Cast to array for consistency.
+        $result = (array) $result;
         $result['type'] = $type;
         $queue_item = array(
           'delete' => $result,
