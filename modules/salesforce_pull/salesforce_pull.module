@@ -561,7 +561,7 @@ function salesforce_pull_get_deleted_records() {
     // SOAP getDeleted() returns an object while the REST getDeleted() returns
     // an array, so cast all checked values to an object to avoid additional
     // conditional logic.
-    $results = (object) $client->getDeleted($type, $last_delete_sync_sf, $now_sf);
+    $results = (object) $client->trySoap('getDeleted', $type, $last_delete_sync_sf, $now_sf);
     if (empty($results->deletedRecords)) {
       continue;
     }

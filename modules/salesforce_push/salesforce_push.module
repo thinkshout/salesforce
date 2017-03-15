@@ -396,23 +396,23 @@ function salesforce_push_cron() {
   // Use soap API to batch process records.
   $soap = new SalesforceSoapPartner($sfapi, variable_get('salesforce_partner_wsdl', libraries_get_path('salesforce') . '/soapclient/partner.wsdl.xml'));
   if (!empty($delete_list)) {
-    $results = $soap->delete($delete_list);
+    $results = $soap-trySoap('delete', $delete_list);
     salesforce_push_process_soap_results('Delete', $results, $synced_entities);
   }
 
   if (!empty($create_list)) {
-    $results = $soap->create($create_list);
+    $results = $soap->trySoap('create', $create_list);
     salesforce_push_process_soap_results('Create', $results, $synced_entities);
   }
 
   if (!empty($update_list)) {
-    $results = $soap->update($update_list);
+    $results = $soap->trySoap('update', $update_list);
     salesforce_push_process_soap_results('Update', $results, $synced_entities);
   }
 
   if (!empty($upsert_list)) {
     foreach ($upsert_list as $key => $upsert_item) {
-      $results = $soap->upsert($key, $upsert_item);
+      $results = $soap->trySoap('upsert', $key, $upsert_item);
       salesforce_push_process_soap_results('Upsert', $results, $synced_entities);
     }
   }

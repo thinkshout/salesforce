@@ -285,7 +285,7 @@ class Salesforce {
    * Get the access token.
    */
   public function getAccessToken() {
-    return isset($_SESSION['salesforce_access_token']) ? $_SESSION['salesforce_access_token'] : FALSE;
+    return variable_get('salesforce_access_token', FALSE);
   }
 
   /**
@@ -297,7 +297,7 @@ class Salesforce {
    *   Access token from Salesforce.
    */
   protected function setAccessToken($token) {
-    $_SESSION['salesforce_access_token'] = $token;
+    variable_set('salesforce_access_token', $token);
   }
 
   /**
@@ -322,7 +322,7 @@ class Salesforce {
    *
    * @throws SalesforceException
    */
-  protected function refreshToken() {
+  public function refreshToken() {
     $refresh_token = $this->getRefreshToken();
     if (empty($refresh_token)) {
       throw new SalesforceException(t('There is no refresh token.'));
