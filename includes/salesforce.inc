@@ -145,11 +145,32 @@ class Salesforce {
     }
 
     $data = drupal_json_decode($this->response->data);
-    if (!empty($data[0]) && count($data) == 1) {
-      $data = $data[0];
-    }
+     
+     if (empty($data[0])) {
+       $this->checkResponseDataForApiError($data);
+     }
+     else {
+       foreach ($data as $item) {
+         $this->checkResponseDataForApiError($item);
+       }
+ 
+       if (count($data) == 1) {
+         $data = $data[0];
+       }
+     }
 
-    if (is_array($data) && isset($data['error'])) {
+    return $data;
+  }
+
+  /**
+   * Private helper that throws an exception if a API error is found in the response data.
+   *
+   * @param array $data
+   *   Array of salesforce api response data.
+   * @throws SalesforceException
+   */
+  private function checkResponseDataForApiError($data) {
+    if (isset($data['error'])) {
       throw new SalesforceException($data['error_description'], $data['error']);
     }
 
@@ -157,7 +178,6 @@ class Salesforce {
       throw new SalesforceException($data['message'], $this->response->code);
     }
 
-    return $data;
   }
 
   /**
@@ -329,9 +349,7 @@ class Salesforce {
 
     $data = drupal_json_decode($response->data);
 
-    if (isset($data['error'])) {
-      throw new SalesforceException($data['error_description'], $data['error']);
-    }
+    $this->checkResponseDataForApiError($data);
 
     $this->setAccessToken($data['access_token']);
     $this->setIdentity($data['id']);
