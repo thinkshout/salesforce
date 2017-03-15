@@ -17,6 +17,48 @@ function salesforce_uninstall() {
   variable_del('salesforce_refresh_token');
 }
 
+
+/**
+ * Implements hook_requirements().
+ */
+function salesforce_requirements($phase) {
+  $requirements = array();
+
+  $t = get_t();
+
+  if ($phase == 'runtime') {
+    $requirements['salesforce'] = array(
+      'title' => $t('Salesforce'),
+    );
+    // Check if SSL is enabled. Do not proceed if it is disabled.
+    if ($_SERVER['HTTPS'] !== 'on') {
+      $requirements['salesforce']['value'] = $t('SSL is not enabled for this site. You must enable SSL to authorize your site with Salesforce.');
+      $requirements['salesforce']['severity'] = REQUIREMENT_ERROR;
+      return $requirements;
+    }
+    // Check if the site is authorized with Salesforce.
+    $sfapi = new Salesforce(variable_get('salesforce_consumer_key', NULL), variable_get('salesforce_consumer_key', NULL));
+    if ($sfapi->isAuthorized()) {
+      try {
+        $resources = $sfapi->listResources();
+        if (is_array($resources) && !empty($resources)) {
+          $requirements['salesforce']['value'] = $t('Your website is authorized and connected to Salesforce. !resources.', array('!resources' => l($t('View available resources'), 'admin/config/services/salesforce')));
+          $requirements['salesforce']['severity'] = REQUIREMENT_OK;
+        }
+      } catch (Exception $e) {
+        $requirements['salesforce']['value'] = $e->getMessage();
+        $requirements['salesforce']['severity'] = REQUIREMENT_ERROR;
+      }
+    }
+    else {
+      $requirements['salesforce']['value'] = $t('Your website is not authorized to connect with Salesforce. Please visit !config to authorize your site.', array('!config' => l($t('the Salesforce configuration page'), 'admin/config/services/salesforce')));
+      $requirements['salesforce']['severity'] = REQUIREMENT_ERROR;
+    }
+  }
+
+  return $requirements;
+}
+
 /**
  * Implements hook_schema().
  */
