@@ -60,6 +60,8 @@ class SalesforceMappingUIController extends EntityDefaultUIController {
       '#entity_type' => $this->entityType,
     );
 
+    $form['pager'] = array('#theme' => 'pager');
+
     // Only show the save button when there are entities in the list.
     if (!empty($rows)) {
       $form['actions']['#type'] = 'actions';
