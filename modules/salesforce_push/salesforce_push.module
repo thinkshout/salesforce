@@ -158,7 +158,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
   }
 
   // Generate parameter array from field mappings.
-  $params = salesforce_push_map_params($mapping, $entity_wrapper, $key_field, $key_value, FALSE, !$mapping_object);
+  $key_field = $key_value = NULL;
+  $params = salesforce_push_map_params($mapping, $entity_wrapper, FALSE, !$mapping_object);
 
   // Entity is not linked to an SF object.
   if (!$mapping_object) {
@@ -171,7 +172,8 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
 
     try {
       // An external key has been specified, attempt an upsert().
-      if (!empty($key_field)) {
+      if (!empty($mapping->dedupe_key) && !empty($params[$mapping->dedupe_key])) {
+        $key_value = $params[$mapping->dedupe_key];
 
         // External key values with punctuation need to be escaped.
         $encoded_value = urlencode($key_value);
@@ -180,19 +182,19 @@ function salesforce_push_sync_rest($entity_type, $entity, $mapping, $sf_sync_tri
         $encoded_value = str_replace('.', '%2E', $encoded_value);
 
         $op = 'Upsert';
-        $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $key_field, $encoded_value, $params);
+        $data = $sfapi->objectUpsert($mapping->salesforce_object_type, $mapping->dedupe_key, $encoded_value, $params);
         // Handle upsert responses.
         switch ($sfapi->response->code) {
           // On Upsert:update retrieve object.
           case '204':
-            $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $key_field, $encoded_value);
+            $sf_object = $sfapi->objectReadbyExternalId($mapping->salesforce_object_type, $mapping->dedupe_key, $encoded_value);
             $data['id'] = $sf_object['Id'];
             break;
 
           // Handle duplicate records.
           case '300':
             $data['errorCode'] = $sfapi->response->error .
-              ' (' . $key_field . ':' . $key_value . ')';
+              ' (' . $mapping->dedupe_key . ':' . $key_value . ')';
             break;
         }
       }
@@ -344,7 +346,7 @@ function salesforce_push_cron() {
     }
     $wrapper = entity_metadata_wrapper($item->data['entity_type'], $entity);
     $key_field = $key_value = NULL;
-    $params = salesforce_push_map_params($mapping, $wrapper, $key_field, $key_value, $use_soap, !$mapping_object);
+    $params = salesforce_push_map_params($mapping, $wrapper, $use_soap, !$mapping_object);
 
     $synced_entities[$delta] = array(
       'entity_wrapper' => $wrapper,
@@ -376,8 +378,8 @@ function salesforce_push_cron() {
     }
 
     // If we have a dedupe key, prefer upsert.
-    if ($key_field && $key_value) {
-      $upsert_list[$key_field][$delta] = $sobject;
+    if ($mapping->dedupe_key && !empty($params[$mapping->dedupe_key])) {
+      $upsert_list[$mapping->dedupe_key][$delta] = $sobject;
     }
     else {
       // Otherwise create.
@@ -504,10 +506,6 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
  *   Mapping object.
  * @param object $entity_wrapper
  *   Entity wrapper object.
- * @param string $key_field
- *   Unique identifier field.
- * @param string $key_value
- *   Value of the unique identifier field.
  * @param bool $use_soap
  *   Flag to enforce use of the SOAP API.
  * @param bool $is_new
@@ -516,7 +514,7 @@ function salesforce_push_process_soap_results($op, $results, $synced_entities) {
  * @return array
  *   Associative array of key value pairs.
  */
-function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$key_value, $use_soap = FALSE, $is_new = TRUE) {
+function salesforce_push_map_params($mapping, $entity_wrapper, $use_soap = FALSE, $is_new = TRUE) {
   foreach ($mapping->field_mappings as $fieldmap) {
     // Skip fields that aren't being pushed to Salesforce.
     if (!in_array($fieldmap['direction'], array(SALESFORCE_MAPPING_DIRECTION_DRUPAL_SF, SALESFORCE_MAPPING_DIRECTION_SYNC))) {
@@ -532,11 +530,11 @@ function salesforce_push_map_params($mapping, $entity_wrapper, &$key_field, &$ke
 
     $value = call_user_func($fieldmap_type['push_value_callback'], $fieldmap, $entity_wrapper);
     $params[$fieldmap['salesforce_field']['name']] = $value;
+  }
 
-    if ($fieldmap['key']) {
-      $key_field = $fieldmap['salesforce_field']['name'];
-      $key_value = $value;
-    }
+  if (!empty($mapping->dedupe_key) && !$use_soap) {
+    // If key is set, remove from $params to avoid UPSERT errors.
+    unset($params[$mapping->dedupe_key]);
   }
 
   drupal_alter('salesforce_push_params', $params, $mapping, $entity_wrapper);

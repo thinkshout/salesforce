@@ -103,6 +103,13 @@ function salesforce_mapping_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'dedupe_key' => array(
+        'description' => 'The SF field to be used as primary key for upserts',
+        'type' => 'varchar',
+        'length' => '128',
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'field_mappings' => array(
         'type' => 'text',
         'serialize' => TRUE,
@@ -680,4 +687,28 @@ function salesforce_mapping_update_7306(&$sandbox) {
     'default' => 'LastModifiedDate',
   );
   db_add_field('salesforce_mapping', 'pull_trigger_date', $pull_date_field);
+}
+
+/**
+ * Add dedupe_key as a property to mappings.
+ */
+function salesforce_mapping_update_7307(&$sandbox) {
+  $dedupe_key = array(
+    'description' => 'The SF field to be used as primary key for upserts',
+    'type' => 'varchar',
+    'length' => '128',
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_add_field('salesforce_mapping', 'dedupe_key', $dedupe_key);
+
+  $maps = salesforce_mapping_load_multiple();
+  foreach ($maps as $map) {
+    foreach ($map->field_mappings as $fieldmap) {
+      if ($fieldmap['key']) {
+        $map->dedupe_key = $fieldmap['salesforce_field']['name'];
+        $map->save();
+      }
+    }
+  }
 }
