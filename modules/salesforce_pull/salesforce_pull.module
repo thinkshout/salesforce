@@ -533,8 +533,10 @@ function salesforce_pull_get_deleted_records() {
   // with an API version >= 29.0.
   $sfapi = salesforce_get_api();
   $client = $sfapi;
+  $use_soap = FALSE;
   if (class_exists('SalesforceSoapPartner')) {
     $client = new SalesforceSoapPartner($sfapi, variable_get('salesforce_partner_wsdl', libraries_get_path('salesforce') . '/soapclient/partner.wsdl.xml'));
+    $use_soap = TRUE;
   }
 
   // Before we delete any records, we must check for merged records.
@@ -561,7 +563,12 @@ function salesforce_pull_get_deleted_records() {
     // SOAP getDeleted() returns an object while the REST getDeleted() returns
     // an array, so cast all checked values to an object to avoid additional
     // conditional logic.
-    $results = (object) $client->trySoap('getDeleted', $type, $last_delete_sync_sf, $now_sf);
+    if ($use_soap) {
+      $results = (object) $client->trySoap('getDeleted', $type, $last_delete_sync_sf, $now_sf);
+    }
+    else {
+      $results = (object) $client->getDeleted($type, $last_delete_sync_sf, $now_sf);
+    }
     if (empty($results->deletedRecords)) {
       continue;
     }
