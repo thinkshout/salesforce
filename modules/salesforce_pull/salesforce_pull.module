@@ -573,6 +573,10 @@ function salesforce_pull_get_deleted_records() {
       continue;
     }
     if (!isset($results->errorCode)) {
+      // Convert deleted records to objects.
+      foreach ($results->deletedRecords as $index => $result) {
+        $results->deletedRecords[$index] = (object) $result;
+      }
 
       // Handle merges from Salesforce.
       $merge_fields = array(
