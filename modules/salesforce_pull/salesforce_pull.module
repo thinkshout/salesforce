@@ -269,6 +269,16 @@ function salesforce_pull_get_pull_query($type) {
   // Iterate over each field mapping to determine our query parameters.
   foreach (salesforce_mapping_load_multiple(array('salesforce_object_type' => $type)) as $mapping) {
     $mapped_fields = array_merge($mapped_fields, $mapping->getMappedFields(array(SALESFORCE_MAPPING_DIRECTION_SYNC, SALESFORCE_MAPPING_DIRECTION_SF_DRUPAL)));
+
+    // If Record Type is specified, restrict query.
+    $mapping_record_types = $mapping->getMappedRecordTypes();
+    // If Record Type is not specified for a given mapping, ensure query is unrestricted.
+    if (empty($mapping_record_types)) {
+      $mapped_record_types = FALSE;
+    }
+    elseif (is_array($mapped_record_types)) {
+      $mapped_record_types = array_merge($mapped_record_types, $mapping_record_types);
+    }
   }
 
   // There are no field mappings configured to pull data from Salesforce so
@@ -291,9 +301,7 @@ function salesforce_pull_get_pull_query($type) {
     $soql->addCondition($mapping->pull_trigger_date, $last_sync, '>');
   }
 
-  // If Record Type is specified, restrict query.
-  $mapped_record_types = $mapping->getMappedRecordTypes();
-  if (count($mapped_record_types) > 0) {
+  if (!empty($mapped_record_types)) {
     $soql->addCondition('RecordTypeId', $mapped_record_types, 'IN');
   }
 
